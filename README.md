@@ -1,12 +1,13 @@
-# Vibe Submissions
+# VibeApps - Discover and Share Vibe Coding Applications | Community Platform
 
 A modern community platform for discovering and sharing vibe coding applications, inspired by Lobste.rs. Built with React, TypeScript, and Tailwind CSS.
 
-## Features
+## Featuress
 
 ### For Users
 
 #### Submission Features
+
 - **Submit Applications**: Share your applications with custom titles, descriptions, and tags
   - Upload up to 4 screenshots per submission
   - Link to announcements from LinkedIn, Twitter/X, Bluesky, and Reddit
@@ -15,6 +16,7 @@ A modern community platform for discovering and sharing vibe coding applications
   - One submission per day limit to maintain quality
 
 #### Browsing & Discovery
+
 - **Flexible Viewing Options**:
   - Toggle between grid and list views
   - Grid view shows screenshots and descriptions
@@ -30,6 +32,7 @@ A modern community platform for discovering and sharing vibe coding applications
   - Real-time search results
 
 #### Engagement Features
+
 - **Interactive Elements**:
   - Upvote submissions to show appreciation
   - Comment on submissions with Markdown support
@@ -44,6 +47,7 @@ A modern community platform for discovering and sharing vibe coding applications
 ### For Administrators
 
 #### Content Management
+
 - **Content Moderation**:
   - Review and manage reported content
   - Add custom messages to submissions that appear on the frontend
@@ -54,6 +58,7 @@ A modern community platform for discovering and sharing vibe coding applications
   - Filter and search through moderation queue
 
 #### Form Management
+
 - **Form Builder**:
   - Create custom forms with multiple field types:
     - Short text
@@ -74,6 +79,7 @@ A modern community platform for discovering and sharing vibe coding applications
   - Organize forms with custom titles and slugs
 
 #### Results Management
+
 - **Form Results**:
   - View submissions by form
   - Sort and filter results
@@ -84,6 +90,7 @@ A modern community platform for discovering and sharing vibe coding applications
   - Track submission counts and metrics
 
 #### Tag Management
+
 - **Tag System**:
   - Control which tags appear in the header
   - Add, remove, and manage available tags
@@ -91,6 +98,7 @@ A modern community platform for discovering and sharing vibe coding applications
   - Organize content with custom tag categories
 
 #### Site Settings
+
 - **Global Configuration**:
   - Set default view mode (grid/list)
   - Configure submissions per page
@@ -113,6 +121,7 @@ A modern community platform for discovering and sharing vibe coding applications
 ## Color Scheme
 
 The application uses a carefully crafted color palette:
+
 - Background: `#F9F7EE`
 - Text: `#525252`
 - Headers: `#2A2825`
@@ -185,16 +194,19 @@ Learn more about the concepts and best practices behind Convex:
 1. Push your code to a Git repository (GitHub, GitLab, or Bitbucket)
 
 2. Create a new project on Vercel:
+
    - Go to [vercel.com](https://vercel.com)
    - Click "New Project"
    - Import your repository
    - Select the repository you want to deploy
 
 3. Configure environment variables:
+
    - Add your Convex deployment URL and other environment variables
    - These should match the variables in your `.env` file
 
 4. Deploy:
+
    - Vercel will automatically build and deploy your site
    - Any future pushes to your repository will trigger automatic deployments
 
