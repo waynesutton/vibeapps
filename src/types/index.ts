@@ -1,66 +1,89 @@
-export interface Story {
-  id: string;
-  title: string;
-  url: string;
-  description: string;
-  tags: string[];
-  author: string;
-  createdAt: Date;
-  votes: number;
-  commentCount: number;
-  customMessage?: string;
-  screenshot?: string;
-  rating?: number;
-  ratingCount?: number;
-}
+import { Doc, Id } from "../convex/_generated/dataModel";
 
-export interface Comment {
-  id: string;
-  content: string;
-  author: string;
-  createdAt: Date;
-  storyId: string;
-  parentId?: string;
-  votes: number;
-}
+// Represents a full Story document fetched from Convex,
+// potentially including resolved tags and screenshot URL.
+export type Story = Doc<"stories"> & {
+  // Resolved data often added in queries:
+  tags?: Doc<"tags">[]; // Renamed from StoryWithDetails tag for consistency
+  screenshotUrl?: string | null;
+  // Calculated fields if needed:
+  // voteScore?: number;
+  // averageRating?: number;
+};
 
+// Represents a full Comment document fetched from Convex.
+export type Comment = Doc<"comments"> & {
+  // Potential resolved data:
+  // authorDetails?: Doc<"users">;
+};
+
+// Represents a full Tag document fetched from Convex.
+export type Tag = Doc<"tags">;
+
+// Represents the Settings document (singleton)
+export type SiteSettings = Doc<"settings">;
+
+// Represents a Custom Form document
+export type CustomForm = Doc<"forms">;
+
+// Represents a Form Field document
+export type FormField = Doc<"formFields">;
+
+// Represents a Form Submission document
+export type FormSubmission = Doc<"formSubmissions">;
+
+// ------ Placeholder/Legacy Types (Review if still needed) ------
+
+// Kept for reference, but prefer using Doc<"users"> if defined
 export interface User {
-  id: string;
+  id: string; // Should this be Id<"users">?
   username: string;
   email: string;
-  role: 'user' | 'admin';
+  role: "user" | "admin";
   karma: number;
-  createdAt: Date;
+  createdAt: number; // Convex uses number for _creationTime
 }
 
-export interface Tag {
-  name: string;
-  showInHeader: boolean;
-}
+// This seems redundant now with Doc<"tags">, keeping for reference.
+// export interface Tag {
+//   name: string;
+//   showInHeader: boolean;
+// }
 
-export type FormFieldType = 'shortText' | 'longText' | 'url' | 'email' | 'yesNo' | 'dropdown' | 'multiSelect';
+// Use FormField["fieldType"] instead
+// export type FormFieldType =
+//   | "shortText"
+//   | "longText"
+//   | "url"
+//   | "email"
+//   | "yesNo"
+//   | "dropdown"
+//   | "multiSelect";
 
-export interface FormField {
-  id: string;
-  type: FormFieldType;
-  label: string;
-  required: boolean;
-  options?: string[];
-  placeholder?: string;
-}
+// This structure is represented by Doc<"formFields"> now
+// export interface FormField {
+//   id: string; // Should be _id: Id<"formFields">?
+//   type: FormFieldType;
+//   label: string;
+//   required: boolean;
+//   options?: string[];
+//   placeholder?: string;
+// }
 
-export interface CustomForm {
-  id: string;
-  title: string;
-  slug: string;
-  fields: FormField[];
-  isPublic: boolean;
-  createdAt: Date;
-}
+// This structure is represented by Doc<"forms"> now
+// export interface CustomForm {
+//   id: string; // Should be _id: Id<"forms">?
+//   title: string;
+//   slug: string;
+//   fields: FormField[]; // This would be fetched separately
+//   isPublic: boolean;
+//   createdAt: number; // Convex uses number for _creationTime
+// }
 
-export interface FormSubmission {
-  id: string;
-  formId: string;
-  data: Record<string, any>;
-  createdAt: Date;
-}
+// This structure is represented by Doc<"formSubmissions"> now
+// export interface FormSubmission {
+//   id: string; // Should be _id: Id<"formSubmissions">?
+//   formId: Id<"forms">;
+//   data: Record<string, any>;
+//   createdAt: number; // Convex uses number for _creationTime
+// }

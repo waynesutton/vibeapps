@@ -1,271 +1,199 @@
-import React from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { Download, ArrowLeft, Copy, ExternalLink, Eye, EyeOff, FileText, ChevronRight } from 'lucide-react';
+import React, { useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { Download, ArrowLeft, ArrowUp, ArrowDown } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { Id } from "../../../convex/_generated/dataModel";
+import type { CustomForm, FormSubmission, FormField } from "../../types";
 
-interface FormSubmission {
-  id: string;
-  formId: string;
-  data: Record<string, any>;
-  createdAt: Date;
-}
+// Helper function to format date
+const formatDate = (timestamp: number): string => {
+  try {
+    return new Date(timestamp).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch (e) {
+    return "Invalid Date";
+  }
+};
 
-interface FormResultsGroup {
-  formId: string;
-  formTitle: string;
-  slug: string;
-  isPublic: boolean;
-  submissions: FormSubmission[];
-}
+// Function to safely access nested data, assuming field labels are keys
+const getFieldValue = (data: any, fieldLabel: string): string => {
+  // Convert label to the key format used in submission data (e.g., lowercase_with_underscores)
+  const key = fieldLabel.toLowerCase().replace(/\s+/g, "_");
+  const value = data?.[key];
+  if (Array.isArray(value)) return value.join(", "); // Join array values
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  return value?.toString() || "-"; // Return value or placeholder
+};
 
-// Mock data
-const MOCK_RESULTS_GROUPS: FormResultsGroup[] = [
-  {
-    formId: '1',
-    formTitle: 'Feedback Form',
-    slug: 'feedback-form-results',
-    isPublic: true,
-    submissions: [
-      {
-        id: '1',
-        formId: '1',
-        data: {
-          name: 'John Doe',
-          email: 'john@example.com',
-          feedback: 'Great service!',
-        },
-        createdAt: new Date(),
-      },
-      {
-        id: '2',
-        formId: '1',
-        data: {
-          name: 'Jane Smith',
-          email: 'jane@example.com',
-          feedback: 'Could be better.',
-        },
-        createdAt: new Date(Date.now() - 3600000),
-      },
-    ],
-  },
-];
+// Function to generate CSV content
+const generateCSV = (fields: FormField[], submissions: FormSubmission[]): string => {
+  const headers = ["Submitted At", ...fields.map((f) => f.label)];
+  const rows = submissions.map((sub) => {
+    const rowData = [
+      formatDate(sub._creationTime),
+      ...fields.map((field) => `"${getFieldValue(sub.data, field.label).replace(/"/g, '""')}"`), // Escape quotes
+    ];
+    return rowData.join(",");
+  });
+  return [headers.join(","), ...rows].join("\n");
+};
 
 export function FormResults() {
-  const { id } = useParams<{ id: string }>();
-  const [resultsGroups, setResultsGroups] = React.useState<FormResultsGroup[]>(MOCK_RESULTS_GROUPS);
-  const [sortField, setSortField] = React.useState<string>('createdAt');
-  const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('desc');
-  const [copiedId, setCopiedId] = React.useState<string | null>(null);
+  const { formId } = useParams<{ formId?: Id<"forms"> }>();
 
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+  const formData = useQuery(api.forms.getFormWithFields, formId ? { formId } : "skip");
+  const submissions = useQuery(api.forms.listSubmissions, formId ? { formId } : "skip");
+
+  const [sortField, setSortField] = useState<string>("_creationTime");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+
+  const handleSort = (fieldKey: string) => {
+    if (sortField === fieldKey) {
+      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
-      setSortField(field);
-      setSortDirection('asc');
+      setSortField(fieldKey);
+      setSortDirection("desc"); // Default to descending for new column
     }
   };
 
-  const toggleVisibility = (formId: string) => {
-    setResultsGroups(groups => groups.map(group =>
-      group.formId === formId ? { ...group, isPublic: !group.isPublic } : group
-    ));
+  const exportCSV = () => {
+    if (!formData || !submissions) return;
+    const csvContent = generateCSV(formData.fields, submissions);
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${formData.slug}_submissions.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  const copyResultsUrl = async (group: FormResultsGroup) => {
-    const url = `${window.location.origin}/results/${group.slug}`;
-    await navigator.clipboard.writeText(url);
-    setCopiedId(group.formId);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
+  // Sort submissions based on current state
+  const sortedSubmissions = React.useMemo(() => {
+    if (!submissions) return [];
+    return [...submissions].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
 
-  const exportCSV = (formId: string) => {
-    const group = resultsGroups.find(g => g.formId === formId);
-    if (!group) return;
-
-    // TODO: Implement CSV export for specific form
-    console.log('Exporting CSV for form:', formId);
-  };
-
-  const selectedGroup = id ? resultsGroups.find(group => group.formId === id) : null;
-
-  const renderBreadcrumbs = () => (
-    <div className="flex items-center gap-2 text-[#787672] mb-6">
-      <Link to="/admin" className="hover:text-[#525252]">Admin Dashboard</Link>
-      <ChevronRight className="w-4 h-4" />
-      <Link to="/admin" className="hover:text-[#525252]">Results</Link>
-      {selectedGroup && (
-        <>
-          <ChevronRight className="w-4 h-4" />
-          <span className="text-[#525252]">{selectedGroup.formTitle}</span>
-        </>
-      )}
-    </div>
-  );
-
-  if (id && selectedGroup) {
-    const sortedSubmissions = [...selectedGroup.submissions].sort((a, b) => {
-      const aValue = sortField === 'createdAt' ? a.createdAt : a.data[sortField];
-      const bValue = sortField === 'createdAt' ? b.createdAt : b.data[sortField];
-      
-      if (sortDirection === 'asc') {
-        return aValue > bValue ? 1 : -1;
+      if (sortField === "_creationTime") {
+        aValue = a._creationTime;
+        bValue = b._creationTime;
       } else {
-        return aValue < bValue ? 1 : -1;
+        // sortField is the field label, convert to key
+        const fieldKey = sortField.toLowerCase().replace(/\s+/g, "_");
+        aValue = a.data?.[fieldKey];
+        bValue = b.data?.[fieldKey];
       }
+
+      // Basic comparison, might need refinement for different types
+      const comparison = aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      return sortDirection === "asc" ? comparison : -comparison;
     });
+  }, [submissions, sortField, sortDirection]);
 
-    return (
-      <div className="space-y-6">
-        {renderBreadcrumbs()}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="/admin" className="text-[#787672] hover:text-[#525252] flex items-center gap-1">
-              <ArrowLeft className="w-4 h-4" />
-              Back to Admin Dashboard
-            </Link>
-          </div>
-          <button
-            onClick={() => exportCSV(selectedGroup.formId)}
-            className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-[4px] hover:bg-[#e5e1de] transition-colors flex items-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Export CSV
-          </button>
+  if (formData === undefined || submissions === undefined) {
+    return <div>Loading results...</div>;
+  }
+
+  if (!formData) {
+    return <div>Form not found.</div>;
+  }
+
+  const formFields = formData.fields || []; // Use fields from fetched form data
+
+  return (
+    <div className="space-y-6">
+      {/* Back Link and Title */}
+      <div className="flex flex-wrap justify-between items-center gap-4">
+        <div>
+          <Link
+            to="/admin/forms"
+            className="text-sm text-[#787672] hover:text-[#525252] flex items-center gap-1 mb-1">
+            <ArrowLeft className="w-4 h-4" /> Back to Forms List
+          </Link>
+          <h2 className="text-xl font-medium text-[#525252]">Results for: {formData.title}</h2>
         </div>
+        <button
+          onClick={exportCSV}
+          disabled={!submissions || submissions.length === 0}
+          className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+          <Download className="w-4 h-4" />
+          Export CSV ({sortedSubmissions.length} rows)
+        </button>
+      </div>
 
-        <div className="bg-white rounded-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-medium text-[#525252]">
-              {selectedGroup.formTitle} - Results
-            </h2>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => copyResultsUrl(selectedGroup)}
-                className="text-[#787672] hover:text-[#525252]"
-                title={copiedId === selectedGroup.formId ? "Copied!" : "Copy Results URL"}
-              >
-                <Copy className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => toggleVisibility(selectedGroup.formId)}
-                className="text-[#787672] hover:text-[#525252]"
-                title={selectedGroup.isPublic ? "Make Private" : "Make Public"}
-              >
-                {selectedGroup.isPublic ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-          </div>
-          
+      {/* Results Table */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        {sortedSubmissions.length === 0 ? (
+          <div className="p-6 text-center text-gray-500">No submissions received yet.</div>
+        ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-[#F4F0ED]">
-                  {Object.keys(selectedGroup.submissions[0]?.data || {}).map(field => (
+            <table className="w-full text-sm">
+              <thead className="border-b border-gray-200 bg-gray-50">
+                <tr>
+                  {/* Submitted At Column (Sortable) */}
+                  <th
+                    className="text-left p-3 px-4 text-gray-600 font-medium cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort("_creationTime")}>
+                    <div className="flex items-center gap-1">
+                      Submitted At
+                      {sortField === "_creationTime" &&
+                        (sortDirection === "asc" ? (
+                          <ArrowUp className="w-3 h-3" />
+                        ) : (
+                          <ArrowDown className="w-3 h-3" />
+                        ))}
+                    </div>
+                  </th>
+                  {/* Dynamic Columns based on Form Fields (Sortable) */}
+                  {formFields.map((field) => (
                     <th
-                      key={field}
-                      className="text-left p-4 text-[#525252] font-medium cursor-pointer hover:text-[#2A2825]"
-                      onClick={() => handleSort(field)}
+                      key={field._id}
+                      className="text-left p-3 px-4 text-gray-600 font-medium cursor-pointer hover:bg-gray-100 whitespace-nowrap"
+                      onClick={() => handleSort(field.label)} // Sort by label
                     >
-                      {field.charAt(0).toUpperCase() + field.slice(1)}
-                      {sortField === field && (
-                        <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {field.label}
+                        {sortField === field.label &&
+                          (sortDirection === "asc" ? (
+                            <ArrowUp className="w-3 h-3" />
+                          ) : (
+                            <ArrowDown className="w-3 h-3" />
+                          ))}
+                      </div>
                     </th>
                   ))}
-                  <th
-                    className="text-left p-4 text-[#525252] font-medium cursor-pointer hover:text-[#2A2825]"
-                    onClick={() => handleSort('createdAt')}
-                  >
-                    Submitted
-                    {sortField === 'createdAt' && (
-                      <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-                    )}
-                  </th>
                 </tr>
               </thead>
               <tbody>
-                {sortedSubmissions.map(submission => (
-                  <tr key={submission.id} className="border-b border-[#F4F0ED]">
-                    {Object.values(submission.data).map((value, index) => (
-                      <td key={index} className="p-4 text-[#525252]">
-                        {value}
+                {sortedSubmissions.map((submission) => (
+                  <tr
+                    key={submission._id}
+                    className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
+                    {/* Submitted At Data */}
+                    <td className="p-3 px-4 text-gray-500 whitespace-nowrap">
+                      {formatDate(submission._creationTime)}
+                    </td>
+                    {/* Dynamic Data based on Form Fields */}
+                    {formFields.map((field) => (
+                      <td key={field._id} className="p-3 px-4 text-gray-700 align-top">
+                        {getFieldValue(submission.data, field.label)}
                       </td>
                     ))}
-                    <td className="p-4 text-[#787672]">
-                      {submission.createdAt.toLocaleDateString()}
-                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {renderBreadcrumbs()}
-      <h2 className="text-xl font-medium text-[#525252] mb-6">Form Results</h2>
-      
-      <div className="grid gap-6">
-        {resultsGroups.map(group => (
-          <div key={group.formId} className="bg-white rounded-lg p-6 border border-[#D5D3D0]">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-[#525252]">{group.formTitle}</h3>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => copyResultsUrl(group)}
-                  className="text-[#787672] hover:text-[#525252]"
-                  title={copiedId === group.formId ? "Copied!" : "Copy Results URL"}
-                >
-                  <Copy className="w-4 h-4" />
-                </button>
-                <Link
-                  to={`/results/${group.slug}`}
-                  target="_blank"
-                  className="text-[#787672] hover:text-[#525252]"
-                  title="View Results"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                </Link>
-                <button
-                  onClick={() => toggleVisibility(group.formId)}
-                  className="text-[#787672] hover:text-[#525252]"
-                  title={group.isPublic ? "Make Private" : "Make Public"}
-                >
-                  {group.isPublic ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
-                <Link
-                  to={`/admin/forms/${group.formId}/results`}
-                  className="text-[#787672] hover:text-[#525252]"
-                  title="View Details"
-                >
-                  <FileText className="w-4 h-4" />
-                </Link>
-                <button
-                  onClick={() => exportCSV(group.formId)}
-                  className="text-[#787672] hover:text-[#525252]"
-                  title="Export CSV"
-                >
-                  <Download className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-            <div className="text-[#787672]">
-              {group.submissions.length} submissions
-            </div>
-          </div>
-        ))}
+        )}
       </div>
     </div>
   );

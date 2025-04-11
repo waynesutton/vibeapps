@@ -1,8 +1,12 @@
-# VibeApps - Discover and Share Vibe Coding Applications | Community Platform
+# Vibe Apps – The community for vibe coding apps
 
-A modern community platform for discovering and sharing vibe coding applications, inspired by Lobste.rs. Built with React, TypeScript, and Tailwind CSS.
+### About
 
-## Featuress
+Discover and share vibe coding apps. Built with Convex Chef, Cursor, Bolt, Windsurf, Tempo and more. Powered by Convex.
+
+Vibe Apps is the home for vibe coding projects — a real-time community platform where developers share and explore creative apps built with tools like Convex Chef, Cursor, Bolt, Windsurf, Lovable, Tempo and more. Submit your app, vote on others, drop comments, and discover what the community is cooking. Built on Convex for real-time interaction.
+
+## Features
 
 ### For Users
 
@@ -122,7 +126,7 @@ A modern community platform for discovering and sharing vibe coding applications
 
 The application uses a carefully crafted color palette:
 
-- Background: `#F9F7EE`
+- Background: `#F8F7F7`
 - Text: `#525252`
 - Headers: `#2A2825`
 - Secondary Text: `#787672`

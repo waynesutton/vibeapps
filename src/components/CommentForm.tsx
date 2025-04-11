@@ -1,14 +1,15 @@
-import React from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
+import React from "react";
+import * as Dialog from "@radix-ui/react-dialog";
+import { Id } from "../../convex/_generated/dataModel";
 
 interface CommentFormProps {
   onSubmit: (content: string, author: string) => void;
-  parentId?: string;
+  parentId?: Id<"comments">;
 }
 
 export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
-  const [content, setContent] = React.useState('');
-  const [author, setAuthor] = React.useState('');
+  const [content, setContent] = React.useState("");
+  const [author, setAuthor] = React.useState("");
   const [showNameDialog, setShowNameDialog] = React.useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -18,14 +19,14 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
       return;
     }
     onSubmit(content, author);
-    setContent('');
+    setContent("");
   };
 
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setShowNameDialog(false);
     onSubmit(content, author);
-    setContent('');
+    setContent("");
   };
 
   return (
@@ -43,9 +44,8 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
         </div>
         <button
           type="submit"
-          className="mt-2 px-4 py-2 bg-[#2A2825] text-white rounded-md hover:bg-[#525252] transition-colors"
-        >
-          {parentId ? 'Reply' : 'Comment'}
+          className="mt-2 px-4 py-2 bg-[#2A2825] text-white rounded-md hover:bg-[#525252] transition-colors">
+          {parentId ? "Reply" : "Comment"}
         </button>
       </form>
 
@@ -69,14 +69,12 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
                 <button
                   type="button"
                   onClick={() => setShowNameDialog(false)}
-                  className="px-4 py-2 text-[#787672] hover:text-[#525252]"
-                >
+                  className="px-4 py-2 text-[#787672] hover:text-[#525252]">
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[#2A2825] text-white rounded-md hover:bg-[#525252] transition-colors"
-                >
+                  className="px-4 py-2 bg-[#2A2825] text-white rounded-md hover:bg-[#525252] transition-colors">
                   Submit
                 </button>
               </div>
