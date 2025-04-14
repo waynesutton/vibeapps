@@ -12,7 +12,6 @@ import { FormBuilder } from "./components/admin/FormBuilder";
 import { FormResults } from "./components/admin/FormResults";
 import { PublicForm } from "./components/PublicForm";
 import { useLayoutContext } from "./components/Layout";
-import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Id } from "../convex/_generated/dataModel";
 import { Story } from "./types";
 
@@ -113,38 +112,10 @@ function App() {
           <Route path="/s/:storySlug" element={<StoryPage />} />
           <Route path="/f/:formSlug" element={<PublicFormPage />} />
           <Route path="/search" element={<SearchPage />} />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/forms/new"
-            element={
-              <ProtectedRoute>
-                <FormBuilder />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/forms/:formId"
-            element={
-              <ProtectedRoute>
-                <FormBuilder />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/forms/:formId/results"
-            element={
-              <ProtectedRoute>
-                <FormResults />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/forms/new" element={<FormBuilder />} />
+          <Route path="/admin/forms/:formId" element={<FormBuilder />} />
+          <Route path="/admin/forms/:formId/results" element={<FormResults />} />
         </Route>
       </Routes>
     </BrowserRouter>

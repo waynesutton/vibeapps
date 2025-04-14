@@ -30,20 +30,26 @@ export function TagManagement() {
   // Load tags from Convex into editable state and reset local flags
   useEffect(() => {
     if (allTags) {
-      setEditableTags(
-        allTags.map((tag) => ({
-          ...tag,
-          isNew: false,
-          isModified: false,
-          isDeleted: false, // Reset local flags when data reloads
-        }))
-      );
-      // Keep existing new/modified tags if saving failed previously?
-      // This simple reset assumes save completes or user refreshes.
-      // More complex state management could preserve unsaved changes.
-      setError(null); // Clear errors on data refresh
+      // Preserve locally modified/new/deleted tags if saving is in progress
+      // or if there was an error, otherwise refresh from source.
+      if (!isSaving && !error) {
+        setEditableTags(
+          allTags.map((tag) => ({
+            ...tag,
+            isNew: false,
+            isModified: false,
+            isDeleted: false,
+          }))
+        );
+      } else if (error) {
+        // On error, maybe reconcile? For now, just keep local state
+        // If a tag was successfully created/deleted but others failed,
+        // the useQuery update might overwrite local changes.
+        // A more robust solution would diff here too.
+      }
+      // If isSaving, do nothing, let handleSave complete.
     }
-  }, [allTags]);
+  }, [allTags, isSaving, error]); // Depend on isSaving and error
 
   const handleAddTag = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,12 +68,15 @@ export function TagManagement() {
     setEditableTags((prevTags) => [
       ...prevTags,
       {
-        _id: `new-${Date.now()}` as Id<"tags">,
+        // Generate a temporary client-side ID for new tags
+        // Note: This ID is temporary and will be replaced by the Convex ID upon successful save.
+        _id: `new-${Date.now()}-${Math.random()}` as Id<"tags">,
         name,
-        showInHeader: true,
+        showInHeader: true, // Default for new tags
         _creationTime: Date.now(),
         isNew: true,
-        isModified: true,
+        isModified: true, // Mark as modified to be included in save
+        isDeleted: false,
       },
     ]);
     setNewTagName("");
@@ -93,9 +102,12 @@ export function TagManagement() {
 
   const handleUndeleteTag = (tagId: Id<"tags">) => {
     setEditableTags((prevTags) =>
-      prevTags.map((tag) =>
-        // Unmark deletion, setting isModified
-        tag._id === tagId ? { ...tag, isDeleted: false, isModified: true } : tag
+      prevTags.map(
+        (tag) =>
+          // Unmark deletion, ensuring isModified reflects whether it needs saving
+          // If it was originally new, it just needs isNew=true, isModified=true
+          // If it was existing, it needs isModified=true if state differs from original
+          tag._id === tagId ? { ...tag, isDeleted: false, isModified: true } : tag // Simplified: always mark modified on undo for now
       )
     );
   };
@@ -103,34 +115,57 @@ export function TagManagement() {
   const handleSave = async () => {
     setIsSaving(true);
     setError(null);
-    const changesToSave: Array<Promise<unknown>> = []; // Collect promises
+    const changesToSave: Array<Promise<unknown>> = [];
 
-    // Use the latest fetched tags for comparison to avoid race conditions
+    // Get a fresh snapshot of tags from Convex to avoid stale data issues
+    // This requires fetching `allTags` at the point of save or trusting the cache
     const currentTagsMap = new Map(allTags?.map((t) => [t._id, t]));
     const currentTagsByName = new Map(allTags?.map((t) => [t.name.toLowerCase(), t]));
 
+    const tagsToKeepLocally: EditableTag[] = [];
+    const successfullySavedIds = new Set<Id<"tags">>(); // Track successful saves
+
     for (const tag of editableTags) {
-      if (!tag.isModified) continue; // Skip unmodified tags
+      if (!tag.isModified) {
+        tagsToKeepLocally.push(tag); // Keep unmodified tags
+        continue;
+      }
 
       const originalTag = currentTagsMap.get(tag._id);
 
       if (tag.isDeleted) {
         if (!tag.isNew && originalTag) {
-          // Only delete existing tags that haven't already been deleted
-          changesToSave.push(deleteTag({ tagId: tag._id }));
+          // Only attempt to delete existing tags
+          changesToSave.push(
+            deleteTag({ tagId: tag._id })
+              .then(() => successfullySavedIds.add(tag._id))
+              .catch((err) => {
+                // Handle specific error for this tag
+                console.error(`Failed to delete tag ${tag.name}:`, err);
+                tagsToKeepLocally.push({ ...tag, isDeleted: true, isModified: true }); // Keep in UI as deleted but unsaved
+                throw err; // Re-throw to fail Promise.all
+              })
+          );
         }
-        // If it was new and marked for deletion, it simply won't be created.
+        // If it was new and marked for deletion, it simply vanishes, don't keep it locally
       } else if (tag.isNew) {
-        // Double-check for name collisions just before saving
+        // Check for name collisions just before saving
         if (currentTagsByName.has(tag.name.toLowerCase())) {
           setError(`Tag name "${tag.name}" already exists.`);
-          setIsSaving(false);
-          return; // Stop save process
+          tagsToKeepLocally.push({ ...tag }); // Keep the unsaved new tag in UI
+          continue; // Skip this tag, let others proceed if possible
         }
-        changesToSave.push(createTag({ name: tag.name, showInHeader: tag.showInHeader }));
+        changesToSave.push(
+          createTag({ name: tag.name, showInHeader: tag.showInHeader })
+            .then((newId) => successfullySavedIds.add(newId)) // Track success by new ID
+            .catch((err) => {
+              console.error(`Failed to create tag ${tag.name}:`, err);
+              tagsToKeepLocally.push({ ...tag, isNew: true, isModified: true }); // Keep in UI as new but unsaved
+              throw err;
+            })
+        );
       } else if (originalTag) {
         // It's an existing tag being updated
-        // Prepare updates, only send if changed from original
         const updates: { name?: string; showInHeader?: boolean } = {};
         if (tag.name !== originalTag.name) updates.name = tag.name;
         if (tag.showInHeader !== originalTag.showInHeader) updates.showInHeader = tag.showInHeader;
@@ -140,18 +175,45 @@ export function TagManagement() {
           if (updates.name) {
             const existingByName = currentTagsByName.get(updates.name.toLowerCase());
             if (existingByName && existingByName._id !== tag._id) {
-              setError(`Tag name "${updates.name}" is already in use.`);
-              setIsSaving(false);
-              return; // Stop save process
+              setError(`Tag name "${updates.name}" is already in use by another tag.`);
+              tagsToKeepLocally.push({ ...tag }); // Keep the unsaved modified tag
+              continue; // Skip this tag
             }
           }
-          changesToSave.push(updateTag({ tagId: tag._id, ...updates }));
+          changesToSave.push(
+            updateTag({ tagId: tag._id, ...updates })
+              .then(() => successfullySavedIds.add(tag._id))
+              .catch((err) => {
+                console.error(`Failed to update tag ${tag.name}:`, err);
+                tagsToKeepLocally.push({ ...tag, isModified: true }); // Keep in UI as modified but unsaved
+                throw err;
+              })
+          );
+        } else {
+          tagsToKeepLocally.push({ ...tag, isModified: false }); // No actual change, reset flag
         }
+      } else {
+        // Tag exists locally but not in original map (e.g., created and modified before save)
+        // Treat as new, potentially redundant with isNew check but safer
+        if (currentTagsByName.has(tag.name.toLowerCase())) {
+          setError(`Tag name "${tag.name}" already exists.`);
+          tagsToKeepLocally.push({ ...tag });
+          continue;
+        }
+        changesToSave.push(
+          createTag({ name: tag.name, showInHeader: tag.showInHeader })
+            .then((newId) => successfullySavedIds.add(newId))
+            .catch((err) => {
+              console.error(`Failed to create tag ${tag.name}:`, err);
+              tagsToKeepLocally.push({ ...tag, isNew: true, isModified: true });
+              throw err;
+            })
+        );
       }
     }
 
-    if (changesToSave.length === 0) {
-      // No actual changes detected that need persistence
+    if (changesToSave.length === 0 && !error) {
+      // No actual changes were attempted or needed persistence, and no validation errors occurred
       setEditableTags((prev) =>
         prev.map((t) => ({ ...t, isModified: false, isNew: false, isDeleted: false }))
       );
@@ -161,21 +223,39 @@ export function TagManagement() {
 
     try {
       await Promise.all(changesToSave);
-      console.log("Tag changes saved successfully");
-      // State will update via useEffect when useQuery refetches, resetting flags
-    } catch (err) {
-      console.error("Failed to save tag changes:", err);
-      // Log the full error object for more details
-      console.error("Full error object:", JSON.stringify(err, null, 2));
-      setError(err instanceof Error ? err.message : "An unknown error occurred during save.");
-      // Let user retry, state retains modified flags until success or refresh
+      console.log(
+        "Tag changes saved successfully (partial success possible if errors occurred). Waiting for data refresh."
+      );
+      // Successful operations are tracked in `successfullySavedIds`
+      // The useEffect watching `allTags` should handle the state refresh.
+      // We could manually update state here for faster feedback, but rely on useQuery for now.
+      // Reset local error state only if all promises resolved
+      setError(null);
+    } catch (err: any) {
+      console.error("One or more tag operations failed:", err);
+      // Error message might already be set by specific catch blocks or name checks
+      if (!error) {
+        // Provide a more informative error message
+        let message = "Failed to save some tag changes.";
+        if (err?.data?.message?.includes("Unauthenticated")) {
+          message = "Authentication failed. Please log in again.";
+        } else if (err?.data?.message) {
+          message = `Error: ${err.data.message}`;
+        } else if (err instanceof Error) {
+          message = err.message;
+        }
+        setError(message);
+      }
+      // Update local state to reflect which tags failed
+      // This is partially handled by pushing to tagsToKeepLocally in individual catches
+      setEditableTags(tagsToKeepLocally);
     } finally {
-      // Only stop saving indicator, let useEffect handle state refresh
       setIsSaving(false);
     }
   };
 
   const hasPendingChanges = editableTags.some((tag) => tag.isModified);
+  // Filter out tags marked for deletion for display, unless showing deleted section
   const visibleTags = editableTags.filter((tag) => !tag.isDeleted);
 
   return (
@@ -223,61 +303,52 @@ export function TagManagement() {
         <div className="space-y-2">
           {visibleTags.map((tag) => (
             <div
-              key={tag._id}
-              className={`flex items-center justify-between bg-[#F8F7F7] px-3 py-2 rounded-md border ${tag.isNew ? "border-green-300" : "border-transparent"}`}>
+              key={tag._id} // Use _id which is stable even for new tags (client-generated)
+              className={`flex items-center justify-between bg-[#F8F7F7] px-3 py-2 rounded-md border ${tag.isNew && !tag.isDeleted ? "border-green-300" : "border-transparent"} ${tag.isModified && !tag.isDeleted ? "ring-1 ring-blue-300 ring-inset" : ""} ${tag.isDeleted ? "border-red-300 opacity-50" : ""}`}>
               <span
-                className={`text-sm ${tag.isModified ? "italic text-blue-600" : "text-[#525252]"}`}>
+                className={`text-sm ${tag.isModified && !tag.isDeleted ? "italic text-blue-600" : "text-[#525252]"} ${tag.isDeleted ? "line-through" : ""}`}>
                 {tag.name}
               </span>
-              <div className="flex items-center gap-3">
+              {!tag.isDeleted && (
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => handleToggleHeader(tag._id)}
+                    className="text-[#787672] hover:text-[#525252] disabled:opacity-50"
+                    title={tag.showInHeader ? "Visible in header" : "Hidden from header"}
+                    disabled={isSaving}>
+                    {tag.showInHeader ? (
+                      <Eye className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <EyeOff className="w-4 h-4" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteTag(tag._id)}
+                    className="text-red-500 hover:text-red-700 disabled:opacity-50"
+                    title="Delete tag"
+                    disabled={isSaving}>
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+              {tag.isDeleted && (
                 <button
-                  onClick={() => handleToggleHeader(tag._id)}
-                  className="text-[#787672] hover:text-[#525252] disabled:opacity-50"
-                  title={tag.showInHeader ? "Visible in header" : "Hidden from header"}
+                  onClick={() => handleUndeleteTag(tag._id)}
+                  className="text-xs text-gray-600 hover:text-black disabled:opacity-50"
                   disabled={isSaving}>
-                  {tag.showInHeader ? (
-                    <Eye className="w-4 h-4 text-green-600" />
-                  ) : (
-                    <EyeOff className="w-4 h-4" />
-                  )}
+                  Undo
                 </button>
-                <button
-                  onClick={() => handleDeleteTag(tag._id)}
-                  className="text-red-500 hover:text-red-700 disabled:opacity-50"
-                  title="Delete tag"
-                  disabled={isSaving}>
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+              )}
             </div>
           ))}
         </div>
 
-        {editableTags.some((t) => t.isDeleted) && (
-          <div className="mt-6 pt-4 border-t border-gray-200">
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Deleted Tags (Pending Save)</h3>
-            <div className="space-y-2">
-              {editableTags
-                .filter((t) => t.isDeleted)
-                .map((tag) => (
-                  <div
-                    key={tag._id}
-                    className="flex items-center justify-between bg-red-50 px-3 py-2 rounded-md border border-red-200">
-                    <span className="text-sm text-red-700 line-through">{tag.name}</span>
-                    <button
-                      onClick={() => handleUndeleteTag(tag._id)}
-                      className="text-xs text-gray-600 hover:text-black disabled:opacity-50"
-                      disabled={isSaving}>
-                      Undo
-                    </button>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
-
         <div className="mt-6 text-xs text-[#787672]">
-          <p>Click the eye icon to toggle visibility in the header. Changes require saving.</p>
+          <p>Click the eye icon to toggle visibility in the header. Save changes to persist.</p>
+          {/* Clarify visual indicators */}
+          <p className="mt-1">
+            Green border = New | Blue outline = Modified | Strikethrough = Deleted (pending save)
+          </p>
         </div>
       </div>
     </div>

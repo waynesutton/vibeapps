@@ -1,22 +1,22 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { requireAuth } from "./auth"; // Import the helper
+import { requireAuth } from "./auth"; // Import the auth helper
 
-// Query to list all tags
+// Query to list all tags - Publicly accessible
 export const list = query({
   args: {},
   handler: async (ctx): Promise<Doc<"tags">[]> => {
-    // TODO: Add authentication check - only admins should see all?
-    // Or maybe this is fine for populating the submit form?
+    // No auth needed for listing
     return await ctx.db.query("tags").order("asc").collect();
   },
 });
 
-// Query to list only tags shown in the header
+// Query to list only tags shown in the header - Publicly accessible
 export const listHeader = query({
   args: {},
   handler: async (ctx): Promise<Doc<"tags">[]> => {
+    // No auth needed for listing
     return await ctx.db
       .query("tags")
       .filter((q) => q.eq(q.field("showInHeader"), true))
@@ -25,14 +25,14 @@ export const listHeader = query({
   },
 });
 
-// Mutation to create a new tag
+// Mutation to create a new tag - Requires Auth
 export const create = mutation({
   args: {
     name: v.string(),
     showInHeader: v.boolean(),
   },
   handler: async (ctx, args): Promise<Id<"tags">> => {
-    await requireAuth(ctx); // Add authentication check
+    await requireAuth(ctx); // <<< Add authentication check
     const existing = await ctx.db
       .query("tags")
       .withIndex("by_name", (q) => q.eq("name", args.name))
@@ -47,7 +47,7 @@ export const create = mutation({
   },
 });
 
-// Mutation to update a tag
+// Mutation to update a tag - Requires Auth
 export const update = mutation({
   args: {
     tagId: v.id("tags"),
@@ -55,7 +55,7 @@ export const update = mutation({
     showInHeader: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    await requireAuth(ctx); // Add authentication check
+    await requireAuth(ctx); // <<< Add authentication check
     const { tagId, ...rest } = args;
 
     // Prepare potential update data
@@ -94,24 +94,11 @@ export const update = mutation({
   },
 });
 
-// Mutation to delete a tag
+// Mutation to delete a tag - Requires Auth
 export const deleteTag = mutation({
   args: { tagId: v.id("tags") },
   handler: async (ctx, args) => {
-    await requireAuth(ctx); // Add authentication check
-
-    // Optional: Check if the tag is in use by any stories before deleting
-    // This could be complex if stories have many tags.
-    // Alternatively, handle broken tag references gracefully in the frontend
-    // or update stories to remove the tagId.
-    // For simplicity now, we just delete the tag.
-    // const storiesUsingTag = await ctx.db.query('stories')
-    //     .filter(q => q.eq(q.field('tagIds'), args.tagId)) // This filter might not work directly on arrays
-    //     .collect();
-    // if (storiesUsingTag.length > 0) {
-    //     throw new Error("Cannot delete tag, it is currently in use.");
-    // }
-
+    await requireAuth(ctx); // <<< Add authentication check
     await ctx.db.delete(args.tagId);
   },
 });
