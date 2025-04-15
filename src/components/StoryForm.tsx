@@ -2,12 +2,18 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
-import { Github } from "lucide-react";
+import { Id, Doc } from "../../convex/_generated/dataModel";
+import { Github, Plus, X } from "lucide-react";
+
+interface Tag extends Doc<"tags"> {
+  // Inherits _id, _creationTime, name, showInHeader, isHidden?, backgroundColor?, textColor?
+}
 
 export function StoryForm() {
   const navigate = useNavigate();
   const [selectedTagIds, setSelectedTagIds] = React.useState<Id<"tags">[]>([]);
+  const [newTagInputValue, setNewTagInputValue] = React.useState("");
+  const [newTagNames, setNewTagNames] = React.useState<string[]>([]);
   const [formData, setFormData] = React.useState({
     title: "",
     tagline: "",
@@ -29,11 +35,31 @@ export function StoryForm() {
   const generateUploadUrl = useMutation(api.stories.generateUploadUrl);
   const submitStory = useMutation(api.stories.submit);
 
+  const handleAddNewTag = () => {
+    const tagName = newTagInputValue.trim();
+    if (
+      tagName &&
+      !newTagNames.some((t) => t.toLowerCase() === tagName.toLowerCase()) &&
+      !availableTags?.some((t) => t.name.toLowerCase() === tagName.toLowerCase())
+    ) {
+      setNewTagNames((prev) => [...prev, tagName]);
+      setNewTagInputValue("");
+      setSubmitError(null);
+    } else if (tagName) {
+      setSubmitError("Tag name already exists or is invalid.");
+    }
+  };
+
+  const handleRemoveNewTag = (tagName: string) => {
+    setNewTagNames((prev) => prev.filter((t) => t !== tagName));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting || !selectedTagIds.length) {
-      if (!selectedTagIds.length) {
-        setSubmitError("Please select at least one tag.");
+    const totalTagsSelected = selectedTagIds.length + newTagNames.length;
+    if (isSubmitting || totalTagsSelected === 0) {
+      if (totalTagsSelected === 0) {
+        setSubmitError("Please select or add at least one tag.");
       }
       return;
     }
@@ -59,11 +85,12 @@ export function StoryForm() {
         screenshotId = storageId;
       }
 
-      const result = await submitStory({
+      await submitStory({
         title: formData.title,
         tagline: formData.tagline,
         url: formData.url,
         tagIds: selectedTagIds,
+        newTagNames: newTagNames,
         name: formData.name,
         email: formData.email || undefined,
         screenshotId: screenshotId,
@@ -98,14 +125,14 @@ export function StoryForm() {
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         setSubmitError("Screenshot file size should not exceed 5MB.");
-        e.target.value = ""; // Clear the file input
-        setFormData((prev) => ({ ...prev, image: null })); // Reset image state
+        e.target.value = "";
+        setFormData((prev) => ({ ...prev, image: null }));
       } else {
-        setSubmitError(null); // Clear error if size is valid
+        setSubmitError(null);
         setFormData((prev) => ({ ...prev, image: file }));
       }
     } else {
-      setFormData((prev) => ({ ...prev, image: null })); // Handle case where file is deselected
+      setFormData((prev) => ({ ...prev, image: null }));
     }
   };
 
@@ -278,27 +305,65 @@ export function StoryForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#525252] mb-2">Tags</label>
-            <div className="flex flex-wrap gap-2">
+            <label className="block text-sm font-medium text-[#525252] mb-2">Select Tags</label>
+            <div className="flex flex-wrap gap-2 mb-4">
               {availableTags === undefined && (
                 <span className="text-sm text-gray-500">Loading tags...</span>
               )}
-              {availableTags?.map((tag) => (
+              {availableTags?.map((tag: Tag) => (
                 <button
                   key={tag._id}
                   type="button"
                   onClick={() => toggleTag(tag._id)}
-                  className={`px-3 py-1 rounded-md text-sm transition-colors ${
-                    selectedTagIds.includes(tag._id)
-                      ? "bg-[#F4F0ED] text-[#2A2825]"
-                      : "text-[#787672] hover:text-[#525252] bg-white border border-[#D5D3D0]"
-                  }`}>
+                  className={`px-3 py-1 rounded-md text-sm transition-colors border ${selectedTagIds.includes(tag._id) ? "bg-[#F4F0ED] text-[#2A2825] border-[#D5D3D0]" : "bg-white text-[#787672] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"}`}>
                   {tag.name}
                 </button>
               ))}
             </div>
-            {selectedTagIds.length === 0 && (
-              <p className="text-xs text-red-500 mt-1">Please select at least one tag.</p>
+
+            <label className="block text-sm font-medium text-[#525252] mb-2">Add New Tags</label>
+            <div className="flex gap-2 mb-2">
+              <input
+                type="text"
+                value={newTagInputValue}
+                onChange={(e) => setNewTagInputValue(e.target.value)}
+                placeholder="Enter new tag name..."
+                className="flex-1 px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] border border-[#D5D3D0] text-sm"
+                disabled={isSubmitting}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddNewTag();
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleAddNewTag}
+                disabled={!newTagInputValue.trim() || isSubmitting}
+                className="px-3 py-1 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+                <Plus className="w-4 h-4" /> Add
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {newTagNames.map((tagName) => (
+                <span
+                  key={tagName}
+                  className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-sm border border-blue-200">
+                  {tagName}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveNewTag(tagName)}
+                    disabled={isSubmitting}
+                    className="text-blue-500 hover:text-blue-700">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+
+            {selectedTagIds.length === 0 && newTagNames.length === 0 && (
+              <p className="text-xs text-red-500 mt-1">Please select or add at least one tag.</p>
             )}
           </div>
 
@@ -307,7 +372,7 @@ export function StoryForm() {
               type="submit"
               disabled={
                 isSubmitting ||
-                !selectedTagIds.length ||
+                (selectedTagIds.length === 0 && newTagNames.length === 0) ||
                 !formData.title ||
                 !formData.tagline ||
                 !formData.url ||

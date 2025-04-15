@@ -79,22 +79,46 @@ export function Layout() {
             </div>
             <h1 className="title-font text-[#2A2825] text-2xl mb-1">{siteTitle}</h1>
             <p className="text-sm text-[#787672] mb-4">Vibe Coding Apps Directory</p>
-            <div className="flex justify-center gap-2 mb-4">
-              {headerTags === undefined && <div>Loading tags...</div>}
+            <div className="flex justify-center flex-wrap gap-2 mb-4 px-4">
+              {headerTags === undefined && (
+                <div className="text-sm text-gray-500">Loading tags...</div>
+              )}
               {headerTags
-                ?.filter((tag) => tag.showInHeader)
-                .map((tag) => (
-                  <button
-                    key={tag._id}
-                    onClick={() =>
-                      setSelectedTagId(selectedTagId === tag._id ? undefined : tag._id)
-                    }
-                    className={`text-[#787672] hover:text-[#525252] px-3 py-1 rounded-md transition-colors ${
-                      selectedTagId === tag._id ? "bg-[#F4F0ED] text-[#2A2825]" : ""
-                    }`}>
-                    {tag.name}
-                  </button>
-                ))}
+                // Filter tags shown in header AND not hidden
+                ?.filter((tag) => tag.showInHeader && !tag.isHidden)
+                .map((tag) => {
+                  const isSelected = selectedTagId === tag._id;
+                  const defaultBgColor = "#FFFFFF"; // White background default
+                  const defaultTextColor = "#787672"; // Default text color
+                  const selectedBgColor = "#F4F0ED"; // Selected background
+                  const selectedTextColor = "#2A2825"; // Selected text
+
+                  const bgColor = isSelected
+                    ? selectedBgColor
+                    : tag.backgroundColor || defaultBgColor;
+                  const textColor = isSelected
+                    ? selectedTextColor
+                    : tag.textColor || defaultTextColor;
+                  const border = isSelected
+                    ? `1px solid ${selectedBgColor}` // Use BG color for border when selected
+                    : tag.backgroundColor
+                      ? "1px solid transparent" // No border if custom BG
+                      : `1px solid #D5D3D0`; // Default border
+
+                  return (
+                    <button
+                      key={tag._id}
+                      onClick={() => setSelectedTagId(isSelected ? undefined : tag._id)}
+                      className={`px-3 py-1 rounded-md text-sm font-medium transition-colors duration-150 ease-in-out hover:opacity-80`}
+                      style={{
+                        backgroundColor: bgColor,
+                        color: textColor,
+                        border: border,
+                      }}>
+                      {tag.name}
+                    </button>
+                  );
+                })}
             </div>
             <div className="flex justify-center gap-4 items-center">
               <div className="flex items-center gap-2">

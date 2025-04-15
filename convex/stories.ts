@@ -2,7 +2,7 @@ import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { Doc, Id } from "./_generated/dataModel";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 // Extend the Doc type for Story to include calculated fields and tags
 export type StoryWithDetails = Doc<"stories"> & {
@@ -135,14 +135,15 @@ export const submit = mutation({
     title: v.string(),
     tagline: v.string(),
     url: v.string(),
-    tagIds: v.array(v.id("tags")), // Changed from tags: v.array(v.string())
-    name: v.string(), // NEW: Submitter's name
-    email: v.optional(v.string()), // NEW: Submitter's email
+    tagIds: v.array(v.id("tags")), // Existing tag IDs
+    newTagNames: v.optional(v.array(v.string())), // NEW: Names of new tags to create
+    name: v.string(),
+    email: v.optional(v.string()),
     screenshotId: v.optional(v.id("_storage")),
     linkedinUrl: v.optional(v.string()),
     twitterUrl: v.optional(v.string()),
-    githubUrl: v.optional(v.string()), // Changed from redditUrl
-    chefShowUrl: v.optional(v.string()), // Added Chef.show URL
+    githubUrl: v.optional(v.string()),
+    chefShowUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const slug = generateSlug(args.title);
@@ -155,13 +156,30 @@ export const submit = mutation({
       throw new Error(`Slug "${slug}" already exists for story: ${existing.title}`);
     }
 
-    // Validate tagIds exist (optional but good practice)
-    for (const tagId of args.tagIds) {
+    let allTagIds: Id<"tags">[] = [...args.tagIds]; // Start with existing tag IDs
+
+    // Ensure any new tags are created and get their IDs
+    if (args.newTagNames && args.newTagNames.length > 0) {
+      const newCreatedTagIds = await ctx.runMutation(internal.tags.ensureTags, {
+        tagNames: args.newTagNames,
+      });
+      // Combine existing and newly created tag IDs, ensuring uniqueness
+      allTagIds = [...new Set([...allTagIds, ...newCreatedTagIds])];
+    }
+
+    // Validate final tagIds exist (optional but good practice)
+    for (const tagId of allTagIds) {
       const tag = await ctx.db.get(tagId);
       if (!tag) {
-        console.warn(`Tag with ID ${tagId} not found during submission.`);
-        // Decide whether to throw error or just skip the tag
+        console.warn(`Tag with ID ${tagId} not found during final check.`);
+        // Filter out potentially invalid IDs just in case
+        allTagIds = allTagIds.filter((id) => id !== tagId);
       }
+    }
+
+    // Only proceed if there's at least one valid tag
+    if (allTagIds.length === 0) {
+      throw new Error("At least one valid tag is required to submit a story.");
     }
 
     const storyId = await ctx.db.insert("stories", {
@@ -169,9 +187,9 @@ export const submit = mutation({
       slug: slug,
       url: args.url,
       description: args.tagline,
-      tagIds: args.tagIds, // Use tagIds
-      name: args.name, // USE: name
-      email: args.email, // USE: email
+      tagIds: allTagIds, // Use the combined & validated list of tag IDs
+      name: args.name,
+      email: args.email,
       votes: 1,
       commentCount: 0,
       screenshotId: args.screenshotId,
@@ -179,9 +197,10 @@ export const submit = mutation({
       ratingCount: 0,
       linkedinUrl: args.linkedinUrl,
       twitterUrl: args.twitterUrl,
-      githubUrl: args.githubUrl, // Changed from redditUrl
-      chefShowUrl: args.chefShowUrl, // Added Chef.show URL
-      status: "approved", // Changed from "pending"
+      githubUrl: args.githubUrl,
+      chefShowUrl: args.chefShowUrl,
+      status: "approved",
+      isHidden: false, // Default to not hidden
     });
 
     return { storyId, slug };

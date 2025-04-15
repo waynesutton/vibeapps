@@ -12,7 +12,7 @@ import { Id, Doc } from "../../convex/_generated/dataModel"; // Import Id and Do
 // Removed MOCK_COMMENTS
 
 interface StoryDetailProps {
-  story: Story; // Expecting story with resolved tags and screenshotUrl
+  story: Story; // Expecting story with resolved tags (including colors and isHidden)
 }
 
 export function StoryDetail({ story }: StoryDetailProps) {
@@ -32,15 +32,14 @@ export function StoryDetail({ story }: StoryDetailProps) {
   const addComment = useMutation(api.comments.add);
 
   const handleVote = () => {
+    // TODO: Add auth check & potentially disable after voting
     voteStory({ storyId: story._id });
-    // TODO: Add optimistic update or visual feedback
   };
 
   const handleRating = (value: number) => {
+    // TODO: Add auth check & prevent re-rating
     if (!hasRated) {
       rateStory({ storyId: story._id, rating: value });
-      // TODO: Set local state hasRated based on auth/user status later
-      // Maybe provide immediate visual feedback before confirmation
     }
   };
 
@@ -49,10 +48,10 @@ export function StoryDetail({ story }: StoryDetailProps) {
     addComment({
       storyId: story._id,
       content,
-      author: author || "Anonymous", // Use provided author or default
+      author: author || "Anonymous",
       parentId: replyToId || undefined,
     });
-    setReplyToId(null); // Close reply form
+    setReplyToId(null);
   };
 
   const averageRating = story.ratingCount > 0 ? story.ratingSum / story.ratingCount : 0;
@@ -60,19 +59,23 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <Link to="/" className="text-[#787672] hover:text-[#525252] inline-block mb-6">
+      <Link to="/" className="text-[#787672] hover:text-[#525252] inline-block mb-6 text-sm">
         ← Back to Apps
       </Link>
 
-      <article className="bg-white rounded-lg p-4 border border-[#D5D3D0]">
+      <article className="bg-white rounded-lg p-4 sm:p-6 border border-[#D5D3D0]">
         <div className="flex gap-4">
           <div className="flex flex-col items-center gap-1 pt-1 min-w-[40px]">
-            <button onClick={handleVote} className="text-[#2A2825] hover:bg-[#F4F0ED] p-1 rounded">
+            <button
+              onClick={handleVote}
+              className="text-[#2A2825] hover:bg-[#F4F0ED] p-1 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              // TODO: Add disabled logic based on auth/vote status
+            >
               <ChevronUp className="w-5 h-5" />
             </button>
             <span className="text-[#525252] font-medium text-sm">{story.votes}</span>
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h1 className="text-xl lg:text-2xl font-medium text-[#525252] mb-2">
               <a
                 href={story.url}
@@ -87,13 +90,13 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 <img
                   src={story.screenshotUrl}
                   alt={`${story.title} screenshot`}
-                  className="w-full max-h-[50vh] object-contain bg-gray-100"
+                  className="w-full max-h-[60vh] object-contain bg-gray-100"
                   loading="lazy"
                 />
               </div>
             )}
             <p className="text-[#525252] mb-4 prose prose-sm max-w-none">{story.description}</p>
-            <div className="flex items-center gap-4 text-sm text-[#787672] flex-wrap">
+            <div className="flex items-center gap-4 text-sm text-[#787672] flex-wrap mb-3">
               <span>by {story.name}</span>
               <span>{formatDistanceToNow(story._creationTime)} ago</span>
               <Link to="#comments" className="flex items-center gap-1 hover:text-[#525252]">
@@ -101,15 +104,25 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 {comments?.length ?? 0} Comments
               </Link>
             </div>
-            <div className="mt-3 flex gap-2 flex-wrap">
-              {(story.tags || []).map((tag: Doc<"tags">) => (
-                <Link
-                  key={tag._id}
-                  to={`/?tag=${tag._id}`}
-                  className="text-xs text-[#787672] bg-[#F4F0ED] px-2 py-1 rounded hover:bg-[#e5e1de] hover:text-[#525252] transition-colors">
-                  {tag.name}
-                </Link>
-              ))}
+            <div className="flex gap-1.5 flex-wrap">
+              {(story.tags || []).map(
+                (tag: Doc<"tags">) =>
+                  // Only render tags that are not hidden
+                  !tag.isHidden && (
+                    <Link
+                      key={tag._id}
+                      to={`/?tag=${tag._id}`}
+                      className="px-2 py-0.5 rounded text-xs font-medium transition-opacity hover:opacity-80"
+                      style={{
+                        backgroundColor: tag.backgroundColor || "#F4F0ED", // Default BG
+                        color: tag.textColor || "#525252", // Default Text
+                        // Add border only if no background color is set
+                        border: tag.backgroundColor ? "none" : `1px solid #D5D3D0`,
+                      }}>
+                      {tag.name}
+                    </Link>
+                  )
+              )}
             </div>
           </div>
         </div>
@@ -129,7 +142,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 disabled={hasRated} // TODO: Base on actual user rating status
                 className={`p-1 transition-colors disabled:cursor-not-allowed ${
                   hasRated
-                    ? value <= Math.round(averageRating) // Show rounded average rating if already rated
+                    ? value <= Math.round(averageRating) // Show rounded average if already rated
                       ? "text-yellow-400"
                       : "text-[#D5D3D0]"
                     : value <= (hoveredRating || 0) // Show hover state
@@ -158,16 +171,21 @@ export function StoryDetail({ story }: StoryDetailProps) {
         <CommentForm onSubmit={handleCommentSubmit} />
         <div className="mt-8 space-y-6 border-t border-[#F4F0ED] pt-6">
           {comments === undefined && <div>Loading comments...</div>}
-          {comments?.map((comment: CommentType) => (
-            <React.Fragment key={comment._id}>
-              <Comment comment={comment} onReply={(parentId) => setReplyToId(parentId)} />
-              {replyToId === comment._id && (
-                <div className="pl-8 pt-4">
-                  <CommentForm onSubmit={handleCommentSubmit} parentId={comment._id} />
-                </div>
-              )}
-            </React.Fragment>
-          ))}
+          {comments?.map((commentData) => {
+            // Rename variable to avoid conflict
+            // Ensure commentData conforms to CommentType, though validation should happen in backend
+            const comment = commentData as CommentType;
+            return (
+              <React.Fragment key={comment._id}>
+                <Comment comment={comment} onReply={(parentId) => setReplyToId(parentId)} />
+                {replyToId === comment._id && (
+                  <div className="pl-8 pt-4">
+                    <CommentForm onSubmit={handleCommentSubmit} parentId={comment._id} />
+                  </div>
+                )}
+              </React.Fragment>
+            );
+          })}
           {comments && comments.length === 0 && (
             <div className="text-[#787672]">No comments yet. Be the first!</div>
           )}

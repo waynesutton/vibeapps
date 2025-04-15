@@ -47,6 +47,9 @@ export default defineSchema({
   tags: defineTable({
     name: v.string(),
     showInHeader: v.boolean(),
+    isHidden: v.optional(v.boolean()), // Added for admin hide/show
+    backgroundColor: v.optional(v.string()), // Optional hex color
+    textColor: v.optional(v.string()), // Optional hex color
   }).index("by_name", ["name"]),
 
   settings: defineTable({

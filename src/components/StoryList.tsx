@@ -47,7 +47,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
               className={`flex ${viewMode === "vibe" ? "flex-col items-center w-[70px] flex-shrink-0" : viewMode === "grid" ? "flex-row items-center gap-1 pt-1" : "flex-col items-center min-w-[40px] pt-1"}`}>
               {viewMode === "vibe" ? (
                 <div className="flex flex-col items-center w-full">
-                  <div className="bg-gradient-to-b from-[#FBF5DB] to-[#FAF9F1] rounded-t-md w-full h-[62px] flex flex-col items-center justify-center text-lg border border border-[#D5D3D0] font-normal text-#2A2825 mb-[4px]">
+                  <div className="bg-gradient-to-b from-[#FBF5DB] to-[#FAF9F1] rounded-t-md w-full h-[62px] flex flex-col items-center justify-center text-lg border border border-[#D5D3D0] font-normal text-[#2A2825] mb-[4px]">
                     {story.votes}
                     <div className="text-xs">Vibes</div>
                   </div>
@@ -126,15 +126,23 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                   </a>
                 )}
                 <div
-                  className={`flex gap-2 flex-wrap ${viewMode === "vibe" ? "max-w-[calc(100%-150px)] overflow-hidden whitespace-nowrap" : ""}`}>
-                  {(story.tags || []).map((tag: Doc<"tags">) => (
-                    <Link
-                      key={tag._id}
-                      to={`/?tag=${tag._id}`}
-                      className="text-[#787672] hover:text-[#525252] flex-shrink-0">
-                      {tag.name}
-                    </Link>
-                  ))}
+                  className={`flex gap-1.5 flex-wrap ${viewMode === "vibe" ? "max-w-[calc(100%-150px)] overflow-hidden whitespace-nowrap" : ""}`}>
+                  {(story.tags || []).map(
+                    (tag: Doc<"tags">) =>
+                      !tag.isHidden && (
+                        <Link
+                          key={tag._id}
+                          to={`/?tag=${tag._id}`}
+                          className="px-2 py-0.5 rounded text-xs font-medium transition-opacity hover:opacity-80"
+                          style={{
+                            backgroundColor: tag.backgroundColor || "#F4F0ED",
+                            color: tag.textColor || "#525252",
+                            border: tag.backgroundColor ? "none" : `1px solid #D5D3D0`,
+                          }}>
+                          {tag.name}
+                        </Link>
+                      )
+                  )}
                 </div>
               </div>
             </div>

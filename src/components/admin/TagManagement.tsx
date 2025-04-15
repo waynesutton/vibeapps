@@ -1,353 +1,475 @@
-import React, { useState, useEffect } from "react";
-import { Plus, X, Eye, EyeOff, Save, Trash2 } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { Plus, X, Eye, EyeOff, Save, Trash2, Archive, ArchiveRestore, Palette } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
-import type { Tag } from "../../types";
+import { Id, Doc } from "../../../convex/_generated/dataModel";
 
-// Make properties explicit to help TS
-interface EditableTag extends Tag {
-  _id: Id<"tags">;
+// Interface matching the updated Convex schema for tags
+// Use string | null for colors locally to represent clearing, but handle conversion for mutation
+interface EditableTag extends Omit<Doc<"tags">, "backgroundColor" | "textColor"> {
+  // Omit to redefine
+  _id: Id<"tags">; // Existing or temporary client-side
   _creationTime: number;
   name: string;
   showInHeader: boolean;
+  isHidden?: boolean;
+  backgroundColor?: string | null;
+  textColor?: string | null;
+
+  // UI State Flags
   isNew?: boolean;
   isModified?: boolean;
   isDeleted?: boolean;
 }
 
 export function TagManagement() {
-  const allTags = useQuery(api.tags.list);
+  // Use the admin query to fetch all tags, including hidden ones
+  const allTagsAdmin = useQuery(api.tags.listAllAdmin);
   const createTag = useMutation(api.tags.create);
   const updateTag = useMutation(api.tags.update);
-  const deleteTag = useMutation(api.tags.deleteTag);
+  const deleteTagMutation = useMutation(api.tags.deleteTag);
 
   const [editableTags, setEditableTags] = useState<EditableTag[]>([]);
   const [newTagName, setNewTagName] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false); // Generic processing state
   const [error, setError] = useState<string | null>(null);
+  const [editColorsTagId, setEditColorsTagId] = useState<Id<"tags"> | null>(null);
 
-  // Load tags from Convex into editable state and reset local flags
+  // Sync Convex data to local editable state
   useEffect(() => {
-    if (allTags) {
-      // Preserve locally modified/new/deleted tags if saving is in progress
-      // or if there was an error, otherwise refresh from source.
-      if (!isSaving && !error) {
+    if (allTagsAdmin) {
+      // Only update local state if not currently processing to avoid overwriting pending changes
+      if (!isProcessing) {
         setEditableTags(
-          allTags.map((tag) => ({
-            ...tag,
-            isNew: false,
-            isModified: false,
-            isDeleted: false,
-          }))
+          // Ensure incoming data conforms to EditableTag, handling potentially undefined colors
+          allTagsAdmin.map(
+            (tag): EditableTag => ({
+              ...tag,
+              backgroundColor: tag.backgroundColor ?? null,
+              textColor: tag.textColor ?? null,
+              isNew: false,
+              isModified: false,
+              isDeleted: false,
+            })
+          )
         );
-      } else if (error) {
-        // On error, maybe reconcile? For now, just keep local state
-        // If a tag was successfully created/deleted but others failed,
-        // the useQuery update might overwrite local changes.
-        // A more robust solution would diff here too.
       }
-      // If isSaving, do nothing, let handleSave complete.
     }
-  }, [allTags, isSaving, error]); // Depend on isSaving and error
+    // Keep dependency on isProcessing to prevent refresh during saves
+  }, [allTagsAdmin, isProcessing]);
+
+  // --- Local State Update Handlers ---
+
+  const handleFieldChange = (tagId: Id<"tags">, field: keyof EditableTag, value: any) => {
+    setEditableTags((prevTags) =>
+      prevTags.map((tag) =>
+        tag._id === tagId ? { ...tag, [field]: value, isModified: true } : tag
+      )
+    );
+    setError(null); // Clear error on modification
+  };
 
   const handleAddTag = (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     const name = newTagName.trim();
     if (!name) {
       setError("Tag name cannot be empty.");
       return;
     }
+    // Check against current editable tags (including non-persisted new ones)
     if (
-      editableTags.some((tag) => tag.name.toLowerCase() === name.toLowerCase() && !tag.isDeleted)
+      editableTags.some((tag) => !tag.isDeleted && tag.name.toLowerCase() === name.toLowerCase())
     ) {
       setError("Tag name already exists.");
       return;
     }
-    // Add visually with isNew flag
-    setEditableTags((prevTags) => [
-      ...prevTags,
-      {
-        // Generate a temporary client-side ID for new tags
-        // Note: This ID is temporary and will be replaced by the Convex ID upon successful save.
-        _id: `new-${Date.now()}-${Math.random()}` as Id<"tags">,
-        name,
-        showInHeader: true, // Default for new tags
-        _creationTime: Date.now(),
-        isNew: true,
-        isModified: true, // Mark as modified to be included in save
-        isDeleted: false,
-      },
-    ]);
-    setNewTagName("");
-    setError(null);
-  };
 
-  const handleToggleHeader = (tagId: Id<"tags">) => {
-    setEditableTags((prevTags) =>
-      prevTags.map((tag) =>
-        tag._id === tagId ? { ...tag, showInHeader: !tag.showInHeader, isModified: true } : tag
-      )
-    );
+    const newClientTag: EditableTag = {
+      _id: `new-${Date.now()}-${Math.random()}` as Id<"tags">,
+      name,
+      showInHeader: true, // Default
+      isHidden: false, // Default
+      backgroundColor: null,
+      textColor: null,
+      _creationTime: Date.now(),
+      isNew: true,
+      isModified: true, // Mark as modified to be included in save
+      isDeleted: false,
+    };
+
+    setEditableTags((prevTags) => [...prevTags, newClientTag]);
+    setNewTagName("");
   };
 
   const handleDeleteTag = (tagId: Id<"tags">) => {
-    setEditableTags((prevTags) =>
-      prevTags.map((tag) =>
-        // Mark for deletion, setting isModified
-        tag._id === tagId ? { ...tag, isDeleted: true, isModified: true } : tag
-      )
-    );
+    handleFieldChange(tagId, "isDeleted", true);
   };
 
   const handleUndeleteTag = (tagId: Id<"tags">) => {
-    setEditableTags((prevTags) =>
-      prevTags.map(
-        (tag) =>
-          // Unmark deletion, ensuring isModified reflects whether it needs saving
-          // If it was originally new, it just needs isNew=true, isModified=true
-          // If it was existing, it needs isModified=true if state differs from original
-          tag._id === tagId ? { ...tag, isDeleted: false, isModified: true } : tag // Simplified: always mark modified on undo for now
-      )
-    );
+    // If it was new and deleted, just remove it from the list
+    const tag = editableTags.find((t) => t._id === tagId);
+    if (tag?.isNew && tag?.isDeleted) {
+      setEditableTags((prev) => prev.filter((t) => t._id !== tagId));
+    } else {
+      handleFieldChange(tagId, "isDeleted", false);
+      // If it was *not* new, ensure isModified is true to trigger update
+      setEditableTags((prevTags) =>
+        prevTags.map((t) => (t._id === tagId ? { ...t, isModified: true } : t))
+      );
+    }
   };
 
+  const handleToggleHeader = (tagId: Id<"tags">) => {
+    const currentTag = editableTags.find((t) => t._id === tagId);
+    if (currentTag) {
+      handleFieldChange(tagId, "showInHeader", !currentTag.showInHeader);
+    }
+  };
+
+  const handleToggleHidden = (tagId: Id<"tags">) => {
+    const currentTag = editableTags.find((t) => t._id === tagId);
+    if (currentTag) {
+      handleFieldChange(tagId, "isHidden", !currentTag.isHidden);
+    }
+  };
+
+  // --- Save Logic ---
+
   const handleSave = async () => {
-    setIsSaving(true);
+    setIsProcessing(true);
     setError(null);
-    const changesToSave: Array<Promise<unknown>> = [];
+    let success = true;
+    let encounteredError: string | null = null;
 
-    // Get a fresh snapshot of tags from Convex to avoid stale data issues
-    // This requires fetching `allTags` at the point of save or trusting the cache
-    const currentTagsMap = new Map(allTags?.map((t) => [t._id, t]));
-    const currentTagsByName = new Map(allTags?.map((t) => [t.name.toLowerCase(), t]));
+    const tagsToProcess = editableTags.filter((tag) => tag.isModified);
 
-    const tagsToKeepLocally: EditableTag[] = [];
-    const successfullySavedIds = new Set<Id<"tags">>(); // Track successful saves
-
-    for (const tag of editableTags) {
-      if (!tag.isModified) {
-        tagsToKeepLocally.push(tag); // Keep unmodified tags
-        continue;
-      }
-
-      const originalTag = currentTagsMap.get(tag._id);
-
-      if (tag.isDeleted) {
-        if (!tag.isNew && originalTag) {
-          // Only attempt to delete existing tags
-          changesToSave.push(
-            deleteTag({ tagId: tag._id })
-              .then(() => successfullySavedIds.add(tag._id))
-              .catch((err) => {
-                // Handle specific error for this tag
-                console.error(`Failed to delete tag ${tag.name}:`, err);
-                tagsToKeepLocally.push({ ...tag, isDeleted: true, isModified: true }); // Keep in UI as deleted but unsaved
-                throw err; // Re-throw to fail Promise.all
-              })
-          );
-        }
-        // If it was new and marked for deletion, it simply vanishes, don't keep it locally
-      } else if (tag.isNew) {
-        // Check for name collisions just before saving
-        if (currentTagsByName.has(tag.name.toLowerCase())) {
-          setError(`Tag name "${tag.name}" already exists.`);
-          tagsToKeepLocally.push({ ...tag }); // Keep the unsaved new tag in UI
-          continue; // Skip this tag, let others proceed if possible
-        }
-        changesToSave.push(
-          createTag({ name: tag.name, showInHeader: tag.showInHeader })
-            .then((newId) => successfullySavedIds.add(newId)) // Track success by new ID
-            .catch((err) => {
-              console.error(`Failed to create tag ${tag.name}:`, err);
-              tagsToKeepLocally.push({ ...tag, isNew: true, isModified: true }); // Keep in UI as new but unsaved
-              throw err;
-            })
-        );
-      } else if (originalTag) {
-        // It's an existing tag being updated
-        const updates: { name?: string; showInHeader?: boolean } = {};
-        if (tag.name !== originalTag.name) updates.name = tag.name;
-        if (tag.showInHeader !== originalTag.showInHeader) updates.showInHeader = tag.showInHeader;
-
-        if (Object.keys(updates).length > 0) {
-          // Check for name collision if name changed
-          if (updates.name) {
-            const existingByName = currentTagsByName.get(updates.name.toLowerCase());
-            if (existingByName && existingByName._id !== tag._id) {
-              setError(`Tag name "${updates.name}" is already in use by another tag.`);
-              tagsToKeepLocally.push({ ...tag }); // Keep the unsaved modified tag
-              continue; // Skip this tag
-            }
+    for (const tag of tagsToProcess) {
+      try {
+        if (tag.isDeleted) {
+          if (!tag.isNew) {
+            // Only delete if it exists on the server
+            await deleteTagMutation({ tagId: tag._id });
           }
-          changesToSave.push(
-            updateTag({ tagId: tag._id, ...updates })
-              .then(() => successfullySavedIds.add(tag._id))
-              .catch((err) => {
-                console.error(`Failed to update tag ${tag.name}:`, err);
-                tagsToKeepLocally.push({ ...tag, isModified: true }); // Keep in UI as modified but unsaved
-                throw err;
-              })
-          );
+          // If new and deleted, it just disappears locally (will be filtered out)
+        } else if (tag.isNew) {
+          await createTag({
+            name: tag.name,
+            showInHeader: tag.showInHeader,
+            isHidden: tag.isHidden ?? false,
+            // Pass null as undefined for creation if needed, or let backend handle default
+            backgroundColor: tag.backgroundColor ?? undefined,
+            textColor: tag.textColor ?? undefined,
+          });
         } else {
-          tagsToKeepLocally.push({ ...tag, isModified: false }); // No actual change, reset flag
+          // Existing tag update
+          const updatePayload: Parameters<typeof updateTag>[0] = { tagId: tag._id };
+
+          // Explicitly include fields that might change
+          updatePayload.name = tag.name;
+          updatePayload.showInHeader = tag.showInHeader;
+          updatePayload.isHidden = tag.isHidden;
+          // Convert null to undefined when calling mutation for optional fields
+          updatePayload.backgroundColor = tag.backgroundColor ?? undefined;
+          updatePayload.textColor = tag.textColor ?? undefined;
+
+          await updateTag(updatePayload);
         }
-      } else {
-        // Tag exists locally but not in original map (e.g., created and modified before save)
-        // Treat as new, potentially redundant with isNew check but safer
-        if (currentTagsByName.has(tag.name.toLowerCase())) {
-          setError(`Tag name "${tag.name}" already exists.`);
-          tagsToKeepLocally.push({ ...tag });
-          continue;
-        }
-        changesToSave.push(
-          createTag({ name: tag.name, showInHeader: tag.showInHeader })
-            .then((newId) => successfullySavedIds.add(newId))
-            .catch((err) => {
-              console.error(`Failed to create tag ${tag.name}:`, err);
-              tagsToKeepLocally.push({ ...tag, isNew: true, isModified: true });
-              throw err;
-            })
+        // If successful, mark the tag as no longer modified in the local state immediately
+        // This assumes the mutation succeeded
+        setEditableTags(
+          (prev) =>
+            prev
+              .map((t) =>
+                t._id === tag._id
+                  ? { ...t, isModified: false, isNew: false, isDeleted: tag.isDeleted } // Keep isDeleted if it was deleted
+                  : t
+              )
+              .filter((t) => !(t.isNew && t.isDeleted)) // Remove tags that were new and then deleted
         );
+      } catch (err: any) {
+        console.error(`Failed operation for tag ${tag.name} (${tag._id}):`, err);
+        success = false;
+        encounteredError = err?.data?.message || err.message || "An error occurred.";
+        // Keep the tag marked as modified so the user can retry
+        setError(`Error saving tag "${tag.name}": ${encounteredError}`); // Show specific error
+        // Stop processing further tags on first error to avoid confusing state
+        break;
       }
     }
 
-    if (changesToSave.length === 0 && !error) {
-      // No actual changes were attempted or needed persistence, and no validation errors occurred
-      setEditableTags((prev) =>
-        prev.map((t) => ({ ...t, isModified: false, isNew: false, isDeleted: false }))
-      );
-      setIsSaving(false);
-      return;
+    setIsProcessing(false);
+    if (!success && !error) {
+      setError(encounteredError || "Failed to save some changes.");
+    } else if (success) {
+      setError(null); // Clear error on full success
+      console.log("Tag changes saved successfully.");
+      // Final state refresh will be handled by the useEffect watching allTagsAdmin
     }
-
-    try {
-      await Promise.all(changesToSave);
-      console.log(
-        "Tag changes saved successfully (partial success possible if errors occurred). Waiting for data refresh."
-      );
-      // Successful operations are tracked in `successfullySavedIds`
-      // The useEffect watching `allTags` should handle the state refresh.
-      // We could manually update state here for faster feedback, but rely on useQuery for now.
-      // Reset local error state only if all promises resolved
-      setError(null);
-    } catch (err: any) {
-      console.error("One or more tag operations failed:", err);
-      // Error message might already be set by specific catch blocks or name checks
-      if (!error) {
-        // Provide a more informative error message
-        let message = "Failed to save some tag changes.";
-        if (err?.data?.message?.includes("Unauthenticated")) {
-          message = "Authentication failed. Please log in again.";
-        } else if (err?.data?.message) {
-          message = `Error: ${err.data.message}`;
-        } else if (err instanceof Error) {
-          message = err.message;
-        }
-        setError(message);
-      }
-      // Update local state to reflect which tags failed
-      // This is partially handled by pushing to tagsToKeepLocally in individual catches
-      setEditableTags(tagsToKeepLocally);
-    } finally {
-      setIsSaving(false);
+    // Filter out tags that were successfully deleted and are not new
+    if (success) {
+      setEditableTags((prev) => prev.filter((t) => !(t.isDeleted && !t.isNew)));
     }
   };
 
   const hasPendingChanges = editableTags.some((tag) => tag.isModified);
-  // Filter out tags marked for deletion for display, unless showing deleted section
-  const visibleTags = editableTags.filter((tag) => !tag.isDeleted);
 
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+        {/* Header and Save Button */}
         <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
           <h2 className="text-xl font-medium text-[#525252]">Manage Tags</h2>
           {hasPendingChanges && (
             <button
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isProcessing}
               className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 disabled:opacity-50 text-sm">
               <Save className="w-4 h-4" />
-              {isSaving ? "Saving..." : "Save Changes"}
+              {isProcessing ? "Saving..." : "Save Changes"}
             </button>
           )}
         </div>
 
+        {/* Error Display */}
         {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">{error}</div>
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
+            {error}
+            <button onClick={() => setError(null)} className="ml-4 text-red-900 font-bold">
+              Dismiss
+            </button>
+          </div>
         )}
 
+        {/* Add New Tag Form */}
         <form onSubmit={handleAddTag} className="flex gap-2 mb-6">
           <input
             type="text"
             value={newTagName}
             onChange={(e) => {
               setNewTagName(e.target.value);
-              setError(null);
+              if (error?.includes("already exists")) setError(null); // Clear name error on type
             }}
             placeholder="Enter new tag name"
             className="flex-1 px-3 py-2 border border-[#D5D3D0] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] focus:border-[#2A2825] text-sm"
+            disabled={isProcessing}
           />
           <button
             type="submit"
-            disabled={!newTagName.trim() || isSaving}
+            disabled={!newTagName.trim() || isProcessing}
             className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
             <Plus className="w-4 h-4" />
             Add Tag
           </button>
         </form>
 
-        {allTags === undefined && <div>Loading tags...</div>}
+        {/* Loading State */}
+        {allTagsAdmin === undefined && <div>Loading tags...</div>}
 
-        <div className="space-y-2">
-          {visibleTags.map((tag) => (
+        {/* Tag List */}
+        <div className="space-y-3">
+          {editableTags.map((tag) => (
             <div
-              key={tag._id} // Use _id which is stable even for new tags (client-generated)
-              className={`flex items-center justify-between bg-[#F8F7F7] px-3 py-2 rounded-md border ${tag.isNew && !tag.isDeleted ? "border-green-300" : "border-transparent"} ${tag.isModified && !tag.isDeleted ? "ring-1 ring-blue-300 ring-inset" : ""} ${tag.isDeleted ? "border-red-300 opacity-50" : ""}`}>
-              <span
-                className={`text-sm ${tag.isModified && !tag.isDeleted ? "italic text-blue-600" : "text-[#525252]"} ${tag.isDeleted ? "line-through" : ""}`}>
-                {tag.name}
-              </span>
-              {!tag.isDeleted && (
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => handleToggleHeader(tag._id)}
-                    className="text-[#787672] hover:text-[#525252] disabled:opacity-50"
-                    title={tag.showInHeader ? "Visible in header" : "Hidden from header"}
-                    disabled={isSaving}>
-                    {tag.showInHeader ? (
-                      <Eye className="w-4 h-4 text-green-600" />
-                    ) : (
-                      <EyeOff className="w-4 h-4" />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => handleDeleteTag(tag._id)}
-                    className="text-red-500 hover:text-red-700 disabled:opacity-50"
-                    title="Delete tag"
-                    disabled={isSaving}>
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+              key={tag._id}
+              className={`border rounded-md overflow-hidden transition-all duration-200 ease-in-out ${tag.isDeleted ? "border-red-300 bg-red-50" : tag.isNew ? "border-green-300 bg-green-50" : tag.isModified ? "border-blue-300 bg-blue-50" : "border-gray-200 bg-white"}`}>
+              {/* Main Tag Row */}
+              <div
+                className={`flex items-center justify-between p-3 ${tag.isDeleted ? "opacity-60" : ""}`}>
+                {/* Tag Name and Colors */}
+                <div className="flex items-center gap-2 flex-wrap min-w-0 mr-2">
+                  <span
+                    className="inline-block px-2 py-0.5 rounded text-sm font-medium max-w-full truncate"
+                    style={{
+                      backgroundColor: tag.backgroundColor || "#F4F0ED", // Default BG
+                      color: tag.textColor || "#525252", // Default Text
+                      // Add a subtle border if no custom BG color is set
+                      border: `1px solid ${tag.backgroundColor ? "transparent" : "#D5D3D0"}`,
+                    }}
+                    title={tag.name} // Show full name on hover if truncated
+                  >
+                    {tag.name}
+                  </span>
+                  {tag.isHidden && (
+                    <span className="text-xs text-gray-500 flex-shrink-0">(Hidden)</span>
+                  )}
+                  {tag.isModified && !tag.isDeleted && (
+                    <span className="italic text-xs text-blue-600 opacity-80 flex-shrink-0">
+                      (edited)
+                    </span>
+                  )}
                 </div>
-              )}
-              {tag.isDeleted && (
-                <button
-                  onClick={() => handleUndeleteTag(tag._id)}
-                  className="text-xs text-gray-600 hover:text-black disabled:opacity-50"
-                  disabled={isSaving}>
-                  Undo
-                </button>
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  {!tag.isDeleted ? (
+                    <>
+                      {/* Color Picker Toggle */}
+                      <button
+                        onClick={() =>
+                          setEditColorsTagId(editColorsTagId === tag._id ? null : tag._id)
+                        }
+                        className="text-[#787672] hover:text-[#525252] disabled:opacity-50 p-1"
+                        title="Edit Colors"
+                        disabled={isProcessing}>
+                        <Palette className="w-4 h-4" />
+                      </button>
+
+                      {/* Toggle Hidden (Archive) */}
+                      <button
+                        onClick={() => handleToggleHidden(tag._id)}
+                        className="text-[#787672] hover:text-[#525252] disabled:opacity-50 p-1"
+                        title={
+                          tag.isHidden
+                            ? "Archived (Click to Unarchive)"
+                            : "Visible (Click to Archive)"
+                        }
+                        disabled={isProcessing}>
+                        {tag.isHidden ? (
+                          <ArchiveRestore className="w-4 h-4 text-orange-600" />
+                        ) : (
+                          <Archive className="w-4 h-4" />
+                        )}
+                      </button>
+
+                      {/* Toggle Header Visibility */}
+                      <button
+                        onClick={() => handleToggleHeader(tag._id)}
+                        className="text-[#787672] hover:text-[#525252] disabled:opacity-50 p-1"
+                        title={tag.showInHeader ? "Visible in header" : "Hidden from header"}
+                        disabled={isProcessing || !!tag.isHidden} // Disable if tag is hidden
+                      >
+                        {tag.showInHeader ? (
+                          <Eye className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <EyeOff className="w-4 h-4" />
+                        )}
+                      </button>
+
+                      {/* Delete Button */}
+                      <button
+                        onClick={() => handleDeleteTag(tag._id)}
+                        className="text-red-500 hover:text-red-700 disabled:opacity-50 p-1"
+                        title="Delete tag"
+                        disabled={isProcessing}>
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
+                  ) : (
+                    // Undelete Button
+                    <button
+                      onClick={() => handleUndeleteTag(tag._id)}
+                      className="text-xs text-gray-600 hover:text-black font-medium disabled:opacity-50 p-1"
+                      disabled={isProcessing}>
+                      Undo Delete
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Color Editor (Collapsible) */}
+              {editColorsTagId === tag._id && !tag.isDeleted && (
+                <div className="p-3 border-t border-gray-200 bg-gray-50 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <label
+                      htmlFor={`bg-color-${tag._id}`}
+                      className="text-xs font-medium text-gray-600 w-20 flex-shrink-0">
+                      BG Color:
+                    </label>
+                    <input
+                      type="color"
+                      id={`bg-color-${tag._id}`}
+                      value={tag.backgroundColor || "#ffffff"} // Default to white for picker
+                      onChange={(e) =>
+                        handleFieldChange(tag._id, "backgroundColor", e.target.value)
+                      }
+                      className="h-6 w-10 border border-gray-300 rounded cursor-pointer p-0.5 bg-clip-content"
+                      disabled={isProcessing}
+                    />
+                    <input
+                      type="text"
+                      value={tag.backgroundColor || ""}
+                      placeholder="#rrggbb"
+                      onChange={(e) =>
+                        handleFieldChange(tag._id, "backgroundColor", e.target.value || null)
+                      } // Set to null if empty
+                      className="px-2 py-1 text-xs border border-gray-300 rounded w-20"
+                      disabled={isProcessing}
+                    />
+                    <button
+                      onClick={() => handleFieldChange(tag._id, "backgroundColor", null)}
+                      className="text-xs text-gray-500 hover:text-black"
+                      disabled={isProcessing}>
+                      Clear
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label
+                      htmlFor={`text-color-${tag._id}`}
+                      className="text-xs font-medium text-gray-600 w-20 flex-shrink-0">
+                      Text Color:
+                    </label>
+                    <input
+                      type="color"
+                      id={`text-color-${tag._id}`}
+                      value={tag.textColor || "#000000"} // Default to black for picker
+                      onChange={(e) => handleFieldChange(tag._id, "textColor", e.target.value)}
+                      className="h-6 w-10 border border-gray-300 rounded cursor-pointer p-0.5 bg-clip-content"
+                      disabled={isProcessing}
+                    />
+                    <input
+                      type="text"
+                      value={tag.textColor || ""}
+                      placeholder="#rrggbb"
+                      onChange={(e) =>
+                        handleFieldChange(tag._id, "textColor", e.target.value || null)
+                      } // Set to null if empty
+                      className="px-2 py-1 text-xs border border-gray-300 rounded w-20"
+                      disabled={isProcessing}
+                    />
+                    <button
+                      onClick={() => handleFieldChange(tag._id, "textColor", null)}
+                      className="text-xs text-gray-500 hover:text-black"
+                      disabled={isProcessing}>
+                      Clear
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           ))}
         </div>
 
+        {/* Legend/Help Text */}
         <div className="mt-6 text-xs text-[#787672]">
-          <p>Click the eye icon to toggle visibility in the header. Save changes to persist.</p>
-          {/* Clarify visual indicators */}
-          <p className="mt-1">
-            Green border = New | Blue outline = Modified | Strikethrough = Deleted (pending save)
+          <p>Manage tags for submitted apps. Changes require saving.</p>
+          <ul className="list-disc list-inside mt-1 space-y-0.5">
+            <li>
+              <Palette className="w-3 h-3 inline mr-1" />: Edit background/text colors.
+            </li>
+            <li>
+              <Archive className="w-3 h-3 inline mr-1" /> /{" "}
+              <ArchiveRestore className="w-3 h-3 inline mr-1" />: Archive/unarchive tag (hides from
+              public view).
+            </li>
+            <li>
+              <Eye className="w-3 h-3 inline mr-1" /> / <EyeOff className="w-3 h-3 inline mr-1" />:
+              Toggle header visibility (only affects non-archived tags).
+            </li>
+            <li>
+              <Trash2 className="w-3 h-3 inline mr-1" />: Mark for deletion.
+            </li>
+          </ul>
+          <p className="mt-1 font-medium">Indicators:</p>
+          <p className="mt-0.5">
+            <span className="inline-block px-1 border border-green-300 bg-green-50 text-green-700 rounded text-[10px] mr-1">
+              New
+            </span>
+            <span className="inline-block px-1 border border-blue-300 bg-blue-50 text-blue-700 rounded text-[10px] mr-1">
+              Modified
+            </span>
+            <span className="inline-block px-1 border border-red-300 bg-red-50 text-red-700 rounded text-[10px] mr-1">
+              Deleted
+            </span>
           </p>
         </div>
       </div>
