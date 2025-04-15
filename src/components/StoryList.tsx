@@ -51,7 +51,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                     {story.votes}
                     <div className="text-xs">Vibes</div>
                   </div>
-                  <button className="bg-white border border-t-0 border-[#D5D3D0] text-[#2A2825] hover:bg-[#ebf3ff] w-full rounded-b-md py-1 px-2 flex items-center justify-center gap-1 text-sm font-medium h-[24px]">
+                  <button className="bg-white border border-t-0 border-[#D5D3D0] text-[#2A2825] hover:bg-[#FBF5DB] w-full rounded-b-md py-1 px-2 flex items-center justify-center gap-1 text-sm font-medium h-[24px]">
                     Vibe it
                   </button>
                 </div>

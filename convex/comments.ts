@@ -12,10 +12,11 @@ import { paginationOptsValidator } from "convex/server";
 export const listApprovedByStory = query({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args): Promise<Doc<"comments">[]> => {
-    // Only fetch approved comments
+    // Only fetch approved and not hidden comments
     const comments = await ctx.db
       .query("comments")
       .withIndex("by_storyId_status", (q) => q.eq("storyId", args.storyId).eq("status", "approved"))
+      .filter((q) => q.neq(q.field("isHidden"), true))
       .order("asc") // Fetch comments in chronological order
       .collect();
 

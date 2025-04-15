@@ -98,7 +98,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
               <span>{formatDistanceToNow(story._creationTime)} ago</span>
               <Link to="#comments" className="flex items-center gap-1 hover:text-[#525252]">
                 <MessageSquare className="w-4 h-4" />
-                {story.commentCount} Comments
+                {comments?.length ?? 0} Comments
               </Link>
             </div>
             <div className="mt-3 flex gap-2 flex-wrap">
@@ -153,7 +153,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
       {/* Comments Section */}
       <div id="comments" className="mt-8 scroll-mt-20">
         <h2 className="text-xl font-medium text-[#525252] mb-4">
-          {story.commentCount} {story.commentCount === 1 ? "Comment" : "Comments"}
+          {comments?.length ?? 0} {(comments?.length ?? 0) === 1 ? "Comment" : "Comments"}
         </h2>
         <CommentForm onSubmit={handleCommentSubmit} />
         <div className="mt-8 space-y-6 border-t border-[#F4F0ED] pt-6">

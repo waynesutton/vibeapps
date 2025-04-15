@@ -93,173 +93,164 @@ export function ContentModeration() {
   const showComment = useMutation(api.comments.showComment);
   const deleteComment = useMutation(api.comments.deleteComment);
 
-  const handleStoryAction = (action: string, storyId: Id<"stories">) => {
-    switch (action) {
-      case "approve":
-        approveStory({ storyId, status: "approved" });
-        break;
-      case "reject":
-        rejectStory({ storyId, status: "rejected" });
-        break;
-      case "hide":
-        hideStory({ storyId });
-        break;
-      case "show":
-        showStory({ storyId });
-        break;
-      case "delete":
-        if (window.confirm("Delete story?")) deleteStory({ storyId });
-        break;
-    }
-  };
-
-  const handleCommentAction = (action: string, commentId: Id<"comments">) => {
-    switch (action) {
-      case "approve":
-        approveComment({ commentId, status: "approved" });
-        break;
-      case "reject":
-        rejectComment({ commentId, status: "rejected" });
-        break;
-      case "hide":
-        hideComment({ commentId });
-        break;
-      case "show":
-        showComment({ commentId });
-        break;
-      case "delete":
-        if (window.confirm("Delete comment?")) deleteComment({ commentId });
-        break;
+  const handleAction = (
+    action: "approve" | "reject" | "hide" | "show" | "delete",
+    item: ModeratableItem
+  ) => {
+    if (item.type === "story") {
+      const storyId = item._id as Id<"stories">;
+      switch (action) {
+        case "approve":
+          approveStory({ storyId, status: "approved" });
+          break;
+        case "reject":
+          rejectStory({ storyId, status: "rejected" });
+          break;
+        case "hide":
+          hideStory({ storyId });
+          break;
+        case "show":
+          showStory({ storyId });
+          break;
+        case "delete":
+          if (window.confirm("Delete story? This cannot be undone.")) deleteStory({ storyId });
+          break;
+      }
+    } else {
+      const commentId = item._id as Id<"comments">;
+      switch (action) {
+        case "approve":
+          approveComment({ commentId, status: "approved" });
+          break;
+        case "reject":
+          rejectComment({ commentId, status: "rejected" });
+          break;
+        case "hide":
+          hideComment({ commentId });
+          break;
+        case "show":
+          showComment({ commentId });
+          break;
+        case "delete":
+          if (window.confirm("Delete comment? This cannot be undone."))
+            deleteComment({ commentId });
+          break;
+      }
     }
   };
 
   const isLoading = storiesStatus === "LoadingFirstPage" || commentsStatus === "LoadingFirstPage";
 
-  const renderItem = (item: ModeratableItem) => (
-    <div key={item._id} className="border-b border-[#F4F0ED] pb-4 mb-4 last:border-b-0 last:mb-0">
-      <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          {item.type === "story" && (
-            <Link
-              to={`/s/${item.slug}`}
-              target="_blank"
-              className="font-medium text-[#525252] hover:text-[#2A2825] block mb-1">
-              {item.title}
-            </Link>
-          )}
-          <p
-            className={`text-sm ${item.type === "comment" ? "text-[#525252]" : "text-[#787672]"} mt-1 break-words`}>
-            {item.type === "story" ? item.description : item.content}
-          </p>
-          <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-[#787672]">
-            <span>by {item.type === "story" ? item.name : item.author}</span>
-            {item.type === "story" && item.email && (
-              <span className="text-gray-400">({item.email})</span>
-            )}
-            <span>{formatDistanceToNow(item._creationTime)} ago</span>
+  const renderItem = (item: ModeratableItem) => {
+    return (
+      <div key={item._id} className="border-b border-[#F4F0ED] pb-4 mb-4 last:border-b-0 last:mb-0">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
             {item.type === "story" && (
+              <Link
+                to={`/s/${item.slug}`}
+                target="_blank"
+                className="font-medium text-[#525252] hover:text-[#2A2825] block mb-1">
+                {item.title}
+              </Link>
+            )}
+            <p
+              className={`text-sm ${
+                item.type === "comment" ? "text-[#525252]" : "text-[#787672]"
+              } mt-1 break-words`}>
+              {item.type === "story" ? item.description : item.content}
+            </p>
+            <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-[#787672]">
+              <span>by {item.type === "story" ? item.name : item.author}</span>
+              {item.type === "story" && item.email && (
+                <span className="text-gray-400">({item.email})</span>
+              )}
+              <span>{formatDistanceToNow(item._creationTime)} ago</span>
+              {item.type === "story" && (
+                <>
+                  <span>{item.votes} votes</span>
+                  <Link to={`/s/${item.slug}#comments`} target="_blank" className="hover:underline">
+                    ({item.commentCount} comments)
+                  </Link>
+                </>
+              )}
+              {item.type === "comment" && <span>(Comment on Story id: {item.storyId})</span>}
+              <span
+                className={`font-semibold ${
+                  item.isHidden
+                    ? "text-orange-600"
+                    : item.status === "pending"
+                      ? "text-blue-600"
+                      : item.status === "rejected"
+                        ? "text-red-600"
+                        : "text-green-600"
+                }`}>
+                {item.isHidden
+                  ? "Hidden"
+                  : item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+              </span>
+            </div>
+            {item.type === "story" && item.tags?.length > 0 && (
+              <div className="flex gap-1 mt-2 flex-wrap">
+                {item.tags.map((tag) => (
+                  <span
+                    key={tag._id}
+                    className="text-xs text-[#787672] bg-[#F4F0ED] px-2 py-0.5 rounded">
+                    {tag.name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2 items-center flex-shrink-0">
+            {item.status === "pending" && (
               <>
-                <span>{item.votes} votes</span>
-                <Link to={`/s/${item.slug}#comments`} target="_blank" className="hover:underline">
-                  ({item.commentCount} comments)
-                </Link>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                  onClick={() => handleAction("approve", item)}>
+                  <Check className="w-4 h-4 mr-1" /> Approve
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+                  onClick={() => handleAction("reject", item)}>
+                  <X className="w-4 h-4 mr-1" /> Reject
+                </Button>
               </>
             )}
-            {item.type === "comment" && (
-              <span>
-                (Comment on{" "}
-                {/* Assuming comment schema has storyId and you have a function to fetch story slug or title */}
-                {/* <Link to={`/s/${getStorySlug(item.storyId)}`} target="_blank" className="hover:underline"> */}{" "}
-                Story {/* </Link> */} id: {item.storyId} {/* Temporary display */})
-              </span>
+            {!item.isHidden && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
+                onClick={() => handleAction("hide", item)}>
+                <EyeOff className="w-4 h-4 mr-1" /> Hide
+              </Button>
             )}
-            <span
-              className={`font-semibold ${item.isHidden ? "text-orange-600" : item.status === "pending" ? "text-blue-600" : item.status === "rejected" ? "text-red-600" : "text-green-600"}`}>
-              {item.isHidden
-                ? "Hidden"
-                : item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-            </span>
+            {item.isHidden && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                onClick={() => handleAction("show", item)}>
+                <Eye className="w-4 h-4 mr-1" /> Show
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-700 hover:bg-red-50 hover:text-red-800 border-red-200"
+              onClick={() => handleAction("delete", item)}>
+              <Trash2 className="w-4 h-4 mr-1" /> Delete
+            </Button>
           </div>
-          {item.type === "story" && item.tags?.length > 0 && (
-            <div className="flex gap-1 mt-2 flex-wrap">
-              {item.tags.map((tag) => (
-                <span
-                  key={tag._id}
-                  className="text-xs text-[#787672] bg-[#F4F0ED] px-2 py-0.5 rounded">
-                  {tag.name}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-2 items-center flex-shrink-0">
-          {item.status === "pending" && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
-                onClick={() =>
-                  item.type === "story"
-                    ? handleStoryAction("approve", item._id)
-                    : handleCommentAction("approve", item._id)
-                }>
-                <Check className="w-4 h-4 mr-1" /> Approve
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
-                onClick={() =>
-                  item.type === "story"
-                    ? handleStoryAction("reject", item._id)
-                    : handleCommentAction("reject", item._id)
-                }>
-                <X className="w-4 h-4 mr-1" /> Reject
-              </Button>
-            </>
-          )}
-          {!item.isHidden && item.status !== "pending" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
-              onClick={() =>
-                item.type === "story"
-                  ? handleStoryAction("hide", item._id)
-                  : handleCommentAction("hide", item._id)
-              }>
-              <EyeOff className="w-4 h-4 mr-1" /> Hide
-            </Button>
-          )}
-          {item.isHidden && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-              onClick={() =>
-                item.type === "story"
-                  ? handleStoryAction("show", item._id)
-                  : handleCommentAction("show", item._id)
-              }>
-              <Eye className="w-4 h-4 mr-1" /> Show
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-red-700 hover:bg-red-50 hover:text-red-800 border-red-200"
-            onClick={() =>
-              item.type === "story"
-                ? handleStoryAction("delete", item._id)
-                : handleCommentAction("delete", item._id)
-            }>
-            <Trash2 className="w-4 h-4 mr-1" /> Delete
-          </Button>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const itemsToRender: ModeratableItem[] = useMemo(() => {
     if (activeItemType === "submissions") {

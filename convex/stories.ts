@@ -51,7 +51,10 @@ export const listApproved = query({
     ctx,
     args
   ): Promise<{ page: StoryWithDetails[]; isDone: boolean; continueCursor: string }> => {
-    let query = ctx.db.query("stories").withIndex("by_status", (q) => q.eq("status", "approved")); // Only fetch approved
+    let query = ctx.db
+      .query("stories")
+      .withIndex("by_status", (q) => q.eq("status", "approved")) // Only fetch approved
+      .filter((q) => q.neq(q.field("isHidden"), true)); // <-- Add this filter
 
     // TODO: Filtering by tagId efficiently requires a proper index
     // on the `tagIds` array or a different schema design (e.g., join table).
