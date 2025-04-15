@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, Outlet, useOutletContext, useNavigate } from "react-router-dom";
-import { LayoutGrid, List, PlusCircle, Search } from "lucide-react";
+import { LayoutGrid, List, PlusCircle, Search, ThumbsUp } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -9,13 +9,13 @@ import { ConvexBox } from "./ConvexBox";
 import { Footer } from "./Footer";
 
 interface LayoutContextType {
-  viewMode: "list" | "grid";
+  viewMode: "list" | "grid" | "vibe";
   selectedTagId?: Id<"tags">;
 }
 
 export function Layout() {
   const navigate = useNavigate();
-  const [viewMode, setViewMode] = React.useState<"grid" | "list">("list");
+  const [viewMode, setViewMode] = React.useState<"grid" | "list" | "vibe">("list");
   const [selectedTagId, setSelectedTagId] = React.useState<Id<"tags">>();
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);
@@ -116,6 +116,12 @@ export function Layout() {
                 className={`p-2 rounded-md ${viewMode === "grid" ? "bg-[#F4F0ED]" : ""}`}
                 aria-label="Grid View">
                 <LayoutGrid className="w-5 h-5 text-[#525252]" />
+              </button>
+              <button
+                onClick={() => setViewMode("vibe")}
+                className={`p-2 rounded-md ${viewMode === "vibe" ? "bg-[#F4F0ED]" : ""}`}
+                aria-label="Vibe View">
+                <ThumbsUp className="w-5 h-5 text-[#525252]" />
               </button>
             </div>
           </div>

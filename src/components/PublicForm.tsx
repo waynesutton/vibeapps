@@ -26,7 +26,7 @@ export function PublicForm({ form, fields }: PublicFormProps) {
         ...prev,
         [name]: checkbox.checked,
       }));
-    } else if (e.target.multiple) {
+    } else if ("multiple" in e.target && e.target.multiple) {
       // Handle multi-select
       const select = e.target as HTMLSelectElement;
       const selectedOptions = Array.from(select.selectedOptions).map((option) => option.value);
@@ -106,7 +106,7 @@ export function PublicForm({ form, fields }: PublicFormProps) {
             <option value="" disabled>
               {field.placeholder || "Select..."}
             </option>
-            {(field.options || []).map((opt) => (
+            {(field.options || []).map((opt: string) => (
               <option key={opt} value={opt}>
                 {opt}
               </option>
@@ -122,7 +122,7 @@ export function PublicForm({ form, fields }: PublicFormProps) {
             size={Math.min(5, (field.options || []).length)} // Show scroll after 5 options
           >
             {/* No placeholder for multi-select */}
-            {(field.options || []).map((opt) => (
+            {(field.options || []).map((opt: string) => (
               <option key={opt} value={opt}>
                 {opt}
               </option>

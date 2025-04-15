@@ -164,6 +164,33 @@ export function Settings() {
             />
           </div>
 
+          {/* Default View Mode Setting */}
+          <div>
+            <label
+              htmlFor="defaultViewMode"
+              className="block text-sm font-medium text-[#525252] mb-1">
+              Default View Mode
+            </label>
+            <select
+              id="defaultViewMode"
+              name="defaultViewMode"
+              value={localSettings.defaultViewMode || ""}
+              onChange={(e) =>
+                handleChange({
+                  target: {
+                    name: "defaultViewMode",
+                    value: e.target.value as "list" | "grid" | "vibe",
+                  },
+                })
+              }
+              className="w-full px-3 py-2 bg-white border border-[#D5D3D0] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825]"
+              disabled={isSaving}>
+              <option value="list">List View</option>
+              <option value="grid">Grid View</option>
+              <option value="vibe">Vibe View</option>
+            </select>
+          </div>
+
           {/* Add other settings fields here based on convex/settings.ts args */}
           {/* Example Checkbox: 
           <div>
