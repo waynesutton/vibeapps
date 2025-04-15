@@ -42,35 +42,77 @@ const fetchTagsForStories = async (
   );
 };
 
+// Define SortPeriod type (can be shared or defined here)
+type SortPeriod = "today" | "week" | "month" | "year" | "all";
+
 export const listApproved = query({
   args: {
     paginationOpts: paginationOptsValidator,
-    tagId: v.optional(v.id("tags")), // Filter by tag ID now
+    tagId: v.optional(v.id("tags")), // Filter by tag ID
+    sortPeriod: v.optional(
+      v.union(
+        v.literal("today"),
+        v.literal("week"),
+        v.literal("month"),
+        v.literal("year"),
+        v.literal("all")
+      )
+    ), // Add sort period argument
   },
   handler: async (
     ctx,
     args
   ): Promise<{ page: StoryWithDetails[]; isDone: boolean; continueCursor: string }> => {
-    let query = ctx.db
-      .query("stories")
-      .withIndex("by_status", (q) => q.eq("status", "approved")) // Only fetch approved
-      .filter((q) => q.neq(q.field("isHidden"), true)); // <-- Add this filter
+    const now = Date.now();
+    let startTime = 0;
 
-    // TODO: Filtering by tagId efficiently requires a proper index
-    // on the `tagIds` array or a different schema design (e.g., join table).
-    // For now, filtering post-pagination or relying on search.
-    if (args.tagId) {
-      console.warn(
-        "Filtering by tagId directly in query isn't efficient without a specific index or schema change. This filter might not work as expected."
-      );
-      // Example of how it *might* work with a hypothetical index:
-      // query = query.withIndex("by_tagIds", q => q.eq("tagIds", args.tagId));
+    switch (args.sortPeriod) {
+      case "today":
+        startTime = now - 24 * 60 * 60 * 1000;
+        break;
+      case "week":
+        startTime = now - 7 * 24 * 60 * 60 * 1000;
+        break;
+      case "month":
+        startTime = now - 30 * 24 * 60 * 60 * 1000; // Approx month
+        break;
+      case "year":
+        startTime = now - 365 * 24 * 60 * 60 * 1000; // Approx year
+        break;
+      case "all":
+      default:
+        startTime = 0; // No time filter
+        break;
     }
 
-    // Sort approved stories by creation time (newest first)
+    let query = ctx.db
+      .query("stories")
+      // Use the new index for status filtering primarily
+      .withIndex("by_status_creationTime", (q) => q.eq("status", "approved"))
+      // Apply time filtering and isHidden check using .filter()
+      .filter((q) =>
+        q.and(q.neq(q.field("isHidden"), true), q.gte(q.field("_creationTime"), startTime))
+      );
+
+    // Apply tag filtering if needed (inefficient without proper index)
+    if (args.tagId) {
+      console.warn("Filtering by tagId directly in query isn't efficient...");
+      // This filter will likely happen in memory after fetching, which is inefficient
+      // A better approach involves schema changes or search indexes.
+    }
+
+    // Order by creation time, newest first
     const paginatedStories = await query.order("desc").paginate(args.paginationOpts);
 
-    const storiesWithDetails = await fetchTagsForStories(ctx, paginatedStories.page);
+    // Fetch tags and screenshot URLs
+    let storiesWithDetails = await fetchTagsForStories(ctx, paginatedStories.page);
+
+    // Manual filtering for tagId if present (inefficient)
+    if (args.tagId) {
+      storiesWithDetails = storiesWithDetails.filter((story) => story.tagIds.includes(args.tagId!));
+      // Note: This post-filtering means the page might contain fewer items
+      // than paginationOpts.numItems requested.
+    }
 
     return {
       ...paginatedStories,
@@ -89,7 +131,7 @@ export const listPending = query({
     // TODO: Add authentication check - only admins should access pending stories
     const query = ctx.db
       .query("stories")
-      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .withIndex("by_status_creationTime", (q) => q.eq("status", "pending"))
       .order("asc"); // Show oldest pending first
 
     const paginatedStories = await query.paginate(args.paginationOpts);
@@ -397,7 +439,9 @@ export const listAllStoriesAdmin = query({
         query = baseQuery.filter((q) => q.eq(q.field("isHidden"), args.filters.isHidden));
       } else if (args.filters.status) {
         // Add explicit check for status being defined
-        query = baseQuery.withIndex("by_status", (q) => q.eq("status", args.filters.status!));
+        query = baseQuery.withIndex("by_status_creationTime", (q) =>
+          q.eq("status", args.filters.status!)
+        );
       } else {
         // No filters, fetch all
         query = baseQuery; // Assign baseQuery to query

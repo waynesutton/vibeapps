@@ -25,8 +25,8 @@ export default defineSchema({
   })
     .index("by_slug", ["slug"])
     .index("by_votes", ["votes"])
-    .index("by_status", ["status"])
     .index("by_hidden_status", ["isHidden", "status"])
+    .index("by_status_creationTime", ["status"])
     .searchIndex("search_all", {
       searchField: "title",
       filterFields: ["status", "isHidden"],

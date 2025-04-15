@@ -6,11 +6,17 @@ import { Doc, Id } from "./_generated/dataModel";
 const DEFAULT_SETTINGS = {
   itemsPerPage: 20,
   siteTitle: "Vibe Apps",
+  defaultViewMode: "vibe" as const,
   // Add other defaults as needed
 };
 
 // Type for settings, could be a DB doc or the defaults
-export type SettingsData = Doc<"settings"> | typeof DEFAULT_SETTINGS;
+export type SettingsData = {
+  itemsPerPage: number;
+  siteTitle: string;
+  defaultViewMode: "list" | "grid" | "vibe";
+  // Add other fields from Doc<"settings"> or DEFAULT_SETTINGS if needed
+} & Partial<Doc<"settings">>; // Combine defaults/structure with actual Doc fields
 
 // Query to get the current settings
 export const get = query({
@@ -26,7 +32,11 @@ export const get = query({
       // Return the default object directly
       return DEFAULT_SETTINGS;
     }
-    return settings;
+    // Ensure the fetched settings object conforms to SettingsData
+    return {
+      ...DEFAULT_SETTINGS, // Start with defaults
+      ...settings, // Override with actual DB values
+    };
   },
 });
 
@@ -52,6 +62,7 @@ export const update = mutation({
   args: {
     itemsPerPage: v.optional(v.number()),
     siteTitle: v.optional(v.string()),
+    defaultViewMode: v.optional(v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"))),
     // Add other updatable settings here
   },
   handler: async (ctx, args) => {

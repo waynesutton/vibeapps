@@ -51,7 +51,8 @@ export function Settings() {
       if (localSettings.itemsPerPage !== undefined)
         updates.itemsPerPage = localSettings.itemsPerPage;
       if (localSettings.siteTitle !== undefined) updates.siteTitle = localSettings.siteTitle;
-      // Add other fields here...
+      if (localSettings.defaultViewMode !== undefined)
+        updates.defaultViewMode = localSettings.defaultViewMode;
 
       await updateSettings(updates);
       setShowSuccess(true);
@@ -175,14 +176,7 @@ export function Settings() {
               id="defaultViewMode"
               name="defaultViewMode"
               value={localSettings.defaultViewMode || ""}
-              onChange={(e) =>
-                handleChange({
-                  target: {
-                    name: "defaultViewMode",
-                    value: e.target.value as "list" | "grid" | "vibe",
-                  },
-                })
-              }
+              onChange={handleChange}
               className="w-full px-3 py-2 bg-white border border-[#D5D3D0] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825]"
               disabled={isSaving}>
               <option value="list">List View</option>

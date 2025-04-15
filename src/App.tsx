@@ -16,7 +16,7 @@ import { Id } from "../convex/_generated/dataModel";
 import { Story } from "./types";
 
 function HomePage() {
-  const { viewMode, selectedTagId } = useLayoutContext();
+  const { viewMode, selectedTagId, sortPeriod } = useLayoutContext();
   const settings = useQuery(api.settings.get);
 
   const {
@@ -25,7 +25,7 @@ function HomePage() {
     loadMore,
   } = usePaginatedQuery(
     api.stories.listApproved,
-    { tagId: selectedTagId },
+    { tagId: selectedTagId, sortPeriod: sortPeriod },
     { initialNumItems: settings?.itemsPerPage || 20 }
   );
 
