@@ -179,10 +179,10 @@ export const ensureTags = internalMutation({
       if (existingCheck) {
         tagIds.push(existingCheck._id);
       } else {
-        // New tags default to visible in header and not hidden
+        // New tags default to NOT visible in header and not hidden initially
         const newTagId = await ctx.db.insert("tags", {
           name: nameToCreate,
-          showInHeader: true,
+          showInHeader: false, // Set to false by default
           isHidden: false,
           // Default colors or leave undefined? Let's leave undefined.
         });
