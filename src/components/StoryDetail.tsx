@@ -85,6 +85,11 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 {story.title}
               </a>
             </h1>
+            {story.customMessage && (
+              <div className="mb-4 text-sm text-[#787671] bg-[#F3F0ED] border border-[#D5D3D0] rounded-md p-3 italic">
+                {story.customMessage}
+              </div>
+            )}
             {story.screenshotUrl && (
               <div className="mb-4 rounded-md overflow-hidden border border-[#F4F0ED]">
                 <img
