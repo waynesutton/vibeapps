@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { MessageSquare, Check, X, Eye, EyeOff, Trash2, Search } from "lucide-react";
+import { MessageSquare, Check, X, Eye, EyeOff, Trash2, Search, Pin, Send } from "lucide-react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { usePaginatedQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -17,6 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+// Commenting out until the component is added
+// import { Textarea } from "@/components/ui/textarea";
 import { debounce } from "lodash-es";
 
 type Comment = Doc<"comments">;
@@ -30,6 +32,9 @@ export function ContentModeration() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("pending");
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  // State for custom message editing - Commented out
+  // const [editingMessageId, setEditingMessageId] = useState<Id<"stories"> | null>(null);
+  // const [currentMessage, setCurrentMessage] = useState("");
 
   const debouncedSetSearch = useCallback(
     debounce((value: string) => {
@@ -50,9 +55,11 @@ export function ContentModeration() {
       convexFilters.isHidden = true;
     } else if (statusFilter !== "all") {
       convexFilters.status = statusFilter;
-      convexFilters.isHidden = false;
+      convexFilters.isHidden = false; // Explicitly set to false for non-hidden, non-all filters
+    } else {
+      // For 'all', explicitly set isHidden to undefined
+      convexFilters.isHidden = undefined;
     }
-
     return convexFilters;
   }, [statusFilter]);
 
@@ -76,17 +83,21 @@ export function ContentModeration() {
   } = usePaginatedQuery(
     api.comments.listAllCommentsAdmin,
     {
-      filters: filters,
+      filters: filters, // Assuming comments don't have search yet
     },
     { initialNumItems: 10 }
   );
 
+  // Story Mutations
   const approveStory = useMutation(api.stories.updateStatus);
   const rejectStory = useMutation(api.stories.updateStatus);
   const hideStory = useMutation(api.stories.hideStory);
   const showStory = useMutation(api.stories.showStory);
   const deleteStory = useMutation(api.stories.deleteStory);
+  const updateCustomMessage = useMutation(api.stories.updateStoryCustomMessage);
+  const togglePin = useMutation(api.stories.toggleStoryPinStatus);
 
+  // Comment Mutations
   const approveComment = useMutation(api.comments.updateStatus);
   const rejectComment = useMutation(api.comments.updateStatus);
   const hideComment = useMutation(api.comments.hideComment);
@@ -94,7 +105,7 @@ export function ContentModeration() {
   const deleteComment = useMutation(api.comments.deleteComment);
 
   const handleAction = (
-    action: "approve" | "reject" | "hide" | "show" | "delete",
+    action: "approve" | "reject" | "hide" | "show" | "delete" | "togglePin",
     item: ModeratableItem
   ) => {
     if (item.type === "story") {
@@ -115,8 +126,12 @@ export function ContentModeration() {
         case "delete":
           if (window.confirm("Delete story? This cannot be undone.")) deleteStory({ storyId });
           break;
+        case "togglePin":
+          togglePin({ storyId });
+          break;
       }
     } else {
+      // Comment actions
       const commentId = item._id as Id<"comments">;
       switch (action) {
         case "approve":
@@ -139,27 +154,77 @@ export function ContentModeration() {
     }
   };
 
+  // Handlers for custom message editing - Commented out
+  // const handleEditMessage = (item: StoryWithDetails) => {
+  //   setEditingMessageId(item._id);
+  //   setCurrentMessage(item.customMessage || "");
+  // };
+  // const handleCancelEditMessage = () => {
+  //   setEditingMessageId(null);
+  //   setCurrentMessage("");
+  // };
+  // const handleSaveMessage = (storyId: Id<"stories">) => {
+  //   updateCustomMessage({ storyId, customMessage: currentMessage || undefined });
+  //   handleCancelEditMessage(); // Close editor on save
+  // };
+
   const isLoading = storiesStatus === "LoadingFirstPage" || commentsStatus === "LoadingFirstPage";
 
   const renderItem = (item: ModeratableItem) => {
+    // Commented out editing state logic
+    // const isEditing = item.type === "story" && editingMessageId === item._id;
+    const isEditing = false; // Temporarily set to false as editing is disabled
+
     return (
-      <div key={item._id} className="border-b border-[#F4F0ED] pb-4 mb-4 last:border-b-0 last:mb-0">
+      <div key={item._id} className="border-b border-[#F4F0ED] py-4 last:border-b-0">
         <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
-            {item.type === "story" && (
-              <Link
-                to={`/s/${item.slug}`}
-                target="_blank"
-                className="font-medium text-[#525252] hover:text-[#2A2825] block mb-1">
-                {item.title}
-              </Link>
-            )}
+            <div className="flex items-center gap-2 mb-1">
+              {item.type === "story" && item.isPinned && (
+                <Pin className="w-4 h-4 text-blue-600 flex-shrink-0" aria-label="Pinned" />
+              )}
+              {item.type === "story" && (
+                <Link
+                  to={`/s/${item.slug}`}
+                  target="_blank"
+                  className="font-medium text-[#525252] hover:text-[#2A2825] block truncate">
+                  {item.title}
+                </Link>
+              )}
+            </div>
             <p
-              className={`text-sm ${
-                item.type === "comment" ? "text-[#525252]" : "text-[#787672]"
-              } mt-1 break-words`}>
+              className={`text-sm ${item.type === "comment" ? "text-[#525252]" : "text-[#787672]"} mt-1 break-words`}>
               {item.type === "story" ? item.description : item.content}
             </p>
+            {/* Always show custom message if present, as editing is disabled */}
+            {item.type === "story" && item.customMessage && (
+              <div className="mt-2 text-sm text-[#787671] bg-[#F3F0ED] border border-[#D5D3D0] rounded-md p-2 italic">
+                Admin Message: {item.customMessage}
+              </div>
+            )}
+            {/* Custom Message Editor - Commented out until Textarea is added */}
+            {/* {item.type === "story" && isEditing && (
+              <div className="mt-3 space-y-2">
+                <Textarea // This is the component causing the error if not installed
+                  placeholder="Add a custom message to display on the frontend..."
+                  value={currentMessage}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCurrentMessage(e.target.value)}
+                  rows={2}
+                  className="text-sm"
+                />
+                <div className="flex gap-2 justify-end">
+                  <Button variant="ghost" size="sm" onClick={handleCancelEditMessage}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => handleSaveMessage(item._id as Id<"stories">)}>
+                    Save Message
+                  </Button>
+                </div>
+              </div>
+            )} */}
             <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-[#787672]">
               <span>by {item.type === "story" ? item.name : item.author}</span>
               {item.type === "story" && item.email && (
@@ -170,7 +235,7 @@ export function ContentModeration() {
                 <>
                   <span>{item.votes} votes</span>
                   <Link to={`/s/${item.slug}#comments`} target="_blank" className="hover:underline">
-                    ({item.commentCount} comments)
+                    ({item.commentCount ?? 0} comments)
                   </Link>
                 </>
               )}
@@ -203,8 +268,10 @@ export function ContentModeration() {
             )}
           </div>
           <div className="flex flex-wrap gap-2 items-center flex-shrink-0">
+            {/* Standard Actions */}
             {item.status === "pending" && (
               <>
+                {/* Use standard variants + classes for styling */}
                 <Button
                   variant="outline"
                   size="sm"
@@ -221,7 +288,15 @@ export function ContentModeration() {
                 </Button>
               </>
             )}
-            {!item.isHidden && (
+            {item.isHidden ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                onClick={() => handleAction("show", item)}>
+                <Eye className="w-4 h-4 mr-1" /> Show
+              </Button>
+            ) : (
               <Button
                 variant="outline"
                 size="sm"
@@ -230,15 +305,27 @@ export function ContentModeration() {
                 <EyeOff className="w-4 h-4 mr-1" /> Hide
               </Button>
             )}
-            {item.isHidden && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-                onClick={() => handleAction("show", item)}>
-                <Eye className="w-4 h-4 mr-1" /> Show
-              </Button>
+
+            {/* Story Specific Actions */}
+            {item.type === "story" && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={`${item.isPinned ? "text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100" : "text-gray-600 hover:bg-gray-50"}`}
+                  onClick={() => handleAction("togglePin", item)}>
+                  <Pin className="w-4 h-4 mr-1" /> {item.isPinned ? "Unpin" : "Pin"}
+                </Button>
+                {/* Commenting out Add Message button until Textarea is added */}
+                {/* {!isEditing && (
+                   <Button variant="outline" size="sm" onClick={() => handleEditMessage(item as StoryWithDetails)}>
+                    <MessageSquare className="w-4 h-4 mr-1" /> Add Message
+                   </Button>
+                )} */}
+              </>
             )}
+
+            {/* Delete Action (Common) - Use standard variant + classes */}
             <Button
               variant="outline"
               size="sm"
@@ -254,9 +341,9 @@ export function ContentModeration() {
 
   const itemsToRender: ModeratableItem[] = useMemo(() => {
     if (activeItemType === "submissions") {
-      return (stories || []).map((story) => ({ ...story, type: "story" }));
+      return (stories || []).map((story) => ({ ...story, type: "story" as const }));
     } else {
-      return (comments || []).map((comment) => ({ ...comment, type: "comment" }));
+      return (comments || []).map((comment) => ({ ...comment, type: "comment" as const }));
     }
   }, [activeItemType, stories, comments]);
 
@@ -286,11 +373,11 @@ export function ContentModeration() {
               <SelectValue placeholder="Filter by status..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="all">All (Visible & Hidden)</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="approved">Approved</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
-              <SelectItem value="hidden">Hidden</SelectItem>
+              <SelectItem value="hidden">Hidden Only</SelectItem>
             </SelectContent>
           </Select>
 
@@ -302,7 +389,7 @@ export function ContentModeration() {
               value={searchTerm}
               onChange={handleSearchChange}
               className="pl-10"
-              disabled={activeItemType === "comments"}
+              disabled={activeItemType === "comments"} // Assuming comments search not implemented
             />
             {activeItemType === "comments" && (
               <span className="text-xs text-gray-500 absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -312,16 +399,20 @@ export function ContentModeration() {
           </div>
         </div>
 
-        {isLoading && <div className="text-center py-6">Loading...</div>}
+        {isLoading && (
+          <div className="text-center py-6 text-lg font-medium text-[#787672]">Loading...</div>
+        )}
 
         {!isLoading && itemsToRender.length === 0 && (
-          <div className="text-center py-6 text-[#787672]">
+          <div className="text-center py-10 text-[#787672]">
             No {activeItemType} found matching the criteria.
           </div>
         )}
 
         {!isLoading && itemsToRender.length > 0 && (
-          <div className="divide-y divide-[#F4F0ED]">
+          <div>
+            {" "}
+            {/* Removed redundant divide-y */}
             {itemsToRender.map((item) => renderItem(item))}
           </div>
         )}

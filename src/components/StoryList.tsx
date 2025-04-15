@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { ChevronUp, MessageSquare, ArrowDown, Github } from "lucide-react";
+import { ChevronUp, MessageSquare, ArrowDown, Github, Pin } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Story } from "../types";
 import { UsePaginatedQueryResult } from "convex/react";
@@ -80,11 +80,16 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
             {/* STORY CONTENT - Apply bg/border/padding here for vibe mode */}
             <div
               className={`flex-1 min-w-0 ${viewMode === "vibe" ? "bg-white rounded-lg p-3.5 border border-[#D5D3D0]" : ""}`}>
-              <h2 className="text-[#525252] font-medium mb-2 truncate">
-                <Link to={`/s/${story.slug}`} className="hover:text-[#2A2825] break-words">
-                  {story.title}
-                </Link>
-              </h2>
+              <div className="flex items-center gap-2 mb-2">
+                {story.isPinned && (
+                  <Pin className="w-4 h-4 #787671 flex-shrink-0" aria-label="Pinned Story" />
+                )}
+                <h2 className="text-[#525252] font-medium truncate">
+                  <Link to={`/s/${story.slug}`} className="hover:text-[#2A2825] break-words">
+                    {story.title}
+                  </Link>
+                </h2>
+              </div>
               {viewMode === "grid" && story.screenshotUrl && (
                 <Link
                   to={`/s/${story.slug}`}
@@ -101,7 +106,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                 <p className="text-[#787672] text-sm mb-4 line-clamp-3">{story.description}</p>
               )}
               {story.customMessage && (
-                <div className="mb-4 text-sm text-[#787671] bg-[#F3F0ED] border border-[#D5D3D0] rounded-md p-4">
+                <div className="mb-4 text-sm text-[#787671] bg-[#F3F0ED] border border-[#D5D3D0] rounded-md p-3 italic">
                   {story.customMessage}
                 </div>
               )}

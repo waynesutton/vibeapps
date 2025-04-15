@@ -1,19 +1,21 @@
-import { query, mutation, internalQuery } from "./_generated/server";
+import { query, mutation, internalQuery, QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
-import { Doc, Id } from "./_generated/dataModel";
+import { Doc, Id, DataModel } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api";
+import { GenericDatabaseReader, StorageReader } from "convex/server";
 
 // Extend the Doc type for Story to include calculated fields and tags
 export type StoryWithDetails = Doc<"stories"> & {
   voteScore: number; // Optional: if we want to calculate a score based on votes and time
   screenshotUrl: string | null;
   tags: Doc<"tags">[]; // Include full tag documents
+  commentCount: number; // Ensure commentCount is part of the type
 };
 
-// Helper to fetch tags for a list of stories
-const fetchTagsForStories = async (
-  ctx: any, // Using 'any' for simplicity, replace with proper context type
+// Helper to fetch tags and comment counts for stories
+const fetchTagsAndCountsForStories = async (
+  ctx: { db: GenericDatabaseReader<DataModel>; storage: StorageReader },
   stories: Doc<"stories">[]
 ): Promise<StoryWithDetails[]> => {
   const allTagIds = stories.flatMap((story) => story.tagIds || []);
@@ -27,28 +29,38 @@ const fetchTagsForStories = async (
       const screenshotUrl = story.screenshotId
         ? await ctx.storage.getUrl(story.screenshotId)
         : null;
-      const voteScore = story.votes; // Simple example
+      const voteScore = story.votes;
       const storyTags = (story.tagIds || [])
         .map((id) => tagsMap.get(id))
         .filter(Boolean) as Doc<"tags">[];
+
+      // Fetch approved, non-hidden comments and get the count
+      const comments = await ctx.db
+        .query("comments")
+        .withIndex("by_storyId_status", (q) => q.eq("storyId", story._id).eq("status", "approved"))
+        .filter((q) => q.neq(q.field("isHidden"), true))
+        .collect();
+      const commentCount = comments.length;
 
       return {
         ...story,
         voteScore,
         screenshotUrl,
         tags: storyTags,
+        commentCount,
       };
     })
   );
 };
 
-// Define SortPeriod type (can be shared or defined here)
+// Define SortPeriod type
 type SortPeriod = "today" | "week" | "month" | "year" | "all";
 
+// Updated listApproved query to sort by pinned status first
 export const listApproved = query({
   args: {
     paginationOpts: paginationOptsValidator,
-    tagId: v.optional(v.id("tags")), // Filter by tag ID
+    tagId: v.optional(v.id("tags")),
     sortPeriod: v.optional(
       v.union(
         v.literal("today"),
@@ -57,7 +69,7 @@ export const listApproved = query({
         v.literal("year"),
         v.literal("all")
       )
-    ), // Add sort period argument
+    ),
   },
   handler: async (
     ctx,
@@ -74,68 +86,74 @@ export const listApproved = query({
         startTime = now - 7 * 24 * 60 * 60 * 1000;
         break;
       case "month":
-        startTime = now - 30 * 24 * 60 * 60 * 1000; // Approx month
+        startTime = now - 30 * 24 * 60 * 60 * 1000;
         break;
       case "year":
-        startTime = now - 365 * 24 * 60 * 60 * 1000; // Approx year
+        startTime = now - 365 * 24 * 60 * 60 * 1000;
         break;
-      case "all":
       default:
-        startTime = 0; // No time filter
-        break;
+        startTime = 0;
     }
 
-    let query = ctx.db
+    const initialFilteredStories = await ctx.db
       .query("stories")
-      // Use the new index for status filtering primarily
-      .withIndex("by_status_creationTime", (q) => q.eq("status", "approved"))
-      // Apply time filtering and isHidden check using .filter()
       .filter((q) =>
-        q.and(q.neq(q.field("isHidden"), true), q.gte(q.field("_creationTime"), startTime))
+        q.and(
+          q.eq(q.field("status"), "approved"),
+          q.neq(q.field("isHidden"), true),
+          q.gte(q.field("_creationTime"), startTime)
+        )
+      )
+      .collect();
+
+    // Manual sorting: Pinned first, then by creation time descending
+    initialFilteredStories.sort((a, b) => {
+      const pinA = a.isPinned ?? false;
+      const pinB = b.isPinned ?? false;
+      if (pinA !== pinB) {
+        return pinA ? -1 : 1;
+      }
+      return b._creationTime - a._creationTime;
+    });
+
+    // Apply pagination manually after sorting
+    const startIndex = args.paginationOpts.cursor ? parseInt(args.paginationOpts.cursor, 10) : 0;
+    const endIndex = startIndex + args.paginationOpts.numItems;
+    const pageStories = initialFilteredStories.slice(startIndex, endIndex);
+    const isDone = endIndex >= initialFilteredStories.length;
+    const continueCursor = isDone ? null : endIndex.toString();
+
+    let storiesWithDetails = await fetchTagsAndCountsForStories(ctx, pageStories);
+
+    if (args.tagId) {
+      console.warn("Filtering by tagId after fetching isn't efficient...");
+      storiesWithDetails = storiesWithDetails.filter((story) =>
+        (story.tagIds || []).includes(args.tagId!)
       );
-
-    // Apply tag filtering if needed (inefficient without proper index)
-    if (args.tagId) {
-      console.warn("Filtering by tagId directly in query isn't efficient...");
-      // This filter will likely happen in memory after fetching, which is inefficient
-      // A better approach involves schema changes or search indexes.
-    }
-
-    // Order by creation time, newest first
-    const paginatedStories = await query.order("desc").paginate(args.paginationOpts);
-
-    // Fetch tags and screenshot URLs
-    let storiesWithDetails = await fetchTagsForStories(ctx, paginatedStories.page);
-
-    // Manual filtering for tagId if present (inefficient)
-    if (args.tagId) {
-      storiesWithDetails = storiesWithDetails.filter((story) => story.tagIds.includes(args.tagId!));
-      // Note: This post-filtering means the page might contain fewer items
-      // than paginationOpts.numItems requested.
     }
 
     return {
-      ...paginatedStories,
       page: storiesWithDetails,
+      isDone,
+      continueCursor: continueCursor ?? "",
     };
   },
 });
 
-// Query to list stories pending moderation (for admin)
+// Query to list stories pending moderation
 export const listPending = query({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (
     ctx,
     args
   ): Promise<{ page: StoryWithDetails[]; isDone: boolean; continueCursor: string }> => {
-    // TODO: Add authentication check - only admins should access pending stories
     const query = ctx.db
       .query("stories")
       .withIndex("by_status_creationTime", (q) => q.eq("status", "pending"))
-      .order("asc"); // Show oldest pending first
+      .order("asc");
 
     const paginatedStories = await query.paginate(args.paginationOpts);
-    const storiesWithDetails = await fetchTagsForStories(ctx, paginatedStories.page);
+    const storiesWithDetails = await fetchTagsAndCountsForStories(ctx, paginatedStories.page);
 
     return {
       ...paginatedStories,
@@ -144,21 +162,22 @@ export const listPending = query({
   },
 });
 
+// Updated getBySlug to fetch tags and counts
 export const getBySlug = query({
   args: { slug: v.string() },
   handler: async (ctx, args): Promise<StoryWithDetails | null> => {
     const story = await ctx.db
       .query("stories")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
-      .filter((q) => q.eq(q.field("status"), "approved")) // Only return if approved
+      .filter((q) => q.and(q.eq(q.field("status"), "approved"), q.neq(q.field("isHidden"), true)))
       .unique();
 
     if (!story) {
       return null;
     }
 
-    const storiesWithDetails = await fetchTagsForStories(ctx, [story]);
-    return storiesWithDetails[0]; // fetchTagsForStories returns an array
+    const storiesWithDetails = await fetchTagsAndCountsForStories(ctx, [story]);
+    return storiesWithDetails[0];
   },
 });
 
@@ -166,10 +185,10 @@ export const getBySlug = query({
 function generateSlug(title: string): string {
   return title
     .toLowerCase()
-    .replace(/\s+/g, "-") // Replace spaces with hyphens
-    .replace(/[^a-z0-9-]/g, "") // Remove invalid characters
-    .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
-    .replace(/^-+|-+$/g, ""); // Trim leading/trailing hyphens
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 export const submit = mutation({
@@ -177,8 +196,8 @@ export const submit = mutation({
     title: v.string(),
     tagline: v.string(),
     url: v.string(),
-    tagIds: v.array(v.id("tags")), // Existing tag IDs
-    newTagNames: v.optional(v.array(v.string())), // NEW: Names of new tags to create
+    tagIds: v.array(v.id("tags")),
+    newTagNames: v.optional(v.array(v.string())),
     name: v.string(),
     email: v.optional(v.string()),
     screenshotId: v.optional(v.id("_storage")),
@@ -198,28 +217,23 @@ export const submit = mutation({
       throw new Error(`Slug "${slug}" already exists for story: ${existing.title}`);
     }
 
-    let allTagIds: Id<"tags">[] = [...args.tagIds]; // Start with existing tag IDs
+    let allTagIds: Id<"tags">[] = [...args.tagIds];
 
-    // Ensure any new tags are created and get their IDs
     if (args.newTagNames && args.newTagNames.length > 0) {
       const newCreatedTagIds = await ctx.runMutation(internal.tags.ensureTags, {
         tagNames: args.newTagNames,
       });
-      // Combine existing and newly created tag IDs, ensuring uniqueness
       allTagIds = [...new Set([...allTagIds, ...newCreatedTagIds])];
     }
 
-    // Validate final tagIds exist (optional but good practice)
     for (const tagId of allTagIds) {
       const tag = await ctx.db.get(tagId);
       if (!tag) {
         console.warn(`Tag with ID ${tagId} not found during final check.`);
-        // Filter out potentially invalid IDs just in case
         allTagIds = allTagIds.filter((id) => id !== tagId);
       }
     }
 
-    // Only proceed if there's at least one valid tag
     if (allTagIds.length === 0) {
       throw new Error("At least one valid tag is required to submit a story.");
     }
@@ -229,7 +243,7 @@ export const submit = mutation({
       slug: slug,
       url: args.url,
       description: args.tagline,
-      tagIds: allTagIds, // Use the combined & validated list of tag IDs
+      tagIds: allTagIds,
       name: args.name,
       email: args.email,
       votes: 1,
@@ -242,7 +256,9 @@ export const submit = mutation({
       githubUrl: args.githubUrl,
       chefShowUrl: args.chefShowUrl,
       status: "approved",
-      isHidden: false, // Default to not hidden
+      isHidden: false,
+      isPinned: false,
+      customMessage: undefined,
     });
 
     return { storyId, slug };
@@ -254,45 +270,26 @@ export const generateUploadUrl = mutation(async (ctx) => {
   return await ctx.storage.generateUploadUrl();
 });
 
-// vote remains the same (votes on approved stories typically)
+// vote remains the same
 export const vote = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
     const story = await ctx.db.get(args.storyId);
-    if (!story) {
-      throw new Error("Story not found");
-    }
-    // Optional: Check if story is approved before allowing votes?
-    // if (story.status !== 'approved') {
-    //   throw new Error("Cannot vote on a story that is not approved.");
-    // }
-
-    await ctx.db.patch(args.storyId, {
-      votes: story.votes + 1,
-    });
+    if (!story) throw new Error("Story not found");
+    await ctx.db.patch(args.storyId, { votes: story.votes + 1 });
   },
 });
 
-// rate remains the same (rates on approved stories typically)
+// rate remains the same
 export const rate = mutation({
   args: {
     storyId: v.id("stories"),
-    rating: v.number(), // Expecting a rating from 1 to 5
+    rating: v.number(),
   },
   handler: async (ctx, args) => {
     const story = await ctx.db.get(args.storyId);
-    if (!story) {
-      throw new Error("Story not found");
-    }
-    // Optional: Check if story is approved before allowing rating?
-    // if (story.status !== 'approved') {
-    //   throw new Error("Cannot rate a story that is not approved.");
-    // }
-
-    if (args.rating < 1 || args.rating > 5) {
-      throw new Error("Rating must be between 1 and 5");
-    }
-
+    if (!story) throw new Error("Story not found");
+    if (args.rating < 1 || args.rating > 5) throw new Error("Rating must be between 1 and 5");
     await ctx.db.patch(args.storyId, {
       ratingSum: story.ratingSum + args.rating,
       ratingCount: story.ratingCount + 1,
@@ -300,87 +297,93 @@ export const rate = mutation({
   },
 });
 
-// New mutation for updating story status (moderation)
+// Mutation for updating story status (moderation)
 export const updateStatus = mutation({
   args: {
     storyId: v.id("stories"),
     status: v.union(v.literal("approved"), v.literal("rejected")),
   },
   handler: async (ctx, args) => {
-    // TODO: Add authentication check - only admins should update status
+    // TODO: Add admin auth check
     const story = await ctx.db.get(args.storyId);
-    if (!story) {
-      throw new Error("Story not found");
-    }
-
+    if (!story) throw new Error("Story not found");
     await ctx.db.patch(args.storyId, { status: args.status });
   },
 });
 
-// --- New Moderation Mutations ---
+// --- Admin/Moderation Mutations ---
 
-// Mutation to hide a story (soft delete / visibility toggle)
 export const hideStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
-    // TODO: Add admin authentication check
+    // TODO: Add admin auth check
     const story = await ctx.db.get(args.storyId);
-    if (!story) {
-      throw new Error("Story not found");
-    }
+    if (!story) throw new Error("Story not found");
     await ctx.db.patch(args.storyId, { isHidden: true });
   },
 });
 
-// Mutation to show a hidden story
 export const showStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
-    // TODO: Add admin authentication check
+    // TODO: Add admin auth check
     const story = await ctx.db.get(args.storyId);
-    if (!story) {
-      throw new Error("Story not found");
-    }
+    if (!story) throw new Error("Story not found");
     await ctx.db.patch(args.storyId, { isHidden: false });
   },
 });
 
-// Mutation to permanently delete a story
 export const deleteStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
-    // TODO: Add admin authentication check
+    // TODO: Add admin auth check
     const story = await ctx.db.get(args.storyId);
     if (!story) {
       console.warn(`Story ${args.storyId} not found for deletion.`);
-      return; // Or throw error if preferred
+      return;
     }
-
-    // Optionally: Delete associated comments and votes first
-    // This requires iterating through comments related to the story
-    // const comments = await ctx.db.query('comments').withIndex('by_storyId', q => q.eq('storyId', args.storyId)).collect();
-    // for (const comment of comments) {
-    //   await ctx.db.delete(comment._id);
-    // }
-
-    // Optionally: Delete screenshot from storage
     if (story.screenshotId) {
       try {
         await ctx.storage.delete(story.screenshotId);
       } catch (error) {
-        console.error(
-          `Failed to delete screenshot ${story.screenshotId} for story ${args.storyId}:`,
-          error
-        );
-        // Decide if deletion should proceed or throw
+        console.error(`Failed to delete screenshot ${story.screenshotId}:`, error);
       }
     }
-
+    // Consider deleting associated comments here as well
     await ctx.db.delete(args.storyId);
   },
 });
 
-// Query to list ALL stories for admin, with filtering and search
+// NEW: Mutation to update custom message
+export const updateStoryCustomMessage = mutation({
+  args: {
+    storyId: v.id("stories"),
+    customMessage: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // TODO: Add admin auth check
+    const story = await ctx.db.get(args.storyId);
+    if (!story) throw new Error("Story not found");
+    await ctx.db.patch(args.storyId, {
+      customMessage: args.customMessage || undefined,
+    });
+  },
+});
+
+// NEW: Mutation to toggle pin status
+export const toggleStoryPinStatus = mutation({
+  args: { storyId: v.id("stories") },
+  handler: async (ctx, args) => {
+    // TODO: Add admin auth check
+    const story = await ctx.db.get(args.storyId);
+    if (!story) throw new Error("Story not found");
+    await ctx.db.patch(args.storyId, {
+      isPinned: !story.isPinned,
+    });
+  },
+});
+
+// Updated query to list ALL stories for admin, sorting manually for pinning
 export const listAllStoriesAdmin = query({
   args: {
     paginationOpts: paginationOptsValidator,
@@ -389,7 +392,6 @@ export const listAllStoriesAdmin = query({
         v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected"))
       ),
       isHidden: v.optional(v.boolean()),
-      // tagId: v.optional(v.id("tags")), // Potential future filter
     }),
     searchTerm: v.optional(v.string()),
   },
@@ -397,77 +399,78 @@ export const listAllStoriesAdmin = query({
     ctx,
     args
   ): Promise<{ page: StoryWithDetails[]; isDone: boolean; continueCursor: string }> => {
-    // TODO: Add authentication check - only admins should access
+    // TODO: Add admin auth check
 
-    let query; // Use 'let' because it will be reassigned based on logic
+    let initialStories: Doc<"stories">[];
 
     if (args.searchTerm && args.searchTerm.trim() !== "") {
-      const searchTerm = args.searchTerm.trim(); // Ensure it's a non-empty string
-      // Use search index if searching
-      query = ctx.db.query("stories").withSearchIndex("search_all", (q) => {
-        let builder = q.search("title", searchTerm); // Use the checked searchTerm
-        // Apply filters within the search query if supported by the index setup
+      const searchTerm = args.searchTerm.trim();
+      let query = ctx.db.query("stories").withSearchIndex("search_all", (q) => {
+        let builder = q.search("title", searchTerm);
         if (args.filters.status) {
           builder = builder.eq("status", args.filters.status);
         }
-        // Note: Convex search might not directly support filtering by boolean `isHidden`
-        // If `isHidden` needs filtering during search, it might require schema adjustment
-        // (e.g., storing isHidden as a string literal) or post-search filtering.
-        // Let's assume for now search focuses on title and status filter works.
         if (args.filters.isHidden !== undefined) {
-          console.warn(
-            "Filtering by isHidden during search might not be optimized or directly supported by current search index config."
-          );
-          // We might need to filter results *after* the search pagination if this filter is crucial during search
-          builder = builder.eq("isHidden", args.filters.isHidden); // Attempt to add, check if it works
+          builder = builder.eq("isHidden", args.filters.isHidden);
         }
         return builder;
       });
-      // Ordering with search results might be based on relevance.
-      // Explicit ordering might need to happen after fetching if possible.
-    } else {
-      // Use regular indexes if not searching
-      let baseQuery = ctx.db.query("stories");
-
-      // Apply filters using indexes - prioritize more specific indexes
-      if (args.filters.isHidden !== undefined && args.filters.status) {
-        query = baseQuery.withIndex("by_hidden_status", (q) =>
-          q.eq("isHidden", args.filters.isHidden!).eq("status", args.filters.status!)
-        );
-      } else if (args.filters.isHidden !== undefined) {
-        // Using filter as fallback for boolean (check Convex docs for optimal boolean indexing)
-        query = baseQuery.filter((q) => q.eq(q.field("isHidden"), args.filters.isHidden));
-      } else if (args.filters.status) {
-        // Add explicit check for status being defined
-        query = baseQuery.withIndex("by_status_creationTime", (q) =>
-          q.eq("status", args.filters.status!)
-        );
-      } else {
-        // No filters, fetch all
-        query = baseQuery; // Assign baseQuery to query
+      initialStories = await query.collect();
+      // Post-filter if necessary
+      if (args.filters.status && !initialStories.every((s) => s.status === args.filters.status)) {
+        initialStories = initialStories.filter((s) => s.status === args.filters.status);
       }
-      // Apply default ordering when not searching
-      query = query.order("desc"); // Default order: newest first by _creationTime
+      if (
+        args.filters.isHidden !== undefined &&
+        !initialStories.every((s) => s.isHidden === args.filters.isHidden)
+      ) {
+        initialStories = initialStories.filter((s) => s.isHidden === args.filters.isHidden);
+      }
+    } else {
+      let query = ctx.db.query("stories");
+      // Rely on filter for combined criteria
+      initialStories = await query
+        .filter((q) => {
+          const conditions = [];
+          if (args.filters.status) {
+            conditions.push(q.eq(q.field("status"), args.filters.status));
+          }
+          if (args.filters.isHidden !== undefined) {
+            conditions.push(q.eq(q.field("isHidden"), args.filters.isHidden));
+          }
+          return conditions.length > 0 ? q.and(...conditions) : true;
+        })
+        .collect();
     }
 
-    // Execute pagination
-    const paginatedStories = await query.paginate(args.paginationOpts);
+    // Manual Sorting: Pinned first, then by creation time descending
+    initialStories.sort((a, b) => {
+      const pinA = a.isPinned ?? false;
+      const pinB = b.isPinned ?? false;
+      if (pinA !== pinB) {
+        return pinA ? -1 : 1;
+      }
+      return b._creationTime - a._creationTime;
+    });
 
-    // Fetch additional details (tags, URLs)
-    const storiesWithDetails = await fetchTagsForStories(ctx, paginatedStories.page);
-
-    // Filter by isHidden *after* search pagination if search index didn't support it well
-    let finalPage = storiesWithDetails;
-    if (args.searchTerm && args.searchTerm.trim() !== "" && args.filters.isHidden !== undefined) {
-      // Re-filter the fetched page if the search index couldn't handle the boolean filter reliably
-      finalPage = storiesWithDetails.filter((story) => story.isHidden === args.filters.isHidden);
-      // Note: This post-filtering affects pagination accuracy (might get fewer items than requested).
-      // A better solution might involve schema changes or different indexing for boolean search filters.
+    // Apply pagination manually after sorting
+    const startIndex = args.paginationOpts.cursor ? parseInt(args.paginationOpts.cursor, 10) : 0;
+    if (isNaN(startIndex) || startIndex < 0) {
+      throw new Error("Invalid pagination cursor");
     }
+    const endIndex = startIndex + args.paginationOpts.numItems;
+    const pageStories = initialStories.slice(startIndex, endIndex);
+
+    const isDone = endIndex >= initialStories.length;
+    const continueCursor = isDone ? null : endIndex.toString();
+
+    // Fetch additional details for the paginated subset
+    const storiesWithDetails = await fetchTagsAndCountsForStories(ctx, pageStories);
 
     return {
-      ...paginatedStories,
-      page: finalPage, // Use potentially post-filtered page
+      page: storiesWithDetails,
+      isDone,
+      continueCursor: continueCursor ?? "",
     };
   },
 });
