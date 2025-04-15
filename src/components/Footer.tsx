@@ -1,6 +1,6 @@
-import React from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
-import { X } from 'lucide-react';
+import React from "react";
+import * as Dialog from "@radix-ui/react-dialog";
+import { X } from "lucide-react";
 
 export function Footer() {
   const [showAboutModal, setShowAboutModal] = React.useState(false);
@@ -9,35 +9,29 @@ export function Footer() {
     <footer className="mt-12">
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center gap-4 text-sm text-[#787672]">
-          <button
-            onClick={() => setShowAboutModal(true)}
-            className="hover:text-[#525252]"
-          >
+          <button onClick={() => setShowAboutModal(true)} className="hover:text-[#525252]">
             About
           </button>
           <a
-            href="https://github.com/stackblitz/vibe-submissions"
+            href="https://github.com/waynesutton/vibeapps"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-[#525252]"
-          >
-            GitHub
+            className="hover:text-[#525252]">
+            Vibe Apps Open Source on GitHub
           </a>
           <a
             href="https://convex.dev"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-[#525252]"
-          >
+            className="hover:text-[#525252]">
             Powered by Convex
           </a>
           <a
-            href="https://flow.org"
+            href="https://chef.convex.dev/"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-[#525252]"
-          >
-            Built with Flow
+            className="hover:text-[#525252]">
+            Cook Chef
           </a>
         </div>
       </div>
@@ -55,14 +49,28 @@ export function Footer() {
               </Dialog.Close>
             </div>
             <div className="prose prose-sm">
+              <p>Vibe Apps – The community for vibe coding apps.</p>
+
               <p>
-                Vibe Apps is a community platform for discovering and sharing vibe coding applications.
-                Built with React, TypeScript, and Tailwind CSS, it provides a space for developers to
-                showcase their work and engage with others in the community.
+                Discover and share vibe coding apps built with Convex Chef, Cursor, Bolt, Windsurf,
+                Tempo and more.{" "}
+                <a
+                  href="https://convex.dev"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[#525252]">
+                  Powered by Convex
+                </a>
+                .
               </p>
+
               <p>
-                Features include app submissions, commenting, voting, and a comprehensive admin
-                dashboard for content moderation and site management.
+                Vibe Apps is the place to discover and share vibe coding apps from anywhere on the
+                web — a real-time community platform where vibe coders, developers can share and
+                explore apps built with platforms like Convex Chef, Cursor, Bolt, Windsurf, Lovable,
+                Tempo and more. Submit your app, vote on others, rank submissions, drop comments,
+                and discover what the community is cooking. Built on Convex for real-time
+                interaction.
               </p>
             </div>
           </Dialog.Content>

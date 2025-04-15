@@ -2,7 +2,7 @@
 
 ### About
 
-Discover and share vibe coding apps. Built with Convex Chef, Cursor, Bolt, Windsurf, Tempo and more. Powered by Convex.
+Discover and share vibe coding apps built with Convex Chef, Cursor, Bolt, Windsurf, Tempo and more. Vibe Apps is powered by Convex.dev.
 
 Vibe Apps is the home for vibe coding projects — a real-time community platform where developers share and explore creative apps built with tools like Convex Chef, Cursor, Bolt, Windsurf, Lovable, Tempo and more. Submit your app, vote on others, drop comments, and discover what the community is cooking. Built on Convex for real-time interaction.
 
