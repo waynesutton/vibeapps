@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ChevronUp, MessageSquare, Star } from "lucide-react";
+import { ChevronUp, MessageSquare, Star, Linkedin, Twitter, Github } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useQuery, useMutation } from "convex/react"; // Import Convex hooks
 import { api } from "../../convex/_generated/api"; // Import Convex API
@@ -53,6 +53,21 @@ export function StoryDetail({ story }: StoryDetailProps) {
     });
     setReplyToId(null);
   };
+
+  // Update document title and meta description
+  useEffect(() => {
+    document.title = `${story.title} | Vibe Coding`;
+    const metaDescription = document.querySelector('meta[name="description"]');
+    if (metaDescription) {
+      metaDescription.setAttribute("content", story.description);
+    } else {
+      // Create meta tag if it doesn't exist
+      const newMeta = document.createElement("meta");
+      newMeta.name = "description";
+      newMeta.content = story.description;
+      document.head.appendChild(newMeta);
+    }
+  }, [story.title, story.description]);
 
   const averageRating = story.ratingCount > 0 ? story.ratingSum / story.ratingCount : 0;
   const currentRatingDisplay = averageRating; // Display average for now
@@ -109,26 +124,6 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 {comments?.length ?? 0} Comments
               </Link>
             </div>
-            <div className="flex gap-1.5 flex-wrap">
-              {(story.tags || []).map(
-                (tag: Doc<"tags">) =>
-                  // Only render tags that are not hidden
-                  !tag.isHidden && (
-                    <Link
-                      key={tag._id}
-                      to={`/?tag=${tag._id}`}
-                      className="px-2 py-0.5 rounded text-xs font-medium transition-opacity hover:opacity-80"
-                      style={{
-                        backgroundColor: tag.backgroundColor || "#F4F0ED", // Default BG
-                        color: tag.textColor || "#525252", // Default Text
-                        // Add border only if no background color is set
-                        border: tag.backgroundColor ? "none" : `1px solid #D5D3D0`,
-                      }}>
-                      {tag.name}
-                    </Link>
-                  )
-              )}
-            </div>
           </div>
         </div>
       </article>
@@ -167,6 +162,94 @@ export function StoryDetail({ story }: StoryDetailProps) {
         </div>
         <p className="text-sm text-[#787672]">Your rating helps others discover great apps.</p>
       </div>
+
+      {/* Project Links & Tags Section */}
+      {(story.linkedinUrl ||
+        story.twitterUrl ||
+        story.githubUrl ||
+        story.chefShowUrl ||
+        story.tags?.length > 0) && (
+        <div className="mt-8 bg-white rounded-lg p-6 border border-[#D5D3D0]">
+          <h2 className="text-lg font-medium text-[#525252] mb-4">Project Links & Tags</h2>
+          <div className="space-y-3">
+            {story.githubUrl && (
+              <div className="flex items-center gap-2">
+                <Github className="w-4 h-4 text-[#787672] flex-shrink-0" />
+                <a
+                  href={story.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-[#525252] hover:text-[#2A2825] hover:underline truncate"
+                  title={story.githubUrl}>
+                  GitHub Repo
+                </a>
+              </div>
+            )}
+            {story.linkedinUrl && (
+              <div className="flex items-center gap-2">
+                <Linkedin className="w-4 h-4 text-[#787672] flex-shrink-0" />
+                <a
+                  href={story.linkedinUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-[#525252] hover:text-[#2A2825] hover:underline truncate"
+                  title={story.linkedinUrl}>
+                  LinkedIn Post
+                </a>
+              </div>
+            )}
+            {story.twitterUrl && (
+              <div className="flex items-center gap-2">
+                <Twitter className="w-4 h-4 text-[#787672] flex-shrink-0" />
+                <a
+                  href={story.twitterUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-[#525252] hover:text-[#2A2825] hover:underline truncate"
+                  title={story.twitterUrl}>
+                  X/Bluesky Post
+                </a>
+              </div>
+            )}
+            {story.chefShowUrl && (
+              <div className="flex items-center gap-2">
+                {/* Placeholder for Chef.show icon if available */}
+                <span className="w-4 h-4 text-[#787672] flex-shrink-0">🍳</span>
+                <a
+                  href={story.chefShowUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-[#525252] hover:text-[#2A2825] hover:underline truncate"
+                  title={story.chefShowUrl}>
+                  Chef.show Project
+                </a>
+              </div>
+            )}
+
+            {/* Moved Tags Here */}
+            {story.tags && story.tags.length > 0 && (
+              <div className="flex gap-1.5 flex-wrap pt-3 border-t border-[#F4F0ED] mt-3">
+                {(story.tags || []).map(
+                  (tag: Doc<"tags">) =>
+                    !tag.isHidden && (
+                      <Link
+                        key={tag._id}
+                        to={`/?tag=${tag._id}`}
+                        className="px-2 py-0.5 rounded text-xs font-medium transition-opacity hover:opacity-80"
+                        style={{
+                          backgroundColor: tag.backgroundColor || "#F4F0ED",
+                          color: tag.textColor || "#525252",
+                          border: tag.backgroundColor ? "none" : `1px solid #D5D3D0`,
+                        }}>
+                        {tag.name}
+                      </Link>
+                    )
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Comments Section */}
       <div id="comments" className="mt-8 scroll-mt-20">
