@@ -178,7 +178,7 @@ export const submit = mutation({
       twitterUrl: args.twitterUrl,
       githubUrl: args.githubUrl, // Changed from redditUrl
       chefShowUrl: args.chefShowUrl, // Added Chef.show URL
-      status: "pending", // Set initial status to pending
+      status: "approved", // Changed from "pending"
     });
 
     return { storyId, slug };

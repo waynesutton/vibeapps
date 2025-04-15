@@ -157,7 +157,7 @@ export const add = mutation({
       author: args.author,
       parentId: args.parentId,
       votes: 0,
-      status: "pending", // Set initial status to pending
+      status: "approved", // Changed from "pending"
     });
 
     // TODO: Only increment commentCount when a comment is APPROVED?
