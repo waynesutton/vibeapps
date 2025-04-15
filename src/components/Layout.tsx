@@ -64,7 +64,9 @@ export function Layout() {
             <Link to="/" className="inline-block text-[#2A2825] hover:text-[#525252]">
               <h1 className="title-font text-2xl mb-1">{siteTitle}</h1>
             </Link>
-            <p className="text-sm text-[#787672] mb-4">Vibe Coding Apps Directory</p>
+            <p className="text-sm text-[#787672] mb-4">
+              The place to share and discover new apps built by the vibe coding community.
+            </p>
             <div className="flex justify-center flex-wrap gap-2 mb-4 px-4">
               {headerTags === undefined && (
                 <div className="text-sm text-gray-500">Loading tags...</div>
@@ -106,7 +108,7 @@ export function Layout() {
                   );
                 })}
             </div>
-            <div className="flex justify-center gap-4 items-center relative">
+            <div className="flex justify-center items-center gap-4">
               <div className="flex items-center gap-2">
                 <Link
                   to="/submit"
@@ -150,26 +152,25 @@ export function Layout() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={handleSearchIconClick}
-                  className="p-2 text-[#525252] hover:text-[#2A2825]"
-                  aria-label="Search">
-                  <Search className="w-5 h-5" />
-                </button>
-                <form onSubmit={handleSearch} className="flex items-center">
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search..."
-                    className={`transition-all duration-300 ease-in-out h-9 px-3 text-sm focus:outline-none bg-white text-[#525252] rounded-md border ${isSearchExpanded ? "w-64 opacity-100 border-[#D5D3D0]" : "w-0 opacity-0 p-0 border-none hidden"}`}
-                    style={{ borderColor: isSearchExpanded ? "#D5D3D0" : "transparent" }}
-                  />
-                </form>
-              </div>
+              <button
+                type="button"
+                onClick={handleSearchIconClick}
+                className="p-2 text-[#525252] hover:text-[#2A2825]"
+                aria-label="Search">
+                <Search className="w-5 h-5" />
+              </button>
+              <form onSubmit={handleSearch} className="flex items-center">
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search..."
+                  className={`transition-all duration-300 ease-in-out h-9 text-sm focus:outline-none bg-white text-[#525252] rounded-md border ${isSearchExpanded ? "w-64 opacity-100 px-3 border-[#D5D3D0]" : "w-0 opacity-0 p-0 border-none"}`}
+                  style={{ borderColor: isSearchExpanded ? "#D5D3D0" : "transparent" }}
+                  tabIndex={isSearchExpanded ? 0 : -1}
+                />
+              </form>
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-# Vibe Apps – The community for vibe coding apps
+# Vibe Apps – The place to share and discover new apps built by the vibe coding community.
 
 ### About
 

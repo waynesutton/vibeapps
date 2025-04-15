@@ -12,12 +12,8 @@ export function Footer() {
           <button onClick={() => setShowAboutModal(true)} className="hover:text-[#525252]">
             About
           </button>
-          <a
-            href="https://github.com/waynesutton/vibeapps"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-[#525252]">
-            Vibe Apps Open Source on GitHub
+          <a href="#" target="_blank" rel="noopener noreferrer" className="hover:text-[#525252]">
+            Login
           </a>
           <a
             href="https://convex.dev"
@@ -31,7 +27,7 @@ export function Footer() {
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-[#525252]">
-            Cook Chef
+            Cooked with Chef
           </a>
         </div>
       </div>
@@ -49,7 +45,10 @@ export function Footer() {
               </Dialog.Close>
             </div>
             <div className="prose prose-sm">
-              <p>Vibe Apps – The community for vibe coding apps.</p>
+              <p>
+                Vibe Apps – The place to share and discover new apps built by thevibe coding
+                community..
+              </p>
 
               <p>
                 Discover and share vibe coding apps built with Convex Chef, Cursor, Bolt, Windsurf,
@@ -71,6 +70,15 @@ export function Footer() {
                 Tempo and more. Submit your app, vote on others, rank submissions, drop comments,
                 and discover what the community is cooking. Built on Convex for real-time
                 interaction.
+              </p>
+              <p>
+                <a
+                  href="https://github.com/waynesutton/vibeapps"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[#525252]">
+                  Vibe Apps is Open-Source on GitHub
+                </a>
               </p>
             </div>
           </Dialog.Content>
