@@ -17,8 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-// Commenting out until the component is added
-// import { Textarea } from "@/components/ui/textarea";
+import { Textarea } from "@/components/ui/textarea";
 import { debounce } from "lodash-es";
 
 type Comment = Doc<"comments">;
@@ -33,8 +32,8 @@ export function ContentModeration() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   // State for custom message editing - Commented out
-  // const [editingMessageId, setEditingMessageId] = useState<Id<"stories"> | null>(null);
-  // const [currentMessage, setCurrentMessage] = useState("");
+  const [editingMessageId, setEditingMessageId] = useState<Id<"stories"> | null>(null);
+  const [currentMessage, setCurrentMessage] = useState("");
 
   const debouncedSetSearch = useCallback(
     debounce((value: string) => {
@@ -155,25 +154,25 @@ export function ContentModeration() {
   };
 
   // Handlers for custom message editing - Commented out
-  // const handleEditMessage = (item: StoryWithDetails) => {
-  //   setEditingMessageId(item._id);
-  //   setCurrentMessage(item.customMessage || "");
-  // };
-  // const handleCancelEditMessage = () => {
-  //   setEditingMessageId(null);
-  //   setCurrentMessage("");
-  // };
-  // const handleSaveMessage = (storyId: Id<"stories">) => {
-  //   updateCustomMessage({ storyId, customMessage: currentMessage || undefined });
-  //   handleCancelEditMessage(); // Close editor on save
-  // };
+  const handleEditMessage = (item: StoryWithDetails) => {
+    setEditingMessageId(item._id);
+    setCurrentMessage(item.customMessage || "");
+  };
+  const handleCancelEditMessage = () => {
+    setEditingMessageId(null);
+    setCurrentMessage("");
+  };
+  const handleSaveMessage = (storyId: Id<"stories">) => {
+    updateCustomMessage({ storyId, customMessage: currentMessage || undefined });
+    handleCancelEditMessage(); // Close editor on save
+  };
 
   const isLoading = storiesStatus === "LoadingFirstPage" || commentsStatus === "LoadingFirstPage";
 
   const renderItem = (item: ModeratableItem) => {
     // Commented out editing state logic
-    // const isEditing = item.type === "story" && editingMessageId === item._id;
-    const isEditing = false; // Temporarily set to false as editing is disabled
+    const isEditing = item.type === "story" && editingMessageId === item._id;
+    // const isEditing = false; // Temporarily set to false as editing is disabled
 
     return (
       <div key={item._id} className="border-b border-[#F4F0ED] py-4 last:border-b-0">
@@ -203,12 +202,14 @@ export function ContentModeration() {
               </div>
             )}
             {/* Custom Message Editor - Commented out until Textarea is added */}
-            {/* {item.type === "story" && isEditing && (
+            {item.type === "story" && isEditing && (
               <div className="mt-3 space-y-2">
                 <Textarea // This is the component causing the error if not installed
                   placeholder="Add a custom message to display on the frontend..."
                   value={currentMessage}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCurrentMessage(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                    setCurrentMessage(e.target.value)
+                  }
                   rows={2}
                   className="text-sm"
                 />
@@ -224,7 +225,7 @@ export function ContentModeration() {
                   </Button>
                 </div>
               </div>
-            )} */}
+            )}
             <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-[#787672]">
               <span>by {item.type === "story" ? item.name : item.author}</span>
               {item.type === "story" && item.email && (
@@ -317,11 +318,14 @@ export function ContentModeration() {
                   <Pin className="w-4 h-4 mr-1" /> {item.isPinned ? "Unpin" : "Pin"}
                 </Button>
                 {/* Commenting out Add Message button until Textarea is added */}
-                {/* {!isEditing && (
-                   <Button variant="outline" size="sm" onClick={() => handleEditMessage(item as StoryWithDetails)}>
+                {!isEditing && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEditMessage(item as StoryWithDetails)}>
                     <MessageSquare className="w-4 h-4 mr-1" /> Add Message
-                   </Button>
-                )} */}
+                  </Button>
+                )}
               </>
             )}
 

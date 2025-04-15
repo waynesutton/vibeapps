@@ -80,6 +80,11 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
             {/* STORY CONTENT - Apply bg/border/padding here for vibe mode */}
             <div
               className={`flex-1 min-w-0 ${viewMode === "vibe" ? "bg-white rounded-lg p-3.5 border border-[#D5D3D0]" : ""}`}>
+              {story.customMessage && (
+                <div className="mb-4 text-sm text-[#787671] bg-[#F3F0ED] border border-[#D5D3D0] rounded-md p-3 italic">
+                  {story.customMessage}
+                </div>
+              )}
               <div className="flex items-center gap-2 mb-2">
                 {story.isPinned && (
                   <Pin className="w-4 h-4 #787671 flex-shrink-0" aria-label="Pinned Story" />
@@ -105,11 +110,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
               {viewMode !== "vibe" && (
                 <p className="text-[#787672] text-sm mb-4 line-clamp-3">{story.description}</p>
               )}
-              {story.customMessage && (
-                <div className="mb-4 text-sm text-[#787671] bg-[#F3F0ED] border border-[#D5D3D0] rounded-md p-3 italic">
-                  {story.customMessage}
-                </div>
-              )}
+
               <div className="flex items-center gap-4 text-sm text-[#787672] flex-wrap">
                 <span>by {story.name}</span>
                 <span>{formatDate(story._creationTime)}</span>
