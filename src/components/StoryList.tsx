@@ -42,19 +42,20 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
               className={`flex ${viewMode === "vibe" ? "flex-col items-center w-[70px] flex-shrink-0" : viewMode === "grid" ? "flex-row items-center gap-1 pt-1" : "flex-col items-center min-w-[40px] pt-1"}`}>
               {viewMode === "vibe" ? (
                 <div className="flex flex-col items-center w-full">
-                  <div className="bg-gradient-to-b from-[#639BF8] to-[#3A77D9] rounded-t-md w-full h-[40px] flex items-center justify-center text-lg font-bold text-white">
+                  <div className="bg-gradient-to-b from-[#FBF5DB] to-[#FAF9F1] rounded-t-md w-full h-[62px] flex flex-col items-center justify-center text-lg border border border-[#D5D3D0] font-normal text-#2A2825 mb-[5px]">
                     {story.votes}
+                    <div className="text-xs">Vibes</div>
                   </div>
-                  <button className="bg-white border border-t-0 border-[#639BF8] text-[#639BF8] hover:bg-[#ebf3ff] w-full rounded-b-md py-1 px-2 flex items-center justify-center gap-1 text-sm font-medium h-[24px]">
+                  <button className="bg-white border border-t-0 border-[#D5D3D0] text-[#2A2825] hover:bg-[#ebf3ff] w-full rounded-b-md py-1 px-2 flex items-center justify-center gap-1 text-sm font-medium h-[24px]">
                     Vibe it
                   </button>
                 </div>
               ) : (
                 <>
-                  <button className="text-[#2A2825] hover:bg-[#F4F0ED] p-1 rounded">
+                  <button className="text-[#2A2825] hover:bg-[#FBF5DB] p-1 rounded">
                     <ChevronUp className="w-5 h-5" />
                   </button>
-                  <span className="text-[#525252] font-medium text-sm">{story.votes}</span>
+                  <span className="text-[#2A2825] font-medium text-sm">{story.votes}</span>
                 </>
               )}
             </div>
