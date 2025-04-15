@@ -1,75 +1,157 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { MessageSquare, Flag, Check, X, Eye, EyeOff, Trash2 } from "lucide-react";
+import { MessageSquare, Check, X, Eye, EyeOff, Trash2, Search } from "lucide-react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { usePaginatedQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
-import type { Story, Comment } from "../../types"; // Use our defined types
+import type { StoryWithDetails } from "../../../convex/stories";
+import { Doc } from "../../../convex/_generated/dataModel";
 import { Link } from "react-router-dom";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { debounce } from "lodash-es";
 
-// Define combined type or handle separately
-type ModeratableItem = (Story & { type: "story" }) | (Comment & { type: "comment" });
+type Comment = Doc<"comments">;
+
+type ModeratableItem = (StoryWithDetails & { type: "story" }) | (Comment & { type: "comment" });
+
+type StatusFilter = "all" | "pending" | "approved" | "rejected" | "hidden";
 
 export function ContentModeration() {
-  const [activeTab, setActiveTab] = useState<"submissions" | "comments">("submissions");
+  const [activeItemType, setActiveItemType] = useState<"submissions" | "comments">("submissions");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("pending");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 
-  // Fetch pending stories
+  const debouncedSetSearch = useCallback(
+    debounce((value: string) => {
+      setDebouncedSearchTerm(value);
+    }, 300),
+    []
+  );
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    debouncedSetSearch(value);
+  };
+
+  const filters = useMemo(() => {
+    const convexFilters: any = {};
+    if (statusFilter === "hidden") {
+      convexFilters.isHidden = true;
+    } else if (statusFilter !== "all") {
+      convexFilters.status = statusFilter;
+      convexFilters.isHidden = false;
+    }
+
+    return convexFilters;
+  }, [statusFilter]);
+
   const {
-    results: pendingStories,
+    results: stories,
     status: storiesStatus,
     loadMore: loadMoreStories,
-  } = usePaginatedQuery(api.stories.listPending, {}, { initialNumItems: 10 });
+  } = usePaginatedQuery(
+    api.stories.listAllStoriesAdmin,
+    {
+      filters: filters,
+      searchTerm: debouncedSearchTerm || undefined,
+    },
+    { initialNumItems: 10 }
+  );
 
-  // Fetch pending comments (needs a similar query, e.g., listAllPendingComments)
-  // For now, let's assume a query exists: api.comments.listAllPending
-  // const { results: pendingComments, status: commentsStatus, loadMore: loadMoreComments } =
-  //     usePaginatedQuery(api.comments.listAllPending, {}, { initialNumItems: 10 });
-  // Placeholder until listAllPending is created:
-  const pendingComments: Comment[] = [];
-  const commentsStatus = "Exhausted";
-  const loadMoreComments = () => {};
+  const {
+    results: comments,
+    status: commentsStatus,
+    loadMore: loadMoreComments,
+  } = usePaginatedQuery(
+    api.comments.listAllCommentsAdmin,
+    {
+      filters: filters,
+    },
+    { initialNumItems: 10 }
+  );
 
   const approveStory = useMutation(api.stories.updateStatus);
   const rejectStory = useMutation(api.stories.updateStatus);
+  const hideStory = useMutation(api.stories.hideStory);
+  const showStory = useMutation(api.stories.showStory);
+  const deleteStory = useMutation(api.stories.deleteStory);
+
   const approveComment = useMutation(api.comments.updateStatus);
   const rejectComment = useMutation(api.comments.updateStatus);
-  // TODO: Add delete mutations if needed (hard delete vs. reject status)
+  const hideComment = useMutation(api.comments.hideComment);
+  const showComment = useMutation(api.comments.showComment);
+  const deleteComment = useMutation(api.comments.deleteComment);
 
-  const handleApprove = (item: ModeratableItem) => {
-    if (item.type === "story") {
-      approveStory({ storyId: item._id, status: "approved" });
-    } else {
-      approveComment({ commentId: item._id, status: "approved" });
+  const handleStoryAction = (action: string, storyId: Id<"stories">) => {
+    switch (action) {
+      case "approve":
+        approveStory({ storyId, status: "approved" });
+        break;
+      case "reject":
+        rejectStory({ storyId, status: "rejected" });
+        break;
+      case "hide":
+        hideStory({ storyId });
+        break;
+      case "show":
+        showStory({ storyId });
+        break;
+      case "delete":
+        if (window.confirm("Delete story?")) deleteStory({ storyId });
+        break;
     }
   };
 
-  const handleReject = (item: ModeratableItem) => {
-    if (item.type === "story") {
-      rejectStory({ storyId: item._id, status: "rejected" });
-    } else {
-      rejectComment({ commentId: item._id, status: "rejected" });
+  const handleCommentAction = (action: string, commentId: Id<"comments">) => {
+    switch (action) {
+      case "approve":
+        approveComment({ commentId, status: "approved" });
+        break;
+      case "reject":
+        rejectComment({ commentId, status: "rejected" });
+        break;
+      case "hide":
+        hideComment({ commentId });
+        break;
+      case "show":
+        showComment({ commentId });
+        break;
+      case "delete":
+        if (window.confirm("Delete comment?")) deleteComment({ commentId });
+        break;
     }
   };
 
   const isLoading = storiesStatus === "LoadingFirstPage" || commentsStatus === "LoadingFirstPage";
 
   const renderItem = (item: ModeratableItem) => (
-    <div key={item._id} className="border-b border-[#F4F0ED] pb-4 mb-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1">
+    <div key={item._id} className="border-b border-[#F4F0ED] pb-4 mb-4 last:border-b-0 last:mb-0">
+      <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
           {item.type === "story" && (
             <Link
               to={`/s/${item.slug}`}
+              target="_blank"
               className="font-medium text-[#525252] hover:text-[#2A2825] block mb-1">
               {item.title}
             </Link>
           )}
           <p
-            className={`text-sm ${item.type === "comment" ? "text-[#525252]" : "text-[#787672]"} mt-1`}>
+            className={`text-sm ${item.type === "comment" ? "text-[#525252]" : "text-[#787672]"} mt-1 break-words`}>
             {item.type === "story" ? item.description : item.content}
           </p>
-          <div className="flex items-center gap-4 mt-2 text-xs text-[#787672]">
+          <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-[#787672]">
             <span>by {item.type === "story" ? item.name : item.author}</span>
             {item.type === "story" && item.email && (
               <span className="text-gray-400">({item.email})</span>
@@ -78,18 +160,27 @@ export function ContentModeration() {
             {item.type === "story" && (
               <>
                 <span>{item.votes} votes</span>
-                <span>({item.commentCount} comments)</span>
+                <Link to={`/s/${item.slug}#comments`} target="_blank" className="hover:underline">
+                  ({item.commentCount} comments)
+                </Link>
               </>
             )}
-            {item.type === "comment" && <span>(Comment)</span>}
-            {/* Optional: Link to parent story for comments */}
-            {item.type === "comment" && item.storyId && (
-              <Link to={`/s/${item.storyId}`} className="hover:underline">
-                View Story
-              </Link>
+            {item.type === "comment" && (
+              <span>
+                (Comment on{" "}
+                {/* Assuming comment schema has storyId and you have a function to fetch story slug or title */}
+                {/* <Link to={`/s/${getStorySlug(item.storyId)}`} target="_blank" className="hover:underline"> */}{" "}
+                Story {/* </Link> */} id: {item.storyId} {/* Temporary display */})
+              </span>
             )}
+            <span
+              className={`font-semibold ${item.isHidden ? "text-orange-600" : item.status === "pending" ? "text-blue-600" : item.status === "rejected" ? "text-red-600" : "text-green-600"}`}>
+              {item.isHidden
+                ? "Hidden"
+                : item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+            </span>
           </div>
-          {item.type === "story" && item.tags && (
+          {item.type === "story" && item.tags?.length > 0 && (
             <div className="flex gap-1 mt-2 flex-wrap">
               {item.tags.map((tag) => (
                 <span
@@ -101,88 +192,156 @@ export function ContentModeration() {
             </div>
           )}
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 items-end sm:items-center">
-          <button
-            onClick={() => handleApprove(item)}
-            className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors text-sm flex items-center gap-1"
-            title="Approve">
-            <Check className="w-4 h-4" /> Approve
-          </button>
-          <button
-            onClick={() => handleReject(item)}
-            className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors text-sm flex items-center gap-1"
-            title="Reject">
-            <X className="w-4 h-4" /> Reject
-          </button>
-          {/* Add delete button if hard delete is desired */}
-          {/* <button
-                        // onClick={() => handleDelete(item)}
-                        className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                        title="Delete Permanently"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </button> */}
+        <div className="flex flex-wrap gap-2 items-center flex-shrink-0">
+          {item.status === "pending" && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                onClick={() =>
+                  item.type === "story"
+                    ? handleStoryAction("approve", item._id)
+                    : handleCommentAction("approve", item._id)
+                }>
+                <Check className="w-4 h-4 mr-1" /> Approve
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+                onClick={() =>
+                  item.type === "story"
+                    ? handleStoryAction("reject", item._id)
+                    : handleCommentAction("reject", item._id)
+                }>
+                <X className="w-4 h-4 mr-1" /> Reject
+              </Button>
+            </>
+          )}
+          {!item.isHidden && item.status !== "pending" && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
+              onClick={() =>
+                item.type === "story"
+                  ? handleStoryAction("hide", item._id)
+                  : handleCommentAction("hide", item._id)
+              }>
+              <EyeOff className="w-4 h-4 mr-1" /> Hide
+            </Button>
+          )}
+          {item.isHidden && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+              onClick={() =>
+                item.type === "story"
+                  ? handleStoryAction("show", item._id)
+                  : handleCommentAction("show", item._id)
+              }>
+              <Eye className="w-4 h-4 mr-1" /> Show
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-red-700 hover:bg-red-50 hover:text-red-800 border-red-200"
+            onClick={() =>
+              item.type === "story"
+                ? handleStoryAction("delete", item._id)
+                : handleCommentAction("delete", item._id)
+            }>
+            <Trash2 className="w-4 h-4 mr-1" /> Delete
+          </Button>
         </div>
       </div>
     </div>
   );
 
+  const itemsToRender: ModeratableItem[] = useMemo(() => {
+    if (activeItemType === "submissions") {
+      return (stories || []).map((story) => ({ ...story, type: "story" }));
+    } else {
+      return (comments || []).map((comment) => ({ ...comment, type: "comment" }));
+    }
+  }, [activeItemType, stories, comments]);
+
+  const currentStatus = activeItemType === "submissions" ? storiesStatus : commentsStatus;
+  const loadMore = activeItemType === "submissions" ? loadMoreStories : loadMoreComments;
+
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-        <h2 className="text-xl font-medium text-[#525252] mb-6">Content Moderation Queue</h2>
+      <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200">
+        <h2 className="text-xl font-medium text-[#525252] mb-6">Content Moderation</h2>
 
-        <Tabs.Root
-          value={activeTab}
-          onValueChange={(v) => setActiveTab(v as any)}
-          className="space-y-6">
-          <Tabs.List className="flex gap-4 border-b border-[#F4F0ED] mb-6">
-            <Tabs.Trigger
-              value="submissions"
-              className="px-4 py-2 text-sm text-[#787672] hover:text-[#525252] data-[state=active]:text-[#2A2825] data-[state=active]:font-medium data-[state=active]:border-b-2 data-[state=active]:border-[#2A2825]">
-              Pending Submissions ({pendingStories?.length ?? "?"})
-            </Tabs.Trigger>
-            <Tabs.Trigger
-              value="comments"
-              className="px-4 py-2 text-sm text-[#787672] hover:text-[#525252] data-[state=active]:text-[#2A2825] data-[state=active]:font-medium data-[state=active]:border-b-2 data-[state=active]:border-[#2A2825]">
-              Pending Comments ({pendingComments?.length ?? "?"})
-            </Tabs.Trigger>
-          </Tabs.List>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <Select value={activeItemType} onValueChange={(v: string) => setActiveItemType(v as any)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select Type..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="submissions">Submissions</SelectItem>
+              <SelectItem value="comments">Comments</SelectItem>
+            </SelectContent>
+          </Select>
 
-          {isLoading && <div className="text-center py-4">Loading...</div>}
+          <Select
+            value={statusFilter}
+            onValueChange={(v: string) => setStatusFilter(v as StatusFilter)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Filter by status..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectItem value="hidden">Hidden</SelectItem>
+            </SelectContent>
+          </Select>
 
-          <Tabs.Content value="submissions">
-            {storiesStatus !== "LoadingFirstPage" && pendingStories?.length === 0 && (
-              <div className="text-center py-4 text-[#787672]">No pending submissions.</div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              type="search"
+              placeholder={`Search ${activeItemType}...`}
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="pl-10"
+              disabled={activeItemType === "comments"}
+            />
+            {activeItemType === "comments" && (
+              <span className="text-xs text-gray-500 absolute right-3 top-1/2 transform -translate-y-1/2">
+                (Search N/A)
+              </span>
             )}
-            {pendingStories?.map((story) => renderItem({ ...story, type: "story" }))}
-            {storiesStatus === "CanLoadMore" && (
-              <div className="text-center mt-4">
-                <button
-                  onClick={() => loadMoreStories(10)}
-                  className="text-sm text-[#525252] hover:underline">
-                  Load More Submissions
-                </button>
-              </div>
-            )}
-          </Tabs.Content>
+          </div>
+        </div>
 
-          <Tabs.Content value="comments">
-            {commentsStatus !== "LoadingFirstPage" && pendingComments?.length === 0 && (
-              <div className="text-center py-4 text-[#787672]">No pending comments.</div>
-            )}
-            {pendingComments?.map((comment) => renderItem({ ...comment, type: "comment" }))}
-            {commentsStatus === "CanLoadMore" && (
-              <div className="text-center mt-4">
-                <button
-                  onClick={() => loadMoreComments(10)}
-                  className="text-sm text-[#525252] hover:underline">
-                  Load More Comments
-                </button>
-              </div>
-            )}
-          </Tabs.Content>
-        </Tabs.Root>
+        {isLoading && <div className="text-center py-6">Loading...</div>}
+
+        {!isLoading && itemsToRender.length === 0 && (
+          <div className="text-center py-6 text-[#787672]">
+            No {activeItemType} found matching the criteria.
+          </div>
+        )}
+
+        {!isLoading && itemsToRender.length > 0 && (
+          <div className="divide-y divide-[#F4F0ED]">
+            {itemsToRender.map((item) => renderItem(item))}
+          </div>
+        )}
+
+        {currentStatus === "CanLoadMore" && (
+          <div className="text-center mt-6">
+            <Button variant="outline" onClick={() => loadMore(10)}>
+              Load More {activeItemType}
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

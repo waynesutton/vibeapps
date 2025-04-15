@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
+import { paginationOptsValidator } from "convex/server";
 
 // We might not need this specific type if we don't enhance comments further yet
 // export type CommentWithDetails = Doc<"comments"> & {
@@ -34,6 +35,90 @@ export const listPendingByStory = query({
       .order("asc")
       .collect();
     return comments;
+  },
+});
+
+// Query to list ALL comments for admin, with filtering
+export const listAllCommentsAdmin = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    filters: v.object({
+      storyId: v.optional(v.id("stories")), // Optional filter by story
+      status: v.optional(
+        v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected"))
+      ),
+      isHidden: v.optional(v.boolean()),
+    }),
+    // Add searchTerm if comments should be searchable (requires search index on comments table)
+    // searchTerm: v.optional(v.string()),
+  },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ page: Doc<"comments">[]; isDone: boolean; continueCursor: string }> => {
+    // TODO: Add authentication check - only admins should access
+
+    let queryBuilder; // Use a new variable for the query builder chain
+
+    // Start building the query based on filters
+    if (args.filters.storyId && args.filters.isHidden !== undefined && args.filters.status) {
+      // Most specific index first
+      queryBuilder = ctx.db
+        .query("comments")
+        .withIndex("by_hidden_status", (q) =>
+          q
+            .eq("storyId", args.filters.storyId!)
+            .eq("isHidden", args.filters.isHidden!)
+            .eq("status", args.filters.status!)
+        );
+    } else if (args.filters.storyId && args.filters.status) {
+      queryBuilder = ctx.db
+        .query("comments")
+        .withIndex("by_storyId_status", (q) =>
+          q.eq("storyId", args.filters.storyId!).eq("status", args.filters.status!)
+        );
+    } else if (args.filters.isHidden !== undefined && args.filters.status) {
+      // Using filter as fallback (consider adding specific index if needed)
+      queryBuilder = ctx.db
+        .query("comments")
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("isHidden"), args.filters.isHidden),
+            q.eq(q.field("status"), args.filters.status)
+          )
+        );
+      // TODO: Add index on [isHidden, status] if this becomes slow
+    } else if (args.filters.storyId) {
+      // Using existing compound index
+      queryBuilder = ctx.db
+        .query("comments")
+        .withIndex("by_storyId_status", (q) => q.eq("storyId", args.filters.storyId!));
+    } else if (args.filters.status) {
+      // Needs index on just status - none exists, use filter
+      queryBuilder = ctx.db
+        .query("comments")
+        .filter((q) => q.eq(q.field("status"), args.filters.status));
+      // TODO: Add index on [status] if needed
+    } else if (args.filters.isHidden !== undefined) {
+      // Needs index on just isHidden - none exists, use filter
+      queryBuilder = ctx.db
+        .query("comments")
+        .filter((q) => q.eq(q.field("isHidden"), args.filters.isHidden));
+      // TODO: Add index on [isHidden] if needed
+    } else {
+      // If no filters, start with the base query
+      queryBuilder = ctx.db.query("comments");
+    }
+
+    // Apply default ordering
+    const orderedQuery = queryBuilder.order("desc"); // Default order: newest first
+
+    // Execute pagination
+    const paginatedComments = await orderedQuery.paginate(args.paginationOpts);
+
+    // TODO: Enhance with author details if needed
+
+    return paginatedComments;
   },
 });
 
@@ -110,5 +195,57 @@ export const updateStatus = mutation({
     // }
 
     await ctx.db.patch(args.commentId, { status: args.status });
+  },
+});
+
+// --- New Moderation Mutations ---
+
+// Mutation to hide a comment
+export const hideComment = mutation({
+  args: { commentId: v.id("comments") },
+  handler: async (ctx, args) => {
+    // TODO: Add admin authentication check
+    const comment = await ctx.db.get(args.commentId);
+    if (!comment) {
+      throw new Error("Comment not found");
+    }
+    await ctx.db.patch(args.commentId, { isHidden: true });
+  },
+});
+
+// Mutation to show a hidden comment
+export const showComment = mutation({
+  args: { commentId: v.id("comments") },
+  handler: async (ctx, args) => {
+    // TODO: Add admin authentication check
+    const comment = await ctx.db.get(args.commentId);
+    if (!comment) {
+      throw new Error("Comment not found");
+    }
+    await ctx.db.patch(args.commentId, { isHidden: false });
+  },
+});
+
+// Mutation to permanently delete a comment
+export const deleteComment = mutation({
+  args: { commentId: v.id("comments") },
+  handler: async (ctx, args) => {
+    // TODO: Add admin authentication check
+    const comment = await ctx.db.get(args.commentId);
+    if (!comment) {
+      console.warn(`Comment ${args.commentId} not found for deletion.`);
+      return; // Or throw error
+    }
+
+    // TODO: Consider decrementing story.commentCount if the deleted comment was approved.
+    // const story = await ctx.db.get(comment.storyId);
+    // if (story && comment.status === 'approved') {
+    //   await ctx.db.patch(story._id, { commentCount: Math.max(0, (story.commentCount || 0) - 1) });
+    // }
+
+    // TODO: Handle deletion of replies if this comment had children?
+    // This could be complex and might require a recursive approach or marking children.
+
+    await ctx.db.delete(args.commentId);
   },
 });

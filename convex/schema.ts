@@ -18,15 +18,18 @@ export default defineSchema({
     ratingCount: v.number(), // Number of ratings received
     linkedinUrl: v.optional(v.string()),
     twitterUrl: v.optional(v.string()),
-    redditUrl: v.optional(v.string()),
+    githubUrl: v.optional(v.string()), // Added GitHub Repo URL
+    chefShowUrl: v.optional(v.string()), // Added Chef.show URL
     status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
+    isHidden: v.optional(v.boolean()), // Added for admin hide/show
   })
     .index("by_slug", ["slug"])
     .index("by_votes", ["votes"])
     .index("by_status", ["status"])
+    .index("by_hidden_status", ["isHidden", "status"])
     .searchIndex("search_all", {
       searchField: "title",
-      filterFields: ["status"],
+      filterFields: ["status", "isHidden"],
     }),
 
   comments: defineTable({
@@ -36,7 +39,10 @@ export default defineSchema({
     parentId: v.optional(v.id("comments")), // For nested replies
     votes: v.number(),
     status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
-  }).index("by_storyId_status", ["storyId", "status"]),
+    isHidden: v.optional(v.boolean()), // Added for admin hide/show
+  })
+    .index("by_storyId_status", ["storyId", "status"])
+    .index("by_hidden_status", ["storyId", "isHidden", "status"]),
 
   tags: defineTable({
     name: v.string(),

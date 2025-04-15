@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
+import { Github } from "lucide-react";
 
 export function StoryForm() {
   const navigate = useNavigate();
@@ -14,7 +15,8 @@ export function StoryForm() {
     image: null as File | null,
     linkedinUrl: "",
     twitterUrl: "",
-    redditUrl: "",
+    githubUrl: "",
+    chefShowUrl: "",
     name: "",
     email: "",
   });
@@ -67,7 +69,8 @@ export function StoryForm() {
         screenshotId: screenshotId,
         linkedinUrl: formData.linkedinUrl || undefined,
         twitterUrl: formData.twitterUrl || undefined,
-        redditUrl: formData.redditUrl || undefined,
+        githubUrl: formData.githubUrl || undefined,
+        chefShowUrl: formData.chefShowUrl || undefined,
       });
 
       setShowSuccessMessage(true);
@@ -216,7 +219,7 @@ export function StoryForm() {
 
           <div>
             <label htmlFor="linkedinUrl" className="block text-sm font-medium text-[#525252] mb-1">
-              LinkedIn Announcement Post URL
+              LinkedIn Announcement Post URL (Optional)
             </label>
             <input
               type="url"
@@ -231,7 +234,7 @@ export function StoryForm() {
 
           <div>
             <label htmlFor="twitterUrl" className="block text-sm font-medium text-[#525252] mb-1">
-              X (Twitter) or Bluesky Announcement Post URL
+              X (Twitter) or Bluesky Announcement Post URL (Optional)
             </label>
             <input
               type="url"
@@ -245,15 +248,30 @@ export function StoryForm() {
           </div>
 
           <div>
-            <label htmlFor="redditUrl" className="block text-sm font-medium text-[#525252] mb-1">
-              Reddit Announcement Post URL
+            <label htmlFor="githubUrl" className="block text-sm font-medium text-[#525252] mb-1">
+              GitHub Repo URL (Optional)
             </label>
             <input
               type="url"
-              id="redditUrl"
-              placeholder="https://reddit.com/r/..."
-              value={formData.redditUrl}
-              onChange={(e) => setFormData((prev) => ({ ...prev, redditUrl: e.target.value }))}
+              id="githubUrl"
+              placeholder="https://github.com/..."
+              value={formData.githubUrl}
+              onChange={(e) => setFormData((prev) => ({ ...prev, githubUrl: e.target.value }))}
+              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] border border-[#D5D3D0]"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="chefShowUrl" className="block text-sm font-medium text-[#525252] mb-1">
+              Chef.show Project URL (Optional)
+            </label>
+            <input
+              type="url"
+              id="chefShowUrl"
+              placeholder="https://chef.show/..."
+              value={formData.chefShowUrl}
+              onChange={(e) => setFormData((prev) => ({ ...prev, chefShowUrl: e.target.value }))}
               className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] border border-[#D5D3D0]"
               disabled={isSubmitting}
             />

@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { ChevronUp, MessageSquare, ArrowDown } from "lucide-react";
+import { ChevronUp, MessageSquare, ArrowDown, Github } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Story } from "../types";
 import { UsePaginatedQueryResult } from "convex/react";
@@ -114,6 +114,17 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                   <MessageSquare className="w-4 h-4" />
                   {story.commentCount}
                 </Link>
+                {story.githubUrl && (
+                  <a
+                    href={story.githubUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[#787672] hover:text-[#525252]"
+                    title="View GitHub Repo">
+                    <Github className="w-4 h-4" />
+                    <span>Repo</span>
+                  </a>
+                )}
                 <div
                   className={`flex gap-2 flex-wrap ${viewMode === "vibe" ? "max-w-[calc(100%-150px)] overflow-hidden whitespace-nowrap" : ""}`}>
                   {(story.tags || []).map((tag: Doc<"tags">) => (
