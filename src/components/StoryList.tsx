@@ -3,8 +3,9 @@ import { Link } from "react-router-dom";
 import { ChevronUp, MessageSquare, ArrowDown, Github, Pin } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Story } from "../types";
-import { UsePaginatedQueryResult } from "convex/react";
+import { UsePaginatedQueryResult, useMutation } from "convex/react";
 import { Id, Doc } from "../../convex/_generated/dataModel";
+import { api } from "../../convex/_generated/api";
 
 interface StoryListProps {
   stories: Story[];
@@ -15,6 +16,12 @@ interface StoryListProps {
 }
 
 export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }: StoryListProps) {
+  const voteStory = useMutation(api.stories.voteStory);
+
+  const handleVote = (storyId: Id<"stories">) => {
+    voteStory({ storyId });
+  };
+
   const containerClass =
     viewMode === "grid"
       ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
@@ -51,13 +58,17 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                     {story.votes}
                     <div className="text-xs">Vibes</div>
                   </div>
-                  <button className="bg-white border border-t-0 border-[#D5D3D0] text-[#787671] hover:bg-[#FBF5DB] w-full rounded-b-md py-1 px-2 flex items-center justify-center gap-1 text-sm font-normal h-[24px]">
+                  <button
+                    onClick={() => handleVote(story._id)}
+                    className="bg-white border border-t-0 border-[#D5D3D0] text-[#787671] hover:bg-[#FBF5DB] w-full rounded-b-md py-1 px-2 flex items-center justify-center gap-1 text-sm font-normal h-[24px]">
                     Vibe it
                   </button>
                 </div>
               ) : (
                 <>
-                  <button className="text-[#2A2825] hover:bg-[#FBF5DB] p-1 rounded">
+                  <button
+                    onClick={() => handleVote(story._id)}
+                    className="text-[#2A2825] hover:bg-[#FBF5DB] p-1 rounded">
                     <ChevronUp className="w-5 h-5" />
                   </button>
                   <span className="text-[#2A2825] font-medium text-sm">{story.votes}</span>

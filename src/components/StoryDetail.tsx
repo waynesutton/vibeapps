@@ -27,7 +27,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
   const hasRated = false; // Placeholder
 
   // Convex mutations
-  const voteStory = useMutation(api.stories.vote);
+  const voteStory = useMutation(api.stories.voteStory);
   const rateStory = useMutation(api.stories.rate);
   const addComment = useMutation(api.comments.add);
 

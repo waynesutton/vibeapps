@@ -53,10 +53,19 @@ const fetchTagsAndCountsForStories = async (
   );
 };
 
-// Define SortPeriod type
-type SortPeriod = "today" | "week" | "month" | "year" | "all";
+// Define SortPeriod type including vote-based options
+export type SortPeriod =
+  | "today"
+  | "week"
+  | "month"
+  | "year"
+  | "all"
+  | "votes_today"
+  | "votes_week"
+  | "votes_month"
+  | "votes_year";
 
-// Updated listApproved query to sort by pinned status first
+// Updated listApproved query to sort by pinned status first and handle new vote sorts
 export const listApproved = query({
   args: {
     paginationOpts: paginationOptsValidator,
@@ -67,7 +76,11 @@ export const listApproved = query({
         v.literal("week"),
         v.literal("month"),
         v.literal("year"),
-        v.literal("all")
+        v.literal("all"),
+        v.literal("votes_today"),
+        v.literal("votes_week"),
+        v.literal("votes_month"),
+        v.literal("votes_year")
       )
     ),
   },
@@ -95,48 +108,86 @@ export const listApproved = query({
         startTime = 0;
     }
 
-    const initialFilteredStories = await ctx.db
-      .query("stories")
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("status"), "approved"),
-          q.neq(q.field("isHidden"), true),
-          q.gte(q.field("_creationTime"), startTime)
+    let paginatedResult;
+    let initialFilteredStories: Doc<"stories">[];
+
+    if (args.sortPeriod?.startsWith("votes_")) {
+      // If sorting by votes, use the index, order, filter, then paginate
+      paginatedResult = await ctx.db
+        .query("stories")
+        .withIndex("by_votes")
+        .order("desc")
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("status"), "approved"),
+            q.neq(q.field("isHidden"), true),
+            q.gte(q.field("_creationTime"), startTime) // Apply time filter *after* index selection
+          )
         )
-      )
-      .collect();
+        .paginate(args.paginationOpts);
 
-    // Manual sorting: Pinned first, then by creation time descending
-    initialFilteredStories.sort((a, b) => {
-      const pinA = a.isPinned ?? false;
-      const pinB = b.isPinned ?? false;
-      if (pinA !== pinB) {
-        return pinA ? -1 : 1;
+      initialFilteredStories = paginatedResult.page;
+      const storiesWithDetails = await fetchTagsAndCountsForStories(ctx, initialFilteredStories);
+
+      // Filter by tagId *after* pagination if needed (less efficient but necessary)
+      let finalPage = storiesWithDetails;
+      if (args.tagId) {
+        console.warn("Filtering by tagId after pagination isn't efficient...");
+        finalPage = storiesWithDetails.filter((story) =>
+          (story.tagIds || []).includes(args.tagId!)
+        );
       }
-      return b._creationTime - a._creationTime;
-    });
 
-    // Apply pagination manually after sorting
-    const startIndex = args.paginationOpts.cursor ? parseInt(args.paginationOpts.cursor, 10) : 0;
-    const endIndex = startIndex + args.paginationOpts.numItems;
-    const pageStories = initialFilteredStories.slice(startIndex, endIndex);
-    const isDone = endIndex >= initialFilteredStories.length;
-    const continueCursor = isDone ? null : endIndex.toString();
+      return {
+        page: finalPage,
+        isDone: paginatedResult.isDone,
+        continueCursor: paginatedResult.continueCursor,
+      };
+    } else {
+      // For time-based sorting (or 'all'), filter first, collect all matching, then sort manually for pinning, then paginate manually
+      const baseQuery = ctx.db
+        .query("stories")
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("status"), "approved"),
+            q.neq(q.field("isHidden"), true),
+            q.gte(q.field("_creationTime"), startTime)
+          )
+        );
+      initialFilteredStories = await baseQuery.collect();
 
-    let storiesWithDetails = await fetchTagsAndCountsForStories(ctx, pageStories);
+      // Manual sorting: Pinned first, then by creation time descending
+      initialFilteredStories.sort((a, b) => {
+        const pinA = a.isPinned ?? false;
+        const pinB = b.isPinned ?? false;
+        if (pinA !== pinB) {
+          return pinA ? -1 : 1;
+        }
+        return b._creationTime - a._creationTime;
+      });
 
-    if (args.tagId) {
-      console.warn("Filtering by tagId after fetching isn't efficient...");
-      storiesWithDetails = storiesWithDetails.filter((story) =>
-        (story.tagIds || []).includes(args.tagId!)
-      );
+      // Apply pagination manually after sorting
+      const startIndex = args.paginationOpts.cursor ? parseInt(args.paginationOpts.cursor, 10) : 0;
+      const endIndex = startIndex + args.paginationOpts.numItems;
+      const pageStories = initialFilteredStories.slice(startIndex, endIndex);
+      const isDone = endIndex >= initialFilteredStories.length;
+      const continueCursor = isDone ? null : endIndex.toString();
+
+      let storiesWithDetails = await fetchTagsAndCountsForStories(ctx, pageStories);
+
+      // Post-filter by tagId if provided
+      if (args.tagId) {
+        storiesWithDetails = storiesWithDetails.filter((story) =>
+          (story.tagIds || []).includes(args.tagId!)
+        );
+      }
+
+      return {
+        page: storiesWithDetails,
+        isDone,
+        continueCursor: continueCursor ?? "",
+      };
     }
-
-    return {
-      page: storiesWithDetails,
-      isDone,
-      continueCursor: continueCursor ?? "",
-    };
   },
 });
 
@@ -295,8 +346,8 @@ export const generateUploadUrl = mutation(async (ctx) => {
   return await ctx.storage.generateUploadUrl();
 });
 
-// vote remains the same
-export const vote = mutation({
+// Renamed vote to voteStory
+export const voteStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
     const story = await ctx.db.get(args.storyId);

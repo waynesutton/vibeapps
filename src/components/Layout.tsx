@@ -14,7 +14,16 @@ interface LayoutContextType {
   sortPeriod: SortPeriod;
 }
 
-type SortPeriod = "today" | "week" | "month" | "year" | "all";
+type SortPeriod =
+  | "today"
+  | "week"
+  | "month"
+  | "year"
+  | "all"
+  | "votes_today"
+  | "votes_week"
+  | "votes_month"
+  | "votes_year";
 
 export function Layout() {
   const navigate = useNavigate();
@@ -146,6 +155,10 @@ export function Layout() {
                     <option value="month">This Month</option>
                     <option value="week">This Week</option>
                     <option value="today">Today</option>
+                    <option value="votes_year">Most Vibes (Year)</option>
+                    <option value="votes_month">Most Vibes (Month)</option>
+                    <option value="votes_week">Most Vibes (Week)</option>
+                    <option value="votes_today">Most Vibes (Today)</option>
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#787672]">
                     <ChevronDown className="h-4 w-4" />
