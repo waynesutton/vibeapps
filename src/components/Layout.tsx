@@ -105,16 +105,24 @@ export function Layout({ children }: { children?: ReactNode }) {
                         ? "1px solid transparent" // No border if custom BG
                         : `1px solid #D5D3D0`; // Default border
 
+                    // Define base styles
+                    const baseStyle = {
+                      backgroundColor: bgColor,
+                      color: textColor,
+                      border: border,
+                    };
+
+                    // Add glow effect if selected
+                    const finalStyle = isSelected
+                      ? { ...baseStyle, boxShadow: "0 0 8px 2px #787671" }
+                      : baseStyle;
+
                     return (
                       <button
                         key={tag._id}
                         onClick={() => setSelectedTagId(isSelected ? undefined : tag._id)}
                         className={`px-3 py-1 rounded-md text-sm font-medium transition-colors duration-150 ease-in-out hover:opacity-80`}
-                        style={{
-                          backgroundColor: bgColor,
-                          color: textColor,
-                          border: border,
-                        }}>
+                        style={finalStyle}>
                         {tag.name}
                       </button>
                     );
