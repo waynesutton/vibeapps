@@ -150,7 +150,7 @@ export function StoryForm() {
 
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-[#525252] mb-1">
-              Your Name
+              Your Name *
             </label>
             <input
               type="text"
@@ -182,7 +182,7 @@ export function StoryForm() {
 
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-[#525252] mb-1">
-              App Title
+              App Title *
             </label>
             <input
               type="text"
@@ -198,7 +198,7 @@ export function StoryForm() {
 
           <div>
             <label htmlFor="tagline" className="block text-sm font-medium text-[#525252] mb-1">
-              App Project Tagline
+              App Project Tagline *
             </label>
             <input
               type="text"
@@ -214,7 +214,7 @@ export function StoryForm() {
 
           <div>
             <label htmlFor="url" className="block text-sm font-medium text-[#525252] mb-1">
-              App Website Link
+              App Website Link *
             </label>
             <div className="text-sm text-[#787672] mb-2">Enter your app url (ex: https://)</div>
             <input
@@ -293,7 +293,7 @@ export function StoryForm() {
 
           <div>
             <label htmlFor="chefAppUrl" className="block text-sm font-medium text-[#525252] mb-1">
-              Chef.app Project URL (Optional)
+              Convex.app Project URL (Optional)
             </label>
             <input
               type="url"
@@ -322,7 +322,7 @@ export function StoryForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#525252] mb-2">Select Tags</label>
+            <label className="block text-sm font-medium text-[#525252] mb-2">Select Tags *</label>
             <div className="flex flex-wrap gap-2 mb-4">
               {availableTags === undefined && (
                 <span className="text-sm text-gray-500">Loading tags...</span>
@@ -338,7 +338,7 @@ export function StoryForm() {
               ))}
             </div>
 
-            <label className="block text-sm font-medium text-[#525252] mb-2">Add New Tags</label>
+            <label className="block text-sm font-medium text-[#525252] mb-2">Add New Tags *</label>
             <div className="flex gap-2 mb-2">
               <input
                 type="text"

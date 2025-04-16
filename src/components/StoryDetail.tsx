@@ -195,7 +195,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   rel="noopener noreferrer"
                   className="text-sm text-[#525252] hover:text-[#2A2825] hover:underline truncate"
                   title={story.linkedinUrl}>
-                  LinkedIn Post
+                  LinkedIn URL
                 </a>
               </div>
             )}
@@ -208,7 +208,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   rel="noopener noreferrer"
                   className="text-sm text-[#525252] hover:text-[#2A2825] hover:underline truncate"
                   title={story.twitterUrl}>
-                  X/Bluesky Post
+                  X/Bluesky URL
                 </a>
               </div>
             )}
@@ -221,7 +221,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   rel="noopener noreferrer"
                   className="text-sm text-[#525252] hover:text-[#2A2825] hover:underline truncate"
                   title={story.chefAppUrl}>
-                  Chef.app Project
+                  Convex.app Project
                 </a>
               </div>
             )}
