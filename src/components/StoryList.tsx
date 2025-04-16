@@ -51,7 +51,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                     {story.votes}
                     <div className="text-xs">Vibes</div>
                   </div>
-                  <button className="bg-white border border-t-0 border-[#D5D3D0] text-[#2A2825] hover:bg-[#FBF5DB] w-full rounded-b-md py-1 px-2 flex items-center justify-center gap-1 text-sm font-medium h-[24px]">
+                  <button className="bg-white border border-t-0 border-[#D5D3D0] text-[#787671] hover:bg-[#FBF5DB] w-full rounded-b-md py-1 px-2 flex items-center justify-center gap-1 text-sm font-normal h-[24px]">
                     Vibe it
                   </button>
                 </div>
@@ -67,11 +67,13 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
 
             {/* THUMBNAIL - Vibe view only */}
             {viewMode === "vibe" && story.screenshotUrl && (
-              <Link to={`/s/${story.slug}`} className="flex-shrink-0 w-90 h-20 block">
+              <Link
+                to={`/s/${story.slug}`}
+                className="flex-shrink-0 w-40 aspect-video block overflow-hidden rounded-md">
                 <img
                   src={story.screenshotUrl}
                   alt={`${story.title} thumbnail`}
-                  className="w-full h-full object-cover rounded-md border border-[#D5D3D0]"
+                  className="w-full h-full object-cover border border-[#D5D3D0]"
                   loading="lazy"
                 />
               </Link>
