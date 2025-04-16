@@ -19,7 +19,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
     viewMode === "grid"
       ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
       : viewMode === "vibe"
-        ? "flex flex-wrap gap-6"
+        ? "flex flex-col space-y-6"
         : "space-y-4";
 
   const formatDate = (creationTime: number) => {
