@@ -207,6 +207,21 @@ export const submit = mutation({
     chefShowUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Rate Limiting Check
+    if (args.email) {
+      const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
+      const recentSubmissions = await ctx.db
+        .query("submissionLogs")
+        .withIndex("by_email_time", (q) =>
+          q.eq("submitterEmail", args.email!).gt("submissionTime", twentyFourHoursAgo)
+        )
+        .collect();
+
+      if (recentSubmissions.length >= 10) {
+        throw new Error("Submission limit reached. You can submit up to 10 projects per day.");
+      }
+    }
+
     const slug = generateSlug(args.title);
 
     const existing = await ctx.db
@@ -260,6 +275,14 @@ export const submit = mutation({
       isPinned: false,
       customMessage: undefined,
     });
+
+    // Log the submission if email was provided
+    if (args.email) {
+      await ctx.db.insert("submissionLogs", {
+        submitterEmail: args.email,
+        submissionTime: Date.now(),
+      });
+    }
 
     return { storyId, slug };
   },

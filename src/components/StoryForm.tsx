@@ -246,7 +246,7 @@ export function StoryForm() {
 
           <div>
             <label htmlFor="linkedinUrl" className="block text-sm font-medium text-[#525252] mb-1">
-              LinkedIn Announcement Post URL (Optional)
+              LinkedIn Profile or LinkedIn Announcement Post URL (Optional)
             </label>
             <input
               type="url"
@@ -261,7 +261,7 @@ export function StoryForm() {
 
           <div>
             <label htmlFor="twitterUrl" className="block text-sm font-medium text-[#525252] mb-1">
-              X (Twitter) or Bluesky Announcement Post URL (Optional)
+              X (Twitter) or Bluesky Profile orAnnouncement Post URL (Optional)
             </label>
             <input
               type="url"
@@ -389,7 +389,7 @@ export function StoryForm() {
           </div>
 
           <div className="text-sm text-[#787672]">
-            To maintain quality and prevent spam, you can only submit one project a day.
+            To maintain quality and prevent spam, you can submit up to 10 projects per day.
           </div>
 
           {submitError && (
@@ -398,7 +398,7 @@ export function StoryForm() {
 
           {showSuccessMessage && (
             <div className="mt-4 p-4 bg-green-100 text-green-700 rounded-md text-sm">
-              Thanks for cooking! Your submission is pending review.
+              Thanks for sharing!
             </div>
           )}
         </form>

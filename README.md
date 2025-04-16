@@ -61,7 +61,7 @@ Vibe Apps is the home for vibe coding projects — a real-time community platfor
   - Separate moderation queues for submissions and comments
   - Filter and search through moderation queue
 
-#### Form Management
+#### Future Feature: Form Management
 
 - **Form Builder**:
   - Create custom forms with multiple field types:

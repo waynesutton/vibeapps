@@ -23,12 +23,14 @@ export default defineSchema({
     status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
     isHidden: v.optional(v.boolean()), // Added for admin hide/show
     isPinned: v.optional(v.boolean()),
+    isApproved: v.optional(v.boolean()),
   })
     .index("by_slug", ["slug"])
     .index("by_votes", ["votes"])
     .index("by_hidden_status", ["isHidden", "status"])
     .index("by_status_creationTime", ["status"])
     .index("by_pinned_status_hidden", ["isPinned", "status", "isHidden"])
+    .index("by_approved", ["isApproved"])
     .searchIndex("search_all", {
       searchField: "title",
       filterFields: ["status", "isHidden"],
@@ -87,4 +89,9 @@ export default defineSchema({
     formId: v.id("forms"),
     data: v.any(),
   }).index("by_formId", ["formId"]),
+
+  submissionLogs: defineTable({
+    submitterEmail: v.string(), // Index submissions by email
+    submissionTime: v.number(), // Store the submission timestamp
+  }).index("by_email_time", ["submitterEmail", "submissionTime"]),
 });
