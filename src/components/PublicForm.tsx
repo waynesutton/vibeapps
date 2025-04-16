@@ -48,7 +48,7 @@ export function PublicForm({ form, fields }: PublicFormProps) {
     setSubmitStatus("idle");
 
     try {
-      await submitFormMutation({ formId: form._id, data: formData });
+      await submitFormMutation({ slug: form.slug, data: formData });
       setSubmitStatus("success");
       setFormData({}); // Clear form on success
     } catch (error) {

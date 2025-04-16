@@ -19,6 +19,7 @@ export default defineSchema({
     linkedinUrl: v.optional(v.string()),
     twitterUrl: v.optional(v.string()),
     githubUrl: v.optional(v.string()), // Added GitHub Repo URL
+    chefAppUrl: v.optional(v.string()), // Added Chef.app URL
     chefShowUrl: v.optional(v.string()), // Added Chef.show URL
     status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
     isHidden: v.optional(v.boolean()), // Added for admin hide/show
@@ -65,6 +66,7 @@ export default defineSchema({
     title: v.string(),
     slug: v.string(),
     isPublic: v.boolean(),
+    resultsArePublic: v.optional(v.boolean()), // Add field for public results
   }).index("by_slug", ["slug"]),
 
   formFields: defineTable({

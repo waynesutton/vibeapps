@@ -11,6 +11,7 @@ import { AdminDashboard } from "./components/admin/AdminDashboard";
 import { FormBuilder } from "./components/admin/FormBuilder";
 import { FormResults } from "./components/admin/FormResults";
 import { PublicForm } from "./components/PublicForm";
+import { PublicResultsViewer } from "./components/PublicResultsViewer";
 import { useLayoutContext } from "./components/Layout";
 import { Id } from "../convex/_generated/dataModel";
 import { Story } from "./types";
@@ -111,6 +112,7 @@ function App() {
           <Route path="/submit" element={<StoryForm />} />
           <Route path="/s/:storySlug" element={<StoryPage />} />
           <Route path="/f/:formSlug" element={<PublicFormPage />} />
+          <Route path="/results/:slug" element={<PublicResultsViewer />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/forms/new" element={<FormBuilder />} />

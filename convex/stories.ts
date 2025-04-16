@@ -205,6 +205,7 @@ export const submit = mutation({
     twitterUrl: v.optional(v.string()),
     githubUrl: v.optional(v.string()),
     chefShowUrl: v.optional(v.string()),
+    chefAppUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Rate Limiting Check
@@ -270,6 +271,7 @@ export const submit = mutation({
       twitterUrl: args.twitterUrl,
       githubUrl: args.githubUrl,
       chefShowUrl: args.chefShowUrl,
+      chefAppUrl: args.chefAppUrl,
       status: "approved",
       isHidden: false,
       isPinned: false,

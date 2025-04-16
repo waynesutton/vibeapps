@@ -22,6 +22,11 @@ interface EditableFormField extends Partial<FormField> {
   _id?: Id<"formFields">; // Existing ID from Convex
   localId: string; // Local temporary ID for React key
   options?: string[];
+  fieldType?: FormField["fieldType"];
+  label?: string;
+  required?: boolean;
+  placeholder?: string;
+  order?: number; // Add missing order property
 }
 
 export function FormBuilder() {
@@ -38,6 +43,7 @@ export function FormBuilder() {
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [isPublic, setIsPublic] = useState(false);
+  const [resultsArePublic, setResultsArePublic] = useState(false);
   const [fields, setFields] = useState<EditableFormField[]>([]);
   const [previewMode, setPreviewMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -51,12 +57,14 @@ export function FormBuilder() {
       setTitle(existingFormData.title);
       setSlug(existingFormData.slug);
       setIsPublic(existingFormData.isPublic);
+      setResultsArePublic(existingFormData.resultsArePublic ?? false);
       setFields(existingFormData.fields.map((f) => ({ ...f, localId: f._id })));
     } else if (!formId) {
       // Reset state if creating a new form (no formId)
       setTitle("");
       setSlug("");
       setIsPublic(false);
+      setResultsArePublic(false);
       setFields([]);
       setCurrentFormId(null);
     }
@@ -96,33 +104,35 @@ export function FormBuilder() {
 
       // Step 1: Create or Update the Form document
       if (savedFormId) {
-        // Update existing form title/slug/public status
+        // Update existing form title, public status, and results public status
         await updateForm({
           formId: savedFormId,
           title,
-          // slug: slug, // Consider if slug should be updatable
           isPublic,
+          resultsArePublic,
         });
       } else {
-        // Create new form
+        // Create new form - only pass title, backend handles slug and defaults
         savedFormId = await createForm({ title });
         if (!savedFormId) throw new Error("Failed to create form document.");
         setCurrentFormId(savedFormId);
-        // Update URL without full reload to reflect new ID (optional)
-        // window.history.replaceState(null, '', `/admin/forms/${savedFormId}`);
-        // Navigate to the edit page with the new ID
+        // Navigate to the edit page with the new ID, replacing history
         navigate(`/admin/forms/${savedFormId}`, { replace: true });
       }
 
       // Step 2: Save the fields associated with the form
-      const fieldsToSave = fields.map((f, index) => ({
-        order: index, // Ensure order is sequential
-        label: f.label || "Untitled Field", // Provide default label
-        fieldType: f.fieldType!,
-        required: f.required || false,
-        options: f.options,
-        placeholder: f.placeholder,
-      }));
+      // Ensure fields are valid before sending
+      const fieldsToSave = fields.map((f, index) => {
+        if (!f.fieldType) throw new Error(`Field at index ${index} missing fieldType`);
+        return {
+          order: index, // Ensure order is sequential
+          label: f.label || "Untitled Field", // Provide default label
+          fieldType: f.fieldType,
+          required: f.required || false,
+          options: f.options,
+          placeholder: f.placeholder,
+        };
+      });
 
       await saveFieldsMutation({
         formId: savedFormId,
@@ -130,7 +140,8 @@ export function FormBuilder() {
       });
 
       console.log("Form and fields saved successfully!");
-      // Optionally show a success message
+      // Optionally show a success message (could be a state update)
+      // Example: setShowSuccess(true); setTimeout(() => setShowSuccess(false), 3000);
     } catch (err) {
       console.error("Failed to save form:", err);
       setError(err instanceof Error ? err.message : "An unknown error occurred during save.");
@@ -287,7 +298,7 @@ export function FormBuilder() {
     <div className="space-y-6">
       {/* Back Link */}
       <Link
-        to="/admin/forms"
+        to="/admin?tab=forms"
         className="text-sm text-[#787672] hover:text-[#525252] flex items-center gap-1 mb-6">
         <ArrowLeft className="w-4 h-4" /> Back to Forms List
       </Link>
@@ -320,9 +331,10 @@ export function FormBuilder() {
       {/* Editor or Preview Pane */}
       {!previewMode ? (
         <div className="space-y-6">
-          {/* Form Settings (Title, Slug, Public) */}
+          {/* Form Settings (Title, Slug, Public, Results Public) */}
           <div className="bg-white p-4 rounded-lg border border-gray-200 space-y-4">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Form Settings</h3>
+            {/* Form Title */}
             <div>
               <label htmlFor="formTitle" className="block text-xs text-gray-500 mb-1">
                 Form Title
@@ -337,8 +349,13 @@ export function FormBuilder() {
                 required
               />
             </div>
-            {/* Slug might be auto-generated or editable carefully */}
-            {slug && <div className="text-xs text-gray-400">Public URL: /f/{slug}</div>}
+            {/* Display Slug (read-only from state) */}
+            {slug && (
+              <div className="text-xs text-gray-400">
+                Public URL: /f/{slug} (Auto-generated from title on save)
+              </div>
+            )}
+            {/* Make Form Public */}
             <div>
               <label className="flex items-center gap-2">
                 <input
@@ -347,7 +364,21 @@ export function FormBuilder() {
                   onChange={(e) => setIsPublic(e.target.checked)}
                   className="rounded border-gray-300 text-[#2A2825] focus:ring-[#2A2825] focus:ring-offset-0 h-4 w-4"
                 />
-                <span className="text-sm text-[#525252]">Make Publicly Accessible</span>
+                <span className="text-sm text-[#525252]">Make Form Publicly Accessible</span>
+              </label>
+            </div>
+            {/* Make Results Public */}
+            <div>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={resultsArePublic}
+                  onChange={(e) => setResultsArePublic(e.target.checked)}
+                  className="rounded border-gray-300 text-[#2A2825] focus:ring-[#2A2825] focus:ring-offset-0 h-4 w-4"
+                />
+                <span className="text-sm text-[#525252]">
+                  Make Results Publicly Accessible (at /results/{slug})
+                </span>
               </label>
             </div>
           </div>

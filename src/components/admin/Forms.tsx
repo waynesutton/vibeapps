@@ -1,6 +1,17 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, FileText, Eye, EyeOff, Copy, ExternalLink, Trash2, BarChart2 } from "lucide-react";
+import {
+  Plus,
+  FileText,
+  Eye,
+  EyeOff,
+  Copy,
+  ExternalLink,
+  Trash2,
+  BarChart2,
+  Lock,
+  Unlock,
+} from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -14,30 +25,43 @@ export function Forms() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<Id<"forms"> | null>(null);
 
-  const toggleVisibility = (form: CustomForm) => {
+  const toggleFormVisibility = (form: CustomForm) => {
     updateForm({ formId: form._id, isPublic: !form.isPublic });
   };
 
+  const toggleResultsVisibility = (form: CustomForm) => {
+    updateForm({ formId: form._id, resultsArePublic: !form.resultsArePublic });
+  };
+
   const copyFormUrl = async (form: CustomForm) => {
-    const url = `${window.location.origin}/f/${form.slug}`; // Use /f/ prefix
+    const url = `${window.location.origin}/f/${form.slug}`;
     try {
       await navigator.clipboard.writeText(url);
-      setCopiedId(form._id);
+      setCopiedId(form._id + "-form");
       setTimeout(() => setCopiedId(null), 2000);
     } catch (err) {
-      console.error("Failed to copy URL:", err);
-      // Optionally show an error message to the user
+      console.error("Failed to copy Form URL:", err);
+    }
+  };
+
+  const copyResultsUrl = async (form: CustomForm) => {
+    const url = `${window.location.origin}/results/${form.slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(form._id + "-results");
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy Results URL:", err);
     }
   };
 
   const handleDelete = (formId: Id<"forms">) => {
     if (deleteConfirmId === formId) {
-      // Confirm deletion
       deleteForm({ formId });
       setDeleteConfirmId(null);
     } else {
-      // Ask for confirmation
       setDeleteConfirmId(formId);
+      setTimeout(() => setDeleteConfirmId(null), 5000);
     }
   };
 
@@ -65,7 +89,8 @@ export function Forms() {
               <thead className="border-b border-gray-200 bg-gray-50">
                 <tr>
                   <th className="text-left p-3 px-4 text-[#525252] font-medium">Form Title</th>
-                  <th className="text-left p-3 px-4 text-[#525252] font-medium">Status</th>
+                  <th className="text-left p-3 px-4 text-[#525252] font-medium">Form Status</th>
+                  <th className="text-left p-3 px-4 text-[#525252] font-medium">Results Status</th>
                   <th className="text-left p-3 px-4 text-[#525252] font-medium">Actions</th>
                 </tr>
               </thead>
@@ -74,7 +99,6 @@ export function Forms() {
                   <tr
                     key={form._id}
                     className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
-                    {/* Form Title / Link to Builder */}
                     <td className="p-3 px-4">
                       <Link
                         to={`/admin/forms/${form._id}`}
@@ -83,64 +107,94 @@ export function Forms() {
                       </Link>
                       <span className="text-xs text-gray-400 ml-2">/f/{form.slug}</span>
                     </td>
-                    {/* Status (Public/Private) */}
                     <td className="p-3 px-4">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                          form.isPublic
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}>
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${form.isPublic ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}
+                        `}>
                         {form.isPublic ? "Public" : "Private"}
                       </span>
                     </td>
-                    {/* Actions */}
                     <td className="p-3 px-4">
-                      <div className="flex items-center gap-3">
-                        {/* Edit Form */}
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${form.resultsArePublic ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}
+                        `}>
+                        {form.resultsArePublic ? "Public" : "Private"}
+                      </span>
+                    </td>
+                    <td className="p-3 px-4">
+                      <div className="flex items-center gap-3 flex-wrap">
                         <Link
                           to={`/admin/forms/${form._id}`}
                           className="text-gray-500 hover:text-blue-600"
                           title="Edit Form">
                           <FileText className="w-4 h-4" />
                         </Link>
-                        {/* View Results */}
                         <Link
                           to={`/admin/forms/${form._id}/results`}
                           className="text-gray-500 hover:text-purple-600"
-                          title="View Results">
+                          title="View Admin Results">
                           <BarChart2 className="w-4 h-4" />
                         </Link>
-                        {/* Toggle Visibility */}
                         <button
-                          onClick={() => toggleVisibility(form)}
+                          onClick={() => toggleFormVisibility(form)}
                           className="text-gray-500 hover:text-gray-800"
-                          title={form.isPublic ? "Make Private" : "Make Public"}>
+                          title={form.isPublic ? "Make Form Private" : "Make Form Public"}>
                           {form.isPublic ? (
                             <EyeOff className="w-4 h-4" />
                           ) : (
                             <Eye className="w-4 h-4" />
                           )}
                         </button>
-                        {/* Copy URL */}
+                        <button
+                          onClick={() => toggleResultsVisibility(form)}
+                          className="text-gray-500 hover:text-gray-800"
+                          title={
+                            form.resultsArePublic ? "Make Results Private" : "Make Results Public"
+                          }>
+                          {form.resultsArePublic ? (
+                            <Lock className="w-4 h-4" />
+                          ) : (
+                            <Unlock className="w-4 h-4" />
+                          )}
+                        </button>
                         <button
                           onClick={() => copyFormUrl(form)}
-                          className={`text-gray-500 ${copiedId === form._id ? "text-green-600" : "hover:text-gray-800"}`}
-                          title={copiedId === form._id ? "Copied!" : "Copy Public URL"}
+                          className={`text-gray-500 ${copiedId === form._id + "-form" ? "text-green-600" : "hover:text-gray-800"} ${!form.isPublic ? "opacity-50 cursor-not-allowed" : ""}`}
+                          title={
+                            copiedId === form._id + "-form" ? "Copied!" : "Copy Public Form URL"
+                          }
                           disabled={!form.isPublic}>
                           <Copy className="w-4 h-4" />
                         </button>
-                        {/* Visit Public URL */}
                         <Link
                           to={`/f/${form.slug}`}
                           target="_blank"
                           className={`text-gray-500 ${!form.isPublic ? "opacity-50 cursor-not-allowed" : "hover:text-blue-600"}`}
                           title={form.isPublic ? "Visit Public Form" : "Form is private"}
-                          onClick={(e) => !form.isPublic && e.preventDefault()} // Prevent navigation if private
-                        >
+                          onClick={(e) => !form.isPublic && e.preventDefault()}>
                           <ExternalLink className="w-4 h-4" />
                         </Link>
-                        {/* Delete Button */}
+                        <button
+                          onClick={() => copyResultsUrl(form)}
+                          className={`text-gray-500 ${copiedId === form._id + "-results" ? "text-green-600" : "hover:text-gray-800"} ${!form.resultsArePublic ? "opacity-50 cursor-not-allowed" : ""}`}
+                          title={
+                            copiedId === form._id + "-results"
+                              ? "Copied!"
+                              : "Copy Public Results URL"
+                          }
+                          disabled={!form.resultsArePublic}>
+                          <Copy className="w-4 h-4" />
+                        </button>
+                        <Link
+                          to={`/results/${form.slug}`}
+                          target="_blank"
+                          className={`text-gray-500 ${!form.resultsArePublic ? "opacity-50 cursor-not-allowed" : "hover:text-blue-600"}`}
+                          title={
+                            form.resultsArePublic ? "Visit Public Results" : "Results are private"
+                          }
+                          onClick={(e) => !form.resultsArePublic && e.preventDefault()}>
+                          <ExternalLink className="w-4 h-4" />
+                        </Link>
                         <button
                           onClick={() => handleDelete(form._id)}
                           className={`text-gray-500 ${deleteConfirmId === form._id ? "text-red-600 font-bold" : "hover:text-red-600"}`}

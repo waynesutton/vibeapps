@@ -23,6 +23,7 @@ export function StoryForm() {
     twitterUrl: "",
     githubUrl: "",
     chefShowUrl: "",
+    chefAppUrl: "",
     name: "",
     email: "",
   });
@@ -98,6 +99,7 @@ export function StoryForm() {
         twitterUrl: formData.twitterUrl || undefined,
         githubUrl: formData.githubUrl || undefined,
         chefShowUrl: formData.chefShowUrl || undefined,
+        chefAppUrl: formData.chefAppUrl || undefined,
       });
 
       setShowSuccessMessage(true);
@@ -284,6 +286,21 @@ export function StoryForm() {
               placeholder="https://github.com/..."
               value={formData.githubUrl}
               onChange={(e) => setFormData((prev) => ({ ...prev, githubUrl: e.target.value }))}
+              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] border border-[#D5D3D0]"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="chefAppUrl" className="block text-sm font-medium text-[#525252] mb-1">
+              Chef.app Project URL (Optional)
+            </label>
+            <input
+              type="url"
+              id="chefAppUrl"
+              placeholder="https://chef.app/..."
+              value={formData.chefAppUrl}
+              onChange={(e) => setFormData((prev) => ({ ...prev, chefAppUrl: e.target.value }))}
               className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] border border-[#D5D3D0]"
               disabled={isSubmitting}
             />

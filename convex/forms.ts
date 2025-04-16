@@ -34,6 +34,7 @@ export const getFormBySlug = query({
       .unique();
 
     if (!form) {
+      console.log(`Form not found or not public for slug: ${args.slug}`);
       return null;
     }
 
@@ -65,55 +66,90 @@ export const getFormWithFields = query({
   },
 });
 
+// NEW: Query to get form results by slug (for public results view)
+export const getFormResultsBySlug = query({
+  args: { slug: v.string() },
+  handler: async (
+    ctx,
+    args
+  ): Promise<
+    (Doc<"forms"> & { fields: Doc<"formFields">[]; submissions: Doc<"formSubmissions">[] }) | null
+  > => {
+    const form = await ctx.db
+      .query("forms")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .filter((q) => q.eq(q.field("resultsArePublic"), true)) // Only return if results are public
+      .unique();
+
+    if (!form) {
+      console.log(`Form results not found or not public for slug: ${args.slug}`);
+      return null;
+    }
+
+    const fields = await ctx.db
+      .query("formFields")
+      .withIndex("by_formId_order", (q) => q.eq("formId", form._id))
+      .order("asc")
+      .collect();
+
+    const submissions = await ctx.db
+      .query("formSubmissions")
+      .withIndex("by_formId", (q) => q.eq("formId", form._id))
+      .order("desc")
+      .collect();
+
+    return { ...form, fields, submissions };
+  },
+});
+
 // Mutation to create a new form
 export const createForm = mutation({
-  args: { title: v.string() },
+  args: { title: v.string() }, // Only need title to create
   handler: async (ctx, args): Promise<Id<"forms">> => {
     // TODO: Add admin authentication check
-    const slug = generateSlug(args.title);
+    let slug = generateSlug(args.title);
     const existing = await ctx.db
       .query("forms")
       .withIndex("by_slug", (q) => q.eq("slug", slug))
       .first();
+
+    // Ensure slug uniqueness
     if (existing) {
-      // Simple way to make slug unique: append timestamp or random chars
-      const uniqueSlug = `${slug}-${Date.now().toString().slice(-5)}`;
-      console.warn(`Slug "${slug}" exists, using unique slug "${uniqueSlug}"`);
-      return await ctx.db.insert("forms", { title: args.title, slug: uniqueSlug, isPublic: false });
+      slug = `${slug}-${Date.now().toString().slice(-5)}`; // Append timestamp suffix if needed
+      console.warn(`Slug "${generateSlug(args.title)}" exists, using unique slug "${slug}"`);
     }
 
-    return await ctx.db.insert("forms", { title: args.title, slug, isPublic: false });
+    // Create form with default private settings
+    return await ctx.db.insert("forms", {
+      title: args.title,
+      slug,
+      isPublic: false,
+      resultsArePublic: false, // Default results to private
+    });
   },
 });
 
-// Mutation to update form details
+// Mutation to update form details (excluding slug)
 export const updateForm = mutation({
   args: {
     formId: v.id("forms"),
     title: v.optional(v.string()),
-    slug: v.optional(v.string()),
     isPublic: v.optional(v.boolean()),
+    resultsArePublic: v.optional(v.boolean()), // Allow updating results visibility
   },
   handler: async (ctx, args) => {
     // TODO: Add admin authentication check
     const { formId, ...updates } = args;
 
-    if (updates.slug) {
-      const existing = await ctx.db
-        .query("forms")
-        .withIndex("by_slug", (q) => q.eq("slug", updates.slug!))
-        .filter((q) => q.neq(q.field("_id"), formId))
-        .first();
-      if (existing) {
-        throw new Error(`Slug "${updates.slug}" is already in use.`);
-      }
-    }
+    // Note: We are intentionally NOT allowing slug updates here
+    // to prevent breaking existing links. A separate mechanism
+    // would be needed if slug changes are required.
 
     await ctx.db.patch(formId, updates);
   },
 });
 
-// Mutation to delete a form
+// Mutation to delete a form and its associated data
 export const deleteForm = mutation({
   args: { formId: v.id("forms") },
   handler: async (ctx, args) => {
@@ -141,7 +177,6 @@ export const deleteForm = mutation({
 
 // Validator for a single field object (used in saveFields)
 const fieldValidator = v.object({
-  // id: v.optional(v.id("formFields")), // ID might not be present for new fields
   order: v.number(),
   label: v.string(),
   fieldType: v.union(
@@ -171,17 +206,18 @@ export const saveFields = mutation({
       throw new Error("Form not found");
     }
 
-    // Delete existing fields for this form first
+    // Strategy: Delete existing fields and insert new ones.
+    // Could be optimized to patch/update existing fields if needed.
     const existingFields = await ctx.db
       .query("formFields")
       .withIndex("by_formId_order", (q) => q.eq("formId", args.formId))
       .collect();
     await Promise.all(existingFields.map((field) => ctx.db.delete(field._id)));
 
-    // Insert the new fields
+    // Insert the new fields with correct formId
     for (const field of args.fields) {
       await ctx.db.insert("formFields", {
-        formId: args.formId,
+        formId: args.formId, // Ensure correct formId is associated
         ...field,
       });
     }
@@ -190,26 +226,35 @@ export const saveFields = mutation({
 
 // --- Submission Management ---
 
-// Mutation to submit data for a form
+// Mutation to submit data for a form (using slug)
 export const submitForm = mutation({
   args: {
-    formId: v.id("forms"),
+    slug: v.string(), // Use slug to identify the form
     data: v.any(), // Expecting a JSON object representing form data
   },
   handler: async (ctx, args) => {
-    const form = await ctx.db.get(args.formId);
+    // Find the form by slug
+    const form = await ctx.db
+      .query("forms")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+
+    // Check if form exists and is public
     if (!form || !form.isPublic) {
       throw new Error("Form not found or is not public");
     }
-    // TODO: Add validation against form fields?
+
+    // TODO: Add validation against form fields based on form._id?
+
+    // Insert the submission data
     await ctx.db.insert("formSubmissions", {
-      formId: args.formId,
+      formId: form._id, // Use the found form's ID
       data: args.data,
     });
   },
 });
 
-// Query to list submissions for a specific form (for admin)
+// Query to list submissions for a specific form (for admin, using formId)
 export const listSubmissions = query({
   args: { formId: v.id("forms") },
   handler: async (ctx, args): Promise<Doc<"formSubmissions">[]> => {

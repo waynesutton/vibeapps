@@ -168,6 +168,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
         story.twitterUrl ||
         story.githubUrl ||
         story.chefShowUrl ||
+        story.chefAppUrl ||
         story.tags?.length > 0) && (
         <div className="mt-8 bg-white rounded-lg p-6 border border-[#D5D3D0]">
           <h2 className="text-lg font-medium text-[#525252] mb-4">Project Links & Tags</h2>
@@ -211,9 +212,21 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 </a>
               </div>
             )}
+            {story.chefAppUrl && (
+              <div className="flex items-center gap-2">
+                <span className="w-4 h-4 text-[#787672] flex-shrink-0">🍲</span>
+                <a
+                  href={story.chefAppUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-[#525252] hover:text-[#2A2825] hover:underline truncate"
+                  title={story.chefAppUrl}>
+                  Chef.app Project
+                </a>
+              </div>
+            )}
             {story.chefShowUrl && (
               <div className="flex items-center gap-2">
-                {/* Placeholder for Chef.show icon if available */}
                 <span className="w-4 h-4 text-[#787672] flex-shrink-0">🍳</span>
                 <a
                   href={story.chefShowUrl}
