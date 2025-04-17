@@ -61,7 +61,7 @@ Vibe Apps is the home for vibe coding projects — a real-time community platfor
   - Separate moderation queues for submissions and comments
   - Filter and search through moderation queue
 
-#### Future Feature: Form Management
+#### Feature: Form Management
 
 - **Form Builder**:
   - Create custom forms with multiple field types:
@@ -193,34 +193,9 @@ Learn more about the concepts and best practices behind Convex:
 - [Environment Variables](https://docs.convex.dev/production/environment-variables)
 - [AI Code Generation](https://docs.convex.dev/ai)
 
-## Hosting on Vercel
+## Hosting on
 
-1. Push your code to a Git repository (GitHub, GitLab, or Bitbucket)
-
-2. Create a new project on Vercel:
-
-   - Go to [vercel.com](https://vercel.com)
-   - Click "New Project"
-   - Import your repository
-   - Select the repository you want to deploy
-
-3. Configure environment variables:
-
-   - Add your Convex deployment URL and other environment variables
-   - These should match the variables in your `.env` file
-
-4. Deploy:
-
-   - Vercel will automatically build and deploy your site
-   - Any future pushes to your repository will trigger automatic deployments
-
-5. Custom domain (optional):
-   - Go to your project settings
-   - Navigate to "Domains"
-   - Add your custom domain
-   - Follow the instructions to configure DNS
-
-For more detailed instructions, visit the [Convex Vercel deployment guide](https://docs.convex.dev/production/hosting/vercel).
+For more detailed instructions, visit the [Convex deployment guide](https://docs.convex.dev/production/hosting/).
 
 ## 📝 License
 

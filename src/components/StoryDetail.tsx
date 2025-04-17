@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ChevronUp, MessageSquare, Star, Linkedin, Twitter, Github } from "lucide-react";
+import { ChevronUp, MessageSquare, Star, Linkedin, Twitter, Github, Flag } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useQuery, useMutation } from "convex/react"; // Import Convex hooks
 import { api } from "../../convex/_generated/api"; // Import Convex API
@@ -71,6 +71,13 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
   const averageRating = story.ratingCount > 0 ? story.ratingSum / story.ratingCount : 0;
   const currentRatingDisplay = averageRating; // Display average for now
+
+  // Generate slug from title (simple example)
+  const storySlug = story.title
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^\w-]+/g, "");
+  const reportUrl = `https://github.com/waynesutton/vibeapps/issues/new?q=is%3Aissue+state%3Aopen+Flagged&title=Flagged+Content%3A+${encodeURIComponent(story.title)}&body=Reporting+issue+for+story%3A+%0A-+Title%3A+${encodeURIComponent(story.title)}%0A-+Slug%3A+${storySlug}%0A-+URL%3A+${encodeURIComponent(story.url)}%0A-+Reason%3A+`;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -291,6 +298,20 @@ export function StoryDetail({ story }: StoryDetailProps) {
             <div className="text-[#787672]">No comments yet. Be the first!</div>
           )}
         </div>
+      </div>
+
+      {/* Flag/Report Section */}
+      <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-center gap-3 text-sm text-gray-600">
+        <Flag className="w-4 h-4 text-gray-500 flex-shrink-0" />
+        <button className="font-medium text-gray-700 hover:text-gray-900">Flag/Report</button>
+        <span>-</span>
+        <a
+          href={reportUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline hover:text-blue-800">
+          Report / Moderate Content
+        </a>
       </div>
     </div>
   );
