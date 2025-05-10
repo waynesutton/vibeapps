@@ -19,6 +19,7 @@ import SignInPage from "./pages/SignInPage";
 import SignUpPage from "./pages/SignUpPage";
 import { ProtectedLayout } from "./components/ProtectedLayout";
 import { AdminRouteGuard } from "./components/AdminRouteGuard";
+import UserProfilePage from "./pages/UserProfilePage";
 
 function HomePage() {
   const { viewMode, selectedTagId, sortPeriod } = useLayoutContext();
@@ -115,6 +116,7 @@ function App() {
           <Route index element={<HomePage />} />
           <Route element={<ProtectedLayout />}>
             <Route path="/submit" element={<StoryForm />} />
+            <Route path="/profile" element={<UserProfilePage />} />
           </Route>
           <Route element={<AdminRouteGuard />}>
             <Route path="/admin" element={<AdminDashboard />} />

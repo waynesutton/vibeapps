@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ChevronUp, MessageSquare, Star, Linkedin, Twitter, Github, Flag } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useQuery, useMutation } from "convex/react"; // Import Convex hooks
@@ -8,6 +8,7 @@ import type { Story, Comment as CommentType } from "../types";
 import { Comment } from "./Comment";
 import { CommentForm } from "./CommentForm";
 import { Id, Doc } from "../../convex/_generated/dataModel"; // Import Id and Doc
+import { useAuth } from "@clerk/clerk-react"; // Added useAuth
 
 // Removed MOCK_COMMENTS
 
@@ -16,15 +17,22 @@ interface StoryDetailProps {
 }
 
 export function StoryDetail({ story }: StoryDetailProps) {
+  const navigate = useNavigate(); // Initialize navigate
+  const { isSignedIn, isLoaded: isClerkLoaded } = useAuth(); // Get auth state
+
   // Fetch APPROVED comments using Convex query
   const comments = useQuery(api.comments.listApprovedByStory, { storyId: story._id });
+  const currentUserRating = useQuery(
+    api.stories.getUserRatingForStory,
+    isSignedIn ? { storyId: story._id } : "skip" // Only run if signed in
+  );
 
   const [replyToId, setReplyToId] = React.useState<Id<"comments"> | null>(null);
 
   // Rating state - keep local state for UI feedback, but rely on Convex for source of truth
   const [hoveredRating, setHoveredRating] = React.useState<number>(0);
-  // TODO: Check if user has already rated (needs auth)
-  const hasRated = false; // Placeholder
+
+  const hasRated = currentUserRating !== null && currentUserRating !== undefined;
 
   // Convex mutations
   const voteStory = useMutation(api.stories.voteStory);
@@ -32,23 +40,57 @@ export function StoryDetail({ story }: StoryDetailProps) {
   const addComment = useMutation(api.comments.add);
 
   const handleVote = () => {
-    // TODO: Add auth check & potentially disable after voting
-    voteStory({ storyId: story._id });
+    if (!isClerkLoaded) return; // Don't do anything if Clerk hasn't loaded
+
+    if (!isSignedIn) {
+      navigate("/sign-in"); // Redirect to sign-in if not logged in
+      return;
+    }
+    voteStory({ storyId: story._id })
+      .then((result) => {
+        console.log("Vote successful:", result);
+        // Optionally, update UI based on result.action and result.newVoteCount
+      })
+      .catch((error) => {
+        console.error("Error voting:", error);
+        // Handle error, e.g., show a notification to the user
+      });
   };
 
   const handleRating = (value: number) => {
-    // TODO: Add auth check & prevent re-rating
-    if (!hasRated) {
-      rateStory({ storyId: story._id, rating: value });
+    if (!isClerkLoaded) return;
+
+    if (!isSignedIn) {
+      navigate("/sign-in");
+      return;
     }
+    if (hasRated) {
+      // User has already rated, prevent re-rating (or allow update if implemented)
+      alert("You have already rated this app.");
+      return;
+    }
+    rateStory({ storyId: story._id, rating: value })
+      .then((result) => {
+        console.log("Rating success:", result);
+        // Optimistically update UI or refetch currentUserRating might be needed here
+        // For now, a simple alert.
+        alert(result.message);
+      })
+      .catch((error) => {
+        console.error("Error rating:", error);
+        alert(`Error rating: ${error.data?.message || error.message}`);
+      });
   };
 
-  const handleCommentSubmit = (content: string, author: string) => {
-    // TODO: Replace hardcoded author with authenticated user
+  const handleCommentSubmit = (content: string) => {
+    if (!isClerkLoaded) return;
+    if (!isSignedIn) {
+      navigate("/sign-in");
+      return;
+    }
     addComment({
       storyId: story._id,
       content,
-      author: author || "Anonymous",
       parentId: replyToId || undefined,
     });
     setReplyToId(null);
@@ -70,7 +112,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
   }, [story.title, story.description]);
 
   const averageRating = story.ratingCount > 0 ? story.ratingSum / story.ratingCount : 0;
-  const currentRatingDisplay = averageRating; // Display average for now
+  // Display user's own rating if they have rated, otherwise the average or hover state
+  const displayRatingForStars = hasRated ? currentUserRating : hoveredRating;
 
   // Generate slug from title (simple example)
   const storySlug = story.title
@@ -90,9 +133,11 @@ export function StoryDetail({ story }: StoryDetailProps) {
           <div className="flex flex-col items-center gap-1 pt-1 min-w-[40px]">
             <button
               onClick={handleVote}
-              className="text-[#2A2825] hover:bg-[#F4F0ED] p-1 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-              // TODO: Add disabled logic based on auth/vote status
-            >
+              disabled={!isClerkLoaded} // Disable while Clerk is loading to prevent premature clicks
+              className={`text-[#2A2825] hover:bg-[#F4F0ED] p-1 rounded ${
+                !isSignedIn && isClerkLoaded ? "opacity-50 cursor-help" : ""
+              }`}
+              title={!isSignedIn && isClerkLoaded ? "Sign in to vote" : "Vote for this app"}>
               <ChevronUp className="w-5 h-5" />
             </button>
             <span className="text-[#525252] font-medium text-sm">{story.votes}</span>
@@ -138,24 +183,35 @@ export function StoryDetail({ story }: StoryDetailProps) {
       {/* Rating Section */}
       <div className="mt-8 bg-white rounded-lg p-6 border border-[#D5D3D0]">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4">
-          <h2 className="text-lg font-medium text-[#525252]">Rate this app</h2>
+          <h2 className="text-lg font-medium text-[#525252]">
+            {hasRated ? "Your Rating" : "Rate this app"}
+          </h2>
           <div className="flex items-center gap-1">
             {[1, 2, 3, 4, 5].map((value) => (
               <button
                 key={value}
                 onClick={() => handleRating(value)}
-                onMouseEnter={() => setHoveredRating(value)}
+                onMouseEnter={() => !hasRated && setHoveredRating(value)} // Only hover if not rated
                 onMouseLeave={() => setHoveredRating(0)}
-                disabled={hasRated} // TODO: Base on actual user rating status
+                disabled={!isClerkLoaded || (isSignedIn && hasRated)} // Disable if not loaded, or if signed in AND already rated
                 className={`p-1 transition-colors disabled:cursor-not-allowed ${
+                  !isSignedIn && isClerkLoaded ? "opacity-50 cursor-help" : ""
+                } ${
                   hasRated
-                    ? value <= Math.round(averageRating) // Show rounded average if already rated
+                    ? value <= (currentUserRating || 0)
+                      ? "text-yellow-500"
+                      : "text-gray-300"
+                    : value <= (hoveredRating || 0)
                       ? "text-yellow-400"
-                      : "text-[#D5D3D0]"
-                    : value <= (hoveredRating || 0) // Show hover state
-                      ? "text-yellow-400"
-                      : "text-[#D5D3D0] hover:text-yellow-400"
-                }`}>
+                      : "text-gray-300 hover:text-yellow-400"
+                }`}
+                title={
+                  !isSignedIn && isClerkLoaded
+                    ? "Sign in to rate"
+                    : hasRated
+                      ? `You rated ${currentUserRating} star(s)`
+                      : `Rate ${value} stars`
+                }>
                 <Star className="w-5 h-5 fill-current" />
               </button>
             ))}

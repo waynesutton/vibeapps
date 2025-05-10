@@ -89,7 +89,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                 </SignedOut>
                 <SignedIn>
                   <UserSyncer />
-                  <UserButton afterSignOutUrl="/" />
+                  <UserButton afterSignOutUrl="/" userProfileUrl="/profile" />
                 </SignedIn>
               </div>
             </div>

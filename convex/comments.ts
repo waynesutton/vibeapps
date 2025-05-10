@@ -1,7 +1,8 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
-import { Doc, Id, QueryCtx, MutationCtx } from "./_generated/dataModel";
+import { Doc, Id } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
+import { getAuthenticatedUserId, requireAdminRole } from "./users"; // Import the centralized helper and requireAdminRole
 
 // We might not need this specific type if we don't enhance comments further yet
 // export type CommentWithDetails = Doc<"comments"> & {
@@ -9,21 +10,10 @@ import { paginationOptsValidator } from "convex/server";
 // };
 
 // Helper function to get the Convex user ID of the authenticated user
-// TODO: Move this to a shared auth utils file or convex/users.ts
-async function getAuthenticatedUserId(ctx: MutationCtx | QueryCtx): Promise<Id<"users">> {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) {
-    throw new Error("User not authenticated.");
-  }
-  const user = await ctx.db
-    .query("users")
-    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-    .unique();
-  if (!user) {
-    throw new Error("User record not found for authenticated user. Please ensure user is synced.");
-  }
-  return user._id;
-}
+// REMOVED - Now imported from convex/users.ts
+// async function getAuthenticatedUserId(ctx: MutationCtx | QueryCtx): Promise<Id<"users">> {
+//  ... implementation ...
+// }
 
 // Query to list APPROVED comments for a specific story
 export const listApprovedByStory = query({
@@ -46,7 +36,7 @@ export const listApprovedByStory = query({
 export const listPendingByStory = query({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args): Promise<Doc<"comments">[]> => {
-    // TODO: Add authentication check - only admins should access pending comments
+    await requireAdminRole(ctx); // <<< Added admin check
     const comments = await ctx.db
       .query("comments")
       .withIndex("by_storyId_status", (q) => q.eq("storyId", args.storyId).eq("status", "pending"))
@@ -74,7 +64,7 @@ export const listAllCommentsAdmin = query({
     ctx,
     args
   ): Promise<{ page: Doc<"comments">[]; isDone: boolean; continueCursor: string }> => {
-    // TODO: Add authentication check - only admins should access
+    await requireAdminRole(ctx); // <<< Added admin check
 
     let queryBuilder; // Use a new variable for the query builder chain
 
@@ -195,7 +185,7 @@ export const updateStatus = mutation({
     status: v.union(v.literal("approved"), v.literal("rejected")),
   },
   handler: async (ctx, args) => {
-    // TODO: Add authentication check - only admins should update status
+    await requireAdminRole(ctx); // <<< Added admin check
     const comment = await ctx.db.get(args.commentId);
     if (!comment) {
       throw new Error("Comment not found");
@@ -223,7 +213,7 @@ export const updateStatus = mutation({
 export const hideComment = mutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, args) => {
-    // TODO: Add admin authentication check
+    await requireAdminRole(ctx); // <<< Added admin check
     const comment = await ctx.db.get(args.commentId);
     if (!comment) {
       throw new Error("Comment not found");
@@ -236,7 +226,7 @@ export const hideComment = mutation({
 export const showComment = mutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, args) => {
-    // TODO: Add admin authentication check
+    await requireAdminRole(ctx); // <<< Added admin check
     const comment = await ctx.db.get(args.commentId);
     if (!comment) {
       throw new Error("Comment not found");
@@ -249,22 +239,62 @@ export const showComment = mutation({
 export const deleteComment = mutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, args) => {
-    // TODO: Add admin authentication check
+    await requireAdminRole(ctx); // Current: Admin can delete any comment
+    // We will add a new mutation for users to delete their OWN comments
     const comment = await ctx.db.get(args.commentId);
     if (!comment) {
       console.warn(`Comment ${args.commentId} not found for deletion.`);
-      return; // Or throw error
+      return;
+    }
+    // TODO: Decrement story.commentCount, handle replies, etc.
+    await ctx.db.delete(args.commentId);
+  },
+});
+
+// Mutation for a user to delete their own comment
+export const deleteOwnComment = mutation({
+  args: { commentId: v.id("comments") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthenticatedUserId(ctx);
+    const comment = await ctx.db.get(args.commentId);
+
+    if (!comment) {
+      throw new Error("Comment not found.");
     }
 
-    // TODO: Consider decrementing story.commentCount if the deleted comment was approved.
-    // const story = await ctx.db.get(comment.storyId);
-    // if (story && comment.status === 'approved') {
-    //   await ctx.db.patch(story._id, { commentCount: Math.max(0, (story.commentCount || 0) - 1) });
-    // }
+    if (comment.userId !== userId) {
+      throw new Error("User not authorized to delete this comment. Only the owner can delete.");
+    }
 
-    // TODO: Handle deletion of replies if this comment had children?
-    // This could be complex and might require a recursive approach or marking children.
+    const story = await ctx.db.get(comment.storyId);
+    if (story) {
+      // Decrement comment count on the story if the comment was approved
+      // (Assuming commentCount reflects approved comments)
+      if (comment.status === "approved") {
+        // You might need to define what status means for comment count
+        await ctx.db.patch(story._id, { commentCount: Math.max(0, (story.commentCount || 0) - 1) });
+      }
+    }
+
+    // TODO: Handle deletion of replies to this comment.
+    // This could be complex. For now, replies will be orphaned or you might prevent deletion if replies exist.
+    // Example: Check for replies
+    const replies = await ctx.db
+      .query("comments")
+      .filter((q) => q.eq(q.field("parentId"), args.commentId))
+      .collect();
+    if (replies.length > 0) {
+      // Option 1: Prevent deletion
+      // throw new Error("Cannot delete this comment as it has replies. Please delete replies first.");
+      // Option 2: Delete replies (recursive or iterative - can be complex)
+      // console.warn(`Comment ${args.commentId} has ${replies.length} replies that will also be deleted.`);
+      // for (const reply of replies) {
+      //   await ctx.runMutation(api.comments.deleteOwnComment, { commentId: reply._id }); // Risky if not handled well
+      // }
+      // For now, we allow deletion and replies will be orphaned.
+    }
 
     await ctx.db.delete(args.commentId);
+    return { success: true };
   },
 });

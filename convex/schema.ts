@@ -6,6 +6,7 @@ export default defineSchema({
     name: v.string(), // User's name
     clerkId: v.string(), // Clerk User ID for linking
     roles: v.optional(v.array(v.string())), // Optional: Store roles like 'admin'
+    email: v.optional(v.string()), // Added user's email
   }).index("by_clerk_id", ["clerkId"]),
 
   stories: defineTable({
@@ -58,8 +59,10 @@ export default defineSchema({
 
   votes: defineTable({
     userId: v.id("users"),
-    storyId: v.id("stories"), // Assuming votes are for stories
-  }).index("by_user_story", ["userId", "storyId"]), // Unique index to prevent duplicate votes
+    storyId: v.id("stories"),
+  })
+    .index("by_user_story", ["userId", "storyId"]) // Existing unique index
+    .index("by_story", ["storyId"]), // Added for deleting votes by storyId
 
   tags: defineTable({
     name: v.string(),
@@ -111,4 +114,10 @@ export default defineSchema({
   })
     .index("by_email_time", ["submitterEmail", "submissionTime"])
     .index("by_user_time", ["userId", "submissionTime"]), // Added for rate limiting by user
+
+  storyRatings: defineTable({
+    userId: v.id("users"),
+    storyId: v.id("stories"),
+    value: v.number(), // Rating value, e.g., 1-5
+  }).index("by_user_story", ["userId", "storyId"]), // Unique index
 });

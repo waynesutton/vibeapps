@@ -20,6 +20,7 @@ import type * as settings from "../settings.js";
 import type * as stories from "../stories.js";
 import type * as tags from "../tags.js";
 import type * as users from "../users.js";
+import type * as validators from "../validators.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   stories: typeof stories;
   tags: typeof tags;
   users: typeof users;
+  validators: typeof validators;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

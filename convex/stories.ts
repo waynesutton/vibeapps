@@ -4,6 +4,16 @@ import { paginationOptsValidator } from "convex/server";
 import { Doc, Id, DataModel } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api";
 import { GenericDatabaseReader, StorageReader } from "convex/server";
+import { getAuthenticatedUserId, requireAdminRole } from "./users"; // Import the centralized helper and requireAdminRole
+import { storyWithDetailsValidator } from "./validators"; // Import from new validators file
+
+// Validator for Doc<"tags">
+// REMOVED - Moved to convex/validators.ts
+// const tagDocValidator = v.object({ ... });
+
+// Validator for StoryWithDetails type
+// REMOVED - Moved to convex/validators.ts
+// export const storyWithDetailsValidator = v.object({ ... });
 
 // Extend the Doc type for Story to include calculated fields and tags
 export type StoryWithDetails = Doc<"stories"> & {
@@ -213,9 +223,10 @@ export const listPending = query({
   },
 });
 
-// Updated getBySlug to fetch tags and counts
+// Updated getBySlug to fetch tags and counts and add explicit returns validator
 export const getBySlug = query({
   args: { slug: v.string() },
+  returns: v.union(storyWithDetailsValidator, v.null()), // Explicit returns validator
   handler: async (ctx, args): Promise<StoryWithDetails | null> => {
     const story = await ctx.db
       .query("stories")
@@ -231,27 +242,6 @@ export const getBySlug = query({
     return storiesWithDetails[0];
   },
 });
-
-// Helper function to get the Convex user ID of the authenticated user
-// This should ideally be in a shared auth utils file or convex/users.ts
-// For now, defining it here if not already globally available via an import
-async function getAuthenticatedUserId(ctx: MutationCtx): Promise<Id<"users">> {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) {
-    throw new Error("User not authenticated. Cannot submit story.");
-  }
-  // Find the user document ID based on the Clerk ID (subject)
-  const user = await ctx.db
-    .query("users")
-    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-    .unique();
-
-  if (!user) {
-    // This case should ideally be handled by ensureUser, but good to check
-    throw new Error("User record not found for authenticated user. Please ensure user is synced.");
-  }
-  return user._id;
-}
 
 // Helper function to generate a URL-friendly slug
 function generateSlug(title: string): string {
@@ -279,7 +269,7 @@ export const submit = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx);
-    const userRecord = await ctx.db.get(userId); // Fetch user record to get name/email if needed for logs
+    const userRecord = await ctx.db.get(userId);
 
     if (!userRecord) {
       throw new Error("Authenticated user record not found. Sync issue?");
@@ -361,6 +351,7 @@ export const submit = mutation({
 
     // Log the submission
     await ctx.db.insert("submissionLogs", {
+      submitterEmail: userRecord.email || "unknown@example.com",
       userId: userId,
       submissionTime: Date.now(),
     });
@@ -412,20 +403,86 @@ export const voteStory = mutation({
   },
 });
 
-// rate remains the same
+// rate mutation updated for authenticated users and to prevent re-rating
 export const rate = mutation({
   args: {
     storyId: v.id("stories"),
-    rating: v.number(),
+    rating: v.number(), // Expecting 1-5
   },
   handler: async (ctx, args) => {
+    const userId = await getAuthenticatedUserId(ctx);
+
+    if (args.rating < 1 || args.rating > 5) {
+      throw new Error("Rating must be between 1 and 5.");
+    }
+
     const story = await ctx.db.get(args.storyId);
-    if (!story) throw new Error("Story not found");
-    if (args.rating < 1 || args.rating > 5) throw new Error("Rating must be between 1 and 5");
+    if (!story) {
+      throw new Error("Story not found.");
+    }
+
+    // Check if the user has already rated this story
+    const existingRating = await ctx.db
+      .query("storyRatings")
+      .withIndex("by_user_story", (q) => q.eq("userId", userId).eq("storyId", args.storyId))
+      .first();
+
+    if (existingRating) {
+      // Option 1: Prevent re-rating (current implementation)
+      throw new Error("You have already rated this story.");
+
+      // Option 2: Allow changing rating (more complex, requires adjusting sum/count carefully)
+      // const oldRatingValue = existingRating.value;
+      // await ctx.db.patch(existingRating._id, { value: args.rating });
+      // await ctx.db.patch(args.storyId, {
+      //   ratingSum: story.ratingSum - oldRatingValue + args.rating,
+      //   // ratingCount remains the same if only allowing update
+      // });
+      // return { success: true, message: "Rating updated." };
+    }
+
+    // Add new rating to storyRatings table
+    await ctx.db.insert("storyRatings", {
+      userId: userId,
+      storyId: args.storyId,
+      value: args.rating,
+    });
+
+    // Update ratingSum and ratingCount on the story
     await ctx.db.patch(args.storyId, {
       ratingSum: story.ratingSum + args.rating,
       ratingCount: story.ratingCount + 1,
     });
+
+    return { success: true, message: "Rating submitted." };
+  },
+});
+
+// Query to get the authenticated user's rating for a specific story
+export const getUserRatingForStory = query({
+  args: { storyId: v.id("stories") },
+  returns: v.union(v.null(), v.number()), // Returns rating value (1-5) or null
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null; // Not logged in, so no rating
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      return null; // User not found in Convex DB (shouldn't happen if ensureUser works)
+    }
+
+    const existingRating = await ctx.db
+      .query("storyRatings")
+      .withIndex("by_user_story", (q) => q.eq("userId", user._id).eq("storyId", args.storyId))
+      .first();
+
+    return existingRating ? existingRating.value : null;
   },
 });
 
@@ -436,7 +493,7 @@ export const updateStatus = mutation({
     status: v.union(v.literal("approved"), v.literal("rejected")),
   },
   handler: async (ctx, args) => {
-    // TODO: Add admin auth check
+    await requireAdminRole(ctx); // <<< Added admin check
     const story = await ctx.db.get(args.storyId);
     if (!story) throw new Error("Story not found");
     await ctx.db.patch(args.storyId, { status: args.status });
@@ -448,7 +505,7 @@ export const updateStatus = mutation({
 export const hideStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
-    // TODO: Add admin auth check
+    await requireAdminRole(ctx); // <<< Added admin check
     const story = await ctx.db.get(args.storyId);
     if (!story) throw new Error("Story not found");
     await ctx.db.patch(args.storyId, { isHidden: true });
@@ -458,7 +515,7 @@ export const hideStory = mutation({
 export const showStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
-    // TODO: Add admin auth check
+    await requireAdminRole(ctx); // <<< Added admin check
     const story = await ctx.db.get(args.storyId);
     if (!story) throw new Error("Story not found");
     await ctx.db.patch(args.storyId, { isHidden: false });
@@ -468,7 +525,7 @@ export const showStory = mutation({
 export const deleteStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
-    // TODO: Add admin auth check
+    await requireAdminRole(ctx); // <<< Added admin check
     const story = await ctx.db.get(args.storyId);
     if (!story) {
       console.warn(`Story ${args.storyId} not found for deletion.`);
@@ -493,7 +550,7 @@ export const updateStoryCustomMessage = mutation({
     customMessage: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // TODO: Add admin auth check
+    await requireAdminRole(ctx); // <<< Added admin check
     const story = await ctx.db.get(args.storyId);
     if (!story) throw new Error("Story not found");
     await ctx.db.patch(args.storyId, {
@@ -506,12 +563,77 @@ export const updateStoryCustomMessage = mutation({
 export const toggleStoryPinStatus = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
-    // TODO: Add admin auth check
+    await requireAdminRole(ctx); // <<< Added admin check
     const story = await ctx.db.get(args.storyId);
     if (!story) throw new Error("Story not found");
     await ctx.db.patch(args.storyId, {
       isPinned: !story.isPinned,
     });
+  },
+});
+
+// Mutation to allow a user to delete their own story
+export const deleteOwnStory = mutation({
+  args: { storyId: v.id("stories") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthenticatedUserId(ctx);
+    const story = await ctx.db.get(args.storyId);
+
+    if (!story) {
+      throw new Error("Story not found.");
+    }
+
+    if (story.userId !== userId) {
+      // Optionally, check if user is an admin, then allow deletion
+      // This would require an additional check like:
+      // const identity = await ctx.auth.getUserIdentity();
+      // const userDoc = await ctx.db.query("users").withIndex("by_clerk_id", q => q.eq("clerkId", identity.subject)).unique();
+      // if (!userDoc?.roles?.includes("admin")) {
+      //   throw new Error("User not authorized to delete this story.");
+      // }
+      // For now, strict ownership for this mutation:
+      throw new Error("User not authorized to delete this story. Only the owner can delete.");
+    }
+
+    // If story has a screenshot, delete it from storage
+    if (story.screenshotId) {
+      try {
+        await ctx.storage.delete(story.screenshotId);
+      } catch (error) {
+        console.error(
+          `Failed to delete screenshot ${story.screenshotId} for story ${args.storyId}:`,
+          error
+        );
+        // Decide if this error should prevent story deletion or just be logged
+      }
+    }
+
+    // TODO: Consider how to handle associated comments and votes.
+    // Option 1: Delete them here (can be complex, especially with replies).
+    // Option 2: Leave them orphaned (might be simpler, but could lead to dangling data).
+    // Option 3: Mark them as associated with a "deleted user" or anonymize.
+    // For now, just deleting the story.
+
+    // Example: Delete associated votes
+    const votes = await ctx.db
+      .query("votes")
+      .withIndex("by_story", (q) => q.eq("storyId", args.storyId))
+      .collect();
+    for (const vote of votes) {
+      await ctx.db.delete(vote._id);
+    }
+
+    // Example: Delete associated comments (simple, non-recursive for replies)
+    const comments = await ctx.db
+      .query("comments")
+      .withIndex("by_storyId_status", (q) => q.eq("storyId", args.storyId))
+      .collect();
+    for (const comment of comments) {
+      await ctx.db.delete(comment._id);
+    }
+
+    await ctx.db.delete(args.storyId);
+    return { success: true };
   },
 });
 
@@ -531,7 +653,7 @@ export const listAllStoriesAdmin = query({
     ctx,
     args
   ): Promise<{ page: StoryWithDetails[]; isDone: boolean; continueCursor: string }> => {
-    // TODO: Add admin auth check
+    await requireAdminRole(ctx); // <<< Added admin check
 
     let initialStories: Doc<"stories">[];
 
