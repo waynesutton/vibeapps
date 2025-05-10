@@ -7,6 +7,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import type { SiteSettings, Tag } from "../types";
 import { ConvexBox } from "./ConvexBox";
 import { Footer } from "./Footer";
+import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
 
 interface LayoutContextType {
   viewMode: "list" | "grid" | "vibe";
@@ -70,12 +71,27 @@ export function Layout({ children }: { children?: ReactNode }) {
       {/* <div className="absolute top-0 z-[-2] h-screen w-screen bg-white bg-[radial-gradient(100%_50%_at_50%_0%,rgba(0,163,255,0.13)_0,rgba(0,163,255,0)_50%,rgba(0,163,255,0)_100%)]"></div> */}
 
       <div className="flex flex-col min-h-screen bg-[#F8F7F7]">
-        <header className="pt-5 pb-4">
+        <header className="pt-5 pb-4 sticky top-0 z-50 bg-[#F8F7F7]/80 backdrop-blur-md">
           <div className="container mx-auto px-4">
-            <div className="text-center">
+            <div className="flex justify-between items-center mb-4">
+              <div></div>
               <Link to="/" className="inline-block text-[#2A2825] hover:text-[#525252]">
-                <h1 className="title-font text-2xl mb-1">{siteTitle}</h1>
+                <h1 className="title-font text-2xl">{siteTitle}</h1>
               </Link>
+              <div className="flex items-center gap-2">
+                <SignedOut>
+                  <button
+                    onClick={() => navigate("/sign-in")}
+                    className="px-4 py-2 bg-white border border-[#D5D3D0] text-[#787670] rounded-md text-sm font-medium hover:bg-gray-50 transition-colors">
+                    Sign in
+                  </button>
+                </SignedOut>
+                <SignedIn>
+                  <UserButton afterSignOutUrl="/" />
+                </SignedIn>
+              </div>
+            </div>
+            <div className="text-center">
               <p className="text-sm text-[#787672] mb-4">
                 The place to share and find new apps from the vibe coding community.
               </p>
