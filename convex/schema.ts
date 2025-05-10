@@ -2,14 +2,19 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  users: defineTable({
+    name: v.string(), // User's name
+    clerkId: v.string(), // Clerk User ID for linking
+    roles: v.optional(v.array(v.string())), // Optional: Store roles like 'admin'
+  }).index("by_clerk_id", ["clerkId"]),
+
   stories: defineTable({
     title: v.string(),
     slug: v.string(),
     url: v.string(),
     description: v.string(),
     tagIds: v.array(v.id("tags")),
-    name: v.string(), // Submitter's name (replaces author)
-    email: v.optional(v.string()), // Submitter's email (optional)
+    userId: v.optional(v.id("users")), // Link to the users table, optional for public/anonymous submissions
     votes: v.number(),
     commentCount: v.number(), // Storing for easier querying
     customMessage: v.optional(v.string()),
@@ -32,6 +37,7 @@ export default defineSchema({
     .index("by_status_creationTime", ["status"])
     .index("by_pinned_status_hidden", ["isPinned", "status", "isHidden"])
     .index("by_approved", ["isApproved"])
+    .index("by_user", ["userId"]) // Added index by user
     .searchIndex("search_all", {
       searchField: "title",
       filterFields: ["status", "isHidden"],
@@ -39,7 +45,7 @@ export default defineSchema({
 
   comments: defineTable({
     content: v.string(),
-    author: v.string(), // Will revisit if auth is added
+    userId: v.id("users"), // Link to the users table
     storyId: v.id("stories"),
     parentId: v.optional(v.id("comments")), // For nested replies
     votes: v.number(),
@@ -47,7 +53,13 @@ export default defineSchema({
     isHidden: v.optional(v.boolean()), // Added for admin hide/show
   })
     .index("by_storyId_status", ["storyId", "status"])
-    .index("by_hidden_status", ["storyId", "isHidden", "status"]),
+    .index("by_hidden_status", ["storyId", "isHidden", "status"])
+    .index("by_user", ["userId"]), // Added index by user
+
+  votes: defineTable({
+    userId: v.id("users"),
+    storyId: v.id("stories"), // Assuming votes are for stories
+  }).index("by_user_story", ["userId", "storyId"]), // Unique index to prevent duplicate votes
 
   tags: defineTable({
     name: v.string(),
@@ -93,7 +105,10 @@ export default defineSchema({
   }).index("by_formId", ["formId"]),
 
   submissionLogs: defineTable({
-    submitterEmail: v.string(), // Index submissions by email
+    submitterEmail: v.string(), // Index submissions by email - can be kept for anonymous or as a secondary piece of info
     submissionTime: v.number(), // Store the submission timestamp
-  }).index("by_email_time", ["submitterEmail", "submissionTime"]),
+    userId: v.optional(v.id("users")), // Optional: link to user if submission was by a logged-in user
+  })
+    .index("by_email_time", ["submitterEmail", "submissionTime"])
+    .index("by_user_time", ["userId", "submissionTime"]), // Added for rate limiting by user
 });

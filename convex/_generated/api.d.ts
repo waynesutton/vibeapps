@@ -19,6 +19,7 @@ import type * as forms from "../forms.js";
 import type * as settings from "../settings.js";
 import type * as stories from "../stories.js";
 import type * as tags from "../tags.js";
+import type * as users from "../users.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   settings: typeof settings;
   stories: typeof stories;
   tags: typeof tags;
+  users: typeof users;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

@@ -1,12 +1,29 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { Doc, Id } from "./_generated/dataModel";
+import { Doc, Id, QueryCtx, MutationCtx } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
 
 // We might not need this specific type if we don't enhance comments further yet
 // export type CommentWithDetails = Doc<"comments"> & {
 //   // Add any details needed in the future, like author info if users table exists
 // };
+
+// Helper function to get the Convex user ID of the authenticated user
+// TODO: Move this to a shared auth utils file or convex/users.ts
+async function getAuthenticatedUserId(ctx: MutationCtx | QueryCtx): Promise<Id<"users">> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("User not authenticated.");
+  }
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .unique();
+  if (!user) {
+    throw new Error("User record not found for authenticated user. Please ensure user is synced.");
+  }
+  return user._id;
+}
 
 // Query to list APPROVED comments for a specific story
 export const listApprovedByStory = query({
@@ -128,10 +145,11 @@ export const add = mutation({
   args: {
     storyId: v.id("stories"),
     content: v.string(),
-    author: v.string(), // TODO: Replace with authenticated user
     parentId: v.optional(v.id("comments")),
   },
   handler: async (ctx, args) => {
+    const userId = await getAuthenticatedUserId(ctx); // Get authenticated user ID
+
     const story = await ctx.db.get(args.storyId);
     if (!story) {
       throw new Error("Story not found");
@@ -155,7 +173,7 @@ export const add = mutation({
     await ctx.db.insert("comments", {
       storyId: args.storyId,
       content: args.content,
-      author: args.author,
+      userId: userId, // Use authenticated user's ID
       parentId: args.parentId,
       votes: 0,
       status: "approved", // Changed from "pending"

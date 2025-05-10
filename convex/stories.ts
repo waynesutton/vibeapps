@@ -232,6 +232,27 @@ export const getBySlug = query({
   },
 });
 
+// Helper function to get the Convex user ID of the authenticated user
+// This should ideally be in a shared auth utils file or convex/users.ts
+// For now, defining it here if not already globally available via an import
+async function getAuthenticatedUserId(ctx: MutationCtx): Promise<Id<"users">> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("User not authenticated. Cannot submit story.");
+  }
+  // Find the user document ID based on the Clerk ID (subject)
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .unique();
+
+  if (!user) {
+    // This case should ideally be handled by ensureUser, but good to check
+    throw new Error("User record not found for authenticated user. Please ensure user is synced.");
+  }
+  return user._id;
+}
+
 // Helper function to generate a URL-friendly slug
 function generateSlug(title: string): string {
   return title
@@ -249,8 +270,6 @@ export const submit = mutation({
     url: v.string(),
     tagIds: v.array(v.id("tags")),
     newTagNames: v.optional(v.array(v.string())),
-    name: v.string(),
-    email: v.optional(v.string()),
     screenshotId: v.optional(v.id("_storage")),
     linkedinUrl: v.optional(v.string()),
     twitterUrl: v.optional(v.string()),
@@ -259,19 +278,30 @@ export const submit = mutation({
     chefAppUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Rate Limiting Check
-    if (args.email) {
-      const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
-      const recentSubmissions = await ctx.db
-        .query("submissionLogs")
-        .withIndex("by_email_time", (q) =>
-          q.eq("submitterEmail", args.email!).gt("submissionTime", twentyFourHoursAgo)
-        )
-        .collect();
+    const userId = await getAuthenticatedUserId(ctx);
+    const userRecord = await ctx.db.get(userId); // Fetch user record to get name/email if needed for logs
 
-      if (recentSubmissions.length >= 10) {
-        throw new Error("Submission limit reached. You can submit up to 10 projects per day.");
-      }
+    if (!userRecord) {
+      throw new Error("Authenticated user record not found. Sync issue?");
+    }
+
+    // Rate Limiting Check (now based on userId)
+    const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
+    const recentSubmissions = await ctx.db
+      .query("submissionLogs")
+      // Assuming submissionLogs has userId and submissionTime fields.
+      // We might need to adjust the index or query if using email for anonymous and userId for logged in.
+      // For now, this assumes submissionLogs will primarily use userId for authenticated users.
+      .withIndex(
+        "by_user_time",
+        (
+          q // IMPORTANT: This index needs to be added to submissionLogs in schema.ts
+        ) => q.eq("userId", userId).gt("submissionTime", twentyFourHoursAgo)
+      )
+      .collect();
+
+    if (recentSubmissions.length >= 10) {
+      throw new Error("Submission limit reached. You can submit up to 10 projects per day.");
     }
 
     const slug = generateSlug(args.title);
@@ -311,8 +341,7 @@ export const submit = mutation({
       url: args.url,
       description: args.tagline,
       tagIds: allTagIds,
-      name: args.name,
-      email: args.email,
+      userId: userId,
       votes: 1,
       commentCount: 0,
       screenshotId: args.screenshotId,
@@ -327,15 +356,14 @@ export const submit = mutation({
       isHidden: false,
       isPinned: false,
       customMessage: undefined,
+      isApproved: true,
     });
 
-    // Log the submission if email was provided
-    if (args.email) {
-      await ctx.db.insert("submissionLogs", {
-        submitterEmail: args.email,
-        submissionTime: Date.now(),
-      });
-    }
+    // Log the submission
+    await ctx.db.insert("submissionLogs", {
+      userId: userId,
+      submissionTime: Date.now(),
+    });
 
     return { storyId, slug };
   },
@@ -350,9 +378,37 @@ export const generateUploadUrl = mutation(async (ctx) => {
 export const voteStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
+    const userId = await getAuthenticatedUserId(ctx); // Ensure user is authenticated
+
     const story = await ctx.db.get(args.storyId);
-    if (!story) throw new Error("Story not found");
+    if (!story) {
+      throw new Error("Story not found");
+    }
+
+    // Check if the user has already voted for this story
+    const existingVote = await ctx.db
+      .query("votes")
+      .withIndex("by_user_story", (q) => q.eq("userId", userId).eq("storyId", args.storyId))
+      .first();
+
+    if (existingVote) {
+      // User has already voted, perhaps allow unvoting or just do nothing / throw error
+      // For now, let's remove the vote (unvote action)
+      await ctx.db.delete(existingVote._id);
+      await ctx.db.patch(args.storyId, { votes: story.votes - 1 });
+      return { success: true, action: "unvoted", newVoteCount: story.votes - 1 };
+      // throw new Error("User has already voted for this story.");
+    }
+
+    // User hasn't voted, so add a vote
+    await ctx.db.insert("votes", {
+      userId: userId,
+      storyId: args.storyId,
+    });
+
+    // Increment the vote count on the story
     await ctx.db.patch(args.storyId, { votes: story.votes + 1 });
+    return { success: true, action: "voted", newVoteCount: story.votes + 1 };
   },
 });
 

@@ -15,6 +15,10 @@ import { PublicResultsViewer } from "./components/PublicResultsViewer";
 import { useLayoutContext } from "./components/Layout";
 import { Id } from "../convex/_generated/dataModel";
 import { Story } from "./types";
+import SignInPage from "./pages/SignInPage";
+import SignUpPage from "./pages/SignUpPage";
+import { ProtectedLayout } from "./components/ProtectedLayout";
+import { AdminRouteGuard } from "./components/AdminRouteGuard";
 
 function HomePage() {
   const { viewMode, selectedTagId, sortPeriod } = useLayoutContext();
@@ -109,16 +113,22 @@ function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<HomePage />} />
-          <Route path="/submit" element={<StoryForm />} />
+          <Route element={<ProtectedLayout />}>
+            <Route path="/submit" element={<StoryForm />} />
+          </Route>
+          <Route element={<AdminRouteGuard />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/forms/new" element={<FormBuilder />} />
+            <Route path="/admin/forms/:formId" element={<FormBuilder />} />
+            <Route path="/admin/forms/:formId/results" element={<FormResults />} />
+          </Route>
           <Route path="/s/:storySlug" element={<StoryPage />} />
           <Route path="/f/:formSlug" element={<PublicFormPage />} />
           <Route path="/results/:slug" element={<PublicResultsViewer />} />
           <Route path="/search" element={<SearchPage />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/forms/new" element={<FormBuilder />} />
-          <Route path="/admin/forms/:formId" element={<FormBuilder />} />
-          <Route path="/admin/forms/:formId/results" element={<FormResults />} />
         </Route>
+        <Route path="/sign-in" element={<SignInPage />} />
+        <Route path="/sign-up" element={<SignUpPage />} />
       </Routes>
     </BrowserRouter>
   );

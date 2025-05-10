@@ -8,6 +8,7 @@ import type { SiteSettings, Tag } from "../types";
 import { ConvexBox } from "./ConvexBox";
 import { Footer } from "./Footer";
 import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
+import { UserSyncer } from "./UserSyncer";
 
 interface LayoutContextType {
   viewMode: "list" | "grid" | "vibe";
@@ -87,6 +88,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                   </button>
                 </SignedOut>
                 <SignedIn>
+                  <UserSyncer />
                   <UserButton afterSignOutUrl="/" />
                 </SignedIn>
               </div>
