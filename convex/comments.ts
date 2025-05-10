@@ -15,20 +15,49 @@ import { getAuthenticatedUserId, requireAdminRole } from "./users"; // Import th
 //  ... implementation ...
 // }
 
-// Query to list APPROVED comments for a specific story
+// Define a validator for the comment structure including author details
+const commentWithAuthorValidator = v.object({
+  // fields from Doc<"comments">
+  _id: v.id("comments"),
+  _creationTime: v.number(),
+  content: v.string(),
+  userId: v.id("users"),
+  storyId: v.id("stories"),
+  parentId: v.optional(v.id("comments")),
+  votes: v.number(),
+  status: v.string(), // Assuming status is a string based on previous usage
+  isHidden: v.optional(v.boolean()),
+  // Added author details
+  authorName: v.optional(v.string()),
+  authorUsername: v.optional(v.string()),
+});
+
+// Query to list APPROVED comments for a specific story, now with author details
 export const listApprovedByStory = query({
   args: { storyId: v.id("stories") },
-  handler: async (ctx, args): Promise<Doc<"comments">[]> => {
-    // Only fetch approved and not hidden comments
+  returns: v.array(commentWithAuthorValidator), // Use the new validator
+  handler: async (
+    ctx,
+    args
+  ): Promise<Array<Doc<"comments"> & { authorName?: string; authorUsername?: string }>> => {
     const comments = await ctx.db
       .query("comments")
       .withIndex("by_storyId_status", (q) => q.eq("storyId", args.storyId).eq("status", "approved"))
       .filter((q) => q.neq(q.field("isHidden"), true))
-      .order("asc") // Fetch comments in chronological order
+      .order("asc")
       .collect();
 
-    // TODO: Enhance with author details if/when user authentication is added
-    return comments;
+    const commentsWithAuthors = await Promise.all(
+      comments.map(async (comment) => {
+        const author = comment.userId ? await ctx.db.get(comment.userId) : null;
+        return {
+          ...comment,
+          authorName: author?.name,
+          authorUsername: author?.username,
+        };
+      })
+    );
+    return commentsWithAuthors;
   },
 });
 

@@ -18,6 +18,7 @@ import type * as comments from "../comments.js";
 import type * as forms from "../forms.js";
 import type * as settings from "../settings.js";
 import type * as stories from "../stories.js";
+import type * as storyRatings from "../storyRatings.js";
 import type * as tags from "../tags.js";
 import type * as users from "../users.js";
 import type * as validators from "../validators.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   forms: typeof forms;
   settings: typeof settings;
   stories: typeof stories;
+  storyRatings: typeof storyRatings;
   tags: typeof tags;
   users: typeof users;
   validators: typeof validators;

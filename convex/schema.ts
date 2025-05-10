@@ -7,7 +7,10 @@ export default defineSchema({
     clerkId: v.string(), // Clerk User ID for linking
     roles: v.optional(v.array(v.string())), // Optional: Store roles like 'admin'
     email: v.optional(v.string()), // Added user's email
-  }).index("by_clerk_id", ["clerkId"]),
+    username: v.optional(v.string()), // Added username, make it unique
+  })
+    .index("by_clerk_id", ["clerkId"])
+    .index("by_username", ["username"]), // Index for fetching by username
 
   stories: defineTable({
     title: v.string(),

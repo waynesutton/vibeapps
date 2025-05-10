@@ -4,8 +4,11 @@ import { Doc, Id } from "../convex/_generated/dataModel";
 // potentially including resolved tags and screenshot URL.
 export type Story = Doc<"stories"> & {
   // Resolved data often added in queries:
-  tags?: Doc<"tags">[]; // Renamed from StoryWithDetails tag for consistency
-  screenshotUrl?: string | null;
+  tags: Tag[];
+  screenshotUrl: string | null;
+  userId?: Id<"users">;
+  authorName?: string;
+  authorUsername?: string;
   // Calculated fields if needed:
   // voteScore?: number;
   // averageRating?: number;
@@ -13,8 +16,11 @@ export type Story = Doc<"stories"> & {
 
 // Represents a full Comment document fetched from Convex.
 export type Comment = Doc<"comments"> & {
-  // Potential resolved data:
-  // authorDetails?: Doc<"users">;
+  // Existing fields are from Doc<"comments">
+  // Add new fields that come from the backend query (listApprovedByStory)
+  authorName?: string;
+  authorUsername?: string;
+  // replies?: Comment[]; // If you implement nested replies display directly in type
 };
 
 // Represents a full Tag document fetched from Convex.

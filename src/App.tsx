@@ -20,6 +20,7 @@ import SignUpPage from "./pages/SignUpPage";
 import { ProtectedLayout } from "./components/ProtectedLayout";
 import { AdminRouteGuard } from "./components/AdminRouteGuard";
 import UserProfilePage from "./pages/UserProfilePage";
+import SetUsernamePage from "./pages/SetUsernamePage";
 
 function HomePage() {
   const { viewMode, selectedTagId, sortPeriod } = useLayoutContext();
@@ -116,7 +117,8 @@ function App() {
           <Route index element={<HomePage />} />
           <Route element={<ProtectedLayout />}>
             <Route path="/submit" element={<StoryForm />} />
-            <Route path="/profile" element={<UserProfilePage />} />
+            <Route path="/u/:username" element={<UserProfilePage />} />
+            <Route path="/set-username" element={<SetUsernamePage />} />
           </Route>
           <Route element={<AdminRouteGuard />}>
             <Route path="/admin" element={<AdminDashboard />} />
@@ -129,8 +131,8 @@ function App() {
           <Route path="/results/:slug" element={<PublicResultsViewer />} />
           <Route path="/search" element={<SearchPage />} />
         </Route>
-        <Route path="/sign-in" element={<SignInPage />} />
-        <Route path="/sign-up" element={<SignUpPage />} />
+        <Route path="/sign-in/*" element={<SignInPage />} />
+        <Route path="/sign-up/*" element={<SignUpPage />} />
       </Routes>
     </BrowserRouter>
   );

@@ -7,7 +7,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import type { SiteSettings, Tag } from "../types";
 import { ConvexBox } from "./ConvexBox";
 import { Footer } from "./Footer";
-import { SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
+import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/clerk-react";
 import { UserSyncer } from "./UserSyncer";
 
 interface LayoutContextType {
@@ -29,6 +29,7 @@ type SortPeriod =
 
 export function Layout({ children }: { children?: ReactNode }) {
   const navigate = useNavigate();
+  const { user: clerkUser, isSignedIn, isLoaded: isClerkLoaded } = useUser();
   const [viewMode, setViewMode] = React.useState<"grid" | "list" | "vibe">();
   const [selectedTagId, setSelectedTagId] = React.useState<Id<"tags">>();
   const [sortPeriod, setSortPeriod] = React.useState<SortPeriod>("all");
@@ -38,6 +39,11 @@ export function Layout({ children }: { children?: ReactNode }) {
 
   const headerTags = useQuery(api.tags.listHeader);
   const settings = useQuery(api.settings.get);
+
+  const convexUserDoc = useQuery(
+    api.users.getMyUserDocument,
+    isClerkLoaded && isSignedIn ? {} : "skip"
+  );
 
   React.useEffect(() => {
     if (settings?.defaultViewMode && !viewMode) {
@@ -67,6 +73,17 @@ export function Layout({ children }: { children?: ReactNode }) {
 
   const siteTitle = settings?.siteTitle || "Vibe Apps";
 
+  let profileUrl = "/sign-in";
+  if (isClerkLoaded && isSignedIn) {
+    if (convexUserDoc === undefined) {
+      profileUrl = "#";
+    } else if (convexUserDoc && convexUserDoc.username) {
+      profileUrl = `/u/${convexUserDoc.username}`;
+    } else {
+      profileUrl = "/set-username";
+    }
+  }
+
   return (
     <>
       {/* <div className="absolute top-0 z-[-2] h-screen w-screen bg-white bg-[radial-gradient(100%_50%_at_50%_0%,rgba(0,163,255,0.13)_0,rgba(0,163,255,0)_50%,rgba(0,163,255,0)_100%)]"></div> */}
@@ -89,7 +106,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                 </SignedOut>
                 <SignedIn>
                   <UserSyncer />
-                  <UserButton afterSignOutUrl="/" userProfileUrl="/profile" />
+                  <UserButton afterSignOutUrl="/" userProfileUrl={profileUrl} />
                 </SignedIn>
               </div>
             </div>

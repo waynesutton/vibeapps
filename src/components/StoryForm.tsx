@@ -24,8 +24,6 @@ export function StoryForm() {
     githubUrl: "",
     chefShowUrl: "",
     chefAppUrl: "",
-    name: "",
-    email: "",
   });
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
@@ -92,8 +90,6 @@ export function StoryForm() {
         url: formData.url,
         tagIds: selectedTagIds,
         newTagNames: newTagNames,
-        name: formData.name,
-        email: formData.email || undefined,
         screenshotId: screenshotId,
         linkedinUrl: formData.linkedinUrl || undefined,
         twitterUrl: formData.twitterUrl || undefined,
@@ -147,38 +143,6 @@ export function StoryForm() {
       <div className="bg-white p-6 rounded-lg border border-[#D5D3D0]">
         <form onSubmit={handleSubmit} className="space-y-6">
           <h2 className="text-2xl font-bold text-[#2A2825]">Submit your Vibe Coding app</h2>
-
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-[#525252] mb-1">
-              Your Name *
-            </label>
-            <input
-              type="text"
-              id="name"
-              placeholder="Full Name"
-              value={formData.name}
-              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] border border-[#D5D3D0]"
-              required
-              disabled={isSubmitting}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-[#525252] mb-1">
-              Contact Email
-            </label>
-            <div className="text-xs text-[#787672] mb-2">(Optional, for contest use only)</div>
-            <input
-              type="email"
-              id="email"
-              placeholder="email@example.com"
-              value={formData.email}
-              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] border border-[#D5D3D0]"
-              disabled={isSubmitting}
-            />
-          </div>
 
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-[#525252] mb-1">
@@ -392,8 +356,7 @@ export function StoryForm() {
                 (selectedTagIds.length === 0 && newTagNames.length === 0) ||
                 !formData.title ||
                 !formData.tagline ||
-                !formData.url ||
-                !formData.name
+                !formData.url
               }
               className="px-4 py-2 bg-[#2A2825] text-white rounded-md hover:bg-[#525252] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               {isSubmitting ? "Submitting..." : "Submit App"}

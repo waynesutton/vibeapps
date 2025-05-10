@@ -4,6 +4,7 @@ import { MessageSquare } from "lucide-react";
 import type { Comment as CommentType } from "../types";
 import ReactMarkdown from "react-markdown";
 import { Id } from "../../convex/_generated/dataModel";
+import { Link } from "react-router-dom";
 
 interface CommentProps {
   comment: CommentType;
@@ -11,10 +12,19 @@ interface CommentProps {
 }
 
 export function Comment({ comment, onReply }: CommentProps) {
+  const authorDisplayName = comment.authorName || "Anonymous";
+  const authorProfileUrl = comment.authorUsername ? `/u/${comment.authorUsername}` : null;
+
   return (
     <div className="pl-4 mt-4">
       <div className="flex gap-2 items-center text-sm text-[#787672] mb-2">
-        <span>{comment.author}</span>
+        {authorProfileUrl ? (
+          <Link to={authorProfileUrl} className="font-medium text-[#525252] hover:underline">
+            {authorDisplayName}
+          </Link>
+        ) : (
+          <span className="font-medium text-[#525252]">{authorDisplayName}</span>
+        )}
         <span>•</span>
         <span>{formatDistanceToNow(comment._creationTime)} ago</span>
       </div>

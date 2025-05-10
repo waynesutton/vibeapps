@@ -728,3 +728,25 @@ export const listAllStoriesAdmin = query({
     };
   },
 });
+
+// Internal query to fetch full details for a batch of story IDs
+export const _getStoryDetailsBatch = internalQuery({
+  args: { storyIds: v.array(v.id("stories")) },
+  // Returns an array of StoryWithDetails or null if a story not found (though should ideally exist)
+  // For simplicity, we'll filter out nulls later or ensure storyIds are valid.
+  // Using storyWithDetailsValidator from ./validators.ts
+  returns: v.array(storyWithDetailsValidator),
+  handler: async (ctx, args): Promise<StoryWithDetails[]> => {
+    if (args.storyIds.length === 0) {
+      return [];
+    }
+    const stories = await Promise.all(args.storyIds.map((storyId) => ctx.db.get(storyId)));
+    const validStories = stories.filter((s) => s !== null) as Doc<"stories">[];
+    if (validStories.length === 0) {
+      return [];
+    }
+    // Use the existing fetchTagsAndCountsForStories helper
+    // (which itself needs access to ctx.db and ctx.storage, already available in internalQuery ctx)
+    return await fetchTagsAndCountsForStories(ctx, validStories);
+  },
+});
