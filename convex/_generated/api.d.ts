@@ -16,6 +16,7 @@ import type {
 import type * as auth from "../auth.js";
 import type * as clerk from "../clerk.js";
 import type * as comments from "../comments.js";
+import type * as convexBoxConfig from "../convexBoxConfig.js";
 import type * as forms from "../forms.js";
 import type * as http from "../http.js";
 import type * as settings from "../settings.js";
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   clerk: typeof clerk;
   comments: typeof comments;
+  convexBoxConfig: typeof convexBoxConfig;
   forms: typeof forms;
   http: typeof http;
   settings: typeof settings;

@@ -3,6 +3,7 @@ import { Save, AlertCircle } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { SiteSettings } from "../../types";
+import { ConvexBoxSettingsForm } from "./ConvexBoxSettingsForm";
 
 export function Settings() {
   const currentSettings = useQuery(api.settings.get);
@@ -108,7 +109,7 @@ export function Settings() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
         <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
           <h2 className="text-xl font-medium text-[#525252]">Site Settings</h2>
@@ -203,6 +204,8 @@ export function Settings() {
           */}
         </div>
       </div>
+
+      <ConvexBoxSettingsForm />
     </div>
   );
 }

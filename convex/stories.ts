@@ -210,7 +210,7 @@ export const listPending = query({
   ): Promise<{ page: StoryWithDetails[]; isDone: boolean; continueCursor: string }> => {
     const query = ctx.db
       .query("stories")
-      .withIndex("by_status_creationTime", (q) => q.eq("status", "pending"))
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
       .order("asc");
 
     const paginatedStories = await query.paginate(args.paginationOpts);
