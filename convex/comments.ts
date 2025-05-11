@@ -65,7 +65,6 @@ export const listApprovedByStory = query({
 export const listPendingByStory = query({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args): Promise<Doc<"comments">[]> => {
-    await requireAdminRole(ctx); // <<< Added admin check
     const comments = await ctx.db
       .query("comments")
       .withIndex("by_storyId_status", (q) => q.eq("storyId", args.storyId).eq("status", "pending"))
@@ -93,8 +92,6 @@ export const listAllCommentsAdmin = query({
     ctx,
     args
   ): Promise<{ page: Doc<"comments">[]; isDone: boolean; continueCursor: string }> => {
-    await requireAdminRole(ctx); // <<< Added admin check
-
     let queryBuilder; // Use a new variable for the query builder chain
 
     // Start building the query based on filters
@@ -214,7 +211,6 @@ export const updateStatus = mutation({
     status: v.union(v.literal("approved"), v.literal("rejected")),
   },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx); // <<< Added admin check
     const comment = await ctx.db.get(args.commentId);
     if (!comment) {
       throw new Error("Comment not found");
@@ -242,7 +238,6 @@ export const updateStatus = mutation({
 export const hideComment = mutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx); // <<< Added admin check
     const comment = await ctx.db.get(args.commentId);
     if (!comment) {
       throw new Error("Comment not found");
@@ -255,7 +250,6 @@ export const hideComment = mutation({
 export const showComment = mutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx); // <<< Added admin check
     const comment = await ctx.db.get(args.commentId);
     if (!comment) {
       throw new Error("Comment not found");
@@ -268,7 +262,6 @@ export const showComment = mutation({
 export const deleteComment = mutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx); // Current: Admin can delete any comment
     // We will add a new mutation for users to delete their OWN comments
     const comment = await ctx.db.get(args.commentId);
     if (!comment) {

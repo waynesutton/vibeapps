@@ -18,7 +18,6 @@ import { Story } from "./types";
 import SignInPage from "./pages/SignInPage";
 import SignUpPage from "./pages/SignUpPage";
 import { ProtectedLayout } from "./components/ProtectedLayout";
-import { AdminRouteGuard } from "./components/AdminRouteGuard";
 import UserProfilePage from "./pages/UserProfilePage";
 import SetUsernamePage from "./pages/SetUsernamePage";
 
@@ -120,12 +119,10 @@ function App() {
             <Route path="/u/:username" element={<UserProfilePage />} />
             <Route path="/set-username" element={<SetUsernamePage />} />
           </Route>
-          <Route element={<AdminRouteGuard />}>
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/forms/new" element={<FormBuilder />} />
-            <Route path="/admin/forms/:formId" element={<FormBuilder />} />
-            <Route path="/admin/forms/:formId/results" element={<FormResults />} />
-          </Route>
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/forms/new" element={<FormBuilder />} />
+          <Route path="/admin/forms/:formId" element={<FormBuilder />} />
+          <Route path="/admin/forms/:formId/results" element={<FormResults />} />
           <Route path="/s/:storySlug" element={<StoryPage />} />
           <Route path="/f/:formSlug" element={<PublicFormPage />} />
           <Route path="/results/:slug" element={<PublicResultsViewer />} />

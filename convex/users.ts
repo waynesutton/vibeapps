@@ -1,4 +1,4 @@
-import { mutation, query, QueryCtx, MutationCtx } from "./_generated/server";
+import { mutation, query, QueryCtx, MutationCtx, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Id, Doc } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api"; // Ensured internal is imported if needed by other funcs
@@ -26,8 +26,9 @@ export const ensureUser = mutation({
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
       .unique();
 
-    const publicMetadata = identity.publicMetadata as { roles?: string[] } | undefined;
-    const clerkRoles = publicMetadata?.roles ?? [];
+    // Role is no longer synced from Clerk to Convex user document here
+    // const publicMetadata = identity.publicMetadata as { role?: string } | undefined;
+    // const clerkRole = publicMetadata?.role;
 
     let clerkEmail: string | undefined = undefined;
     if (typeof identity.emailAddress === "string") {
@@ -60,10 +61,11 @@ export const ensureUser = mutation({
         updates.email = clerkEmail;
         changed = true;
       }
-      if (JSON.stringify(clerkRoles) !== JSON.stringify(existingUser.roles)) {
-        updates.roles = clerkRoles;
-        changed = true;
-      }
+      // Removed role update: Convex user document will no longer store the role from Clerk
+      // if (clerkRole !== existingUser.role) {
+      //   updates.role = clerkRole;
+      //   changed = true;
+      // }
 
       // Handle username update for existing user
       if (existingUser.username === null && candidateUsername !== null) {
@@ -126,7 +128,7 @@ export const ensureUser = mutation({
     const userId = await ctx.db.insert("users", {
       name: nameToStoreOnInsert,
       clerkId: identity.subject,
-      roles: clerkRoles,
+      // role: clerkRole, // Role is no longer stored on the Convex user document
       email: clerkEmail,
       username: usernameForDbInsert,
     });
@@ -172,7 +174,7 @@ export async function getAuthenticatedUserDoc(
     .unique();
 }
 
-// After getAuthenticatedUserDoc and before getUserRoles or at the end of user-related queries
+// After getAuthenticatedUserDoc and before getUserRole or at the end of user-related queries
 
 const userDocValidator = v.object({
   // Re-using/defining for clarity, ensure it matches Doc<"users">
@@ -180,7 +182,7 @@ const userDocValidator = v.object({
   _creationTime: v.number(),
   name: v.string(),
   clerkId: v.string(),
-  roles: v.optional(v.array(v.string())),
+  // role: v.optional(v.string()), // Role is no longer on the user document in Convex DB
   email: v.optional(v.string()),
   username: v.optional(v.string()),
 });
@@ -196,16 +198,16 @@ export const getMyUserDocument = query({
   },
 });
 
-// Query to get user roles (example from clerksetup.md)
-// This might be useful for frontend checks if not directly using Clerk's useUser().has()
-export const getUserRoles = query({
-  args: {},
-  returns: v.union(v.null(), v.object({ roles: v.array(v.string()) })),
-  handler: async (ctx) => {
-    const user = await getAuthenticatedUserDoc(ctx);
-    return user ? { roles: user.roles ?? [] } : null;
-  },
-});
+// Query to get user role - THIS QUERY IS NO LONGER VALID AS ROLE IS NOT ON CONVEX USER DOC
+// Frontend should get role directly from Clerk's useUser().user.publicMetadata.role
+// export const getUserRole = query({
+//   args: {},
+//   returns: v.union(v.null(), v.object({ role: v.optional(v.string()) })),
+//   handler: async (ctx) => {
+//     const user = await getAuthenticatedUserDoc(ctx);
+//     return user ? { role: user.role } : null; // user.role no longer exists
+//   },
+// });
 
 /**
  * Ensures the currently authenticated user has the 'admin' role.
@@ -213,35 +215,75 @@ export const getUserRoles = query({
  * This should be called at the beginning of admin-only mutations/actions.
  */
 export async function requireAdminRole(ctx: QueryCtx | MutationCtx): Promise<void> {
+  console.log("[requireAdminRole] Function called.");
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
+    console.error("[requireAdminRole] No identity found. User not authenticated.");
     throw new Error("Authentication required for admin action.");
   }
 
-  const user = await ctx.db
-    .query("users")
-    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-    .unique();
+  console.log("[requireAdminRole] Identity subject (Clerk User ID):", identity.subject);
+  // Limit logging of the full identity object to avoid overly verbose logs if it's huge
+  console.log(
+    "[requireAdminRole] Full identity object (logging first 500 chars):",
+    JSON.stringify(identity, null, 2).substring(0, 500)
+  );
 
-  if (!user) {
-    throw new Error("Authenticated user not found in database. Admin check failed.");
+  if (identity.publicMetadata === null || identity.publicMetadata === undefined) {
+    console.error("[requireAdminRole] identity.publicMetadata is null or undefined.");
+  } else {
+    console.log(
+      "[requireAdminRole] type of identity.publicMetadata:",
+      typeof identity.publicMetadata
+    );
+    // Attempt to log it directly, though complex objects might just show [object Object]
+    console.log(
+      "[requireAdminRole] identity.publicMetadata direct log (may be [object Object]):",
+      identity.publicMetadata
+    );
+    // More reliable way to see its content for simple JSON-like objects:
+    console.log(
+      "[requireAdminRole] identity.publicMetadata JSON.stringified:",
+      JSON.stringify(identity.publicMetadata, null, 2)
+    );
+    console.log(
+      "[requireAdminRole] Keys in identity.publicMetadata:",
+      Object.keys(identity.publicMetadata)
+    );
+    console.log(
+      "[requireAdminRole] Value of identity.publicMetadata.role (lowercase 'r'):",
+      (identity.publicMetadata as any).role
+    );
+    console.log(
+      "[requireAdminRole] Value of identity.publicMetadata.Role (uppercase 'R'):",
+      (identity.publicMetadata as any).Role
+    );
   }
 
-  // Safely access publicMetadata and roles from Clerk token as fallback
-  const publicMetadata = identity.publicMetadata as { roles?: string[] } | undefined;
-  const clerkTokenRoles = publicMetadata?.roles ?? [];
+  const publicMetadata = identity.publicMetadata as { role?: string } | undefined;
+  const clerkTokenRole = publicMetadata?.role; // This is where we expect 'admin'
 
-  if (!(user.roles && user.roles.includes("admin")) && !clerkTokenRoles.includes("admin")) {
-    throw new Error("Admin privileges required for this action.");
+  console.log(
+    "[requireAdminRole] Parsed publicMetadata variable (after type assertion):",
+    JSON.stringify(publicMetadata, null, 2)
+  );
+  console.log(
+    "[requireAdminRole] Extracted clerkTokenRole variable (this should be 'admin'):",
+    JSON.stringify(clerkTokenRole)
+  );
+
+  if (clerkTokenRole === "admin") {
+    console.log("[requireAdminRole] 'admin' role FOUND in clerkTokenRole. Access GRANTED.");
+    return;
   }
-  // If roles in DB don't match Clerk token and Clerk token has admin, consider patching DB.
-  // This logic can be refined based on source of truth for roles.
-  if (!user.roles?.includes("admin") && clerkTokenRoles.includes("admin") && user._id) {
-    if (JSON.stringify(user.roles) !== JSON.stringify(clerkTokenRoles)) {
-      // console.log(`Updating roles for user ${user._id} from Clerk token.`);
-      // await ctx.db.patch(user._id, { roles: clerkTokenRoles }); // Disabled for now to avoid mutation in query context if called from query
-    }
-  }
+
+  console.error(
+    "[requireAdminRole] 'admin' role NOT FOUND in clerkTokenRole. Access DENIED. Current role value in token:",
+    clerkTokenRole
+  );
+  throw new Error(
+    "Admin privileges required. Role 'admin' not found in Clerk token's publicMetadata."
+  );
 }
 
 // --- Queries for User Profile Page ---
@@ -320,7 +362,7 @@ const userInProfileValidator = v.object({
   _creationTime: v.number(),
   name: v.string(),
   clerkId: v.string(),
-  roles: v.optional(v.array(v.string())),
+  // role: v.optional(v.string()), // Role is no longer on the user document in Convex DB
   email: v.optional(v.string()),
   username: v.optional(v.string()),
 });
@@ -536,5 +578,82 @@ export const setUsername = mutation({
     await ctx.db.patch(userId, { username: trimmedUsername });
 
     return { success: true, username: trimmedUsername };
+  },
+});
+
+export const syncUserFromClerkWebhook = internalMutation({
+  args: {
+    clerkId: v.string(),
+    email: v.optional(v.string()),
+    firstName: v.optional(v.union(v.string(), v.null())),
+    lastName: v.optional(v.union(v.string(), v.null())),
+    imageUrl: v.optional(v.union(v.string(), v.null())),
+    publicMetadata: v.optional(v.any()), // Or a more specific v.object if you know the structure
+  },
+  handler: async (ctx, args) => {
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
+      .unique();
+
+    let nameToStore = "Anonymous";
+    if (args.firstName && args.lastName) {
+      nameToStore = `${args.firstName} ${args.lastName}`;
+    } else if (args.firstName) {
+      nameToStore = args.firstName;
+    } else if (args.lastName) {
+      nameToStore = args.lastName; // Or consider just one name if only one is present
+    }
+    // No explicit fallback to nickname from webhook data, as it's not directly available in the root of user object
+
+    const userRole = args.publicMetadata?.role as string | undefined;
+
+    if (existingUser) {
+      // User exists, update them
+      const updates: Partial<Doc<"users">> = {};
+      let changed = false;
+
+      if (nameToStore !== existingUser.name) {
+        updates.name = nameToStore;
+        changed = true;
+      }
+      if (args.email && args.email !== existingUser.email) {
+        updates.email = args.email;
+        changed = true;
+      }
+      // Add other fields from args like imageUrl if you store them
+      // if (args.imageUrl && args.imageUrl !== existingUser.imageUrl) { // Assuming imageUrl field exists on users table
+      //   updates.imageUrl = args.imageUrl;
+      //   changed = true;
+      // }
+
+      // Sync the role if your users table has a 'role' field
+      // Note: This requires 'role: v.optional(v.string())' in your convex/schema.ts for the 'users' table
+      if (userRole !== (existingUser as any).role) {
+        // Cast to any if role isn't strictly on Doc<"users">
+        updates.role = userRole; // Store the role from publicMetadata
+        changed = true;
+      }
+
+      if (changed) {
+        await ctx.db.patch(existingUser._id, updates);
+        console.log(`Webhook: Patched user ${args.clerkId}`);
+      } else {
+        console.log(`Webhook: No changes for user ${args.clerkId}`);
+      }
+      return existingUser._id;
+    } else {
+      // New user, insert them
+      console.log(`Webhook: Creating new user ${args.clerkId}`);
+      return await ctx.db.insert("users", {
+        clerkId: args.clerkId,
+        name: nameToStore,
+        email: args.email, // This might be undefined if not found
+        // imageUrl: args.imageUrl, // If you add imageUrl to your schema
+        username: undefined, // Username is not typically in basic webhook data, handle separately if needed
+        role: userRole, // Store the role from publicMetadata
+        // Initialize other fields your 'users' table requires
+      });
+    }
   },
 });

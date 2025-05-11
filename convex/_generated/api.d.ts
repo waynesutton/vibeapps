@@ -14,8 +14,10 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as auth from "../auth.js";
+import type * as clerk from "../clerk.js";
 import type * as comments from "../comments.js";
 import type * as forms from "../forms.js";
+import type * as http from "../http.js";
 import type * as settings from "../settings.js";
 import type * as stories from "../stories.js";
 import type * as storyRatings from "../storyRatings.js";
@@ -33,8 +35,10 @@ import type * as validators from "../validators.js";
  */
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  clerk: typeof clerk;
   comments: typeof comments;
   forms: typeof forms;
+  http: typeof http;
   settings: typeof settings;
   stories: typeof stories;
   storyRatings: typeof storyRatings;

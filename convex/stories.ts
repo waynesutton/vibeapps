@@ -493,7 +493,6 @@ export const updateStatus = mutation({
     status: v.union(v.literal("approved"), v.literal("rejected")),
   },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx); // <<< Added admin check
     const story = await ctx.db.get(args.storyId);
     if (!story) throw new Error("Story not found");
     await ctx.db.patch(args.storyId, { status: args.status });
@@ -505,7 +504,6 @@ export const updateStatus = mutation({
 export const hideStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx); // <<< Added admin check
     const story = await ctx.db.get(args.storyId);
     if (!story) throw new Error("Story not found");
     await ctx.db.patch(args.storyId, { isHidden: true });
@@ -515,7 +513,6 @@ export const hideStory = mutation({
 export const showStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx); // <<< Added admin check
     const story = await ctx.db.get(args.storyId);
     if (!story) throw new Error("Story not found");
     await ctx.db.patch(args.storyId, { isHidden: false });
@@ -525,7 +522,6 @@ export const showStory = mutation({
 export const deleteStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx); // <<< Added admin check
     const story = await ctx.db.get(args.storyId);
     if (!story) {
       console.warn(`Story ${args.storyId} not found for deletion.`);
@@ -550,7 +546,6 @@ export const updateStoryCustomMessage = mutation({
     customMessage: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx); // <<< Added admin check
     const story = await ctx.db.get(args.storyId);
     if (!story) throw new Error("Story not found");
     await ctx.db.patch(args.storyId, {
@@ -563,7 +558,6 @@ export const updateStoryCustomMessage = mutation({
 export const toggleStoryPinStatus = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx); // <<< Added admin check
     const story = await ctx.db.get(args.storyId);
     if (!story) throw new Error("Story not found");
     await ctx.db.patch(args.storyId, {
@@ -653,8 +647,6 @@ export const listAllStoriesAdmin = query({
     ctx,
     args
   ): Promise<{ page: StoryWithDetails[]; isDone: boolean; continueCursor: string }> => {
-    await requireAdminRole(ctx); // <<< Added admin check
-
     let initialStories: Doc<"stories">[];
 
     if (args.searchTerm && args.searchTerm.trim() !== "") {
