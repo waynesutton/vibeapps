@@ -1,6 +1,7 @@
 import React from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
+import { SignInButton } from "@clerk/clerk-react";
 
 export function Footer() {
   const [showAboutModal, setShowAboutModal] = React.useState(false);
@@ -8,13 +9,19 @@ export function Footer() {
   return (
     <footer className="mt-12">
       <div className="container mx-auto px-4 py-6">
-        <div className="flex items-center gap-4 text-sm text-[#787672]">
+        <div className="flex items-center gap-4 text-xs text-[#787672]">
+          <span className="text-[#787672]">©{new Date().getFullYear()} Convex, Inc.</span>
           <button onClick={() => setShowAboutModal(true)} className="hover:text-[#525252]">
             About
           </button>
           <a href="#" target="_blank" rel="noopener noreferrer" className="hover:text-[#525252]">
-            Login
+            Submit
           </a>
+          <SignInButton mode="modal">
+            <button className="bg-transparent border-none p-0 m-0 cursor-pointer hover:text-[#525252]">
+              Sign In
+            </button>
+          </SignInButton>
           <a
             href="https://convex.dev"
             target="_blank"
@@ -22,13 +29,13 @@ export function Footer() {
             className="hover:text-[#525252]">
             Powered by Convex
           </a>
-          <a
+          {/*<a
             href="https://chef.convex.dev/"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-[#525252]">
             Cooked with Chef
-          </a>
+          </a> */}
         </div>
       </div>
 
