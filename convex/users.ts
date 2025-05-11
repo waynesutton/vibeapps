@@ -40,6 +40,11 @@ export const ensureUser = mutation({
       candidateUsername = identity.username.trim();
     }
 
+    let clerkImageUrl: string | undefined = undefined;
+    if (typeof identity.imageUrl === "string") {
+      clerkImageUrl = identity.imageUrl || undefined; // Ensure empty string becomes undefined if desired, or just identity.imageUrl
+    }
+
     if (existingUser) {
       let nameToStore = existingUser.name;
       if (identity.givenName && identity.familyName) {
@@ -59,6 +64,10 @@ export const ensureUser = mutation({
       }
       if (clerkEmail !== existingUser.email) {
         updates.email = clerkEmail;
+        changed = true;
+      }
+      if (clerkImageUrl && clerkImageUrl !== existingUser.imageUrl) {
+        updates.imageUrl = clerkImageUrl;
         changed = true;
       }
       // Removed role update: Convex user document will no longer store the role from Clerk
@@ -131,6 +140,7 @@ export const ensureUser = mutation({
       // role: clerkRole, // Role is no longer stored on the Convex user document
       email: clerkEmail,
       username: usernameForDbInsert,
+      imageUrl: clerkImageUrl,
     });
     return userId;
   },
@@ -621,11 +631,12 @@ export const syncUserFromClerkWebhook = internalMutation({
         updates.email = args.email;
         changed = true;
       }
-      // Add other fields from args like imageUrl if you store them
-      // if (args.imageUrl && args.imageUrl !== existingUser.imageUrl) { // Assuming imageUrl field exists on users table
-      //   updates.imageUrl = args.imageUrl;
-      //   changed = true;
-      // }
+      // Handle imageUrl: if it's null from webhook, store as undefined
+      const webhookImageUrl = args.imageUrl === null ? undefined : args.imageUrl;
+      if (webhookImageUrl !== undefined && webhookImageUrl !== existingUser.imageUrl) {
+        updates.imageUrl = webhookImageUrl;
+        changed = true;
+      }
 
       // Sync the role if your users table has a 'role' field
       // Note: This requires 'role: v.optional(v.string())' in your convex/schema.ts for the 'users' table
@@ -649,7 +660,7 @@ export const syncUserFromClerkWebhook = internalMutation({
         clerkId: args.clerkId,
         name: nameToStore,
         email: args.email, // This might be undefined if not found
-        // imageUrl: args.imageUrl, // If you add imageUrl to your schema
+        imageUrl: args.imageUrl === null ? undefined : args.imageUrl,
         username: undefined, // Username is not typically in basic webhook data, handle separately if needed
         role: userRole, // Store the role from publicMetadata
         // Initialize other fields your 'users' table requires

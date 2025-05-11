@@ -116,9 +116,9 @@ function App() {
           <Route index element={<HomePage />} />
           <Route element={<ProtectedLayout />}>
             <Route path="/submit" element={<StoryForm />} />
-            <Route path="/u/:username" element={<UserProfilePage />} />
             <Route path="/set-username" element={<SetUsernamePage />} />
           </Route>
+          <Route path="/u/:username" element={<UserProfilePage />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/forms/new" element={<FormBuilder />} />
           <Route path="/admin/forms/:formId" element={<FormBuilder />} />

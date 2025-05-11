@@ -17,7 +17,7 @@ export default function UserProfilePage() {
   const { user: authUser, isLoaded: isClerkLoaded } = useUser();
   const navigate = useNavigate();
 
-  // Fetch profile data based on username from URL
+  // Fetch profile data based on username from URL - this query is public
   const profileData = useQuery(
     api.users.getUserProfileByUsername,
     username ? { username } : "skip"
@@ -28,12 +28,14 @@ export default function UserProfilePage() {
   const deleteOwnCommentMutation = useMutation(api.comments.deleteOwnComment);
   const deleteOwnRatingMutation = useMutation(api.storyRatings.deleteOwnRating);
 
-  if (!isClerkLoaded || profileData === undefined) {
+  // It's important to wait for profileData to be defined or null, not just isClerkLoaded
+  // as profileData fetch is independent of Clerk loading when page is public.
+  if (profileData === undefined) {
+    // Only show loading if profileData is genuinely not yet fetched/failed
     return <Loading />;
   }
 
   if (!username) {
-    // Should not happen if route is matched, but good check
     return <ErrorDisplay message="Username not found in URL." />;
   }
 
@@ -42,7 +44,8 @@ export default function UserProfilePage() {
   }
 
   const { user: profileUser, stories, votes, comments, ratings } = profileData;
-  const isOwnProfile = authUser?.username === profileUser?.username; // Check if viewing own profile
+  // isOwnProfile should only be true if authUser exists and their username matches profileUser's username
+  const isOwnProfile = !!authUser && authUser.username === profileUser?.username;
 
   const handleUnvote = async (storyId: Id<"stories">) => {
     try {
@@ -97,26 +100,25 @@ export default function UserProfilePage() {
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold text-[#2A2825] mb-2">
-          {profileUser.name}'s Profile {isOwnProfile && "(Yours)"}
-        </h1>
-        {/* Display Clerk image if it's own profile and available, otherwise a placeholder or nothing */}
-        {isOwnProfile && authUser?.imageUrl && (
+        <h1 className="text-3xl font-bold text-[#2A2825] mb-2">{profileUser.name}</h1>
+        {/* Display public profile image if available, otherwise a placeholder */}
+        {profileUser.imageUrl ? (
           <img
-            src={authUser.imageUrl}
-            alt={`${authUser.fullName || authUser.username || "User"}'s profile picture`}
+            src={profileUser.imageUrl}
+            alt={`${profileUser.name || "User"}'s profile picture`}
             className="w-24 h-24 rounded-full object-cover mb-4 border-2 border-gray-300"
           />
+        ) : (
+          <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-4xl font-bold mb-4 border-2 border-gray-300">
+            {profileUser.name ? profileUser.name.charAt(0).toUpperCase() : "U"}
+          </div>
         )}
         <p className="text-xl text-[#525252]">Username: {profileUser.username || "N/A"}</p>
-        {profileUser.email && (
-          <p className="text-sm text-[#787672]">
-            Email: {profileUser.email} {isOwnProfile ? "" : "(Email hidden for privacy)"}
-          </p>
+        {/* Show email only if it's the user's own profile */}
+        {isOwnProfile && profileUser.email && (
+          <p className="text-sm text-[#787672]">Email: {profileUser.email}</p>
         )}
-        {profileUser.roles && profileUser.roles.length > 0 && (
-          <p className="text-sm text-[#787672]">Roles: {profileUser.roles.join(", ")}</p>
-        )}
+        {profileUser.role && <p className="text-sm text-[#787672]">Role: {profileUser.role}</p>}
       </header>
 
       {/* Section for User's Submissions (Stories) */}

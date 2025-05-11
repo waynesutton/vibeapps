@@ -31,6 +31,8 @@ export function Settings() {
       processedValue = (e.target as HTMLInputElement).checked;
     } else if (type === "number") {
       processedValue = value === "" ? 0 : parseInt(value, 10); // Handle empty input for numbers
+    } else if (name === "defaultSortPeriod") {
+      processedValue = value as SortPeriod; // Ensure it's treated as SortPeriod type
     }
 
     setLocalSettings((prev) => ({ ...prev, [name]: processedValue }));
@@ -54,6 +56,9 @@ export function Settings() {
       if (localSettings.siteTitle !== undefined) updates.siteTitle = localSettings.siteTitle;
       if (localSettings.defaultViewMode !== undefined)
         updates.defaultViewMode = localSettings.defaultViewMode;
+      if (localSettings.defaultSortPeriod !== undefined) {
+        updates.defaultSortPeriod = localSettings.defaultSortPeriod;
+      }
 
       await updateSettings(updates);
       setShowSuccess(true);
@@ -183,6 +188,32 @@ export function Settings() {
               <option value="list">List View</option>
               <option value="grid">Grid View</option>
               <option value="vibe">Vibe View</option>
+            </select>
+          </div>
+
+          {/* Default Sort Period Setting */}
+          <div>
+            <label
+              htmlFor="defaultSortPeriod"
+              className="block text-sm font-medium text-[#525252] mb-1">
+              Default Homepage Sort
+            </label>
+            <select
+              id="defaultSortPeriod"
+              name="defaultSortPeriod"
+              value={localSettings.defaultSortPeriod || "all"} // Default to 'all' if not set
+              onChange={handleChange}
+              className="w-full px-3 py-2 bg-white border border-[#D5D3D0] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825]"
+              disabled={isSaving}>
+              <option value="today">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="year">This Year</option>
+              <option value="all">All Time</option>
+              <option value="votes_today">Most Vibes (Today)</option>
+              <option value="votes_week">Most Vibes (Week)</option>
+              <option value="votes_month">Most Vibes (Month)</option>
+              <option value="votes_year">Most Vibes (Year)</option>
             </select>
           </div>
 

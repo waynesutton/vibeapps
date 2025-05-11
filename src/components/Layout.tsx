@@ -32,7 +32,7 @@ export function Layout({ children }: { children?: ReactNode }) {
   const { user: clerkUser, isSignedIn, isLoaded: isClerkLoaded } = useUser();
   const [viewMode, setViewMode] = React.useState<"grid" | "list" | "vibe">();
   const [selectedTagId, setSelectedTagId] = React.useState<Id<"tags">>();
-  const [sortPeriod, setSortPeriod] = React.useState<SortPeriod>("today");
+  const [sortPeriod, setSortPeriod] = React.useState<SortPeriod>("all");
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
@@ -46,9 +46,12 @@ export function Layout({ children }: { children?: ReactNode }) {
   );
 
   React.useEffect(() => {
-    if (settings?.defaultViewMode && !viewMode) {
-      setViewMode(settings.defaultViewMode);
-    } else if (!settings && !viewMode) {
+    if (settings) {
+      if (settings.defaultViewMode && !viewMode) {
+        setViewMode(settings.defaultViewMode);
+      }
+      setSortPeriod(settings.defaultSortPeriod || "all");
+    } else if (!viewMode) {
       setViewMode("vibe");
     }
   }, [settings, viewMode]);

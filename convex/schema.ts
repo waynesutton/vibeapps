@@ -8,6 +8,7 @@ export default defineSchema({
     email: v.optional(v.string()), // Added user's email
     username: v.optional(v.string()), // Added username, make it unique
     role: v.optional(v.string()), // User's role, e.g., "admin"
+    imageUrl: v.optional(v.string()), // Publicly visible profile image URL
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_username", ["username"]), // Index for fetching by username
@@ -73,6 +74,19 @@ export default defineSchema({
     itemsPerPage: v.number(),
     siteTitle: v.string(),
     defaultViewMode: v.optional(v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"))),
+    defaultSortPeriod: v.optional(
+      v.union(
+        v.literal("today"),
+        v.literal("week"),
+        v.literal("month"),
+        v.literal("year"),
+        v.literal("all"),
+        v.literal("votes_today"),
+        v.literal("votes_week"),
+        v.literal("votes_month"),
+        v.literal("votes_year")
+      )
+    ),
   }),
 
   forms: defineTable({

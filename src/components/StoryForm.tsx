@@ -227,7 +227,7 @@ export function StoryForm() {
 
           <div>
             <label htmlFor="twitterUrl" className="block text-sm font-medium text-[#525252] mb-1">
-              X (Twitter) or Bluesky Profile orAnnouncement Post URL (Optional)
+              X (Twitter) or Bluesky Profile or Announcement Post URL (Optional)
             </label>
             <input
               type="url"

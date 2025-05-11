@@ -63,6 +63,19 @@ export const update = mutation({
     itemsPerPage: v.optional(v.number()),
     siteTitle: v.optional(v.string()),
     defaultViewMode: v.optional(v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"))),
+    defaultSortPeriod: v.optional(
+      v.union(
+        v.literal("today"),
+        v.literal("week"),
+        v.literal("month"),
+        v.literal("year"),
+        v.literal("all"),
+        v.literal("votes_today"),
+        v.literal("votes_week"),
+        v.literal("votes_month"),
+        v.literal("votes_year")
+      )
+    ),
     // Add other updatable settings here
   },
   handler: async (ctx, args) => {
