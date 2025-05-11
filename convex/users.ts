@@ -1,9 +1,16 @@
-import { mutation, query, QueryCtx, MutationCtx, internalMutation } from "./_generated/server";
+import {
+  mutation,
+  query,
+  QueryCtx,
+  MutationCtx,
+  internalMutation,
+  action,
+} from "./_generated/server";
 import { v } from "convex/values";
 import { Id, Doc } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api"; // Ensured internal is imported if needed by other funcs
 import type { StoryWithDetails } from "./stories"; // Import StoryWithDetails type
-import { storyWithDetailsValidator } from "./validators"; // Updated import path
+import { storyWithDetailsValidator, StoryWithDetailsPublic } from "./validators"; // Updated import path
 
 /**
  * Ensures a user record exists in the Convex database for the authenticated user.
@@ -202,9 +209,31 @@ const userDocValidator = v.object({
  */
 export const getMyUserDocument = query({
   args: {},
-  returns: v.union(v.null(), userDocValidator),
+  // returns: v.union(v.null(), userDocValidator), // Assuming userDocValidator is defined elsewhere or use v.any() / specific object if not
+  returns: v.union(
+    v.null(),
+    v.object({
+      /* define user fields here */ _id: v.id("users"),
+      _creationTime: v.number(),
+      clerkId: v.string(),
+      email: v.optional(v.string()),
+      name: v.string(),
+      username: v.optional(v.string()),
+      imageUrl: v.optional(v.string()),
+      role: v.optional(v.string()),
+      // add other fields from your users table if any
+    })
+  ),
   handler: async (ctx) => {
-    return await getAuthenticatedUserDoc(ctx);
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null;
+    }
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject)) // Ensured correct index name
+      .unique();
+    return user;
   },
 });
 
@@ -303,8 +332,9 @@ export async function requireAdminRole(ctx: QueryCtx | MutationCtx): Promise<voi
  */
 export const listUserStories = query({
   args: { userId: v.id("users") },
-  returns: v.array(storyWithDetailsValidator),
-  handler: async (ctx, args): Promise<StoryWithDetails[]> => {
+  returns: v.array(storyWithDetailsValidator), // Use the validator for Convex
+  handler: async (ctx, args): Promise<StoryWithDetailsPublic[]> => {
+    // Return the TypeScript type
     // Step 1: Fetch basic story documents for the user
     const basicStories = await ctx.db
       .query("stories")
@@ -319,10 +349,13 @@ export const listUserStories = query({
     // Step 2: Get all story IDs
     const storyIds = basicStories.map((story) => story._id);
 
-    // Step 3: Call the internal batch query to get full details
-    const detailedStories = await ctx.runQuery(internal.stories._getStoryDetailsBatch, {
-      storyIds,
-    });
+    // Step 3: Call the internal batch query to get full details, including author info
+    const detailedStories: StoryWithDetailsPublic[] = await ctx.runQuery(
+      internal.stories._getStoryDetailsBatch,
+      {
+        storyIds,
+      }
+    );
 
     return detailedStories;
   },
@@ -666,5 +699,108 @@ export const syncUserFromClerkWebhook = internalMutation({
         // Initialize other fields your 'users' table requires
       });
     }
+  },
+});
+
+// Action to generate a short-lived upload URL for profile images
+export const generateUploadUrl = action({
+  args: {},
+  handler: async (ctx) => {
+    // No specific permissions needed here, as it just generates a URL.
+    // The actual upload will be to this URL, and then a mutation will link it.
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+// Mutation to update the user\'s profile image using a storageId
+export const setUserProfileImage = mutation({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("User not authenticated to set profile image.");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      throw new Error("User record not found.");
+    }
+
+    const imageUrl = await ctx.storage.getUrl(args.storageId);
+    if (!imageUrl) {
+      // This could happen if the storageId is invalid or the file doesn\'t exist.
+      console.error(`Failed to get URL for storageId: ${args.storageId}`);
+      throw new Error(
+        "Could not retrieve image URL from storage. The file might not have been uploaded correctly."
+      );
+    }
+
+    await ctx.db.patch(user._id, { imageUrl: imageUrl });
+    return { success: true, imageUrl };
+  },
+});
+
+// Mutation to update the username
+export const updateUsername = mutation({
+  args: { newUsername: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("User not authenticated to update username.");
+    }
+
+    const trimmedUsername = args.newUsername.trim();
+
+    // Basic username validation (adjust as needed)
+    if (trimmedUsername.length < 3 || trimmedUsername.length > 20) {
+      throw new Error("Username must be between 3 and 20 characters.");
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(trimmedUsername)) {
+      throw new Error("Username can only contain letters, numbers, and underscores.");
+    }
+
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!currentUser) {
+      throw new Error("Current user record not found.");
+    }
+
+    // If username is the same as current, no need to update or check uniqueness
+    if (currentUser.username === trimmedUsername) {
+      return { success: true, username: trimmedUsername, message: "Username is unchanged." };
+    }
+
+    // Check if the new username is already taken by another user
+    const existingUserWithNewUsername = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", trimmedUsername))
+      .unique();
+
+    if (
+      existingUserWithNewUsername &&
+      existingUserWithNewUsername._id.toString() !== currentUser._id.toString()
+    ) {
+      throw new Error("This username is already taken. Please choose another one.");
+    }
+
+    await ctx.db.patch(currentUser._id, { username: trimmedUsername });
+
+    // IMPORTANT: If Clerk username needs to be kept in sync,
+    // you might need to call Clerk\'s API here or client-side after this mutation succeeds.
+    // For example (conceptual, requires Clerk Admin SDK setup if run server-side):
+    // import { ConvexClerk } from "@clerk/clerk-sdk-node";
+    // const clerk = ConvexClerk({jwtKey: process.env.CLERK_JWT_KEY});
+    // await clerk.users.updateUser(identity.subject, { username: trimmedUsername });
+    // This is complex and depends on your Clerk setup.
+    // For now, we focus on updating the Convex user document.
+
+    return { success: true, username: trimmedUsername, message: "Username updated successfully." };
   },
 });

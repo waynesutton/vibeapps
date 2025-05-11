@@ -5,6 +5,21 @@ import { api } from "../../../convex/_generated/api";
 import type { SiteSettings } from "../../types";
 import { ConvexBoxSettingsForm } from "./ConvexBoxSettingsForm";
 
+// Define SortPeriod locally for type casting, mirroring Layout.tsx
+type SortPeriod =
+  | "today"
+  | "week"
+  | "month"
+  | "year"
+  | "all"
+  | "votes_today"
+  | "votes_week"
+  | "votes_month"
+  | "votes_year";
+
+// Define ViewMode locally for type casting
+type ViewMode = "list" | "grid" | "vibe";
+
 export function Settings() {
   const currentSettings = useQuery(api.settings.get);
   const updateSettings = useMutation(api.settings.update);
@@ -33,6 +48,9 @@ export function Settings() {
       processedValue = value === "" ? 0 : parseInt(value, 10); // Handle empty input for numbers
     } else if (name === "defaultSortPeriod") {
       processedValue = value as SortPeriod; // Ensure it's treated as SortPeriod type
+    } else if (name === "defaultViewMode") {
+      // Add specific handling for defaultViewMode
+      processedValue = value as ViewMode;
     }
 
     setLocalSettings((prev) => ({ ...prev, [name]: processedValue }));

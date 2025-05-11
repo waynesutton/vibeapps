@@ -5,7 +5,7 @@ import { Doc, Id, DataModel } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api";
 import { GenericDatabaseReader, StorageReader } from "convex/server";
 import { getAuthenticatedUserId, requireAdminRole } from "./users"; // Import the centralized helper and requireAdminRole
-import { storyWithDetailsValidator } from "./validators"; // Import from new validators file
+import { storyWithDetailsValidator, StoryWithDetailsPublic } from "./validators"; // Import StoryWithDetailsPublic
 
 // Validator for Doc<"tags">
 // REMOVED - Moved to convex/validators.ts
@@ -21,6 +21,9 @@ export type StoryWithDetails = Doc<"stories"> & {
   screenshotUrl: string | null;
   tags: Doc<"tags">[]; // Include full tag documents
   commentCount: number; // Ensure commentCount is part of the type
+  authorName?: string;
+  authorUsername?: string;
+  authorImageUrl?: string;
 };
 
 // Helper to fetch tags and comment counts for stories
@@ -33,6 +36,11 @@ const fetchTagsAndCountsForStories = async (
 
   const tags = await Promise.all(uniqueTagIds.map((tagId) => ctx.db.get(tagId)));
   const tagsMap = new Map(tags.filter(Boolean).map((tag) => [tag!._id, tag!]));
+
+  // Efficiently fetch all unique author details
+  const uniqueUserIds = [...new Set(stories.map((story) => story.userId).filter(Boolean))];
+  const users = await Promise.all(uniqueUserIds.map((userId) => ctx.db.get(userId as Id<"users">)));
+  const usersMap = new Map(users.filter(Boolean).map((user) => [user!._id, user!]));
 
   return Promise.all(
     stories.map(async (story) => {
@@ -52,12 +60,17 @@ const fetchTagsAndCountsForStories = async (
         .collect();
       const commentCount = comments.length;
 
+      const author = story.userId ? usersMap.get(story.userId) : undefined;
+
       return {
         ...story,
         voteScore,
         screenshotUrl,
         tags: storyTags,
         commentCount,
+        authorName: author?.name,
+        authorUsername: author?.username,
+        authorImageUrl: author?.imageUrl,
       };
     })
   );
@@ -259,7 +272,7 @@ export const submit = mutation({
     tagline: v.string(),
     url: v.string(),
     tagIds: v.array(v.id("tags")),
-    newTagNames: v.optional(v.array(v.string())),
+    newTagNames: v.array(v.string()),
     screenshotId: v.optional(v.id("_storage")),
     linkedinUrl: v.optional(v.string()),
     twitterUrl: v.optional(v.string()),
@@ -454,7 +467,7 @@ export const rate = mutation({
       ratingCount: story.ratingCount + 1,
     });
 
-    return { success: true, message: "Rating submitted." };
+    return { success: true };
   },
 });
 
@@ -722,23 +735,86 @@ export const listAllStoriesAdmin = query({
 });
 
 // Internal query to fetch full details for a batch of story IDs
+// This will include author information and tags.
 export const _getStoryDetailsBatch = internalQuery({
   args: { storyIds: v.array(v.id("stories")) },
-  // Returns an array of StoryWithDetails or null if a story not found (though should ideally exist)
-  // For simplicity, we'll filter out nulls later or ensure storyIds are valid.
-  // Using storyWithDetailsValidator from ./validators.ts
+  // The handler will return StoryWithDetailsPublic[], so the validator should match this structure.
+  // The storyWithDetailsValidator is used to validate the shape of each object.
   returns: v.array(storyWithDetailsValidator),
-  handler: async (ctx, args): Promise<StoryWithDetails[]> => {
-    if (args.storyIds.length === 0) {
+  handler: async (ctx, args): Promise<StoryWithDetailsPublic[]> => {
+    const results: StoryWithDetailsPublic[] = [];
+    for (const storyId of args.storyIds) {
+      const story = await ctx.db.get(storyId);
+      if (!story) continue;
+
+      const author = await ctx.db.get(story.userId);
+      const tags = await Promise.all(story.tagIds.map((tagId) => ctx.db.get(tagId)));
+      const screenshotUrl = story.screenshotId
+        ? await ctx.storage.getUrl(story.screenshotId)
+        : null;
+
+      // Construct the story object according to StoryWithDetailsPublic type
+      results.push({
+        ...story, // Spread all fields from Doc<"stories">
+        // Explicitly list all fields required by StoryWithDetailsPublic that come from Doc<"stories">
+        _id: story._id,
+        _creationTime: story._creationTime,
+        title: story.title,
+        slug: story.slug,
+        url: story.url,
+        description: story.description,
+        tagIds: story.tagIds,
+        userId: story.userId,
+        votes: story.votes,
+        commentCount: story.commentCount,
+        screenshotId: story.screenshotId,
+        ratingSum: story.ratingSum,
+        ratingCount: story.ratingCount,
+        linkedinUrl: story.linkedinUrl,
+        twitterUrl: story.twitterUrl,
+        githubUrl: story.githubUrl,
+        chefShowUrl: story.chefShowUrl,
+        chefAppUrl: story.chefAppUrl,
+        status: story.status,
+        isHidden: story.isHidden,
+        isPinned: story.isPinned,
+        customMessage: story.customMessage,
+        isApproved: story.isApproved,
+        // Joined data
+        authorName: author?.name,
+        authorUsername: author?.username,
+        authorImageUrl: author?.imageUrl,
+        tags: tags.filter(Boolean) as Doc<"tags">[],
+        screenshotUrl: screenshotUrl,
+        voteScore: story.votes, // Example: voteScore is just votes for now
+      });
+    }
+    return results;
+  },
+});
+
+// Example of a public query to list stories (e.g., for the homepage)
+export const listApprovedStoriesWithDetails = query({
+  args: { paginationOpts: v.optional(v.any()) },
+  returns: v.array(storyWithDetailsValidator), // Validator for return shape
+  handler: async (ctx, args): Promise<StoryWithDetailsPublic[]> => {
+    const approvedStories = await ctx.db
+      .query("stories")
+      .filter((q) => q.and(q.eq(q.field("status"), "approved"), q.eq(q.field("isHidden"), false)))
+      .order("desc")
+      .collect();
+
+    if (approvedStories.length === 0) {
       return [];
     }
-    const stories = await Promise.all(args.storyIds.map((storyId) => ctx.db.get(storyId)));
-    const validStories = stories.filter((s) => s !== null) as Doc<"stories">[];
-    if (validStories.length === 0) {
-      return [];
-    }
-    // Use the existing fetchTagsAndCountsForStories helper
-    // (which itself needs access to ctx.db and ctx.storage, already available in internalQuery ctx)
-    return await fetchTagsAndCountsForStories(ctx, validStories);
+
+    const storyIds = approvedStories.map((s) => s._id);
+
+    const detailedStories: StoryWithDetailsPublic[] = await ctx.runQuery(
+      internal.stories._getStoryDetailsBatch,
+      { storyIds }
+    );
+
+    return detailedStories;
   },
 });

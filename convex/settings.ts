@@ -2,41 +2,39 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 
+// Define the type for SortPeriod based on schema/frontend usage
+export type SortPeriodConvex = Doc<"settings">["defaultSortPeriod"]; // Infer from schema
+export type ViewModeConvex = Doc<"settings">["defaultViewMode"]; // Infer from schema
+
 // Default settings
 const DEFAULT_SETTINGS = {
   itemsPerPage: 20,
   siteTitle: "Vibe Apps",
-  defaultViewMode: "vibe" as const,
-  // Add other defaults as needed
+  defaultViewMode: "vibe" as ViewModeConvex, // Use the inferred type
+  defaultSortPeriod: "all" as SortPeriodConvex, // Add default and use inferred type
 };
 
-// Type for settings, could be a DB doc or the defaults
-export type SettingsData = {
-  itemsPerPage: number;
-  siteTitle: string;
-  defaultViewMode: "list" | "grid" | "vibe";
-  // Add other fields from Doc<"settings"> or DEFAULT_SETTINGS if needed
-} & Partial<Doc<"settings">>; // Combine defaults/structure with actual Doc fields
+// Type for settings data returned by the 'get' query.
+// This should encompass all fields from DEFAULT_SETTINGS and actual Doc<"settings"> fields.
+export type SettingsData = typeof DEFAULT_SETTINGS & Partial<Doc<"settings">>;
 
 // Query to get the current settings
 export const get = query({
   args: {},
-  // Update return type
   handler: async (ctx): Promise<SettingsData> => {
-    const settings = await ctx.db.query("settings").first();
-    if (!settings) {
-      // If no settings found, return defaults
+    const settingsDoc = await ctx.db.query("settings").first();
+    if (!settingsDoc) {
       console.warn(
         "Settings not found in DB, returning defaults. Run initialize mutation to persist."
       );
-      // Return the default object directly
       return DEFAULT_SETTINGS;
     }
-    // Ensure the fetched settings object conforms to SettingsData
+    // Combine defaults with DB values, ensuring DB values override.
+    // And ensure all default keys are present if not in DB doc yet.
     return {
-      ...DEFAULT_SETTINGS, // Start with defaults
-      ...settings, // Override with actual DB values
-    };
+      ...DEFAULT_SETTINGS,
+      ...settingsDoc,
+    } as SettingsData; // Assert to ensure type compatibility
   },
 });
 

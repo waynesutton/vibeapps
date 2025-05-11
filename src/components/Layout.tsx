@@ -30,15 +30,18 @@ type SortPeriod =
 export function Layout({ children }: { children?: ReactNode }) {
   const navigate = useNavigate();
   const { user: clerkUser, isSignedIn, isLoaded: isClerkLoaded } = useUser();
-  const [viewMode, setViewMode] = React.useState<"grid" | "list" | "vibe">();
-  const [selectedTagId, setSelectedTagId] = React.useState<Id<"tags">>();
-  const [sortPeriod, setSortPeriod] = React.useState<SortPeriod>("all");
+
+  const settings = useQuery(api.settings.get);
+  // Initialize with undefined, will be set by useEffect
+  const [viewMode, setViewMode] = React.useState<"grid" | "list" | "vibe" | undefined>(undefined);
+  const [sortPeriod, setSortPeriod] = React.useState<SortPeriod | undefined>(undefined);
+  const [selectedTagId, setSelectedTagId] = React.useState<Id<"tags"> | undefined>(undefined);
+
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   const headerTags = useQuery(api.tags.listHeader);
-  const settings = useQuery(api.settings.get);
 
   const convexUserDoc = useQuery(
     api.users.getMyUserDocument,
@@ -47,14 +50,25 @@ export function Layout({ children }: { children?: ReactNode }) {
 
   React.useEffect(() => {
     if (settings) {
-      if (settings.defaultViewMode && !viewMode) {
-        setViewMode(settings.defaultViewMode);
+      // When settings are loaded
+      // Set initial viewMode only if it hasn't been set yet (e.g., by user interaction or previous effect run)
+      if (viewMode === undefined) {
+        setViewMode(settings.defaultViewMode || "vibe"); // Use DB setting or fallback to "vibe"
       }
-      setSortPeriod(settings.defaultSortPeriod || "all");
-    } else if (!viewMode) {
-      setViewMode("vibe");
+      // Set initial sortPeriod only if it hasn't been set yet
+      if (sortPeriod === undefined) {
+        setSortPeriod(settings.defaultSortPeriod || "all"); // Use DB setting or fallback to "all"
+      }
+    } else {
+      // Settings not yet loaded
+      if (viewMode === undefined) {
+        setViewMode("vibe"); // Pre-emptive default for viewMode
+      }
+      if (sortPeriod === undefined) {
+        setSortPeriod("all"); // Pre-emptive default for sortPeriod
+      }
     }
-  }, [settings, viewMode]);
+  }, [settings]); // Re-run ONLY when settings data changes.
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

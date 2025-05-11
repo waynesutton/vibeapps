@@ -125,7 +125,15 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
               )}
 
               <div className="flex items-center gap-4 text-sm text-[#787672] flex-wrap">
-                <span>by {story.name}</span>
+                {story.authorUsername ? (
+                  <Link
+                    to={`/u/${story.authorUsername}`}
+                    className="hover:text-[#525252] hover:underline">
+                    by {story.authorName || story.authorUsername}
+                  </Link>
+                ) : (
+                  <span>by {story.authorName || "Anonymous User"}</span>
+                )}
                 <span>{formatDate(story._creationTime)}</span>
                 <Link
                   to={`/s/${story.slug}#comments`}

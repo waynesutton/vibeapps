@@ -74,7 +74,6 @@ export function StoryDetail({ story }: StoryDetailProps) {
         console.log("Rating success:", result);
         // Optimistically update UI or refetch currentUserRating might be needed here
         // For now, a simple alert.
-        alert(result.message);
       })
       .catch((error) => {
         console.error("Error rating:", error);
@@ -169,7 +168,15 @@ export function StoryDetail({ story }: StoryDetailProps) {
             )}
             <p className="text-[#525252] mb-4 prose prose-sm max-w-none">{story.description}</p>
             <div className="flex items-center gap-4 text-sm text-[#787672] flex-wrap mb-3">
-              <span>by {story.name}</span>
+              {story.authorUsername ? (
+                <Link
+                  to={`/u/${story.authorUsername}`}
+                  className="hover:text-[#525252] hover:underline">
+                  by {story.authorName || story.authorUsername}
+                </Link>
+              ) : (
+                <span>by {story.authorName || "Anonymous User"}</span>
+              )}
               <span>{formatDistanceToNow(story._creationTime)} ago</span>
               <Link to="#comments" className="flex items-center gap-1 hover:text-[#525252]">
                 <MessageSquare className="w-4 h-4" />
