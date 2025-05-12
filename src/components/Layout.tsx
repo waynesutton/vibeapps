@@ -7,7 +7,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import type { SiteSettings, Tag } from "../types";
 import { ConvexBox } from "./ConvexBox";
 import { Footer } from "./Footer";
-import { SignedIn, SignedOut, UserButton, useUser } from "@clerk/clerk-react";
+import { SignedIn, SignedOut, UserButton, useUser, useClerk } from "@clerk/clerk-react";
 import { UserSyncer } from "./UserSyncer";
 
 interface LayoutContextType {
@@ -30,6 +30,9 @@ type SortPeriod =
 export function Layout({ children }: { children?: ReactNode }) {
   const navigate = useNavigate();
   const { user: clerkUser, isSignedIn, isLoaded: isClerkLoaded } = useUser();
+  const clerk = useClerk();
+  const [showProfileMenu, setShowProfileMenu] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
 
   const settings = useQuery(api.settings.get);
   // Initialize with undefined, will be set by useEffect
@@ -91,6 +94,7 @@ export function Layout({ children }: { children?: ReactNode }) {
   const siteTitle = settings?.siteTitle || "Vibe Apps";
 
   let profileUrl = "/sign-in";
+  let avatarUrl = clerkUser?.imageUrl;
   if (isClerkLoaded && isSignedIn) {
     if (convexUserDoc === undefined) {
       profileUrl = "#";
@@ -100,6 +104,18 @@ export function Layout({ children }: { children?: ReactNode }) {
       profileUrl = "/set-username";
     }
   }
+
+  // Close dropdown on outside click
+  React.useEffect(() => {
+    if (!showProfileMenu) return;
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showProfileMenu]);
 
   return (
     <>
@@ -217,7 +233,35 @@ export function Layout({ children }: { children?: ReactNode }) {
                 </SignedOut>
                 <SignedIn>
                   <UserSyncer />
-                  <UserButton afterSignOutUrl="/" userProfileUrl={profileUrl} />
+                  {/* Custom Avatar Button and Dropdown */}
+                  <div className="relative" ref={menuRef}>
+                    <button
+                      onClick={() => setShowProfileMenu((v) => !v)}
+                      className="rounded-full border border-[#D5D3D0] w-9 h-9 overflow-hidden focus:outline-none"
+                      aria-label="Open profile menu"
+                      type="button">
+                      <img src={avatarUrl} alt="User avatar" className="w-9 h-9 object-cover" />
+                    </button>
+                    {showProfileMenu && (
+                      <div className="absolute right-0 mt-2 w-40 bg-white border border-[#D5D3D0] rounded-md shadow-lg z-50">
+                        <a
+                          href={profileUrl}
+                          className="block px-4 py-2 text-sm text-[#2A2825] hover:bg-[#F3F4F6]"
+                          onClick={() => setShowProfileMenu(false)}>
+                          Profile
+                        </a>
+                        <button
+                          onClick={() => {
+                            setShowProfileMenu(false);
+                            clerk.signOut();
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-[#2A2825] hover:bg-[#F3F4F6]"
+                          type="button">
+                          Sign out
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </SignedIn>
               </div>
             </div>
