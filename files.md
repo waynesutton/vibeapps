@@ -8,20 +8,24 @@
 - `src/`: Directory for React frontend code.
   - `components/`: Reusable React components.
     - `Layout.tsx`: Main application layout, header, navigation, view mode controls.
-    - `StoryList.tsx`: Displays a list or grid of stories, handles pagination (placeholder).
-    - `StoryDetail.tsx`: Displays details of a single story, handles rating, comments.
-    - `StoryForm.tsx`: Form for submitting new stories, handles file upload.
-    - `Comment.tsx`: Displays a single comment.
-    - `CommentForm.tsx`: Form for adding new comments or replies.
-    - `SearchResults.tsx`: Displays search results (currently uses mock data).
-    - `Footer.tsx`: Application footer with links.
-    - `ConvexBox.tsx`: Small box linking to Convex.
-    - `admin/`: Components related to the admin dashboard (placeholders).
-      - `AdminDashboard.tsx`
-      - `FormBuilder.tsx`
-      - `FormResults.tsx`
-  - `types/index.ts`: TypeScript type definitions for data structures (`Story`, `Comment`, etc.).
-  - `App.tsx`: Main application component, sets up routing, defines page components (`HomePage`, `StoryPage`, `SearchPage`, etc.).
+    - `StoryList.tsx`: Displays a list or grid of stories, handles pagination, sorting, and filtering.
+    - `StoryDetail.tsx`: Displays details of a single story, handles rating, comments, and metadata.
+    - `StoryForm.tsx`: Form for submitting new stories, handles file upload and validation.
+    - `Comment.tsx`: Displays a single comment with markdown rendering and reply support.
+    - `CommentForm.tsx`: Form for adding new comments or replies, with validation.
+    - `SearchResults.tsx`: Displays search results, filtering, and empty state handling.
+    - `Footer.tsx`: Application footer with links and about modal.
+    - `ConvexBox.tsx`: Convex integration notice and dismissible notification.
+    - `admin/`: Components related to the admin dashboard.
+      - `AdminDashboard.tsx`: Admin control panel, navigation, and overview statistics.
+      - `ContentModeration.tsx`: Content moderation queue, report handling, and visibility controls.
+      - `FormBuilder.tsx`: Custom form creation, field management, and preview.
+      - `FormResults.tsx`: Form submission viewing, filtering, and CSV export.
+      - `Forms.tsx`: Form management interface, visibility controls, and export.
+      - `Settings.tsx`: Global site settings and feature toggles.
+      - `TagManagement.tsx`: Tag creation, deletion, and organization.
+  - `types/index.ts`: TypeScript type definitions for stories, comments, users, forms, tags, and ratings.
+  - `App.tsx`: Main application component, routing, and page definitions.
   - `main.tsx`: Entry point of the React application, configures Convex client.
   - `index.css`: Global CSS styles and Tailwind CSS setup.
 - `.env`: Environment variables (should contain `VITE_CONVEX_URL`).
@@ -31,6 +35,7 @@
 - `features.md`: Tracks implemented and planned application features.
 - `prompts.md`: History of prompts given during development.
 - `files.md`: This file - overview of codebase structure.
+- `changelog.md`: Developer-friendly changelog of new features added.
 
 ## Root Configuration Files
 

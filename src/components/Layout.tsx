@@ -35,8 +35,8 @@ export function Layout({ children }: { children?: ReactNode }) {
   const menuRef = React.useRef<HTMLDivElement>(null);
 
   const settings = useQuery(api.settings.get);
-  // Initialize with undefined, will be set by useEffect
   const [viewMode, setViewMode] = React.useState<"grid" | "list" | "vibe" | undefined>(undefined);
+  const [userChangedViewMode, setUserChangedViewMode] = React.useState(false);
   const [sortPeriod, setSortPeriod] = React.useState<SortPeriod | undefined>(undefined);
   const [selectedTagId, setSelectedTagId] = React.useState<Id<"tags"> | undefined>(undefined);
 
@@ -53,25 +53,21 @@ export function Layout({ children }: { children?: ReactNode }) {
 
   React.useEffect(() => {
     if (settings) {
-      // When settings are loaded
-      // Set initial viewMode only if it hasn't been set yet (e.g., by user interaction or previous effect run)
-      if (viewMode === undefined) {
-        setViewMode(settings.defaultViewMode || "vibe"); // Use DB setting or fallback to "vibe"
+      if (!userChangedViewMode) {
+        setViewMode(settings.defaultViewMode || "vibe");
       }
-      // Set initial sortPeriod only if it hasn't been set yet
       if (sortPeriod === undefined) {
-        setSortPeriod(settings.defaultSortPeriod || "all"); // Use DB setting or fallback to "all"
+        setSortPeriod(settings.defaultSortPeriod || "all");
       }
     } else {
-      // Settings not yet loaded
-      if (viewMode === undefined) {
-        setViewMode("vibe"); // Pre-emptive default for viewMode
+      if (!userChangedViewMode && viewMode === undefined) {
+        setViewMode("vibe");
       }
       if (sortPeriod === undefined) {
-        setSortPeriod("all"); // Pre-emptive default for sortPeriod
+        setSortPeriod("all");
       }
     }
-  }, [settings]); // Re-run ONLY when settings data changes.
+  }, [settings, userChangedViewMode]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,20 +135,29 @@ export function Layout({ children }: { children?: ReactNode }) {
                   Submit
                 </Link>
                 <button
-                  onClick={() => setViewMode("list")}
-                  className={`p-2 rounded-md ${viewMode === "list" ? "bg-[#F4F0ED]" : "hover:bg-gray-100"}`}
+                  onClick={() => {
+                    setViewMode("list");
+                    setUserChangedViewMode(true);
+                  }}
+                  className={`p-2 rounded-md border border-[#D5D3D0] ${viewMode === "list" ? "bg-[#F4F0ED]" : "hover:bg-gray-100"}`}
                   aria-label="List View">
                   <List className="w-5 h-5 text-[#525252]" />
                 </button>
                 <button
-                  onClick={() => setViewMode("grid")}
-                  className={`p-2 rounded-md ${viewMode === "grid" ? "bg-[#F4F0ED]" : "hover:bg-gray-100"}`}
+                  onClick={() => {
+                    setViewMode("grid");
+                    setUserChangedViewMode(true);
+                  }}
+                  className={`p-2 rounded-md border border-[#D5D3D0] ${viewMode === "grid" ? "bg-[#F4F0ED]" : "hover:bg-gray-100"}`}
                   aria-label="Grid View">
                   <LayoutGrid className="w-5 h-5 text-[#525252]" />
                 </button>
                 <button
-                  onClick={() => setViewMode("vibe")}
-                  className={`p-2 rounded-md ${viewMode === "vibe" ? "bg-[#F4F0ED]" : "hover:bg-gray-100"}`}
+                  onClick={() => {
+                    setViewMode("vibe");
+                    setUserChangedViewMode(true);
+                  }}
+                  className={`p-2 rounded-md border border-[#D5D3D0] ${viewMode === "vibe" ? "bg-[#F4F0ED]" : "hover:bg-gray-100"}`}
                   aria-label="Vibe View">
                   <ThumbsUp className="w-5 h-5 text-[#525252]" />
                 </button>
@@ -227,7 +232,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                 <SignedOut>
                   <button
                     onClick={() => navigate("/sign-in")}
-                    className="px-4 py-2 bg-[#2A2825] border border-[#D5D3D0] text-[#ffffff] rounded-md text-sm font-medium hover:bg-[#F2F0ED] hover:text-[#2A2825] transition-colors">
+                    className="px-4 py-2 bg-[#2A2825] border border-[#D5D3D0] text-[#ffffff] rounded-md text-xs font-normal hover:bg-[#F2F0ED] hover:text-[#2A2825] transition-colors">
                     Sign in
                   </button>
                 </SignedOut>

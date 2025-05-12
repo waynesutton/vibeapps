@@ -156,21 +156,22 @@ npm run preview
 ├── src/
 │   ├── components/         # React components
 │   │   ├── admin/         # Admin dashboard components
-│   │   │   ├── ContentModeration.tsx
-│   │   │   ├── FormBuilder.tsx
-│   │   │   ├── FormResults.tsx
-│   │   │   ├── Forms.tsx
-│   │   │   ├── Settings.tsx
-│   │   │   └── TagManagement.tsx
-│   │   ├── Comment.tsx
-│   │   ├── CommentForm.tsx
-│   │   ├── ConvexBox.tsx
-│   │   ├── Footer.tsx
-│   │   ├── Layout.tsx
-│   │   ├── SearchResults.tsx
-│   │   ├── StoryDetail.tsx
-│   │   ├── StoryForm.tsx
-│   │   └── StoryList.tsx
+│   │   │   ├── AdminDashboard.tsx         # Admin control panel, navigation, and overview statistics
+│   │   │   ├── ContentModeration.tsx      # Content moderation queue, report handling, and visibility controls
+│   │   │   ├── FormBuilder.tsx            # Custom form creation, field management, and preview
+│   │   │   ├── FormResults.tsx            # Form submission viewing, filtering, and CSV export
+│   │   │   ├── Forms.tsx                  # Form management interface, visibility controls, and export
+│   │   │   ├── Settings.tsx               # Global site settings and feature toggles
+│   │   │   └── TagManagement.tsx          # Tag creation, deletion, and organization
+│   │   ├── Comment.tsx                    # Displays a single comment with markdown rendering and reply support
+│   │   ├── CommentForm.tsx                # Form for adding new comments or replies, with validation
+│   │   ├── ConvexBox.tsx                  # Convex integration notice and dismissible notification
+│   │   ├── Footer.tsx                     # Application footer with links and about modal
+│   │   ├── Layout.tsx                     # Main application layout, header, navigation, view mode controls
+│   │   ├── SearchResults.tsx              # Displays search results, filtering, and empty state handling
+│   │   ├── StoryDetail.tsx                # Displays details of a single story, handles rating, comments, and metadata
+│   │   ├── StoryForm.tsx                  # Form for submitting new stories, handles file upload and validation
+│   │   └── StoryList.tsx                  # Displays a list or grid of stories, handles pagination, sorting, and filtering
 │   ├── convex/            # Convex backend functions
 │   │   ├── schema.ts      # Database schema
 │   │   └── _generated/    # Generated types
@@ -179,6 +180,8 @@ npm run preview
 │   ├── index.css         # Global styles
 │   └── main.tsx          # Application entry point
 ├── public/               # Static assets
+├── files.md              # Overview of codebase structure
+├── changelog.md          # Developer-friendly changelog of new features added
 └── config files         # Various configuration files
 ```
 
