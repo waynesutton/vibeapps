@@ -302,7 +302,9 @@ export function StoryForm() {
               ))}
             </div>
 
-            <label className="block text-sm font-medium text-[#525252] mb-2">Add New Tags *</label>
+            <label className="block text-sm font-medium text-[#525252] mb-2">
+              Add New Tags (optional)
+            </label>
             <div className="flex gap-2 mb-2">
               <input
                 type="text"

@@ -83,6 +83,7 @@ export default function UserProfilePage() {
   const [newTwitter, setNewTwitter] = useState("");
   const [newBluesky, setNewBluesky] = useState("");
   const [newLinkedin, setNewLinkedin] = useState("");
+  const [activeTab, setActiveTab] = useState<string>("votes"); // Moved here
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -523,30 +524,46 @@ export default function UserProfilePage() {
         </h2>
         <div className="flex flex-row gap-8 justify-center sm:justify-start">
           <div className="flex flex-col items-center">
-            <span className="text-xl text-[#2A2825]">{stories.length}</span>
+            <a
+              href="#submissions"
+              onClick={() => setActiveTab("votes")}
+              className="text-xl text-[#2A2825] hover:underline">
+              {stories.length}
+            </a>
             <span className="text-sm text-gray-500">Submissions</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="text-xl text-[#2A2825]">{votes.length}</span>
+            <a
+              href="#tab-section-votes"
+              onClick={() => setActiveTab("votes")}
+              className="text-xl text-[#2A2825] hover:underline">
+              {votes.length}
+            </a>
             <span className="text-sm text-gray-500">Votes</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="text-xl text-[#2A2825]">{ratings.length}</span>
+            <a
+              href="#tab-section-ratings"
+              onClick={() => setActiveTab("ratings")}
+              className="text-xl text-[#2A2825] hover:underline">
+              {ratings.length}
+            </a>
             <span className="text-sm text-gray-500">Ratings Given</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="text-xl text-[#2A2825]">{comments.length}</span>
+            <a
+              href="#tab-section-comments"
+              onClick={() => setActiveTab("comments")}
+              className="text-xl text-[#2A2825] hover:underline">
+              {comments.length}
+            </a>
             <span className="text-sm text-gray-500">Comments</span>
           </div>
         </div>
       </section>
 
-      {/* Existing sections for Submissions, Votes, Ratings, Comments */}
-      {/* Make sure these sections use `profileUser`, `stories`, `votes`, `comments`, `ratings` */}
-      {/* and the handler functions: `handleDeleteStory`, `handleUnvote`, `handleDeleteRating`, `handleDeleteComment` */}
-
-      {/* Section for User\'s Submissions (Stories) */}
-      <section className="mb-12 p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
+      {/* Section for User's Submissions (Stories) - Always Visible */}
+      <section id="submissions" className="mb-6 p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
         <h2 className="text-lg font-normal text-[#2A2825] mb-4 pb-2 border-b border-gray-300">
           Submissions
         </h2>
@@ -581,128 +598,166 @@ export default function UserProfilePage() {
         )}
       </section>
 
-      {/* Section for User\'s Votes */}
-      <section className="mb-12 p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
-        <h2 className="text-lg font-normal text-[#2A2825] mb-4 pb-2 border-b border-gray-300">
-          Votes
-        </h2>
-        {votes.length === 0 && <p className="text-gray-500 italic">No votes yet.</p>}
-        {votes.length > 0 && (
-          <ul className="space-y-4">
-            {votes.map((vote: VoteInProfile) => (
-              <li
-                key={vote._id}
-                className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow">
-                <div className="flex-grow mr-4">
-                  <Link
-                    to={`/s/${vote.storySlug}`}
-                    className="text-lg font-semibold text-[#2A2825] hover:underline">
-                    {vote.storyTitle || "View Story"}
-                  </Link>
-                  <p className="text-xs text-gray-400">
-                    Voted on: {new Date(vote._creationTime).toLocaleDateString()}
-                  </p>
-                </div>
-                {isOwnProfile && (
-                  <button
-                    onClick={() => handleUnvote(vote.storyId)}
-                    className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0">
-                    <ThumbsUp className="w-4 h-4 transform rotate-180" /> Unvote
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      {/* Tab Navigation and Content Area */}
+      <div className="mb-12">
+        {/* Tab Buttons */}
+        <div className="flex border-b border-gray-300 mb-4">
+          <button
+            onClick={() => setActiveTab("votes")}
+            className={`py-2 px-4 text-sm font-medium focus:outline-none ${
+              activeTab === "votes"
+                ? "border-b-2 border-[#2A2825] text-[#2A2825]"
+                : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}>
+            Votes ({votes?.length ?? 0})
+          </button>
+          <button
+            onClick={() => setActiveTab("ratings")}
+            className={`py-2 px-4 text-sm font-medium focus:outline-none ${
+              activeTab === "ratings"
+                ? "border-b-2 border-[#2A2825] text-[#2A2825]"
+                : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}>
+            Ratings Given ({ratings?.length ?? 0})
+          </button>
+          <button
+            onClick={() => setActiveTab("comments")}
+            className={`py-2 px-4 text-sm font-medium focus:outline-none ${
+              activeTab === "comments"
+                ? "border-b-2 border-[#2A2825] text-[#2A2825]"
+                : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}>
+            Comments ({comments?.length ?? 0})
+          </button>
+        </div>
 
-      {/* Section for User\'s Story Ratings */}
-      <section className="mb-12 p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
-        <h2 className="text-lg font-normal text-[#2A2825] mb-4 pb-2 border-b border-gray-300">
-          Ratings Given
-        </h2>
-        {ratings.length === 0 && <p className="text-gray-500 italic">No ratings given yet.</p>}
-        {ratings.length > 0 && (
-          <ul className="space-y-4">
-            {ratings.map((rating: RatingInProfile) => (
-              <li
-                key={rating._id}
-                className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow">
-                <div className="flex-grow mr-4">
-                  <Link
-                    to={`/s/${rating.storySlug}`}
-                    className="text-lg font-semibold text-[#2A2825] hover:underline">
-                    {rating.storyTitle || "View Story"}
-                  </Link>
-                  <p className="text-sm text-yellow-500 flex items-center">
-                    Rated:{" "}
-                    {Array(rating.value)
-                      .fill(null)
-                      .map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-current text-yellow-400" />
-                      ))}
-                    {Array(5 - rating.value)
-                      .fill(null)
-                      .map((_, i) => (
-                        <Star
-                          key={i + rating.value}
-                          className="w-4 h-4 text-gray-300 fill-current"
-                        />
-                      ))}
-                    <span className="ml-2 text-xs text-gray-400">
-                      ({new Date(rating._creationTime).toLocaleDateString()})
-                    </span>
-                  </p>
-                </div>
-                {isOwnProfile && (
-                  <button
-                    onClick={() => handleDeleteRating(rating._id)}
-                    className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0">
-                    <Trash2 className="w-4 h-4" /> Delete
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
+        {/* Conditionally Rendered Content */}
+        {activeTab === "votes" && (
+          <section
+            id="tab-section-votes"
+            className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
+            {/* Votes content from original section, no title needed here as it's on the tab */}
+            {votes.length === 0 && <p className="text-gray-500 italic">No votes yet.</p>}
+            {votes.length > 0 && (
+              <ul className="space-y-4">
+                {votes.map((vote: VoteInProfile) => (
+                  <li
+                    key={vote._id}
+                    className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow">
+                    <div className="flex-grow mr-4">
+                      <Link
+                        to={`/s/${vote.storySlug}`}
+                        className="text-lg font-semibold text-[#2A2825] hover:underline">
+                        {vote.storyTitle || "View Story"}
+                      </Link>
+                      <p className="text-xs text-gray-400">
+                        Voted on: {new Date(vote._creationTime).toLocaleDateString()}
+                      </p>
+                    </div>
+                    {isOwnProfile && (
+                      <button
+                        onClick={() => handleUnvote(vote.storyId)}
+                        className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0">
+                        <ThumbsUp className="w-4 h-4 transform rotate-180" /> Unvote
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         )}
-      </section>
 
-      {/* Section for User\'s Comments */}
-      <section className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
-        <h2 className="text-lg font-normal text-[#2A2825] mb-4 pb-2 border-b border-gray-300">
-          Comments
-        </h2>
-        {comments.length === 0 && <p className="text-gray-500 italic">No comments yet.</p>}
-        {comments.length > 0 && (
-          <ul className="space-y-4">
-            {comments.map((comment: CommentInProfile) => (
-              <li
-                key={comment._id}
-                className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow">
-                <div className="flex-grow mr-4">
-                  <p className="text-gray-700 mb-1 whitespace-pre-wrap">{comment.content}</p>
-                  <p className="text-xs text-gray-400">
-                    Commented on{" "}
-                    <Link
-                      to={`/s/${comment.storySlug}#comments`}
-                      className="text-[#2A2825] hover:underline">
-                      {comment.storyTitle || "story"}
-                    </Link>{" "}
-                    - {new Date(comment._creationTime).toLocaleDateString()}
-                  </p>
-                </div>
-                {isOwnProfile && (
-                  <button
-                    onClick={() => handleDeleteComment(comment._id)}
-                    className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0">
-                    <Trash2 className="w-4 h-4" /> Delete
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
+        {activeTab === "ratings" && (
+          <section
+            id="tab-section-ratings"
+            className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
+            {/* Ratings content from original section */}
+            {ratings.length === 0 && <p className="text-gray-500 italic">No ratings given yet.</p>}
+            {ratings.length > 0 && (
+              <ul className="space-y-4">
+                {ratings.map((rating: RatingInProfile) => (
+                  <li
+                    key={rating._id}
+                    className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow">
+                    <div className="flex-grow mr-4">
+                      <Link
+                        to={`/s/${rating.storySlug}`}
+                        className="text-lg font-semibold text-[#2A2825] hover:underline">
+                        {rating.storyTitle || "View Story"}
+                      </Link>
+                      <p className="text-sm text-yellow-500 flex items-center">
+                        Rated:{" "}
+                        {Array(rating.value)
+                          .fill(null)
+                          .map((_, i) => (
+                            <Star key={i} className="w-4 h-4 fill-current text-yellow-400" />
+                          ))}
+                        {Array(5 - rating.value)
+                          .fill(null)
+                          .map((_, i) => (
+                            <Star
+                              key={i + rating.value}
+                              className="w-4 h-4 text-gray-300 fill-current"
+                            />
+                          ))}
+                        <span className="ml-2 text-xs text-gray-400">
+                          ({new Date(rating._creationTime).toLocaleDateString()})
+                        </span>
+                      </p>
+                    </div>
+                    {isOwnProfile && (
+                      <button
+                        onClick={() => handleDeleteRating(rating._id)}
+                        className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0">
+                        <Trash2 className="w-4 h-4" /> Delete
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         )}
-      </section>
+
+        {activeTab === "comments" && (
+          <section
+            id="tab-section-comments"
+            className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
+            {/* Comments content from original section */}
+            {comments.length === 0 && <p className="text-gray-500 italic">No comments yet.</p>}
+            {comments.length > 0 && (
+              <ul className="space-y-4">
+                {comments.map((comment: CommentInProfile) => (
+                  <li
+                    key={comment._id}
+                    className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow">
+                    <div className="flex-grow mr-4">
+                      <p className="text-gray-700 mb-1 whitespace-pre-wrap">{comment.content}</p>
+                      <p className="text-xs text-gray-400">
+                        Commented on{" "}
+                        <Link
+                          to={`/s/${comment.storySlug}#comments`}
+                          className="text-[#2A2825] hover:underline">
+                          {comment.storyTitle || "story"}
+                        </Link>{" "}
+                        - {new Date(comment._creationTime).toLocaleDateString()}
+                      </p>
+                    </div>
+                    {isOwnProfile && (
+                      <button
+                        onClick={() => handleDeleteComment(comment._id)}
+                        className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0">
+                        <Trash2 className="w-4 h-4" /> Delete
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+      </div>
     </div>
   );
 }
