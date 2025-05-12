@@ -430,6 +430,7 @@ const commentDetailsForProfileValidator = v.object({
   parentId: v.optional(v.id("comments")),
   status: v.string(),
   votes: v.number(), // Votes on the comment itself
+  isHidden: v.boolean(),
   storyTitle: v.optional(v.string()), // Title of the story commented on
   storySlug: v.optional(v.string()), // Slug of the story commented on
   authorName: v.optional(v.string()), // Name of the comment author
@@ -453,6 +454,7 @@ type CommentDetailsForProfile = Doc<"comments"> & {
   storySlug?: string;
   authorName?: string;
   authorUsername?: string;
+  isHidden: boolean; // Make isHidden non-optional
   // votes: number; // This is already part of Doc<"comments"> schema
 };
 
@@ -504,6 +506,7 @@ export const listUserComments = query({
           storySlug: story?.slug,
           authorName: author?.name, // Name of the comment's author
           authorUsername: author?.username, // Username of the comment's author
+          isHidden: comment.isHidden === undefined ? false : comment.isHidden, // Ensure isHidden is a boolean
         } as CommentDetailsForProfile; // Assert to the specific type
       })
     );

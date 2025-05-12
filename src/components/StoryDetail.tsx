@@ -167,7 +167,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
               </div>
             )}
             <p className="text-[#525252] mb-4 prose prose-sm max-w-none">{story.description}</p>
-            <div className="flex items-center gap-4 text-sm text-[#787672] flex-wrap mb-3">
+            <div className="flex items-center gap-2 text-sm text-[#787672] flex-wrap mb-3">
               {story.authorUsername ? (
                 <Link
                   to={`/u/${story.authorUsername}`}

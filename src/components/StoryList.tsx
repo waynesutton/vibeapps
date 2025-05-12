@@ -124,7 +124,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                 <p className="text-[#787672] text-sm mb-4 line-clamp-3">{story.description}</p>
               )}
 
-              <div className="flex items-center gap-4 text-sm text-[#787672] flex-wrap">
+              <div className="flex items-center gap-1 text-sm text-[#787672] flex-wrap">
                 {story.authorUsername ? (
                   <Link
                     to={`/u/${story.authorUsername}`}

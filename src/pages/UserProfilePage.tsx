@@ -247,7 +247,7 @@ export default function UserProfilePage() {
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6  from-slate-50 to-gray-100 min-h-screen">
       {/* Profile Header - Product Hunt Inspired */}
-      <header className="mb-10 p-6 bg-white rounded-lg border border-gray-200">
+      <header className="mb-10 p-6 bg-[#ffffff] rounded-lg border border-gray-200">
         <div className="flex flex-col sm:flex-row items-center sm:items-start">
           {/* Profile Image Section */}
           <div className="relative mb-4 sm:mb-0 sm:mr-6">
@@ -257,10 +257,10 @@ export default function UserProfilePage() {
                   <img
                     src={newProfileImagePreview}
                     alt="Profile preview"
-                    className="w-32 h-32 rounded-full object-cover border-4 border-gray-300 group-hover:opacity-75 transition-opacity"
+                    className="w-24 h-24 rounded-full object-cover border-4 border-gray-300 group-hover:opacity-75 transition-opacity"
                   />
                 ) : (
-                  <ProfileImagePlaceholder name={profileUser.name} size="w-32 h-32" />
+                  <ProfileImagePlaceholder name={profileUser.name} size="w-24 h-24" />
                 )}
                 <div className="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                   <Camera className="w-8 h-8 text-white" />
@@ -277,10 +277,10 @@ export default function UserProfilePage() {
               <img
                 src={currentImageUrl}
                 alt={`${profileUser.name || "User"}\'s profile`}
-                className="w-32 h-32 rounded-full object-cover border-4 border-gray-300"
+                className="w-24 h-24 rounded-full object-cover border-4 border-gray-300"
               />
             ) : (
-              <ProfileImagePlaceholder name={profileUser.name} size="w-32 h-32" />
+              <ProfileImagePlaceholder name={profileUser.name} size="w-24 h-24" />
             )}
           </div>
 
@@ -291,11 +291,11 @@ export default function UserProfilePage() {
                 type="text"
                 value={newUsername}
                 onChange={(e) => setNewUsername(e.target.value)}
-                className="text-3xl font-bold text-[#2A2825] mb-2 w-full sm:w-auto px-2 py-1 border border-gray-300 rounded-md"
+                className="text-xl font-normal text-[#2A2825] mb-2 w-full sm:w-auto px-2 py-1 border border-gray-300 rounded-md"
                 placeholder="Enter username"
               />
             ) : (
-              <h1 className="text-3xl font-bold text-[#2A2825] mb-1">
+              <h1 className="text-lg font-normal text-[#2A2825] mb-1">
                 {profileUser.name || "Anonymous User"}
               </h1>
             )}
@@ -346,7 +346,7 @@ export default function UserProfilePage() {
       {/* and the handler functions: `handleDeleteStory`, `handleUnvote`, `handleDeleteRating`, `handleDeleteComment` */}
 
       {/* Section for User\'s Submissions (Stories) */}
-      <section className="mb-12 p-4 bg-white rounded-md border border-gray-200">
+      <section className="mb-12 p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
         <h2 className="text-2xl font-semibold text-[#2A2825] mb-4 pb-2 border-b border-gray-300">
           Submissions
         </h2>
@@ -383,7 +383,7 @@ export default function UserProfilePage() {
       </section>
 
       {/* Section for User\'s Votes */}
-      <section className="mb-12 p-4 bg-white rounded-md border border-gray-200">
+      <section className="mb-12 p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
         <h2 className="text-2xl font-semibold text-[#2A2825] mb-4 pb-2 border-b border-gray-300">
           Votes
         </h2>
@@ -418,7 +418,7 @@ export default function UserProfilePage() {
       </section>
 
       {/* Section for User\'s Story Ratings */}
-      <section className="mb-12 p-4 bg-white rounded-md border border-gray-200">
+      <section className="mb-12 p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
         <h2 className="text-2xl font-semibold text-[#2A2825] mb-4 pb-2 border-b border-gray-300">
           Ratings Given
         </h2>
@@ -469,7 +469,7 @@ export default function UserProfilePage() {
       </section>
 
       {/* Section for User\'s Comments */}
-      <section className="p-4 bg-white rounded-md border border-gray-200">
+      <section className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
         <h2 className="text-2xl font-semibold text-[#2A2825] mb-4 pb-2 border-b border-gray-300">
           Comments
         </h2>

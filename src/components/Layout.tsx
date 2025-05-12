@@ -105,8 +105,8 @@ export function Layout({ children }: { children?: ReactNode }) {
     <>
       {/* <div className="absolute top-0 z-[-2] h-screen w-screen bg-white bg-[radial-gradient(100%_50%_at_50%_0%,rgba(0,163,255,0.13)_0,rgba(0,163,255,0)_50%,rgba(0,163,255,0)_100%)]"></div> */}
 
-      <div className="flex flex-col min-h-screen bg-[#F8F7F7]">
-        <header className="pt-5 pb-4 sticky top-0 z-50 bg-[#F8F7F7]/80 backdrop-blur-md">
+      <div className="flex flex-col min-h-screen bg-[#F3F4F6]">
+        <header className="pt-5 pb-4 sticky top-0 z-50">
           <div className="container mx-auto px-4">
             <div className="flex justify-between items-center">
               {/* Left: Site Title */}
