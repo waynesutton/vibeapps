@@ -295,9 +295,9 @@ export default function UserProfilePage() {
         style={{ fontFamily: "Inter, sans-serif" }}>
         <div className="flex flex-col sm:flex-row items-center sm:items-start">
           {/* Profile Image Section */}
-          <div className="relative mb-4 sm:mb-0 sm:mr-6">
+          <div className="relative mb-4 sm:mb-0 sm:mr-6 w-24 h-24">
             {isEditing ? (
-              <button onClick={triggerFileEdit} className="relative group">
+              <button onClick={triggerFileEdit} className="relative group w-24 h-24 rounded-full">
                 {newProfileImagePreview ? (
                   <img
                     src={newProfileImagePreview}
@@ -321,8 +321,8 @@ export default function UserProfilePage() {
             ) : currentImageUrl ? (
               <img
                 src={currentImageUrl}
-                alt={`${profileUser.name || "User"}\'s profile`}
-                className="w-24 h-24 rounded-full object-cover border-4 border-gray-300"
+                alt={`${profileUser.name || "User"}'s profile`}
+                className="w-24  rounded-full object-cover border-4 border-gray-300"
               />
             ) : (
               <ProfileImagePlaceholder name={profileUser.name} size="w-24 h-24" />
