@@ -106,6 +106,7 @@ export const listApproved = query({
         v.literal("votes_year")
       )
     ),
+    searchTerm: v.optional(v.string()),
   },
   handler: async (
     ctx,
@@ -129,6 +130,22 @@ export const listApproved = query({
         break;
       default:
         startTime = 0;
+    }
+
+    if (args.searchTerm && args.searchTerm.trim() !== "") {
+      // Use full text search
+      let query = ctx.db.query("stories").withSearchIndex("search_all", (q) => {
+        let builder = q.search("title", args.searchTerm!);
+        builder = builder.eq("status", "approved").eq("isHidden", false);
+        return builder;
+      });
+      const stories = await query.collect();
+      const storiesWithDetails = await fetchTagsAndCountsForStories(ctx, stories);
+      return {
+        page: storiesWithDetails,
+        isDone: true,
+        continueCursor: "",
+      };
     }
 
     let paginatedResult;

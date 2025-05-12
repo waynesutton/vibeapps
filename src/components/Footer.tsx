@@ -53,7 +53,7 @@ export function Footer() {
             </div>
             <div className="prose prose-sm">
               <p>
-                Vibe Apps – The place to share and discover new apps built by thevibe coding
+                Vibe Apps – The place to share and discover new apps built by the vibe coding
                 community..
               </p>
 

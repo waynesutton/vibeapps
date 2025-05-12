@@ -85,74 +85,76 @@ export const listAllCommentsAdmin = query({
       ),
       isHidden: v.optional(v.boolean()),
     }),
-    // Add searchTerm if comments should be searchable (requires search index on comments table)
-    // searchTerm: v.optional(v.string()),
+    searchTerm: v.optional(v.string()),
   },
   handler: async (
     ctx,
     args
   ): Promise<{ page: Doc<"comments">[]; isDone: boolean; continueCursor: string }> => {
-    let queryBuilder; // Use a new variable for the query builder chain
-
-    // Start building the query based on filters
-    if (args.filters.storyId && args.filters.isHidden !== undefined && args.filters.status) {
-      // Most specific index first
-      queryBuilder = ctx.db
-        .query("comments")
-        .withIndex("by_hidden_status", (q) =>
-          q
-            .eq("storyId", args.filters.storyId!)
-            .eq("isHidden", args.filters.isHidden!)
-            .eq("status", args.filters.status!)
-        );
-    } else if (args.filters.storyId && args.filters.status) {
-      queryBuilder = ctx.db
-        .query("comments")
-        .withIndex("by_storyId_status", (q) =>
-          q.eq("storyId", args.filters.storyId!).eq("status", args.filters.status!)
-        );
-    } else if (args.filters.isHidden !== undefined && args.filters.status) {
-      // Using filter as fallback (consider adding specific index if needed)
-      queryBuilder = ctx.db
-        .query("comments")
-        .filter((q) =>
-          q.and(
-            q.eq(q.field("isHidden"), args.filters.isHidden),
-            q.eq(q.field("status"), args.filters.status)
-          )
-        );
-      // TODO: Add index on [isHidden, status] if this becomes slow
-    } else if (args.filters.storyId) {
-      // Using existing compound index
-      queryBuilder = ctx.db
-        .query("comments")
-        .withIndex("by_storyId_status", (q) => q.eq("storyId", args.filters.storyId!));
-    } else if (args.filters.status) {
-      // Needs index on just status - none exists, use filter
-      queryBuilder = ctx.db
-        .query("comments")
-        .filter((q) => q.eq(q.field("status"), args.filters.status));
-      // TODO: Add index on [status] if needed
-    } else if (args.filters.isHidden !== undefined) {
-      // Needs index on just isHidden - none exists, use filter
-      queryBuilder = ctx.db
-        .query("comments")
-        .filter((q) => q.eq(q.field("isHidden"), args.filters.isHidden));
-      // TODO: Add index on [isHidden] if needed
+    let queryBuilder;
+    if (args.searchTerm && args.searchTerm.trim() !== "") {
+      // Use full text search
+      queryBuilder = ctx.db.query("comments").withSearchIndex("search_content", (q) => {
+        let builder = q.search("content", args.searchTerm!);
+        if (args.filters.status) {
+          builder = builder.eq("status", args.filters.status);
+        }
+        if (args.filters.isHidden !== undefined) {
+          builder = builder.eq("isHidden", args.filters.isHidden);
+        }
+        return builder;
+      });
+      // Do NOT call .order() on search index queries
+      // Execute pagination directly
+      const paginatedComments = await queryBuilder.paginate(args.paginationOpts);
+      return paginatedComments;
     } else {
-      // If no filters, start with the base query
-      queryBuilder = ctx.db.query("comments");
+      // Fallback to previous logic
+      if (args.filters.storyId && args.filters.isHidden !== undefined && args.filters.status) {
+        queryBuilder = ctx.db
+          .query("comments")
+          .withIndex("by_hidden_status", (q) =>
+            q
+              .eq("storyId", args.filters.storyId!)
+              .eq("isHidden", args.filters.isHidden!)
+              .eq("status", args.filters.status!)
+          );
+      } else if (args.filters.storyId && args.filters.status) {
+        queryBuilder = ctx.db
+          .query("comments")
+          .withIndex("by_storyId_status", (q) =>
+            q.eq("storyId", args.filters.storyId!).eq("status", args.filters.status!)
+          );
+      } else if (args.filters.isHidden !== undefined && args.filters.status) {
+        queryBuilder = ctx.db
+          .query("comments")
+          .filter((q) =>
+            q.and(
+              q.eq(q.field("isHidden"), args.filters.isHidden),
+              q.eq(q.field("status"), args.filters.status)
+            )
+          );
+      } else if (args.filters.storyId) {
+        queryBuilder = ctx.db
+          .query("comments")
+          .withIndex("by_storyId_status", (q) => q.eq("storyId", args.filters.storyId!));
+      } else if (args.filters.status) {
+        queryBuilder = ctx.db
+          .query("comments")
+          .filter((q) => q.eq(q.field("status"), args.filters.status));
+      } else if (args.filters.isHidden !== undefined) {
+        queryBuilder = ctx.db
+          .query("comments")
+          .filter((q) => q.eq(q.field("isHidden"), args.filters.isHidden));
+      } else {
+        queryBuilder = ctx.db.query("comments");
+      }
+      // Apply default ordering for non-search queries
+      const orderedQuery = queryBuilder.order("desc"); // Default order: newest first
+      // Execute pagination
+      const paginatedComments = await orderedQuery.paginate(args.paginationOpts);
+      return paginatedComments;
     }
-
-    // Apply default ordering
-    const orderedQuery = queryBuilder.order("desc"); // Default order: newest first
-
-    // Execute pagination
-    const paginatedComments = await orderedQuery.paginate(args.paginationOpts);
-
-    // TODO: Enhance with author details if needed
-
-    return paginatedComments;
   },
 });
 

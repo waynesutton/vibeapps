@@ -58,7 +58,11 @@ export default defineSchema({
   })
     .index("by_storyId_status", ["storyId", "status"])
     .index("by_user", ["userId"])
-    .index("by_hidden_status", ["storyId", "isHidden", "status"]),
+    .index("by_hidden_status", ["storyId", "isHidden", "status"])
+    .searchIndex("search_content", {
+      searchField: "content",
+      filterFields: ["status", "isHidden"],
+    }),
 
   votes: defineTable({
     userId: v.id("users"),
@@ -114,7 +118,9 @@ export default defineSchema({
   formSubmissions: defineTable({
     formId: v.id("forms"),
     data: v.any(),
-  }).index("by_formId", ["formId"]),
+  })
+    .index("by_formId", ["formId"])
+    .searchIndex("search_data", { searchField: "data" }),
 
   submissionLogs: defineTable({
     submitterEmail: v.string(),

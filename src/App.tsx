@@ -76,7 +76,7 @@ function SearchPage() {
 
   const { results: stories, status } = usePaginatedQuery(
     api.stories.listApproved,
-    {},
+    { searchTerm: query },
     { initialNumItems: 100 }
   );
 
@@ -84,14 +84,7 @@ function SearchPage() {
     return <div>Searching...</div>;
   }
 
-  const filteredStories = (stories || []).filter(
-    (story) =>
-      story.title.toLowerCase().includes(query.toLowerCase()) ||
-      story.description.toLowerCase().includes(query.toLowerCase()) ||
-      (story.tags || []).some((tag) => tag.name.toLowerCase().includes(query.toLowerCase()))
-  );
-
-  return <SearchResults query={query} stories={filteredStories as Story[]} viewMode={viewMode} />;
+  return <SearchResults query={query} stories={stories as Story[]} viewMode={viewMode} />;
 }
 
 function PublicFormPage() {

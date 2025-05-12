@@ -28,7 +28,7 @@ type StatusFilter = "all" | "pending" | "approved" | "rejected" | "hidden";
 
 export function ContentModeration() {
   const [activeItemType, setActiveItemType] = useState<"submissions" | "comments">("submissions");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("pending");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   // State for custom message editing - Commented out
