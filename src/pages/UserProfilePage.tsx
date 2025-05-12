@@ -84,6 +84,7 @@ export default function UserProfilePage() {
   const [newBluesky, setNewBluesky] = useState("");
   const [newLinkedin, setNewLinkedin] = useState("");
   const [activeTab, setActiveTab] = useState<string>("votes"); // Moved here
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -106,6 +107,9 @@ export default function UserProfilePage() {
   }, [isEditing, profileData]);
 
   // Initial check for username, which is crucial for the query
+  if (isRedirecting) {
+    return <Loading />;
+  }
   if (!username) {
     // If username is not available from params, show error or redirect.
     // This check should ideally come very early.
@@ -120,6 +124,8 @@ export default function UserProfilePage() {
 
   if (profileData === null) {
     // Query finished, user not found
+    // If we are redirecting, don't show error
+    if (isRedirecting) return <Loading />;
     return <ErrorDisplay message={`Profile for user "${username}" not found.`} />;
   }
 
@@ -166,8 +172,13 @@ export default function UserProfilePage() {
       if (newUsername.trim() !== (profileUser.username || "").trim() && newUsername.trim() !== "") {
         await updateUsernameMutation({ newUsername: newUsername.trim() });
         usernameChanged = true;
-        // If username changes, the URL should ideally change too.
-        // Navigate to the new profile URL after save.
+        if (authUser && authUser.update) {
+          await authUser.update({ username: newUsername.trim() });
+        }
+        // Immediately redirect to new profile URL and prevent further code from running
+        setIsRedirecting(true);
+        navigate(`/u/${newUsername.trim()}`, { replace: true });
+        return;
       }
       if (
         newBio !== (profileUser.bio || "") ||
@@ -333,17 +344,36 @@ export default function UserProfilePage() {
           <div className="flex-grow text-center sm:text-left">
             {isEditing ? (
               <div className="flex items-center mb-2">
-                <input
-                  type="text"
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
-                  className="text-xl font-normal text-[#2A2825] w-auto px-2 py-1 border border-gray-300 rounded-md mr-2"
-                  placeholder="Enter username"
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                />
-                <span className="text-lg text-gray-500" style={{ fontFamily: "Inter, sans-serif" }}>
-                  @{newUsername || "username"}
-                </span>
+                {profileUser.username == null ? (
+                  <>
+                    <input
+                      type="text"
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                      className="text-xl font-normal text-[#2A2825] w-auto px-2 py-1 border border-gray-300 rounded-md mr-2"
+                      placeholder="Enter username"
+                      style={{ fontFamily: "Inter, sans-serif" }}
+                    />
+                    <span
+                      className="text-lg text-gray-500"
+                      style={{ fontFamily: "Inter, sans-serif" }}>
+                      @{newUsername || "username"}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span
+                      className="text-xl font-normal text-[#2A2825] mr-2"
+                      style={{ fontFamily: "Inter, sans-serif" }}>
+                      {profileUser.name || "Anonymous User"}
+                    </span>
+                    <span
+                      className="text-lg text-gray-500"
+                      style={{ fontFamily: "Inter, sans-serif" }}>
+                      @{profileUser.username}
+                    </span>
+                  </>
+                )}
               </div>
             ) : (
               <div className="flex items-baseline mb-1">
