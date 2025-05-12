@@ -102,7 +102,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                 {story.isPinned && (
                   <Pin className="w-4 h-4 #787671 flex-shrink-0" aria-label="Pinned Story" />
                 )}
-                <h2 className="text-[#525252] font-medium truncate">
+                <h2 className="text-[#2A2825] font-normal truncate">
                   <Link to={`/s/${story.slug}`} className="hover:text-[#2A2825] break-words">
                     {story.title}
                   </Link>

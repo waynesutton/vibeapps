@@ -14,9 +14,9 @@ export function Footer() {
           <button onClick={() => setShowAboutModal(true)} className="hover:text-[#525252]">
             About
           </button>
-          <a href="#" target="_blank" rel="noopener noreferrer" className="hover:text-[#525252]">
+          {/* <a href="#" target="_blank" rel="noopener noreferrer" className="hover:text-[#525252]">
             Submit
-          </a>
+          </a> */}
           <SignInButton mode="modal">
             <button className="bg-transparent border-none p-0 m-0 cursor-pointer hover:text-[#525252]">
               Sign In

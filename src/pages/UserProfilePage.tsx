@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useUser } from "@clerk/clerk-react";
+import { useUser, useClerk } from "@clerk/clerk-react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
@@ -16,6 +16,11 @@ import {
   Globe,
   Twitter,
   Linkedin,
+  LogOut,
+  Lock,
+  Mail,
+  UserPlus,
+  AlertTriangle,
 } from "lucide-react";
 import type { Story } from "../types"; // Import the Story type
 import "@fontsource/inter/400.css";
@@ -54,6 +59,7 @@ type RatingInProfile = Doc<"storyRatings"> & {
 export default function UserProfilePage() {
   const { username } = useParams<{ username: string }>();
   const { user: authUser, isLoaded: isClerkLoaded } = useUser();
+  const { signOut } = useClerk();
   const navigate = useNavigate();
 
   const profileData = useQuery(
@@ -83,8 +89,10 @@ export default function UserProfilePage() {
   const [newTwitter, setNewTwitter] = useState("");
   const [newBluesky, setNewBluesky] = useState("");
   const [newLinkedin, setNewLinkedin] = useState("");
-  const [activeTab, setActiveTab] = useState<string>("votes"); // Moved here
+  const [activeTab, setActiveTab] = useState<string>("votes");
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -297,6 +305,65 @@ export default function UserProfilePage() {
     }
   };
   // --- End of original handler functions ---
+
+  // Add new handler functions for account management
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Failed to sign out:", error);
+      setActionError("Failed to sign out. Please try again.");
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!isConfirmingDelete) {
+      setIsConfirmingDelete(true);
+      return;
+    }
+
+    try {
+      // First delete user data from Convex
+      // TODO: Implement a deleteUserData mutation in Convex to clean up user data
+      // await deleteUserDataMutation();
+
+      // Then delete the Clerk user account
+      if (authUser) {
+        await authUser.delete();
+      }
+
+      // Redirect to home page after successful deletion
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Failed to delete account:", error);
+      setActionError("Failed to delete account. Please try again.");
+    } finally {
+      setIsConfirmingDelete(false);
+    }
+  };
+
+  const handleChangePassword = () => {
+    // For password change, we'll open Clerk's User Profile component focused on password
+    if (authUser) {
+      // There are a couple of approaches:
+      // 1. Redirect to a page that shows Clerk's <UserProfile path="account" />
+      navigate("/user-settings?tab=password");
+
+      // 2. Or call the Clerk API directly if we have a custom UI
+      // authUser.update({ password: newPassword })
+    }
+  };
+
+  const handleChangeEmail = () => {
+    // Similar to password, redirect to Clerk's User Profile or custom page
+    navigate("/user-settings?tab=email");
+  };
+
+  const handleManageConnections = () => {
+    // Redirect to a page with Clerk's <UserProfile path="account/connections" />
+    navigate("/user-settings?tab=connections");
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6  from-slate-50 to-gray-100 min-h-screen">
@@ -788,6 +855,91 @@ export default function UserProfilePage() {
           </section>
         )}
       </div>
+
+      {/* Manage Profile Section - Visible only to profile owner */}
+      {isOwnProfile && (
+        <section
+          id="manage-profile"
+          className="mb-10 p-6 bg-[#ffffff] rounded-lg border border-gray-200"
+          style={{ fontFamily: "Inter, sans-serif" }}>
+          <h2 className="text-xl font-semibold text-[#2A2825] mb-6 pb-3 border-b border-gray-300">
+            Manage Profile & Account
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Column 1 */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-medium text-[#2A2825] mb-2">Profile Settings</h3>
+                <button
+                  onClick={() => {
+                    if (!isEditing) {
+                      handleEditToggle(); // Activate editing mode if not already active
+                    }
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#2A2825] transition-colors disabled:opacity-50">
+                  <Edit3 className="w-4 h-4 inline-block mr-2" /> Edit Profile Details
+                </button>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-medium text-[#2A2825] mb-2">Account Security</h3>
+                <button
+                  onClick={handleChangePassword}
+                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#2A2825] transition-colors">
+                  <Lock className="w-4 h-4 inline-block mr-2" /> Change Password
+                </button>
+                <button
+                  onClick={handleChangeEmail}
+                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#2A2825] transition-colors">
+                  <Mail className="w-4 h-4 inline-block mr-2" /> Change Email Address
+                </button>
+              </div>
+            </div>
+
+            {/* Column 2 */}
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-medium text-[#2A2825] mb-2">Connected Services</h3>
+                <button
+                  onClick={handleManageConnections}
+                  className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#2A2825] transition-colors">
+                  <UserPlus className="w-4 h-4 inline-block mr-2" /> Manage Connected Accounts
+                </button>
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-[#2A2825] mb-2">Account Actions</h3>
+                <button
+                  onClick={handleSignOut}
+                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#2A2825] transition-colors">
+                  <LogOut className="w-4 h-4 inline-block mr-2" /> Sign Out
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  className={`w-full mt-4 px-4 py-2 text-left ${
+                    isConfirmingDelete
+                      ? "bg-red-200 border-red-400"
+                      : "bg-red-50 hover:bg-red-100 border-red-300"
+                  } rounded-md text-sm text-red-700 transition-colors flex items-center justify-between`}>
+                  <span>
+                    <AlertTriangle className="w-4 h-4 inline-block mr-2" />{" "}
+                    {isConfirmingDelete ? "Confirm Account Deletion" : "Delete Account"}
+                  </span>
+                  {isConfirmingDelete && <span className="text-xs">Click again to confirm</span>}
+                </button>
+              </div>
+            </div>
+          </div>
+          {actionError && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-300 rounded-md">
+              <p className="text-sm text-red-700">{actionError}</p>
+            </div>
+          )}
+          <p className="mt-6 text-xs text-gray-500">
+            For more advanced settings, you can also visit your main account page.
+          </p>
+        </section>
+      )}
     </div>
   );
 }
