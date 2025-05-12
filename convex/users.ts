@@ -221,6 +221,11 @@ export const getMyUserDocument = query({
       username: v.optional(v.string()),
       imageUrl: v.optional(v.string()),
       role: v.optional(v.string()),
+      bio: v.optional(v.string()),
+      website: v.optional(v.string()),
+      twitter: v.optional(v.string()),
+      bluesky: v.optional(v.string()),
+      linkedin: v.optional(v.string()),
       // add other fields from your users table if any
     })
   ),
@@ -408,6 +413,12 @@ const userInProfileValidator = v.object({
   // role: v.optional(v.string()), // Role is no longer on the user document in Convex DB
   email: v.optional(v.string()),
   username: v.optional(v.string()),
+  imageUrl: v.optional(v.string()),
+  bio: v.optional(v.string()),
+  website: v.optional(v.string()),
+  twitter: v.optional(v.string()),
+  bluesky: v.optional(v.string()),
+  linkedin: v.optional(v.string()),
 });
 
 // Define the expected shape for a single vote item with story details
@@ -805,5 +816,39 @@ export const updateUsername = mutation({
     // For now, we focus on updating the Convex user document.
 
     return { success: true, username: trimmedUsername, message: "Username updated successfully." };
+  },
+});
+
+export const updateProfileDetails = mutation({
+  args: {
+    bio: v.optional(v.string()),
+    website: v.optional(v.string()),
+    twitter: v.optional(v.string()),
+    bluesky: v.optional(v.string()),
+    linkedin: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("User not authenticated to update profile details.");
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+    if (!user) throw new Error("User record not found.");
+    const updates: Partial<Doc<"users">> = {};
+    if (args.bio !== undefined) {
+      if (args.bio && args.bio.length > 200) {
+        throw new Error("Bio must be 200 characters or less.");
+      }
+      updates.bio = args.bio;
+    }
+    if (args.website !== undefined) updates.website = args.website;
+    if (args.twitter !== undefined) updates.twitter = args.twitter;
+    if (args.bluesky !== undefined) updates.bluesky = args.bluesky;
+    if (args.linkedin !== undefined) updates.linkedin = args.linkedin;
+    if (Object.keys(updates).length > 0) {
+      await ctx.db.patch(user._id, updates);
+    }
+    return { success: true };
   },
 });

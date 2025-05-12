@@ -106,7 +106,7 @@ export function Layout({ children }: { children?: ReactNode }) {
       {/* <div className="absolute top-0 z-[-2] h-screen w-screen bg-white bg-[radial-gradient(100%_50%_at_50%_0%,rgba(0,163,255,0.13)_0,rgba(0,163,255,0)_50%,rgba(0,163,255,0)_100%)]"></div> */}
 
       <div className="flex flex-col min-h-screen bg-[#F3F4F6]">
-        <header className="pt-5 pb-4 sticky top-0 z-50">
+        <header className="pt-5 pb-4 bg-[#F3F4F6] sticky top-0 z-50">
           <div className="container mx-auto px-4">
             <div className="flex justify-between items-center">
               {/* Left: Site Title */}
@@ -211,7 +211,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                 <SignedOut>
                   <button
                     onClick={() => navigate("/sign-in")}
-                    className="px-4 py-2 bg-white border border-[#D5D3D0] text-[#787670] rounded-md text-sm font-medium hover:bg-gray-50 transition-colors">
+                    className="px-4 py-2 bg-[#2A2825] border border-[#D5D3D0] text-[#ffffff] rounded-md text-sm font-medium hover:bg-[#F2F0ED] hover:text-[#2A2825] transition-colors">
                     Sign in
                   </button>
                 </SignedOut>

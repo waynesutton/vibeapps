@@ -14,6 +14,7 @@
     "@clerk/clerk-react": "^5.31.2",
     "@clerk/clerk-sdk-node": "^5.1.6",
     "@clerk/themes": "^2.2.43",
+    "@fontsource/inter": "^5.2.5",
     "@radix-ui/react-checkbox": "^1.3.1",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-label": "^2.1.6",

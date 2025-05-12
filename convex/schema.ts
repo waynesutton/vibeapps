@@ -9,6 +9,11 @@ export default defineSchema({
     username: v.optional(v.string()), // Added username, make it unique
     role: v.optional(v.string()), // User's role, e.g., "admin"
     imageUrl: v.optional(v.string()), // Publicly visible profile image URL
+    bio: v.optional(v.string()), // User bio, max 200 chars (enforced in code)
+    website: v.optional(v.string()), // User website URL
+    twitter: v.optional(v.string()), // Twitter profile URL
+    bluesky: v.optional(v.string()), // Bluesky profile URL
+    linkedin: v.optional(v.string()), // LinkedIn profile URL
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_username", ["username"]), // Index for fetching by username

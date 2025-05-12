@@ -4,8 +4,22 @@ import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { ThumbsUp, MessageCircle, Trash2, Star, Edit3, Camera, Save, XCircle } from "lucide-react";
+import {
+  ThumbsUp,
+  MessageCircle,
+  Trash2,
+  Star,
+  Edit3,
+  Camera,
+  Save,
+  XCircle,
+  Globe,
+  Twitter,
+  Linkedin,
+} from "lucide-react";
 import type { Story } from "../types"; // Import the Story type
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
 
 // Placeholder for loading and error states
 const Loading = () => <div className="text-center p-8">Loading profile...</div>;
@@ -56,6 +70,7 @@ export default function UserProfilePage() {
   const generateUploadUrl = useAction(api.users.generateUploadUrl);
   const setUserProfileImage = useMutation(api.users.setUserProfileImage);
   const updateUsernameMutation = useMutation(api.users.updateUsername);
+  const updateProfileDetails = useMutation(api.users.updateProfileDetails);
 
   const [isEditing, setIsEditing] = useState(false);
   const [newUsername, setNewUsername] = useState("");
@@ -63,6 +78,11 @@ export default function UserProfilePage() {
   const [newProfileImagePreview, setNewProfileImagePreview] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [newBio, setNewBio] = useState("");
+  const [newWebsite, setNewWebsite] = useState("");
+  const [newTwitter, setNewTwitter] = useState("");
+  const [newBluesky, setNewBluesky] = useState("");
+  const [newLinkedin, setNewLinkedin] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -71,6 +91,11 @@ export default function UserProfilePage() {
     if (isEditing && profileData?.user) {
       setNewUsername(profileData.user.username || "");
       setNewProfileImagePreview(profileData.user.imageUrl || null);
+      setNewBio(profileData.user.bio || "");
+      setNewWebsite(profileData.user.website || "");
+      setNewTwitter(profileData.user.twitter || "");
+      setNewBluesky(profileData.user.bluesky || "");
+      setNewLinkedin(profileData.user.linkedin || "");
     } else if (!isEditing) {
       // Reset form state when exiting edit mode
       setNewProfileImageFile(null);
@@ -106,6 +131,11 @@ export default function UserProfilePage() {
     if (!isEditing) {
       setNewUsername(profileUser.username || "");
       setNewProfileImagePreview(profileUser.imageUrl || null);
+      setNewBio(profileUser.bio || "");
+      setNewWebsite(profileUser.website || "");
+      setNewTwitter(profileUser.twitter || "");
+      setNewBluesky(profileUser.bluesky || "");
+      setNewLinkedin(profileUser.linkedin || "");
       setNewProfileImageFile(null); // Clear previously selected file if any
       setEditError(null);
     }
@@ -130,17 +160,30 @@ export default function UserProfilePage() {
     setIsSaving(true);
     let usernameChanged = false;
     let imageChanged = false;
-
+    let detailsChanged = false;
     try {
-      // 1. Update username if changed
       if (newUsername.trim() !== (profileUser.username || "").trim() && newUsername.trim() !== "") {
         await updateUsernameMutation({ newUsername: newUsername.trim() });
         usernameChanged = true;
         // If username changes, the URL should ideally change too.
         // Navigate to the new profile URL after save.
       }
-
-      // 2. Upload new profile image if selected
+      if (
+        newBio !== (profileUser.bio || "") ||
+        newWebsite !== (profileUser.website || "") ||
+        newTwitter !== (profileUser.twitter || "") ||
+        newBluesky !== (profileUser.bluesky || "") ||
+        newLinkedin !== (profileUser.linkedin || "")
+      ) {
+        await updateProfileDetails({
+          bio: newBio,
+          website: newWebsite,
+          twitter: newTwitter,
+          bluesky: newBluesky,
+          linkedin: newLinkedin,
+        });
+        detailsChanged = true;
+      }
       if (newProfileImageFile) {
         const uploadUrl = await generateUploadUrl();
         const result = await fetch(uploadUrl, {
@@ -155,7 +198,6 @@ export default function UserProfilePage() {
         await setUserProfileImage({ storageId });
         imageChanged = true;
       }
-
       setIsEditing(false);
       setNewProfileImageFile(null); // Clear file input
       // Data should refetch automatically due to Convex reactivity or an explicit refetch can be added.
@@ -164,7 +206,7 @@ export default function UserProfilePage() {
         navigate(`/u/${newUsername.trim()}`, { replace: true });
       }
       // TODO: Add a success notification/toast
-      alert("Profile updated successfully!");
+      // alert("Profile updated successfully!"); // Removed as per request
     } catch (error: any) {
       console.error("Failed to save profile:", error);
       setEditError(error.data?.message || error.message || "Failed to save profile.");
@@ -235,7 +277,7 @@ export default function UserProfilePage() {
     if (window.confirm("Are you sure you want to delete your rating?")) {
       try {
         await deleteOwnRatingMutation({ storyRatingId: ratingId });
-        alert("Rating deleted successfully!");
+        // alert("Rating deleted successfully!"); // Removed as per request
       } catch (error) {
         console.error("Failed to delete rating:", error);
         alert("Failed to delete rating. See console for details.");
@@ -247,7 +289,9 @@ export default function UserProfilePage() {
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6  from-slate-50 to-gray-100 min-h-screen">
       {/* Profile Header - Product Hunt Inspired */}
-      <header className="mb-10 p-6 bg-[#ffffff] rounded-lg border border-gray-200">
+      <header
+        className="mb-10 p-6 bg-[#ffffff] rounded-lg border border-gray-200"
+        style={{ fontFamily: "Inter, sans-serif" }}>
         <div className="flex flex-col sm:flex-row items-center sm:items-start">
           {/* Profile Image Section */}
           <div className="relative mb-4 sm:mb-0 sm:mr-6">
@@ -287,29 +331,148 @@ export default function UserProfilePage() {
           {/* Profile Info Section */}
           <div className="flex-grow text-center sm:text-left">
             {isEditing ? (
-              <input
-                type="text"
-                value={newUsername}
-                onChange={(e) => setNewUsername(e.target.value)}
-                className="text-xl font-normal text-[#2A2825] mb-2 w-full sm:w-auto px-2 py-1 border border-gray-300 rounded-md"
-                placeholder="Enter username"
-              />
+              <div className="flex items-center mb-2">
+                <input
+                  type="text"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  className="text-xl font-normal text-[#2A2825] w-auto px-2 py-1 border border-gray-300 rounded-md mr-2"
+                  placeholder="Enter username"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                />
+                <span className="text-lg text-gray-500" style={{ fontFamily: "Inter, sans-serif" }}>
+                  @{newUsername || "username"}
+                </span>
+              </div>
             ) : (
-              <h1 className="text-lg font-normal text-[#2A2825] mb-1">
-                {profileUser.name || "Anonymous User"}
-              </h1>
+              <div className="flex items-baseline mb-1">
+                <h1
+                  className="text-lg font-normal text-[#2A2825] mr-2"
+                  style={{ fontFamily: "Inter, sans-serif" }}>
+                  {profileUser.name || "Anonymous User"}
+                </h1>
+                <p className="text-lg text-gray-600" style={{ fontFamily: "Inter, sans-serif" }}>
+                  @{profileUser.username || "N/A"}
+                </p>
+              </div>
             )}
-            <p className="text-xl text-gray-600 mb-3">
-              @{isEditing ? newUsername || "username" : profileUser.username || "N/A"}
-            </p>
-            {/* Placeholder for bio/tagline - future enhancement */}
-            {/* <p className="text-md text-gray-500 mb-3">Community and Startup Programs at Convex</p> */}
+
+            {/* Bio Section - Full Width */}
+            <div className="mb-3 w-full">
+              {isEditing ? (
+                <textarea
+                  value={newBio}
+                  onChange={(e) => setNewBio(e.target.value.slice(0, 200))}
+                  maxLength={200}
+                  className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-[#2A2825] focus:border-[#2A2825]"
+                  placeholder="Add a short bio (max 200 chars)"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                  rows={3}
+                />
+              ) : profileUser.bio ? (
+                <p
+                  className="text-sm text-gray-700 w-full"
+                  style={{ fontFamily: "Inter, sans-serif" }}>
+                  {profileUser.bio}
+                </p>
+              ) : (
+                <p
+                  className="text-sm text-gray-400 italic w-full"
+                  style={{ fontFamily: "Inter, sans-serif" }}>
+                  No bio yet.
+                </p>
+              )}
+            </div>
+
+            {/* Social Links Section - Horizontal */}
+            <div className="flex flex-wrap gap-3 items-center mb-3">
+              {isEditing ? (
+                <>
+                  <input
+                    type="url"
+                    value={newWebsite}
+                    onChange={(e) => setNewWebsite(e.target.value)}
+                    className="flex-grow sm:flex-grow-0 sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-[#2A2825] focus:border-[#2A2825]"
+                    placeholder="Website"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  />
+                  <input
+                    type="url"
+                    value={newTwitter}
+                    onChange={(e) => setNewTwitter(e.target.value)}
+                    className="flex-grow sm:flex-grow-0 sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-[#2A2825] focus:border-[#2A2825]"
+                    placeholder="Twitter"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  />
+                  <input
+                    type="url"
+                    value={newBluesky}
+                    onChange={(e) => setNewBluesky(e.target.value)}
+                    className="flex-grow sm:flex-grow-0 sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-[#2A2825] focus:border-[#2A2825]"
+                    placeholder="Bluesky"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  />
+                  <input
+                    type="url"
+                    value={newLinkedin}
+                    onChange={(e) => setNewLinkedin(e.target.value)}
+                    className="flex-grow sm:flex-grow-0 sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-[#2A2825] focus:border-[#2A2825]"
+                    placeholder="LinkedIn"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  />
+                </>
+              ) : (
+                <>
+                  {profileUser.website && (
+                    <a
+                      href={profileUser.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-gray-500 hover:text-[#2A2825]"
+                      title="Website">
+                      Website
+                    </a>
+                  )}
+                  {profileUser.twitter && (
+                    <a
+                      href={profileUser.twitter}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-gray-500 hover:text-[#2A2825]"
+                      title="Twitter">
+                      Twitter
+                    </a>
+                  )}
+                  {profileUser.bluesky && (
+                    <a
+                      href={profileUser.bluesky}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-gray-500 hover:text-[#2A2825]"
+                      title="Bluesky">
+                      Bluesky
+                    </a>
+                  )}
+                  {profileUser.linkedin && (
+                    <a
+                      href={profileUser.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-gray-500 hover:text-[#2A2825]"
+                      title="LinkedIn">
+                      LinkedIn
+                    </a>
+                  )}
+                </>
+              )}
+            </div>
 
             {isOwnProfile && !isEditing && (
               <button
                 onClick={handleEditToggle}
-                className="mt-2 px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center justify-center sm:justify-start">
-                <Edit3 className="w-4 h-4 mr-2" /> Edit my profile
+                className="mt-2 px-6 py-2 rounded-md bg-[#2A2825] border border-[#D5D3D0] text-[#ffffff] rounded-md text-sm font-medium hover:bg-[#F2F0ED] hover:text-[#2A2825] flex items-center justify-center sm:justify-start"
+                style={{ fontFamily: "Inter, sans-serif" }}>
+                <Edit3 className="w-4 h-4 mr-2 text-md" /> Edit my profile
               </button>
             )}
           </div>
@@ -318,28 +481,65 @@ export default function UserProfilePage() {
         {isEditing && (
           <div className="mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
             {editError && (
-              <p className="text-sm text-red-500 w-full sm:w-auto text-center sm:text-left">
+              <p
+                className="text-sm text-red-500 w-full sm:w-auto text-center sm:text-left"
+                style={{ fontFamily: "Inter, sans-serif" }}>
                 {editError}
               </p>
             )}
             <button
               onClick={handleEditToggle} // This is cancel
               disabled={isSaving}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors flex items-center justify-center">
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors flex items-center justify-center"
+              style={{ fontFamily: "Inter, sans-serif" }}>
               <XCircle className="w-4 h-4 mr-2" /> Cancel
             </button>
             <button
               onClick={handleSaveProfile}
               disabled={
                 isSaving ||
-                (!newProfileImageFile && newUsername.trim() === (profileUser.username || "").trim())
+                (!newProfileImageFile &&
+                  newUsername.trim() === (profileUser.username || "").trim() &&
+                  newBio === (profileUser.bio || "") &&
+                  newWebsite === (profileUser.website || "") &&
+                  newTwitter === (profileUser.twitter || "") &&
+                  newBluesky === (profileUser.bluesky || "") &&
+                  newLinkedin === (profileUser.linkedin || ""))
               }
-              className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors flex items-center justify-center disabled:opacity-50">
+              className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors flex items-center justify-center disabled:opacity-50"
+              style={{ fontFamily: "Inter, sans-serif" }}>
               <Save className="w-4 h-4 mr-2" /> {isSaving ? "Saving..." : "Save Changes"}
             </button>
           </div>
         )}
       </header>
+
+      {/* Mini Dashboard Section */}
+      <section
+        className="mb-10 p-4 bg-[#fff] rounded-md border border-gray-200"
+        style={{ fontFamily: "Inter, sans-serif" }}>
+        <h2 className="text-lg font-normal text-[#2A2825] mb-4 pb-2 border-b border-gray-300">
+          Dashboard
+        </h2>
+        <div className="flex flex-row gap-8 justify-center sm:justify-start">
+          <div className="flex flex-col items-center">
+            <span className="text-xl text-[#2A2825]">{stories.length}</span>
+            <span className="text-sm text-gray-500">Submissions</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-xl text-[#2A2825]">{votes.length}</span>
+            <span className="text-sm text-gray-500">Votes</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-xl text-[#2A2825]">{ratings.length}</span>
+            <span className="text-sm text-gray-500">Ratings Given</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-xl text-[#2A2825]">{comments.length}</span>
+            <span className="text-sm text-gray-500">Comments</span>
+          </div>
+        </div>
+      </section>
 
       {/* Existing sections for Submissions, Votes, Ratings, Comments */}
       {/* Make sure these sections use `profileUser`, `stories`, `votes`, `comments`, `ratings` */}
@@ -347,7 +547,7 @@ export default function UserProfilePage() {
 
       {/* Section for User\'s Submissions (Stories) */}
       <section className="mb-12 p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
-        <h2 className="text-2xl font-semibold text-[#2A2825] mb-4 pb-2 border-b border-gray-300">
+        <h2 className="text-lg font-normal text-[#2A2825] mb-4 pb-2 border-b border-gray-300">
           Submissions
         </h2>
         {stories.length === 0 && <p className="text-gray-500 italic">No submissions yet.</p>}
@@ -360,11 +560,10 @@ export default function UserProfilePage() {
                 <div className="flex-grow mr-4">
                   <Link
                     to={`/s/${story.slug}`}
-                    className="text-lg font-semibold text-blue-600 hover:underline">
+                    className="text-lg font-semibold text-[#2A2825] hover:underline">
                     {story.title}
                   </Link>
                   <p className="text-sm text-gray-600 truncate">{story.description}</p>
-                  <p className="text-xs text-gray-400">Status: {story.status}</p>
                   <p className="text-xs text-gray-500">
                     Submitted by: {story.authorName || story.authorUsername || "Anonymous"}
                   </p>
@@ -384,7 +583,7 @@ export default function UserProfilePage() {
 
       {/* Section for User\'s Votes */}
       <section className="mb-12 p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
-        <h2 className="text-2xl font-semibold text-[#2A2825] mb-4 pb-2 border-b border-gray-300">
+        <h2 className="text-lg font-normal text-[#2A2825] mb-4 pb-2 border-b border-gray-300">
           Votes
         </h2>
         {votes.length === 0 && <p className="text-gray-500 italic">No votes yet.</p>}
@@ -397,7 +596,7 @@ export default function UserProfilePage() {
                 <div className="flex-grow mr-4">
                   <Link
                     to={`/s/${vote.storySlug}`}
-                    className="text-lg font-semibold text-blue-600 hover:underline">
+                    className="text-lg font-semibold text-[#2A2825] hover:underline">
                     {vote.storyTitle || "View Story"}
                   </Link>
                   <p className="text-xs text-gray-400">
@@ -419,7 +618,7 @@ export default function UserProfilePage() {
 
       {/* Section for User\'s Story Ratings */}
       <section className="mb-12 p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
-        <h2 className="text-2xl font-semibold text-[#2A2825] mb-4 pb-2 border-b border-gray-300">
+        <h2 className="text-lg font-normal text-[#2A2825] mb-4 pb-2 border-b border-gray-300">
           Ratings Given
         </h2>
         {ratings.length === 0 && <p className="text-gray-500 italic">No ratings given yet.</p>}
@@ -432,7 +631,7 @@ export default function UserProfilePage() {
                 <div className="flex-grow mr-4">
                   <Link
                     to={`/s/${rating.storySlug}`}
-                    className="text-lg font-semibold text-blue-600 hover:underline">
+                    className="text-lg font-semibold text-[#2A2825] hover:underline">
                     {rating.storyTitle || "View Story"}
                   </Link>
                   <p className="text-sm text-yellow-500 flex items-center">
@@ -470,7 +669,7 @@ export default function UserProfilePage() {
 
       {/* Section for User\'s Comments */}
       <section className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
-        <h2 className="text-2xl font-semibold text-[#2A2825] mb-4 pb-2 border-b border-gray-300">
+        <h2 className="text-lg font-normal text-[#2A2825] mb-4 pb-2 border-b border-gray-300">
           Comments
         </h2>
         {comments.length === 0 && <p className="text-gray-500 italic">No comments yet.</p>}
@@ -486,7 +685,7 @@ export default function UserProfilePage() {
                     Commented on{" "}
                     <Link
                       to={`/s/${comment.storySlug}#comments`}
-                      className="text-blue-500 hover:underline">
+                      className="text-[#2A2825] hover:underline">
                       {comment.storyTitle || "story"}
                     </Link>{" "}
                     - {new Date(comment._creationTime).toLocaleDateString()}
