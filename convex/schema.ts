@@ -141,4 +141,21 @@ export default defineSchema({
     linkUrl: v.string(),
     logoStorageId: v.optional(v.id("_storage")),
   }).index("by_identifier", ["identifier"]),
+
+  reports: defineTable({
+    storyId: v.id("stories"),
+    reporterUserId: v.id("users"),
+    reason: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("resolved_hidden"),
+      v.literal("resolved_deleted"),
+      v.literal("dismissed")
+    ),
+    // Optional: store story details at time of report if stories can be fully deleted
+    // storyTitleSnapshot: v.optional(v.string()),
+    // storyUrlSnapshot: v.optional(v.string()),
+  })
+    .index("by_storyId", ["storyId"])
+    .index("by_status", ["status"]),
 });

@@ -8,7 +8,17 @@ import type { Story, Comment as CommentType } from "../types";
 import { Comment } from "./Comment";
 import { CommentForm } from "./CommentForm";
 import { Id, Doc } from "../../convex/_generated/dataModel"; // Import Id and Doc
-import { useAuth } from "@clerk/clerk-react"; // Added useAuth
+import { useAuth, useUser } from "@clerk/clerk-react"; // Added useAuth, useUser
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"; // Assuming you have a Dialog component
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button"; // For modal buttons
+import { toast } from "sonner";
 
 // Removed MOCK_COMMENTS
 
@@ -38,6 +48,12 @@ export function StoryDetail({ story }: StoryDetailProps) {
   const voteStory = useMutation(api.stories.voteStory);
   const rateStory = useMutation(api.stories.rate);
   const addComment = useMutation(api.comments.add);
+  const createReportMutation = useMutation(api.reports.createReport);
+
+  const [isReportModalOpen, setIsReportModalOpen] = React.useState(false);
+  const [reportReason, setReportReason] = React.useState("");
+  const [isReporting, setIsReporting] = React.useState(false);
+  const [reportModalError, setReportModalError] = React.useState<string | null>(null);
 
   const handleVote = () => {
     if (!isClerkLoaded) return; // Don't do anything if Clerk hasn't loaded
@@ -95,6 +111,64 @@ export function StoryDetail({ story }: StoryDetailProps) {
     setReplyToId(null);
   };
 
+  const handleOpenReportModal = () => {
+    setReportModalError(null);
+    setReportReason("");
+    setIsReportModalOpen(true);
+  };
+
+  const handleReportModalOpenChange = (open: boolean): void => {
+    setIsReportModalOpen(open);
+    if (!open) {
+      setReportModalError(null);
+    }
+  };
+
+  const handleReportSubmit = async () => {
+    if (!reportReason.trim()) {
+      setReportModalError("Please provide a reason for reporting.");
+      return;
+    }
+    if (!story?._id) {
+      setReportModalError("Story ID is missing, cannot submit report.");
+      return;
+    }
+
+    setIsReporting(true);
+    setReportModalError(null);
+    try {
+      await createReportMutation({ storyId: story._id, reason: reportReason });
+      toast.success("Story reported successfully. An admin will review it.");
+      setIsReportModalOpen(false);
+      setReportReason("");
+    } catch (error: any) {
+      console.error("Error reporting story:", error); // Keep full log for debugging
+
+      // Attempt to extract the most user-friendly message from the Convex error
+      let userFriendlyMessage = "You have already reported this story, and it is pending review."; // Default fallback
+      if (error.data) {
+        if (typeof error.data === "string") {
+          userFriendlyMessage = error.data; // If error.data is the string itself
+        } else if (error.data.message && typeof error.data.message === "string") {
+          userFriendlyMessage = error.data.message; // Standard Convex error message path
+        } else if (
+          error.message &&
+          typeof error.message === "string" &&
+          error.message.includes("Uncaught Error:")
+        ) {
+          // Fallback to parsing the longer error.message if a specific known phrase is present
+          // This is more brittle but can catch the desired message if not in error.data.message
+          const match = error.message.match(/Uncaught Error: (.*?) at handler/);
+          if (match && match[1]) {
+            userFriendlyMessage = match[1];
+          }
+        }
+      }
+      setReportModalError(userFriendlyMessage);
+    }
+    setIsReporting(false);
+  };
+
   // Update document title and meta description
   useEffect(() => {
     document.title = `${story.title} | Vibe Coding`;
@@ -119,7 +193,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
     .toLowerCase()
     .replace(/\s+/g, "-")
     .replace(/[^\w-]+/g, "");
-  const reportUrl = `https://github.com/waynesutton/vibeapps/issues/new?q=is%3Aissue+state%3Aopen+Flagged&labels=flagged&title=Flagged+Content%3A+${encodeURIComponent(story.title)}&body=Reporting+issue+for+story%3A+%0A-+Title%3A+${encodeURIComponent(story.title)}%0A-+Slug%3A+${storySlug}%0A-+URL%3A+${encodeURIComponent(story.url)}%0A-+Reason%3A+`;
+  // The direct GitHub link is removed as per new requirement for modal
+  // const reportUrl = `https://github.com/waynesutton/vibeapps/issues/new?q=is%3Aissue+state%3Aopen+Flagged&labels=flagged&title=Flagged+Content%3A+${encodeURIComponent(story.title)}&body=Reporting+issue+for+story%3A+%0A-+Title%3A+${encodeURIComponent(story.title)}%0A-+Slug%3A+${storySlug}%0A-+URL%3A+${encodeURIComponent(story.url)}%0A-+Reason%3A+`;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -364,18 +439,82 @@ export function StoryDetail({ story }: StoryDetailProps) {
       </div>
 
       {/* Flag/Report Section */}
-      <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-center gap-3 text-sm text-gray-600">
-        <Flag className="w-4 h-4 text-gray-500 flex-shrink-0" />
-        <button className="font-medium text-gray-700 hover:text-gray-900">Flag/Report</button>
-        <span>-</span>
-        <a
-          href={reportUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-600 hover:underline hover:text-blue-800">
-          Report / Moderate Content
-        </a>
+      <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between text-sm text-gray-600">
+        <div className="flex items-center gap-3">
+          <Flag className="w-4 h-4 text-gray-500 flex-shrink-0" />
+          <span className="font-medium text-gray-700">Seen something inappropriate?</span>
+        </div>
+        {isClerkLoaded && isSignedIn ? (
+          <Button variant="outline" size="sm" className="text-xs" onClick={handleOpenReportModal}>
+            Report this Submission
+          </Button>
+        ) : isClerkLoaded && !isSignedIn ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            onClick={() => navigate("/sign-in")}
+            title="Sign in to report content">
+            Sign in to Report
+          </Button>
+        ) : (
+          <Button variant="outline" size="sm" className="text-xs" disabled>
+            Loading...
+          </Button>
+        )}
       </div>
+
+      {/* Report Modal */}
+      <Dialog open={isReportModalOpen} onOpenChange={handleReportModalOpenChange}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Report: {story.title}</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <p className="text-sm text-gray-500">
+              Please provide a reason for reporting this submission. Your report will be reviewed by
+              an administrator.
+            </p>
+            <Textarea
+              placeholder="Reason for reporting..."
+              value={reportReason}
+              onChange={(e) => {
+                setReportReason(e.target.value);
+                if (reportModalError && e.target.value.trim()) {
+                  setReportModalError(null);
+                }
+              }}
+              rows={4}
+              disabled={isReporting}
+            />
+          </div>
+          {reportModalError && (
+            <div className="mb-3 p-2 text-sm text-red-700 bg-red-100 border border-red-300 rounded-md">
+              {reportModalError}
+            </div>
+          )}
+          <DialogFooter className="sm:justify-start">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsReportModalOpen(false);
+                setReportModalError(null);
+              }}
+              disabled={isReporting}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleReportSubmit}
+              disabled={isReporting || !reportReason.trim()}
+              className="bg-[#2A2825] text-white hover:bg-[#525252] disabled:opacity-50 sm:ml-[10px]"
+              style={{ fontWeight: "normal" }}>
+              {isReporting ? "Submitting..." : "Submit Report"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

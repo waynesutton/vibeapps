@@ -19,6 +19,7 @@ import type * as comments from "../comments.js";
 import type * as convexBoxConfig from "../convexBoxConfig.js";
 import type * as forms from "../forms.js";
 import type * as http from "../http.js";
+import type * as reports from "../reports.js";
 import type * as settings from "../settings.js";
 import type * as stories from "../stories.js";
 import type * as storyRatings from "../storyRatings.js";
@@ -41,6 +42,7 @@ declare const fullApi: ApiFromModules<{
   convexBoxConfig: typeof convexBoxConfig;
   forms: typeof forms;
   http: typeof http;
+  reports: typeof reports;
   settings: typeof settings;
   stories: typeof stories;
   storyRatings: typeof storyRatings;
