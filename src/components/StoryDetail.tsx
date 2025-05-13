@@ -127,7 +127,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
         ← Back to Apps
       </Link>
 
-      <article className="bg-white rounded-lg p-4 sm:p-6 border border-[#D5D3D0]">
+      <article className="bg-white rounded-lg p-4 sm:p-6 border border-[#D8E1EC]">
         <div className="flex gap-4">
           <div className="flex flex-col items-center gap-1 pt-1 min-w-[40px]">
             <button
@@ -152,7 +152,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
               </a>
             </h1>
             {story.customMessage && (
-              <div className="mb-4 text-sm text-[#787671] bg-[#F3F0ED] border border-[#D5D3D0] rounded-md p-3 italic">
+              <div className="mb-4 text-sm text-[#ffffff] bg-[#2A2825] border border-[#D8E1EC] rounded-md p-3 italic">
                 {story.customMessage}
               </div>
             )}
@@ -188,7 +188,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
       </article>
 
       {/* Rating Section */}
-      <div className="mt-8 bg-white rounded-lg p-6 border border-[#D5D3D0]">
+      <div className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC]">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4">
           <h2 className="text-lg font-medium text-[#525252]">
             {hasRated ? "Your Rating" : "Rate this app"}
@@ -240,7 +240,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
         story.chefShowUrl ||
         story.chefAppUrl ||
         story.tags?.length > 0) && (
-        <div className="mt-8 bg-white rounded-lg p-6 border border-[#D5D3D0]">
+        <div className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC]">
           <h2 className="text-lg font-medium text-[#525252] mb-4">Project Links & Tags</h2>
           <div className="space-y-3">
             {story.githubUrl && (

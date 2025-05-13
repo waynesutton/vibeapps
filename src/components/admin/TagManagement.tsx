@@ -251,7 +251,7 @@ export function TagManagement() {
               if (error?.includes("already exists")) setError(null); // Clear name error on type
             }}
             placeholder="Enter new tag name"
-            className="flex-1 px-3 py-2 border border-[#D5D3D0] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] focus:border-[#2A2825] text-sm"
+            className="flex-1 px-3 py-2 border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] focus:border-[#2A2825] text-sm"
             disabled={isProcessing}
           />
           <button

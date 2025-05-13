@@ -197,7 +197,7 @@ export function ContentModeration() {
             </p>
             {/* Always show custom message if present, as editing is disabled */}
             {item.type === "story" && item.customMessage && (
-              <div className="mt-2 text-sm text-[#787671] bg-[#F3F0ED] border border-[#D5D3D0] rounded-md p-2 italic">
+              <div className="mt-2 text-sm text-[#ffffff] bg-[#2A2825] border border-[#D8E1EC] rounded-md p-2 italic">
                 Admin Message: {item.customMessage}
               </div>
             )}

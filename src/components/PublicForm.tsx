@@ -66,7 +66,7 @@ export function PublicForm({ form, fields }: PublicFormProps) {
       onChange: handleChange,
       required: field.required,
       className:
-        "w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] border border-[#D5D3D0]",
+        "w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] border border-[#D8E1EC]",
       disabled: isSubmitting,
       value: formData[field.label.toLowerCase().replace(/\s+/g, "_")] || "",
     };
@@ -135,7 +135,7 @@ export function PublicForm({ form, fields }: PublicFormProps) {
   };
 
   return (
-    <div className="max-w-2xl mx-auto bg-white p-6 rounded-lg border border-[#D5D3D0]">
+    <div className="max-w-2xl mx-auto bg-white p-6 rounded-lg border border-[#D8E1EC]">
       <h1 className="text-2xl font-bold text-[#2A2825] mb-6">{form.title}</h1>
       {submitStatus === "success" ? (
         <div className="p-4 bg-green-100 text-green-800 rounded-md">

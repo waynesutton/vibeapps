@@ -14,7 +14,7 @@ export function ConvexBox() {
 
   return (
     <div
-      className="fixed right-4 bottom-4 bg-[#F8F7F7] border border-[#D5D3D0] rounded-lg p-4 shadow-sm flex flex-col justify-center items-center text-center overflow-hidden"
+      className="fixed right-4 bottom-4 bg-[#F8F7F7] border border-[#D8E1EC] rounded-lg p-4 shadow-sm flex flex-col justify-center items-center text-center overflow-hidden"
       style={{ width: "350px", height: "150px" }}>
       <button
         onClick={() => setIsLocallyVisible(false)}

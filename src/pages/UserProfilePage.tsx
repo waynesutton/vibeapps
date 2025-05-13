@@ -568,7 +568,7 @@ export default function UserProfilePage() {
             {isOwnProfile && !isEditing && (
               <button
                 onClick={handleEditToggle}
-                className="mt-2 px-6 py-2 rounded-md bg-[#2A2825] border border-[#D5D3D0] text-[#ffffff] rounded-md text-sm font-medium hover:bg-[#F2F0ED] hover:text-[#2A2825] flex items-center justify-center sm:justify-start"
+                className="mt-2 px-6 py-2 rounded-md bg-[#2A2825] border border-[#D8E1EC] text-[#ffffff] rounded-md text-sm font-medium hover:bg-[#F2F0ED] hover:text-[#2A2825] flex items-center justify-center sm:justify-start"
                 style={{ fontFamily: "Inter, sans-serif" }}>
                 <Edit3 className="w-4 h-4 mr-2 text-md" /> Edit my profile
               </button>

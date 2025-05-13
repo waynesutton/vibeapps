@@ -49,12 +49,12 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
         {stories.map((story) => (
           <article
             key={story._id}
-            className={`flex ${viewMode === "grid" ? "flex-col bg-white rounded-lg p-4 border border-[#D5D3D0]" : viewMode === "vibe" ? "items-start" : "flex-row bg-white rounded-lg p-4 border border-[#D5D3D0]"} gap-4`}>
+            className={`flex ${viewMode === "grid" ? "flex-col bg-white rounded-lg p-4 border border-[#D8E1EC]" : viewMode === "vibe" ? "items-start" : "flex-row bg-white rounded-lg p-4 border border-[#D8E1EC]"} gap-4`}>
             <div
               className={`flex ${viewMode === "vibe" ? "flex-col items-center w-[70px] flex-shrink-0" : viewMode === "grid" ? "flex-row items-center gap-1 pt-1" : "flex-col items-center min-w-[40px] pt-1"}`}>
               {viewMode === "vibe" ? (
                 <div className="flex flex-col items-center w-full">
-                  <div className="bg-gradient-to-b from-[#FBF5DB] to-[#FAF9F1] rounded-t-md w-full h-[62px] flex flex-col items-center justify-center text-lg border border border-[#D5D3D0] font-normal text-[#2A2825] mb-[4px]">
+                  <div className="bg-gradient-to-b from-[#FBF5DB] to-[#FAF9F1] rounded-t-md w-full h-[62px] flex flex-col items-center justify-center text-lg border border border-[#D8E1EC] font-normal text-[#2A2825] mb-[4px]">
                     {story.votes}
                     <div className="text-xs">Vibes</div>
                   </div>
@@ -84,7 +84,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                 <img
                   src={story.screenshotUrl}
                   alt={`${story.title} thumbnail`}
-                  className="w-full h-full object-cover border border-[#D5D3D0]"
+                  className="w-full h-full object-cover border border-[#D8E1EC]"
                   loading="lazy"
                 />
               </Link>
@@ -92,9 +92,9 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
 
             {/* STORY CONTENT - Apply bg/border/padding here for vibe mode */}
             <div
-              className={`flex-1 min-w-0 ${viewMode === "vibe" ? "bg-white rounded-lg p-3.5 border border-[#D5D3D0]" : ""}`}>
+              className={`flex-1 min-w-0 ${viewMode === "vibe" ? "bg-white rounded-lg p-3.5 border border-[#D8E1EC]" : ""}`}>
               {story.customMessage && (
-                <div className="mb-4 text-sm text-[#787671] bg-[#F3F0ED] border border-[#D5D3D0] rounded-md p-3 italic">
+                <div className="mb-4 text-sm text-[#ffffff] bg-[#2A2825] border border-[#D8E1EC] rounded-md p-3 italic">
                   {story.customMessage}
                 </div>
               )}

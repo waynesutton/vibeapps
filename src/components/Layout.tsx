@@ -138,28 +138,31 @@ export function Layout({ children }: { children?: ReactNode }) {
                   onClick={() => {
                     setViewMode("list");
                     setUserChangedViewMode(true);
+                    navigate("/"); // Navigate to homepage
                   }}
-                  className={`p-2 rounded-md border border-[#D5D3D0] ${viewMode === "list" ? "bg-[#F4F0ED]" : "hover:bg-gray-100"}`}
+                  className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "list" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
                   aria-label="List View">
-                  <List className="w-5 h-5 text-[#525252]" />
+                  <List className="w-5 h-5 text-[#292929]" />
                 </button>
                 <button
                   onClick={() => {
                     setViewMode("grid");
                     setUserChangedViewMode(true);
+                    navigate("/"); // Navigate to homepage
                   }}
-                  className={`p-2 rounded-md border border-[#D5D3D0] ${viewMode === "grid" ? "bg-[#F4F0ED]" : "hover:bg-gray-100"}`}
+                  className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "grid" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
                   aria-label="Grid View">
-                  <LayoutGrid className="w-5 h-5 text-[#525252]" />
+                  <LayoutGrid className="w-5 h-5 text-[#292929]" />
                 </button>
                 <button
                   onClick={() => {
                     setViewMode("vibe");
                     setUserChangedViewMode(true);
+                    navigate("/"); // Navigate to homepage
                   }}
-                  className={`p-2 rounded-md border border-[#D5D3D0] ${viewMode === "vibe" ? "bg-[#F4F0ED]" : "hover:bg-gray-100"}`}
+                  className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "vibe" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
                   aria-label="Vibe View">
-                  <ThumbsUp className="w-5 h-5 text-[#525252]" />
+                  <ThumbsUp className="w-5 h-5 text-[#292929]" />
                 </button>
 
                 {/* Categories Dropdown */}
@@ -169,7 +172,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                     onChange={(e) =>
                       setSelectedTagId(e.target.value ? (e.target.value as Id<"tags">) : undefined)
                     }
-                    className="appearance-none cursor-pointer pl-3 pr-8 py-2 bg-white border border-[#D5D3D0] rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] hover:border-[#A8A29E]">
+                    className="appearance-none cursor-pointer pl-3 pr-8 py-2 bg-white border border-[#D8E1EC] rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] hover:border-[#A8A29E]">
                     <option value="">All Categories</option>
                     {headerTags
                       ?.filter((tag) => !tag.isHidden) // Still filter hidden tags
@@ -189,7 +192,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                   <select
                     value={sortPeriod}
                     onChange={(e) => setSortPeriod(e.target.value as SortPeriod)}
-                    className="appearance-none cursor-pointer pl-3 pr-8 py-2 bg-white border border-[#D5D3D0] rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] hover:border-[#A8A29E]">
+                    className="appearance-none cursor-pointer pl-3 pr-8 py-2 bg-white border border-[#D8E1EC] rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] hover:border-[#A8A29E]">
                     <option value="today">Today</option>
                     <option value="week">This Week</option>
                     <option value="month">This Month</option>
@@ -232,7 +235,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                 <SignedOut>
                   <button
                     onClick={() => navigate("/sign-in")}
-                    className="px-4 py-2 bg-[#2A2825] border border-[#D5D3D0] text-[#ffffff] rounded-md text-xs font-normal hover:bg-[#F2F0ED] hover:text-[#2A2825] transition-colors">
+                    className="px-4 py-2 bg-[#2A2825] border border-[#D8E1EC] text-[#ffffff] rounded-md text-xs font-normal hover:bg-[#F2F0ED] hover:text-[#2A2825] transition-colors">
                     Sign in
                   </button>
                 </SignedOut>
@@ -240,32 +243,18 @@ export function Layout({ children }: { children?: ReactNode }) {
                   <UserSyncer />
                   {/* Custom Avatar Button and Dropdown */}
                   <div className="relative" ref={menuRef}>
-                    <button
-                      onClick={() => setShowProfileMenu((v) => !v)}
-                      className="rounded-full border border-[#D5D3D0] w-9 h-9 overflow-hidden focus:outline-none"
-                      aria-label="Open profile menu"
-                      type="button">
-                      <img src={avatarUrl} alt="User avatar" className="w-9 h-9 object-cover" />
-                    </button>
-                    {showProfileMenu && (
-                      <div className="absolute right-0 mt-2 w-40 bg-white border border-[#D5D3D0] rounded-md shadow-lg z-50">
-                        <a
-                          href={profileUrl}
-                          className="block px-4 py-2 text-sm text-[#2A2825] hover:bg-[#F3F4F6]"
-                          onClick={() => setShowProfileMenu(false)}>
-                          Profile
-                        </a>
-                        <button
-                          onClick={() => {
-                            setShowProfileMenu(false);
-                            clerk.signOut();
-                          }}
-                          className="block w-full text-left px-4 py-2 text-sm text-[#2A2825] hover:bg-[#F3F4F6]"
-                          type="button">
-                          Sign out
-                        </button>
-                      </div>
-                    )}
+                    <a
+                      href={profileUrl}
+                      className="block px-4 py-2 text-sm text-[#2A2825] hover:bg-[#F3F4F6]"
+                      onClick={() => setShowProfileMenu(false)}>
+                      <button
+                        onClick={() => setShowProfileMenu((v) => !v)}
+                        className="rounded-full border border-[#D8E1EC] w-9 h-9 overflow-hidden focus:outline-none"
+                        aria-label="Open profile menu"
+                        type="button">
+                        <img src={avatarUrl} alt="User avatar" className="w-9 h-9 object-cover" />
+                      </button>
+                    </a>
                   </div>
                 </SignedIn>
               </div>
