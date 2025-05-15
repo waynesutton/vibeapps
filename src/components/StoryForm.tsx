@@ -136,7 +136,7 @@ export function StoryForm() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <Link to="/" className="text-[#787672] hover:text-[#525252] inline-block mb-6">
+      <Link to="/" className="text-[#545454] hover:text-[#525252] inline-block mb-6">
         ← Back to Apps
       </Link>
 
@@ -180,7 +180,7 @@ export function StoryForm() {
             <label htmlFor="url" className="block text-sm font-medium text-[#525252] mb-1">
               App Website Link *
             </label>
-            <div className="text-sm text-[#787672] mb-2">Enter your app url (ex: https://)</div>
+            <div className="text-sm text-[#545454] mb-2">Enter your app url (ex: https://)</div>
             <input
               type="url"
               id="url"
@@ -206,7 +206,7 @@ export function StoryForm() {
               disabled={isSubmitting}
             />
             {formData.image && (
-              <div className="text-sm text-[#787672] mt-1">Selected: {formData.image.name}</div>
+              <div className="text-sm text-[#545454] mt-1">Selected: {formData.image.name}</div>
             )}
           </div>
 
@@ -296,7 +296,7 @@ export function StoryForm() {
                   key={tag._id}
                   type="button"
                   onClick={() => toggleTag(tag._id)}
-                  className={`px-3 py-1 rounded-md text-sm transition-colors border ${selectedTagIds.includes(tag._id) ? "bg-[#F4F0ED] text-[#2A2825] border-[#D5D3D0]" : "bg-white text-[#787672] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"}`}>
+                  className={`px-3 py-1 rounded-md text-sm transition-colors border ${selectedTagIds.includes(tag._id) ? "bg-[#F4F0ED] text-[#2A2825] border-[#D5D3D0]" : "bg-white text-[#545454] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"}`}>
                   {tag.name}
                 </button>
               ))}
@@ -365,12 +365,12 @@ export function StoryForm() {
             </button>
             <Link
               to="/"
-              className="px-4 py-2 text-[#787672] hover:text-[#525252] rounded-md text-sm">
+              className="px-4 py-2 text-[#545454] hover:text-[#525252] rounded-md text-sm">
               Cancel
             </Link>
           </div>
 
-          <div className="text-sm text-[#787672]">
+          <div className="text-sm text-[#545454]">
             To maintain quality and prevent spam, you can submit up to 10 projects per day.
           </div>
 

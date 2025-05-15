@@ -159,12 +159,12 @@ export function ReportManagement() {
         </div>
 
         {isLoading && (
-          <div className="text-center py-6 text-lg font-medium text-[#787672]">
+          <div className="text-center py-6 text-lg font-medium text-[#545454]">
             Loading reports...
           </div>
         )}
         {!isLoading && sortedReports.length === 0 && (
-          <div className="text-center py-10 text-[#787672]">
+          <div className="text-center py-10 text-[#545454]">
             No reports found matching the criteria.
           </div>
         )}

@@ -308,7 +308,7 @@ export function TagManagement() {
                         onClick={() =>
                           setEditColorsTagId(editColorsTagId === tag._id ? null : tag._id)
                         }
-                        className="text-[#787672] hover:text-[#525252] disabled:opacity-50 p-1"
+                        className="text-[#545454] hover:text-[#525252] disabled:opacity-50 p-1"
                         title="Edit Colors"
                         disabled={isProcessing}>
                         <Palette className="w-4 h-4" />
@@ -317,7 +317,7 @@ export function TagManagement() {
                       {/* Toggle Hidden (Archive) */}
                       <button
                         onClick={() => handleToggleHidden(tag._id)}
-                        className="text-[#787672] hover:text-[#525252] disabled:opacity-50 p-1"
+                        className="text-[#545454] hover:text-[#525252] disabled:opacity-50 p-1"
                         title={
                           tag.isHidden
                             ? "Archived (Click to Unarchive)"
@@ -334,7 +334,7 @@ export function TagManagement() {
                       {/* Toggle Header Visibility */}
                       <button
                         onClick={() => handleToggleHeader(tag._id)}
-                        className="text-[#787672] hover:text-[#525252] disabled:opacity-50 p-1"
+                        className="text-[#545454] hover:text-[#525252] disabled:opacity-50 p-1"
                         title={tag.showInHeader ? "Visible in header" : "Hidden from header"}
                         disabled={isProcessing || !!tag.isHidden} // Disable if tag is hidden
                       >
@@ -440,7 +440,7 @@ export function TagManagement() {
         </div>
 
         {/* Legend/Help Text */}
-        <div className="mt-6 text-xs text-[#787672]">
+        <div className="mt-6 text-xs text-[#545454]">
           <p>Manage tags for submitted apps. Changes require saving.</p>
           <ul className="list-disc list-inside mt-1 space-y-0.5">
             <li>

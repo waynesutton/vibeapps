@@ -9,8 +9,8 @@ export function Footer() {
   return (
     <footer className="mt-12">
       <div className="container mx-auto px-4 py-6">
-        <div className="flex items-center gap-4 text-xs text-[#787672]">
-          <span className="text-[#787672]">©{new Date().getFullYear()} Convex, Inc.</span>
+        <div className="flex items-center gap-4 text-xs text-[#545454]">
+          <span className="text-[#545454]">©{new Date().getFullYear()} Convex, Inc.</span>
           <button onClick={() => setShowAboutModal(true)} className="hover:text-[#525252]">
             About
           </button>
@@ -47,7 +47,7 @@ export function Footer() {
               <Dialog.Title className="text-lg font-medium text-[#2A2825]">
                 About Vibe Apps
               </Dialog.Title>
-              <Dialog.Close className="text-[#787672] hover:text-[#525252]">
+              <Dialog.Close className="text-[#545454] hover:text-[#525252]">
                 <X className="w-5 h-5" />
               </Dialog.Close>
             </div>

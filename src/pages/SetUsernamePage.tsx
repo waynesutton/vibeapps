@@ -62,7 +62,7 @@ export default function SetUsernamePage() {
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-xl border border-gray-200">
       <h1 className="text-2xl font-bold text-[#2A2825] mb-6 text-center">Set Your Username</h1>
-      <p className="text-sm text-[#787672] mb-4">
+      <p className="text-sm text-[#545454] mb-4">
         Choose a unique username for your profile. This will be part of your public profile URL.
       </p>
       <form onSubmit={handleSubmit} className="space-y-4">

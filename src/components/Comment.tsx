@@ -17,7 +17,7 @@ export function Comment({ comment, onReply }: CommentProps) {
 
   return (
     <div className="pl-4 mt-4">
-      <div className="flex gap-2 items-center text-sm text-[#787672] mb-2">
+      <div className="flex gap-2 items-center text-sm text-[#545454] mb-2">
         {authorProfileUrl ? (
           <Link to={authorProfileUrl} className="font-medium text-[#525252] hover:underline">
             {authorDisplayName}
@@ -33,7 +33,7 @@ export function Comment({ comment, onReply }: CommentProps) {
       </div>
       <button
         onClick={() => onReply(comment._id)}
-        className="text-sm text-[#787672] hover:text-[#525252] mt-2">
+        className="text-sm text-[#545454] hover:text-[#525252] mt-2">
         reply
       </button>
     </div>

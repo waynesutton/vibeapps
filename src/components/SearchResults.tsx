@@ -19,7 +19,7 @@ export function SearchResults({ query, stories, viewMode }: SearchResultsProps) 
       </div>
       <div className="mb-6">
         <h2 className="text-xl text-[#525252] mb-2">Search Results for "{query}"</h2>
-        <p className="text-[#787672]">
+        <p className="text-[#545454]">
           Found {stories.length} {stories.length === 1 ? "result" : "results"}
         </p>
       </div>

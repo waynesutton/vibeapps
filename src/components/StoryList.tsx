@@ -50,31 +50,37 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
           <article
             key={story._id}
             className={`flex ${viewMode === "grid" ? "flex-col bg-white rounded-lg p-4 border border-[#D8E1EC]" : viewMode === "vibe" ? "items-start" : "flex-row bg-white rounded-lg p-4 border border-[#D8E1EC]"} gap-4`}>
-            <div
-              className={`flex ${viewMode === "vibe" ? "flex-col items-center w-[70px] flex-shrink-0" : viewMode === "grid" ? "flex-row items-center gap-1 pt-1" : "flex-col items-center min-w-[40px] pt-1"}`}>
-              {viewMode === "vibe" ? (
-                <div className="flex flex-col items-center w-full">
-                  <div className="bg-gradient-to-b from-[#FBF5DB] to-[#FAF9F1] rounded-t-md w-full h-[62px] flex flex-col items-center justify-center text-lg border border border-[#D8E1EC] font-normal text-[#2A2825] mb-[4px]">
-                    {story.votes}
-                    <div className="text-xs">Vibes</div>
+            {viewMode !== "grid" && (
+              <div
+                className={`flex ${
+                  viewMode === "vibe"
+                    ? "flex-col items-center w-[70px] flex-shrink-0"
+                    : "flex-col items-center min-w-[40px] pt-1"
+                }`}>
+                {viewMode === "vibe" ? (
+                  <div className="flex flex-col items-center w-full">
+                    <div className="bg-gradient-to-b from-[#FBF5DB] to-[#FAF9F1] rounded-t-md w-full h-[62px] flex flex-col items-center justify-center text-lg border border border-[#D8E1EC] font-normal text-[#2A2825] mb-[4px]">
+                      {story.votes}
+                      <div className="text-xs">Vibes</div>
+                    </div>
+                    <button
+                      onClick={() => handleVote(story._id)}
+                      className="bg-white border border-t-0 border-[#D5D3D0] text-[#787671] hover:bg-[#FBF5DB] w-full rounded-b-md py-1 px-2 flex items-center justify-center gap-1 text-sm font-normal h-[24px]">
+                      Vibe it
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleVote(story._id)}
-                    className="bg-white border border-t-0 border-[#D5D3D0] text-[#787671] hover:bg-[#FBF5DB] w-full rounded-b-md py-1 px-2 flex items-center justify-center gap-1 text-sm font-normal h-[24px]">
-                    Vibe it
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <button
-                    onClick={() => handleVote(story._id)}
-                    className="text-[#2A2825] hover:bg-[#FBF5DB] p-1 rounded">
-                    <ChevronUp className="w-5 h-5" />
-                  </button>
-                  <span className="text-[#2A2825] font-medium text-sm">{story.votes}</span>
-                </>
-              )}
-            </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => handleVote(story._id)}
+                      className="text-[#2A2825] hover:bg-[#FBF5DB] p-1 rounded">
+                      <ChevronUp className="w-5 h-5" />
+                    </button>
+                    <span className="text-[#2A2825] font-medium text-sm">{story.votes}</span>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* THUMBNAIL - Vibe view only */}
             {viewMode === "vibe" && story.screenshotUrl && (
@@ -100,7 +106,17 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
               )}
               <div className="flex items-center gap-2 mb-2">
                 {story.isPinned && (
-                  <Pin className="w-4 h-4 #787671 flex-shrink-0" aria-label="Pinned Story" />
+                  <Pin className="w-4 h-4 text-[#787671] flex-shrink-0" aria-label="Pinned Story" />
+                )}
+                {viewMode === "grid" && (
+                  <>
+                    <button
+                      onClick={() => handleVote(story._id)}
+                      className="text-[#2A2825] hover:bg-[#FBF5DB] p-1 rounded">
+                      <ChevronUp className="w-5 h-5" />
+                    </button>
+                    <span className="text-[#2A2825] font-medium text-sm">{story.votes}</span>
+                  </>
                 )}
                 <h2 className="text-[#2A2825] font-normal truncate">
                   <Link to={`/s/${story.slug}`} className="hover:text-[#2A2825] break-words">
@@ -121,10 +137,10 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                 </Link>
               )}
               {viewMode !== "vibe" && (
-                <p className="text-[#787672] text-sm mb-4 line-clamp-3">{story.description}</p>
+                <p className="text-[#545454] text-sm mb-4 line-clamp-3">{story.description}</p>
               )}
 
-              <div className="flex items-center gap-1 text-sm text-[#787672] flex-wrap">
+              <div className="flex items-center gap-1 text-sm text-[#545454] flex-wrap">
                 {story.authorUsername ? (
                   <Link
                     to={`/u/${story.authorUsername}`}
@@ -146,7 +162,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                     href={story.githubUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-[#787672] hover:text-[#525252]"
+                    className="flex items-center gap-1 text-[#545454] hover:text-[#525252]"
                     title="View GitHub Repo">
                     <Github className="w-4 h-4" />
                     <span>Repo</span>
@@ -189,7 +205,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
         </div>
       )}
       {status === "Exhausted" && stories.length > 0 && (
-        <div className="text-center mt-8 text-[#787672]">No more stories.</div>
+        <div className="text-center mt-8 text-[#545454]">No more stories.</div>
       )}
     </div>
   );

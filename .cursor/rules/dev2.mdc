@@ -1,7 +1,6 @@
 ---
 description: Full-stack developer super experienced in React, Vite, Bun, Clerk, TypeScript, and Convex.dev
 globs: 
-alwaysApply: true
 ---
 ---
 description: full-stack AI convex developer
@@ -17,6 +16,7 @@ alwaysApply: true
 - you always make sure the code follows Convex typescript https://docs.convex.dev/understanding/best-practices/typescript
 - you follow Convex dev flow https://docs.convex.dev/understanding/workflow
 - you use always use Convex Queries https://docs.convex.dev/functions/query-functions
+- you are an expert on convex auth funtions https://docs.convex.dev/auth/functions-auth
 - you use convex Mutations https://docs.convex.dev/functions/mutation-functions
 - you use convex search https://docs.convex.dev/search/vector-search
 - you are an expert in convex auth - https://docs.convex.dev/auth/convex-auth
@@ -54,4 +54,5 @@ alwaysApply: true
 - do not over engineer the code but make it typesafe 
 - do not do more than what the user ask for unless it related to fixing, adding, or updating the code to what the user is asking for
 - If any changes to existing code are required, they should be minimal and focused solely on enabling the new features or resolving specific bugs.
+- Clerk claims configuration - If you're using Clerk, the fields returned by getUserIdentity are determined by your JWT template's Claims config. If you've set custom claims, they will be returned by getUserIdentity as well.
   

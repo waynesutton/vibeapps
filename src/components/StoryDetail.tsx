@@ -198,7 +198,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <Link to="/" className="text-[#787672] hover:text-[#525252] inline-block mb-6 text-sm">
+      <Link to="/" className="text-[#545454] hover:text-[#525252] inline-block mb-6 text-sm">
         ← Back to Apps
       </Link>
 
@@ -242,7 +242,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
               </div>
             )}
             <p className="text-[#525252] mb-4 prose prose-sm max-w-none">{story.description}</p>
-            <div className="flex items-center gap-2 text-sm text-[#787672] flex-wrap mb-3">
+            <div className="flex items-center gap-2 text-sm text-[#545454] flex-wrap mb-3">
               {story.authorUsername ? (
                 <Link
                   to={`/u/${story.authorUsername}`}
@@ -299,13 +299,13 @@ export function StoryDetail({ story }: StoryDetailProps) {
             ))}
           </div>
           {story.ratingCount > 0 && (
-            <span className="text-sm text-[#787672]">
+            <span className="text-sm text-[#545454]">
               {averageRating.toFixed(1)} stars ({story.ratingCount}
               {story.ratingCount === 1 ? " rating" : " ratings"})
             </span>
           )}
         </div>
-        <p className="text-sm text-[#787672]">Your rating helps others discover great apps.</p>
+        <p className="text-sm text-[#545454]">Your rating helps others discover great apps.</p>
       </div>
 
       {/* Project Links & Tags Section */}
@@ -320,7 +320,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
           <div className="space-y-3">
             {story.githubUrl && (
               <div className="flex items-center gap-2">
-                <Github className="w-4 h-4 text-[#787672] flex-shrink-0" />
+                <Github className="w-4 h-4 text-[#545454] flex-shrink-0" />
                 <a
                   href={story.githubUrl}
                   target="_blank"
@@ -333,7 +333,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
             )}
             {story.linkedinUrl && (
               <div className="flex items-center gap-2">
-                <Linkedin className="w-4 h-4 text-[#787672] flex-shrink-0" />
+                <Linkedin className="w-4 h-4 text-[#545454] flex-shrink-0" />
                 <a
                   href={story.linkedinUrl}
                   target="_blank"
@@ -346,7 +346,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
             )}
             {story.twitterUrl && (
               <div className="flex items-center gap-2">
-                <Twitter className="w-4 h-4 text-[#787672] flex-shrink-0" />
+                <Twitter className="w-4 h-4 text-[#545454] flex-shrink-0" />
                 <a
                   href={story.twitterUrl}
                   target="_blank"
@@ -359,7 +359,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
             )}
             {story.chefAppUrl && (
               <div className="flex items-center gap-2">
-                <span className="w-4 h-4 text-[#787672] flex-shrink-0">🍲</span>
+                <span className="w-4 h-4 text-[#545454] flex-shrink-0">🍲</span>
                 <a
                   href={story.chefAppUrl}
                   target="_blank"
@@ -372,7 +372,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
             )}
             {story.chefShowUrl && (
               <div className="flex items-center gap-2">
-                <span className="w-4 h-4 text-[#787672] flex-shrink-0">🍳</span>
+                <span className="w-4 h-4 text-[#545454] flex-shrink-0">🍳</span>
                 <a
                   href={story.chefShowUrl}
                   target="_blank"
@@ -433,7 +433,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
             );
           })}
           {comments && comments.length === 0 && (
-            <div className="text-[#787672]">No comments yet. Be the first!</div>
+            <div className="text-[#545454]">No comments yet. Be the first!</div>
           )}
         </div>
       </div>

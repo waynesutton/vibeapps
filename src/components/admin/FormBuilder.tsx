@@ -299,7 +299,7 @@ export function FormBuilder() {
       {/* Back Link */}
       <Link
         to="/admin?tab=forms"
-        className="text-sm text-[#787672] hover:text-[#525252] flex items-center gap-1 mb-6">
+        className="text-sm text-[#545454] hover:text-[#525252] flex items-center gap-1 mb-6">
         <ArrowLeft className="w-4 h-4" /> Back to Forms List
       </Link>
 

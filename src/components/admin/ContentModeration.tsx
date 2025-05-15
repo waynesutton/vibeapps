@@ -192,7 +192,7 @@ export function ContentModeration() {
               )}
             </div>
             <p
-              className={`text-sm ${item.type === "comment" ? "text-[#525252]" : "text-[#787672]"} mt-1 break-words`}>
+              className={`text-sm ${item.type === "comment" ? "text-[#525252]" : "text-[#545454]"} mt-1 break-words`}>
               {item.type === "story" ? item.description : item.content}
             </p>
             {/* Always show custom message if present, as editing is disabled */}
@@ -226,7 +226,7 @@ export function ContentModeration() {
                 </div>
               </div>
             )}
-            <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-[#787672]">
+            <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-[#545454]">
               <span>by {item.type === "story" ? item.name : item.author}</span>
               {item.type === "story" && item.email && (
                 <span className="text-gray-400">({item.email})</span>
@@ -261,7 +261,7 @@ export function ContentModeration() {
                 {item.tags.map((tag) => (
                   <span
                     key={tag._id}
-                    className="text-xs text-[#787672] bg-[#F4F0ED] px-2 py-0.5 rounded">
+                    className="text-xs text-[#545454] bg-[#F4F0ED] px-2 py-0.5 rounded">
                     {tag.name}
                   </span>
                 ))}
@@ -404,11 +404,11 @@ export function ContentModeration() {
         </div>
 
         {isLoading && (
-          <div className="text-center py-6 text-lg font-medium text-[#787672]">Loading...</div>
+          <div className="text-center py-6 text-lg font-medium text-[#545454]">Loading...</div>
         )}
 
         {!isLoading && itemsToRender.length === 0 && (
-          <div className="text-center py-10 text-[#787672]">
+          <div className="text-center py-10 text-[#545454]">
             No {activeItemType} found matching the criteria.
           </div>
         )}

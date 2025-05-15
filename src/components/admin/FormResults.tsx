@@ -116,7 +116,7 @@ export function FormResults() {
         <div>
           <Link
             to="/admin?tab=forms"
-            className="text-sm text-[#787672] hover:text-[#525252] flex items-center gap-1 mb-1">
+            className="text-sm text-[#545454] hover:text-[#525252] flex items-center gap-1 mb-1">
             <ArrowLeft className="w-4 h-4" /> Back to Forms List
           </Link>
           <h2 className="text-xl font-medium text-[#525252]">Results for: {formData.title}</h2>

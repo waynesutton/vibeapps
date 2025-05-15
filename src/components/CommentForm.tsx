@@ -53,7 +53,7 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
           required
           disabled={!canSubmit}
         />
-        <div className="mt-2 text-sm text-[#787672]">
+        <div className="mt-2 text-sm text-[#545454]">
           {/* Comments are held for moderation before appearing on the site. */}
         </div>
         <button

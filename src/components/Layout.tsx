@@ -130,7 +130,7 @@ export function Layout({ children }: { children?: ReactNode }) {
               <div className="flex items-center gap-3">
                 <Link
                   to="/submit"
-                  className="flex items-center gap-2 text-[#787672] hover:text-[#525252] px-3 py-1 rounded-md text-sm">
+                  className="flex items-center gap-2 text-[#545454] hover:text-[#525252] px-3 py-1 rounded-md text-sm">
                   <PlusCircle className="w-4 h-4" />
                   Submit
                 </Link>
@@ -142,7 +142,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                   }}
                   className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "list" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
                   aria-label="List View">
-                  <List className="w-5 h-5 text-[#292929]" />
+                  <List className="w-5 h-5 text-[#545454]" />
                 </button>
                 <button
                   onClick={() => {
@@ -152,7 +152,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                   }}
                   className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "grid" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
                   aria-label="Grid View">
-                  <LayoutGrid className="w-5 h-5 text-[#292929]" />
+                  <LayoutGrid className="w-5 h-5 text-[#545454]" />
                 </button>
                 <button
                   onClick={() => {
@@ -162,7 +162,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                   }}
                   className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "vibe" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
                   aria-label="Vibe View">
-                  <ThumbsUp className="w-5 h-5 text-[#292929]" />
+                  <ThumbsUp className="w-5 h-5 text-[#545454]" />
                 </button>
 
                 {/* Categories Dropdown */}
@@ -182,7 +182,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                         </option>
                       ))}
                   </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#787672]">
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#545454]">
                     <ChevronDown className="h-4 w-4" />
                   </div>
                 </div>
@@ -203,7 +203,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                     <option value="votes_month">Most Vibes (Month)</option>
                     <option value="votes_year">Most Vibes (Year)</option>
                   </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#787672]">
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#545454]">
                     <ChevronDown className="h-4 w-4" />
                   </div>
                 </div>

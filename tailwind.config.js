@@ -12,7 +12,7 @@ export default {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
-        altGrey: "#787672",
+        altGrey: "#545454",
         altBackground: "#F4F0ED",
         foreground: "hsl(var(--foreground))",
         card: {

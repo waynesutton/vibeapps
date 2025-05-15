@@ -18,7 +18,7 @@ export function ConvexBox() {
       style={{ width: "350px", height: "150px" }}>
       <button
         onClick={() => setIsLocallyVisible(false)}
-        className="absolute top-2 right-2 text-[#787672] hover:text-[#525252] z-10"
+        className="absolute top-2 right-2 text-[#545454] hover:text-[#525252] z-10"
         aria-label="Close">
         <X className="w-4 h-4" />
       </button>

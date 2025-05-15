@@ -25,7 +25,7 @@ export function AdminDashboard() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <Link to="/" className="text-sm text-[#787672] hover:text-[#525252] inline-block mb-6">
+      <Link to="/" className="text-sm text-[#545454] hover:text-[#525252] inline-block mb-6">
         ← Back to Apps Home
       </Link>
 

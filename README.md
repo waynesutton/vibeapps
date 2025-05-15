@@ -129,7 +129,7 @@ The application uses a carefully crafted color palette:
 - Background: `#F8F7F7`
 - Text: `#525252`
 - Headers: `#2A2825`
-- Secondary Text: `#787672`
+- Secondary Text: `#545454`
 - Accent Background: `#F4F0ED`
 - Border Color: `#D5D3D0`
 
