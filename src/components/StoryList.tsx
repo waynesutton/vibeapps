@@ -1,11 +1,20 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { ChevronUp, MessageSquare, ArrowDown, Github, Pin } from "lucide-react";
+import {
+  ChevronUp,
+  MessageSquare,
+  ArrowDown,
+  Github,
+  Pin,
+  Bookmark,
+  BookmarkCheck,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Story } from "../types";
-import { UsePaginatedQueryResult, useMutation } from "convex/react";
+import { UsePaginatedQueryResult, useMutation, useQuery } from "convex/react";
 import { Id, Doc } from "../../convex/_generated/dataModel";
 import { api } from "../../convex/_generated/api";
+import { useAuth } from "@clerk/clerk-react";
 
 interface StoryListProps {
   stories: Story[];
@@ -14,6 +23,48 @@ interface StoryListProps {
   loadMore: UsePaginatedQueryResult<any>["loadMore"];
   itemsPerPage: number;
 }
+
+const BookmarkButton = ({ storyId }: { storyId: Id<"stories"> }) => {
+  const { isSignedIn } = useAuth();
+  const isBookmarked = useQuery(api.bookmarks.isStoryBookmarked, isSignedIn ? { storyId } : "skip");
+  const addOrRemoveBookmarkMutation = useMutation(api.bookmarks.addOrRemoveBookmark);
+
+  const handleBookmarkClick = async () => {
+    if (!isSignedIn) {
+      alert("Please sign in to bookmark stories.");
+      return;
+    }
+    try {
+      await addOrRemoveBookmarkMutation({ storyId });
+    } catch (error) {
+      console.error("Failed to update bookmark:", error);
+      alert("Failed to update bookmark. Please try again.");
+    }
+  };
+
+  if (!isSignedIn) {
+    return (
+      <button
+        className="flex items-center gap-2 text-[#787672] hover:text-[#525252] cursor-not-allowed"
+        title="Sign in to bookmark">
+        <Bookmark className="w-4 h-4" />
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={handleBookmarkClick}
+      className="flex items-center gap-2 text-[#787672] hover:text-[#525252]"
+      title={isBookmarked ? "Remove bookmark" : "Bookmark story"}>
+      {isBookmarked ? (
+        <BookmarkCheck className="w-4 h-4 text-black" />
+      ) : (
+        <Bookmark className="w-4 h-4" />
+      )}
+    </button>
+  );
+};
 
 export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }: StoryListProps) {
   const voteStory = useMutation(api.stories.voteStory);
@@ -140,7 +191,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                 <p className="text-[#545454] text-sm mb-4 line-clamp-3">{story.description}</p>
               )}
 
-              <div className="flex items-center gap-1 text-sm text-[#545454] flex-wrap">
+              <div className="flex items-center gap-2 text-sm text-[#545454] flex-wrap">
                 {story.authorUsername ? (
                   <Link
                     to={`/u/${story.authorUsername}`}
@@ -153,40 +204,22 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                 <span>{formatDate(story._creationTime)}</span>
                 <Link
                   to={`/s/${story.slug}#comments`}
-                  className="flex items-center gap-1 hover:text-[#525252]">
+                  className="flex items-center gap-2 hover:text-[#525252]">
                   <MessageSquare className="w-4 h-4" />
                   {story.commentCount}
                 </Link>
+                <BookmarkButton storyId={story._id} />
                 {story.githubUrl && (
                   <a
                     href={story.githubUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-[#545454] hover:text-[#525252]"
+                    className="flex items-center gap-2 text-[#545454] hover:text-[#525252]"
                     title="View GitHub Repo">
                     <Github className="w-4 h-4" />
                     <span>Repo</span>
                   </a>
                 )}
-                <div
-                  className={`flex gap-1.5 flex-wrap ${viewMode === "vibe" ? "max-w-[calc(100%-150px)] overflow-hidden whitespace-nowrap" : ""}`}>
-                  {(story.tags || []).map(
-                    (tag: Doc<"tags">) =>
-                      !tag.isHidden && (
-                        <Link
-                          key={tag._id}
-                          to={`/?tag=${tag._id}`}
-                          className="px-2 py-0.5 rounded text-xs font-medium transition-opacity hover:opacity-80"
-                          style={{
-                            backgroundColor: tag.backgroundColor || "#F4F0ED",
-                            color: tag.textColor || "#525252",
-                            border: tag.backgroundColor ? "none" : `1px solid #D5D3D0`,
-                          }}>
-                          {tag.name}
-                        </Link>
-                      )
-                  )}
-                </div>
               </div>
             </div>
           </article>

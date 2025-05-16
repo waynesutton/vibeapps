@@ -21,6 +21,9 @@ import {
   Mail,
   UserPlus,
   AlertTriangle,
+  Bookmark,
+  BookmarkCheck,
+  BookmarkMinus,
 } from "lucide-react";
 import type { Story } from "../types"; // Import the Story type
 import "@fontsource/inter/400.css";
@@ -39,7 +42,10 @@ type StoryInProfile = Doc<"stories"> & {
   title: string;
   description: string;
   status: string;
-}; // Adjust based on actual structure
+  authorName?: string | null;
+  authorUsername?: string | null;
+};
+
 type VoteInProfile = Doc<"votes"> & {
   storySlug?: string;
   storyTitle?: string;
@@ -54,6 +60,16 @@ type RatingInProfile = Doc<"storyRatings"> & {
   storySlug?: string;
   storyTitle?: string;
   value: number;
+};
+
+// Define a type for bookmarked stories, mirroring getUserBookmarksWithStoryDetails return
+type BookmarkedStoryItem = Doc<"bookmarks"> & {
+  storyTitle?: string | null;
+  storySlug?: string | null;
+  storyDescription?: string | null;
+  storyAuthorName?: string | null;
+  storyAuthorUsername?: string | null;
+  storyScreenshotUrl?: string | null;
 };
 
 export default function UserProfilePage() {
@@ -71,12 +87,22 @@ export default function UserProfilePage() {
   const deleteOwnStoryMutation = useMutation(api.stories.deleteOwnStory);
   const deleteOwnCommentMutation = useMutation(api.comments.deleteOwnComment);
   const deleteOwnRatingMutation = useMutation(api.storyRatings.deleteOwnRating);
+  const addOrRemoveBookmarkMutation = useMutation(api.bookmarks.addOrRemoveBookmark);
 
   // New mutations and actions for profile editing
   const generateUploadUrl = useAction(api.users.generateUploadUrl);
   const setUserProfileImage = useMutation(api.users.setUserProfileImage);
   const updateUsernameMutation = useMutation(api.users.updateUsername);
   const updateProfileDetails = useMutation(api.users.updateProfileDetails);
+
+  const userBookmarksCount = useQuery(
+    api.bookmarks.countUserBookmarks,
+    isClerkLoaded && authUser ? {} : "skip"
+  );
+  const userBookmarksWithDetails = useQuery(
+    api.bookmarks.getUserBookmarksWithStoryDetails,
+    isClerkLoaded && authUser ? {} : "skip"
+  );
 
   const [isEditing, setIsEditing] = useState(false);
   const [newUsername, setNewUsername] = useState("");
@@ -490,7 +516,7 @@ export default function UserProfilePage() {
                     type="url"
                     value={newWebsite}
                     onChange={(e) => setNewWebsite(e.target.value)}
-                    className="flex-grow sm:flex-grow-0 sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-[#2A2825] focus:border-[#2A2825]"
+                    className="flex-grow  sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-black focus:border-black"
                     placeholder="Website"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   />
@@ -498,7 +524,7 @@ export default function UserProfilePage() {
                     type="url"
                     value={newTwitter}
                     onChange={(e) => setNewTwitter(e.target.value)}
-                    className="flex-grow sm:flex-grow-0 sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-[#2A2825] focus:border-[#2A2825]"
+                    className="flex-grow  sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-black focus:border-black"
                     placeholder="Twitter"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   />
@@ -506,7 +532,7 @@ export default function UserProfilePage() {
                     type="url"
                     value={newBluesky}
                     onChange={(e) => setNewBluesky(e.target.value)}
-                    className="flex-grow sm:flex-grow-0 sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-[#2A2825] focus:border-[#2A2825]"
+                    className="flex-grow  sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-black focus:border-black"
                     placeholder="Bluesky"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   />
@@ -514,7 +540,7 @@ export default function UserProfilePage() {
                     type="url"
                     value={newLinkedin}
                     onChange={(e) => setNewLinkedin(e.target.value)}
-                    className="flex-grow sm:flex-grow-0 sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-[#2A2825] focus:border-[#2A2825]"
+                    className="flex-grow  sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-black focus:border-black"
                     placeholder="LinkedIn"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   />
@@ -656,6 +682,15 @@ export default function UserProfilePage() {
             </a>
             <span className="text-sm text-gray-500">Comments</span>
           </div>
+          <div className="flex flex-col items-center">
+            <a
+              href="#tab-section-bookmarks"
+              onClick={() => setActiveTab("bookmarks")}
+              className="text-xl text-[#2A2825] hover:underline">
+              {userBookmarksCount ?? 0}
+            </a>
+            <span className="text-sm text-gray-500">Bookmarks</span>
+          </div>
         </div>
       </section>
 
@@ -725,6 +760,15 @@ export default function UserProfilePage() {
                 : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}>
             Comments ({comments?.length ?? 0})
+          </button>
+          <button
+            onClick={() => setActiveTab("bookmarks")}
+            className={`py-2 px-4 text-sm font-medium focus:outline-none ${
+              activeTab === "bookmarks"
+                ? "border-b-2 border-[#2A2825] text-[#2A2825]"
+                : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}>
+            Bookmarks ({userBookmarksCount ?? 0})
           </button>
         </div>
 
@@ -846,6 +890,57 @@ export default function UserProfilePage() {
                         onClick={() => handleDeleteComment(comment._id)}
                         className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0">
                         <Trash2 className="w-4 h-4" /> Delete
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+
+        {activeTab === "bookmarks" && (
+          <section
+            id="tab-section-bookmarks"
+            className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
+            {(!userBookmarksWithDetails || userBookmarksWithDetails.length === 0) && (
+              <p className="text-gray-500 italic">No bookmarks yet.</p>
+            )}
+            {userBookmarksWithDetails && userBookmarksWithDetails.length > 0 && (
+              <ul className="space-y-4">
+                {userBookmarksWithDetails.map((bookmark: BookmarkedStoryItem) => (
+                  <li
+                    key={bookmark._id}
+                    className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow">
+                    <div className="flex-grow mr-4">
+                      <Link
+                        to={`/s/${bookmark.storySlug}`}
+                        className="text-lg font-semibold text-[#2A2825] hover:underline">
+                        {bookmark.storyTitle || "View Story"}
+                      </Link>
+                      {bookmark.storyDescription && (
+                        <p className="text-sm text-gray-600 truncate mt-1">
+                          {bookmark.storyDescription}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-1">
+                        Bookmarked on: {new Date(bookmark._creationTime).toLocaleDateString()}
+                      </p>
+                    </div>
+                    {isOwnProfile && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await addOrRemoveBookmarkMutation({ storyId: bookmark.storyId });
+                            // Optionally add a success alert or toast
+                          } catch (error) {
+                            console.error("Failed to remove bookmark:", error);
+                            alert("Failed to remove bookmark. Please try again.");
+                          }
+                        }}
+                        className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
+                        title="Remove bookmark">
+                        <BookmarkMinus className="w-4 h-4" /> Remove
                       </button>
                     )}
                   </li>

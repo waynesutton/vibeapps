@@ -158,4 +158,12 @@ export default defineSchema({
   })
     .index("by_storyId", ["storyId"])
     .index("by_status", ["status"]),
+
+  bookmarks: defineTable({
+    userId: v.id("users"),
+    storyId: v.id("stories"),
+  })
+    .index("by_user_story", ["userId", "storyId"])
+    .index("by_userId", ["userId"])
+    .index("by_storyId", ["storyId"]),
 });

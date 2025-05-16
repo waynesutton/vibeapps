@@ -14,6 +14,7 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as auth from "../auth.js";
+import type * as bookmarks from "../bookmarks.js";
 import type * as clerk from "../clerk.js";
 import type * as comments from "../comments.js";
 import type * as convexBoxConfig from "../convexBoxConfig.js";
@@ -25,6 +26,7 @@ import type * as stories from "../stories.js";
 import type * as storyRatings from "../storyRatings.js";
 import type * as tags from "../tags.js";
 import type * as users from "../users.js";
+import type * as utils from "../utils.js";
 import type * as validators from "../validators.js";
 
 /**
@@ -37,6 +39,7 @@ import type * as validators from "../validators.js";
  */
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  bookmarks: typeof bookmarks;
   clerk: typeof clerk;
   comments: typeof comments;
   convexBoxConfig: typeof convexBoxConfig;
@@ -48,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   storyRatings: typeof storyRatings;
   tags: typeof tags;
   users: typeof users;
+  utils: typeof utils;
   validators: typeof validators;
 }>;
 export declare const api: FilterApi<
