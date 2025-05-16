@@ -162,7 +162,7 @@ export function StoryForm() {
 
           <div>
             <label htmlFor="tagline" className="block text-sm font-medium text-[#525252] mb-1">
-              App Project Tagline *
+              App Project Tagline or Description*
             </label>
             <input
               type="text"

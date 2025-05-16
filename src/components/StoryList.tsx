@@ -169,12 +169,15 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                     <span className="text-[#2A2825] font-medium text-sm">{story.votes}</span>
                   </>
                 )}
-                <h2 className="text-[#2A2825] font-normal truncate">
+                <h2 className="text-[#2A2825] font-bold truncate">
                   <Link to={`/s/${story.slug}`} className="hover:text-[#2A2825] break-words">
                     {story.title}
                   </Link>
                 </h2>
               </div>
+              {viewMode === "vibe" && (
+                <p className="text-[#545454] text-sm mb-2 line-clamp-2">{story.description}</p>
+              )}
               {viewMode === "grid" && story.screenshotUrl && (
                 <Link
                   to={`/s/${story.slug}`}
