@@ -1,10 +1,12 @@
 import React from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { SignInButton } from "@clerk/clerk-react";
+import { SignInButton, useAuth, useClerk } from "@clerk/clerk-react";
 
 export function Footer() {
   const [showAboutModal, setShowAboutModal] = React.useState(false);
+  const { isSignedIn } = useAuth();
+  const { signOut } = useClerk();
 
   return (
     <footer className="mt-12">
@@ -17,11 +19,19 @@ export function Footer() {
           {/* <a href="#" target="_blank" rel="noopener noreferrer" className="hover:text-[#525252]">
             Submit
           </a> */}
-          <SignInButton mode="modal">
-            <button className="bg-transparent border-none p-0 m-0 cursor-pointer hover:text-[#525252]">
-              Sign In
+          {isSignedIn ? (
+            <button
+              onClick={() => signOut()}
+              className="bg-transparent border-none p-0 m-0 cursor-pointer hover:text-[#525252]">
+              Sign Out
             </button>
-          </SignInButton>
+          ) : (
+            <SignInButton mode="modal">
+              <button className="bg-transparent border-none p-0 m-0 cursor-pointer hover:text-[#525252]">
+                Sign In
+              </button>
+            </SignInButton>
+          )}
           <a
             href="https://convex.dev"
             target="_blank"

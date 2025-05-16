@@ -4,6 +4,10 @@ export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["Inter var", "sans-serif"],
+        "alfa-slab-one": ['"Alfa Slab One"', "cursive"],
+      },
       colors: {
         background: "#F3F4F6",
         text: "#525252",

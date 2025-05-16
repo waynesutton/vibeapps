@@ -111,7 +111,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                 {viewMode === "vibe" ? (
                   <div className="flex flex-col items-center w-full">
                     <div className="bg-gradient-to-b from-[#FBF5DB] to-[#FAF9F1] rounded-t-md w-full h-[62px] flex flex-col items-center justify-center text-lg border border border-[#D8E1EC] font-normal text-[#2A2825] mb-[4px]">
-                      {story.votes}
+                      <span className="font-alfa-slab-one">{story.votes}</span>
                       <div className="text-xs">Vibes</div>
                     </div>
                     <button
