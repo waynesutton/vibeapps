@@ -45,6 +45,8 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_user", ["userId"])
     .index("by_votes", ["votes"])
+    .index("by_status_isHidden_votes", ["status", "isHidden", "votes"])
+    .index("by_status_isHidden", ["status", "isHidden"])
     .searchIndex("search_all", { searchField: "title", filterFields: ["status", "isHidden"] }),
 
   comments: defineTable({
@@ -73,11 +75,14 @@ export default defineSchema({
 
   tags: defineTable({
     name: v.string(),
+    slug: v.optional(v.string()),
     showInHeader: v.boolean(),
     isHidden: v.optional(v.boolean()),
     backgroundColor: v.optional(v.string()),
     textColor: v.optional(v.string()),
-  }).index("by_name", ["name"]),
+  })
+    .index("by_name", ["name"])
+    .index("by_slug", ["slug"]),
 
   settings: defineTable({
     itemsPerPage: v.number(),

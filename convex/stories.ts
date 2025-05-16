@@ -1,5 +1,5 @@
 import { query, mutation, internalQuery, QueryCtx, MutationCtx } from "./_generated/server";
-import { v } from "convex/values";
+import { v, type Infer } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { Doc, Id, DataModel } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api";
@@ -833,5 +833,63 @@ export const listApprovedStoriesWithDetails = query({
     );
 
     return detailedStories;
+  },
+});
+
+// Return type for leaderboard stories - simplified for the component
+export const leaderboardStoryValidator = v.object({
+  _id: v.id("stories"),
+  title: v.string(),
+  slug: v.string(),
+  votes: v.number(),
+  authorUsername: v.optional(v.string()),
+  authorName: v.optional(v.string()),
+  // Add _creationTime if you plan to display it
+});
+export type LeaderboardStory = Infer<typeof leaderboardStoryValidator>;
+
+export const getWeeklyLeaderboardStories = query({
+  args: {
+    limit: v.number(),
+  },
+  // Using a simpler return type for the leaderboard
+  returns: v.array(leaderboardStoryValidator),
+  handler: async (ctx, args) => {
+    // Fetch approved, visible stories ordered by votes
+    const allTopStories = await ctx.db
+      .query("stories")
+      .withIndex(
+        "by_status_isHidden_votes",
+        (q) => q.eq("status", "approved").eq("isHidden", false) // Assuming false means visible
+      )
+      .order("desc") // Orders by 'votes' descending
+      .collect();
+
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+    const recentTopStoriesRaw = allTopStories
+      .filter((story) => story._creationTime > sevenDaysAgo)
+      .slice(0, args.limit);
+
+    // Fetch author details for these stories
+    const storiesToReturn: LeaderboardStory[] = [];
+    for (const story of recentTopStoriesRaw) {
+      let authorUsername: string | undefined = undefined;
+      let authorName: string | undefined = undefined;
+      if (story.userId) {
+        const author = await ctx.db.get(story.userId);
+        authorUsername = author?.username;
+        authorName = author?.name;
+      }
+      storiesToReturn.push({
+        _id: story._id,
+        title: story.title,
+        slug: story.slug,
+        votes: story.votes,
+        authorUsername: authorUsername,
+        authorName: authorName,
+      });
+    }
+    return storiesToReturn;
   },
 });

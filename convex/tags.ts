@@ -1,7 +1,18 @@
 import { query, mutation, internalMutation } from "./_generated/server";
-import { v } from "convex/values";
+import { v, type Infer } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { requireAuth } from "./auth"; // Import the auth helper
+
+// Helper function to generate a URL-friendly slug
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\s+/g, "-") // Replace spaces with -
+    .replace(/[^\w-]+/g, "") // Remove all non-word chars
+    .replace(/--+/g, "-") // Replace multiple - with single -
+    .replace(/^-+/, "") // Trim - from start of text
+    .replace(/-+$/, ""); // Trim - from end of text
+}
 
 // Query to list all tags (excluding hidden) - Publicly accessible
 export const list = query({
@@ -50,21 +61,42 @@ export const create = mutation({
     textColor: v.optional(v.string()), // Optional hex
   },
   handler: async (ctx, args): Promise<Id<"tags">> => {
-    // TODO: Remove this comment and uncomment requireAuth once Clerk/Auth is set up!
     // await requireAuth(ctx);
     const name = args.name.trim();
     if (!name) {
       throw new Error("Tag name cannot be empty.");
     }
-    const existing = await ctx.db
+
+    const slug = generateSlug(name);
+    if (!slug) {
+      throw new Error("Could not generate a valid slug from the tag name.");
+    }
+
+    // Check for existing name
+    const existingName = await ctx.db
       .query("tags")
       .withIndex("by_name", (q) => q.eq("name", name))
       .first();
-    if (existing) {
-      throw new Error(`Tag "${name}" already exists.`);
+    if (existingName) {
+      throw new Error(`Tag name "${name}" already exists.`);
     }
+
+    // Check for existing slug
+    const existingSlug = await ctx.db
+      .query("tags")
+      .withIndex("by_slug", (q) => q.eq("slug", slug))
+      .first();
+    if (existingSlug) {
+      // If slug exists but name doesn't, this is a problem (e.g. "My Tag" and "my-tag" and then "My Tag!" both make "my-tag")
+      // For now, throw an error. Could append a short random string or number if collisions are expected.
+      throw new Error(
+        `Tag slug "${slug}" (derived from "${name}") already exists. Please choose a different name.`
+      );
+    }
+
     return await ctx.db.insert("tags", {
       name: name,
+      slug: slug,
       showInHeader: args.showInHeader,
       isHidden: args.isHidden ?? false, // Default to not hidden
       backgroundColor: args.backgroundColor,
@@ -84,26 +116,44 @@ export const update = mutation({
     textColor: v.optional(v.string()), // Can be null/undefined to clear
   },
   handler: async (ctx, args) => {
-    // TODO: Remove this comment and uncomment requireAuth once Clerk/Auth is set up!
     // await requireAuth(ctx);
     const { tagId, ...rest } = args;
 
-    const updateData: Partial<Doc<"tags">> = {};
+    const updateData: Partial<Omit<Doc<"tags">, "_id" | "_creationTime">> = {};
 
     if (rest.name !== undefined) {
       const newName = rest.name.trim();
       if (newName === "") {
         throw new Error("Tag name cannot be empty.");
       }
-      const existing = await ctx.db
+      const newSlug = generateSlug(newName);
+      if (!newSlug) {
+        throw new Error("Could not generate a valid slug from the new tag name.");
+      }
+
+      // Check if new name conflicts with an existing name (excluding current tag)
+      const existingName = await ctx.db
         .query("tags")
         .withIndex("by_name", (q) => q.eq("name", newName))
         .filter((q) => q.neq(q.field("_id"), tagId))
         .first();
-      if (existing) {
+      if (existingName) {
         throw new Error(`Tag name "${newName}" is already in use.`);
       }
+
+      // Check if new slug conflicts with an existing slug (excluding current tag)
+      const existingSlug = await ctx.db
+        .query("tags")
+        .withIndex("by_slug", (q) => q.eq("slug", newSlug))
+        .filter((q) => q.neq(q.field("_id"), tagId))
+        .first();
+      if (existingSlug) {
+        throw new Error(
+          `Tag slug "${newSlug}" (derived from "${newName}") is already in use. Please choose a different name.`
+        );
+      }
       updateData.name = newName;
+      updateData.slug = newSlug;
     }
 
     // Directly assign optional boolean/string fields if they exist in args
@@ -179,9 +229,34 @@ export const ensureTags = internalMutation({
       if (existingCheck) {
         tagIds.push(existingCheck._id);
       } else {
+        const slug = generateSlug(nameToCreate); // Generate slug
+        if (!slug) {
+          // This case should ideally not happen if nameToCreate is valid
+          // but as a fallback, we could skip or use a timestamped slug.
+          // For now, we'll log an error and skip, or throw.
+          console.error(`Could not generate slug for new tag: ${nameToCreate}`);
+          // Or: throw new Error(`Could not generate slug for new tag: ${nameToCreate}`);
+          continue; // Skip this tag if slug generation fails
+        }
+
+        // Check if generated slug already exists to avoid collision
+        const slugCheck = await ctx.db
+          .query("tags")
+          .withIndex("by_slug", (q) => q.eq("slug", slug))
+          .first();
+
+        if (slugCheck) {
+          // Handle slug collision. For now, we'll log and skip, or throw.
+          // A more robust solution might append a short unique hash or number.
+          console.warn(`Slug collision for new tag "${nameToCreate}" (slug: "${slug}"). Skipping.`);
+          // Or: throw new Error(`Slug collision for tag: ${nameToCreate}`);
+          continue;
+        }
+
         // New tags default to NOT visible in header and not hidden initially
         const newTagId = await ctx.db.insert("tags", {
           name: nameToCreate,
+          slug: slug, // Add slug here
           showInHeader: false, // Set to false by default
           isHidden: false,
           // Default colors or leave undefined? Let's leave undefined.
@@ -191,5 +266,69 @@ export const ensureTags = internalMutation({
     }
 
     return tagIds;
+  },
+});
+
+// Validator for the return type of getWeeklyTopCategories
+export const weeklyTopCategoryValidator = v.object({
+  _id: v.id("tags"),
+  name: v.string(),
+  slug: v.optional(v.string()), // Allow slug to be optional to match schema
+  count: v.number(),
+});
+export type WeeklyTopCategory = Infer<typeof weeklyTopCategoryValidator>;
+
+export const getWeeklyTopCategories = query({
+  args: {
+    limit: v.number(),
+  },
+  returns: v.array(weeklyTopCategoryValidator),
+  handler: async (ctx, args) => {
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+    // Fetch recent, approved, visible stories
+    const recentStories = await ctx.db
+      .query("stories")
+      .withIndex(
+        "by_status_isHidden",
+        (q) => q.eq("status", "approved").eq("isHidden", false) // false means visible
+      )
+      // Order by creation time descending to get the most recent first for the week
+      .order("desc")
+      .collect();
+
+    // Filter for stories within the last seven days *after* collection
+    const storiesLastSevenDays = recentStories.filter(
+      (story) => story._creationTime > sevenDaysAgo
+    );
+
+    const tagCounts: Map<Id<"tags">, number> = new Map();
+    const allTagIdsFromStories = storiesLastSevenDays.flatMap((story) => story.tagIds || []);
+
+    for (const tagId of allTagIdsFromStories) {
+      tagCounts.set(tagId, (tagCounts.get(tagId) || 0) + 1);
+    }
+
+    const uniqueTagIds = Array.from(tagCounts.keys());
+    if (uniqueTagIds.length === 0) {
+      return [];
+    }
+
+    const tagDocs = (await Promise.all(uniqueTagIds.map((id) => ctx.db.get(id)))).filter(
+      Boolean
+    ) as Doc<"tags">[];
+
+    const visibleHeaderTagsWithCounts = tagDocs
+      .filter((tag) => tag.showInHeader === true && tag.isHidden !== true)
+      .map((tag) => ({
+        _id: tag._id,
+        name: tag.name,
+        slug: tag.slug, // This can now be string | undefined
+        count: tagCounts.get(tag._id) || 0,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, args.limit);
+
+    return visibleHeaderTagsWithCounts;
   },
 });
