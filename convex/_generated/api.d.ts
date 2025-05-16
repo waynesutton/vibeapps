@@ -13,6 +13,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as adminQueries from "../adminQueries.js";
 import type * as auth from "../auth.js";
 import type * as bookmarks from "../bookmarks.js";
 import type * as clerk from "../clerk.js";
@@ -38,6 +39,7 @@ import type * as validators from "../validators.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  adminQueries: typeof adminQueries;
   auth: typeof auth;
   bookmarks: typeof bookmarks;
   clerk: typeof clerk;
