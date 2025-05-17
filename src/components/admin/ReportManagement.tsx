@@ -229,7 +229,7 @@ export function ReportManagement() {
                       <td className="p-3 px-4 text-gray-500">
                         {report.reporter ? (
                           <Link
-                            to={`/u/${report.reporter.username}`}
+                            to={`/${report.reporter.username}`}
                             target="_blank"
                             className="hover:underline">
                             {report.reporter.name || report.reporter.username}

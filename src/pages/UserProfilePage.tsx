@@ -212,7 +212,7 @@ export default function UserProfilePage() {
         }
         // Immediately redirect to new profile URL and prevent further code from running
         setIsRedirecting(true);
-        navigate(`/u/${newUsername.trim()}`, { replace: true });
+        navigate(`/${newUsername.trim()}`, { replace: true });
         return;
       }
       if (
@@ -250,7 +250,7 @@ export default function UserProfilePage() {
       // Data should refetch automatically due to Convex reactivity or an explicit refetch can be added.
       // If username changed, navigate to new profile URL
       if (usernameChanged && newUsername.trim() !== username) {
-        navigate(`/u/${newUsername.trim()}`, { replace: true });
+        navigate(`/${newUsername.trim()}`, { replace: true });
       }
       // TODO: Add a success notification/toast
       // alert("Profile updated successfully!"); // Removed as per request

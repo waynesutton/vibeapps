@@ -9,6 +9,8 @@ import { ConvexBox } from "./ConvexBox";
 import { Footer } from "./Footer";
 import { SignedIn, SignedOut, UserButton, useUser, useClerk } from "@clerk/clerk-react";
 import { UserSyncer } from "./UserSyncer";
+import { WeeklyLeaderboard } from "./WeeklyLeaderboard";
+import { TopCategoriesOfWeek } from "./TopCategoriesOfWeek";
 
 interface LayoutContextType {
   viewMode: "list" | "grid" | "vibe";
@@ -95,7 +97,7 @@ export function Layout({ children }: { children?: ReactNode }) {
     if (convexUserDoc === undefined) {
       profileUrl = "#";
     } else if (convexUserDoc && convexUserDoc.username) {
-      profileUrl = `/u/${convexUserDoc.username}`;
+      profileUrl = `/${convexUserDoc.username}`;
     } else {
       profileUrl = "/set-username";
     }
@@ -275,7 +277,17 @@ export function Layout({ children }: { children?: ReactNode }) {
           </div>
         </header>
         <main className="flex-grow container mx-auto px-4 py-8">
-          {children || <Outlet context={{ viewMode, selectedTagId, sortPeriod }} />}
+          <div className="flex flex-col md:flex-row gap-8">
+            <div className={viewMode === "vibe" || viewMode === "list" ? "md:w-3/4" : "w-full"}>
+              {children || <Outlet context={{ viewMode, selectedTagId, sortPeriod }} />}
+            </div>
+            {(viewMode === "vibe" || viewMode === "list") && (
+              <aside className="md:w-1/4 space-y-6">
+                <WeeklyLeaderboard />
+                <TopCategoriesOfWeek />
+              </aside>
+            )}
+          </div>
         </main>
         <Footer />
         <ConvexBox />

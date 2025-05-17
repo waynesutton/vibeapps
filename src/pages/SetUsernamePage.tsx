@@ -20,7 +20,7 @@ export default function SetUsernamePage() {
   useEffect(() => {
     if (convexUser && convexUser.username) {
       // Username got set, maybe by another tab or a quick sync after ensureUser
-      navigate(`/u/${convexUser.username}`);
+      navigate(`/${convexUser.username}`);
     }
   }, [convexUser, navigate]);
 
@@ -40,7 +40,7 @@ export default function SetUsernamePage() {
       // Or, navigate directly if preferred, but ensure clerkUser.username is updated too.
       // For now, relying on useEffect.
       // If Clerk's user object also needs update for username, that's a separate step.
-      // This flow assumes a Convex username is primary for /u/:username routes.
+      // This flow assumes a Convex username is primary for /@username routes.
     } catch (err: any) {
       console.error("Error setting username:", err);
       setError(

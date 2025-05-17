@@ -9,9 +9,11 @@ Brief description of the feature and its purpose.
 
 ## In Progress Tasks
 
-- [ ] change from /u/username to /@username in url slugs
+- [x] change from /u/username to /username in url slugs
+- [ ] Add a ban member in /admin dashboard
+- [x] add sidebar leaderboard to list view
 - [ ] update clerk admin role permissions in for mod view
-- [ ] setup resend for emails
+- [ ] setup resend for emails - tbd
 - [ ] Setup hosting on Vercel
 - [ ] Setup domain name on Vercel
 - [ ] Ask vibe coders for feedback and submissions
@@ -21,6 +23,7 @@ Brief description of the feature and its purpose.
 
 - [ ] update category links in vibe view sidebar
 - [ ] add follow profile features
+- [ ] add pinned post to sidebare for storylist.tsx loytout.tsx line 283
 - [ ] add show 3 related products by tags below comments
 
 ## Implementation Plan

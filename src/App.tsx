@@ -111,7 +111,6 @@ function App() {
             <Route path="/submit" element={<StoryForm />} />
             <Route path="/set-username" element={<SetUsernamePage />} />
           </Route>
-          <Route path="/u/:username" element={<UserProfilePage />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/forms/new" element={<FormBuilder />} />
           <Route path="/admin/forms/:formId" element={<FormBuilder />} />
@@ -120,6 +119,7 @@ function App() {
           <Route path="/f/:formSlug" element={<PublicFormPage />} />
           <Route path="/results/:slug" element={<PublicResultsViewer />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/:username" element={<UserProfilePage />} />
         </Route>
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />

@@ -323,7 +323,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
             <div className="flex items-center gap-2 text-sm text-[#545454] flex-wrap mb-3">
               {story.authorUsername ? (
                 <Link
-                  to={`/u/${story.authorUsername}`}
+                  to={`/${story.authorUsername}`}
                   className="hover:text-[#525252] hover:underline">
                   by {story.authorName || story.authorUsername}
                 </Link>

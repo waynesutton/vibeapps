@@ -40,7 +40,7 @@ export function WeeklyLeaderboard() {
               <div className="text-xs text-[#787672] flex items-center gap-2 mt-0.5">
                 {story.authorUsername ? (
                   <Link
-                    to={`/u/${story.authorUsername}`}
+                    to={`/${story.authorUsername}`}
                     className="hover:underline flex items-center gap-1">
                     <UserCircle className="w-3 h-3" />
                     {story.authorName || story.authorUsername}

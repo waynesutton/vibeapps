@@ -13,7 +13,7 @@ interface CommentProps {
 
 export function Comment({ comment, onReply }: CommentProps) {
   const authorDisplayName = comment.authorName || "Anonymous";
-  const authorProfileUrl = comment.authorUsername ? `/u/${comment.authorUsername}` : null;
+  const authorProfileUrl = comment.authorUsername ? `/${comment.authorUsername}` : null;
 
   return (
     <div className="pl-4 mt-4">
