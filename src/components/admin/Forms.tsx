@@ -102,7 +102,7 @@ export function Forms() {
                     <td className="p-3 px-4">
                       <Link
                         to={`/admin/forms/${form._id}`}
-                        className="text-[#525252] hover:text-[#2A2825] font-medium">
+                        className="text-[#525252] hover:text-[#292929] font-medium">
                         {form.title}
                       </Link>
                       <span className="text-xs text-gray-400 ml-2">/f/{form.slug}</span>

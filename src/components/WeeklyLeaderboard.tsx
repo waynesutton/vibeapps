@@ -17,7 +17,7 @@ export function WeeklyLeaderboard() {
   if (!topStories || topStories.length === 0) {
     return (
       <div className="p-4 bg-white rounded-lg border border-[#D8E1EC]">
-        <h3 className="text-lg font-semibold text-[#2A2825] mb-3">Most Vibes This Week</h3>
+        <h3 className="text-lg font-semibold text-[#292929] mb-3">Most Vibes This Week</h3>
         <p className="text-sm text-[#545454]">No stories trending this week yet.</p>
       </div>
     );
@@ -25,7 +25,7 @@ export function WeeklyLeaderboard() {
 
   return (
     <div className="p-4 bg-white rounded-lg border border-[#D8E1EC]">
-      <h3 className="text-lg font-semibold text-[#2A2825] mb-3">Most Vibes This Week</h3>
+      <h3 className="text-lg font-semibold text-[#292929] mb-3">Most Vibes This Week</h3>
       <ul className="space-y-3">
         {topStories.map((story, index) => (
           <li key={story._id} className="flex items-start gap-3">
@@ -33,7 +33,7 @@ export function WeeklyLeaderboard() {
             <div className="flex-grow min-w-0">
               <Link
                 to={`/s/${story.slug}`}
-                className="text-sm text-[#2A2825] hover:text-[#525252] hover:underline font-medium break-words line-clamp-2"
+                className="text-sm text-[#292929] hover:text-[#525252] hover:underline font-medium break-words line-clamp-2"
                 title={story.title}>
                 {story.title}
               </Link>

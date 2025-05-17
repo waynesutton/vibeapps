@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Updated `files.md` with comprehensive descriptions for all files and directories, aligning with `README.md` features.
 - Initial project setup.
 - Detailed file documentation in `files.md` for all components, including admin dashboard and utility files.
 - Expanded admin dashboard components: `AdminDashboard.tsx`, `ContentModeration.tsx`, `FormBuilder.tsx`, `FormResults.tsx`, `Forms.tsx`, `Settings.tsx`, `TagManagement.tsx`.

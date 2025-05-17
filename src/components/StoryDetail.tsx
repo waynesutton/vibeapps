@@ -284,7 +284,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
             <button
               onClick={handleVote}
               disabled={!isClerkLoaded} // Disable while Clerk is loading to prevent premature clicks
-              className={`text-[#2A2825] hover:bg-[#F4F0ED] p-1 rounded ${
+              className={`text-[#292929] hover:bg-[#F4F0ED] p-1 rounded ${
                 !isSignedIn && isClerkLoaded ? "opacity-50 cursor-help" : ""
               }`}
               title={!isSignedIn && isClerkLoaded ? "Sign in to vote" : "Vote for this app"}>
@@ -303,7 +303,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
               </a>
             </h1>
             {story.customMessage && (
-              <div className="mb-4 text-sm text-[#ffffff] bg-[#2A2825] border border-[#D8E1EC] rounded-md p-3 italic">
+              <div className="mb-4 text-sm text-[#ffffff] bg-[#292929] border border-[#D8E1EC] rounded-md p-3 italic">
                 {story.customMessage}
               </div>
             )}
@@ -404,7 +404,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   href={story.githubUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-[#525252] hover:text-[#2A2825] hover:underline truncate"
+                  className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
                   title={story.githubUrl}>
                   GitHub Repo
                 </a>
@@ -417,7 +417,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   href={story.linkedinUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-[#525252] hover:text-[#2A2825] hover:underline truncate"
+                  className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
                   title={story.linkedinUrl}>
                   LinkedIn URL
                 </a>
@@ -430,7 +430,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   href={story.twitterUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-[#525252] hover:text-[#2A2825] hover:underline truncate"
+                  className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
                   title={story.twitterUrl}>
                   X/Bluesky URL
                 </a>
@@ -443,7 +443,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   href={story.chefAppUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-[#525252] hover:text-[#2A2825] hover:underline truncate"
+                  className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
                   title={story.chefAppUrl}>
                   Convex.app Project
                 </a>
@@ -456,7 +456,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   href={story.chefShowUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-[#525252] hover:text-[#2A2825] hover:underline truncate"
+                  className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
                   title={story.chefShowUrl}>
                   Chef.show Project
                 </a>
@@ -587,7 +587,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
               type="button"
               onClick={handleReportSubmit}
               disabled={isReporting || !reportReason.trim()}
-              className="bg-[#2A2825] text-white hover:bg-[#525252] disabled:opacity-50 sm:ml-[10px]"
+              className="bg-[#292929] text-white hover:bg-[#525252] disabled:opacity-50 sm:ml-[10px]"
               style={{ fontWeight: "normal" }}>
               {isReporting ? "Submitting..." : "Submit Report"}
             </Button>

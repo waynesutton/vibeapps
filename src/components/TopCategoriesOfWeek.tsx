@@ -17,7 +17,7 @@ export function TopCategoriesOfWeek() {
   if (!topCategories || topCategories.length === 0) {
     return (
       <div className="p-4 bg-white rounded-lg border border-[#D8E1EC]">
-        <h3 className="text-lg font-semibold text-[#2A2825] mb-3">Top Categories This Week</h3>
+        <h3 className="text-lg font-semibold text-[#292929] mb-3">Top Categories This Week</h3>
         <p className="text-sm text-[#545454]">No active categories this week.</p>
       </div>
     );
@@ -25,7 +25,7 @@ export function TopCategoriesOfWeek() {
 
   return (
     <div className="p-4 bg-white rounded-lg border border-[#D8E1EC]">
-      <h3 className="text-lg font-semibold text-[#2A2825] mb-3">Top Categories This Week</h3>
+      <h3 className="text-lg font-semibold text-[#292929] mb-3">Top Categories This Week</h3>
       <ul className="space-y-2">
         {topCategories.map((category) => {
           if (!category.slug) {
@@ -48,7 +48,7 @@ export function TopCategoriesOfWeek() {
             <li key={category._id}>
               <Link
                 to={`/t/${category.slug}`}
-                className="flex items-center gap-2 text-sm text-[#545454] hover:text-[#2A2825] hover:underline py-1">
+                className="flex items-center gap-2 text-sm text-[#545454] hover:text-[#292929] hover:underline py-1">
                 <Hash className="w-4 h-4 text-[#787672]" />
                 <span className="flex-grow truncate" title={category.name}>
                   {category.name}

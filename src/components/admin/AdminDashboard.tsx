@@ -30,7 +30,7 @@ export function AdminDashboard() {
         ← Back to Apps Home
       </Link>
 
-      <h1 className="text-2xl font-medium text-[#2A2825] mb-8">Admin Dashboard</h1>
+      <h1 className="text-2xl font-medium text-[#292929] mb-8">Admin Dashboard</h1>
 
       <Tabs.Root value={activeTab} onValueChange={handleTabChange} className="space-y-6">
         <Tabs.List className="flex flex-wrap gap-1 sm:gap-4 border-b border-gray-200">
@@ -47,7 +47,7 @@ export function AdminDashboard() {
             <Tabs.Trigger
               key={tab.value}
               value={tab.value}
-              className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-[#2A2825] data-[state=active]:border-b-2 data-[state=active]:border-[#2A2825] focus:outline-none focus:z-10 whitespace-nowrap">
+              className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-[#292929] data-[state=active]:border-b-2 data-[state=active]:border-[#292929] focus:outline-none focus:z-10 whitespace-nowrap">
               {tab.label}
             </Tabs.Trigger>
           ))}

@@ -112,13 +112,13 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                     }`}>
                     {viewMode === "vibe" ? (
                       <div className="flex flex-col items-center w-full">
-                        <div className="bg-gradient-to-b from-[#FBF5DB] to-[#FAF9F1] rounded-t-md w-full h-[62px] flex flex-col items-center justify-center text-lg border border border-[#D8E1EC] font-normal text-[#2A2825] mb-[4px]">
+                        <div className="bg-gradient-to-b from-[#FBF5DB] to-[#FAF9F1] rounded-t-md w-full h-[62px] flex flex-col items-center justify-center text-lg border border border-[#D8E1EC] font-normal text-[#292929] mb-[0px]">
                           <span className="font-alfa-slab-one">{story.votes}</span>
                           <div className="text-xs">Vibes</div>
                         </div>
                         <button
                           onClick={() => handleVote(story._id)}
-                          className="bg-white border border-t-0 border-[#D5D3D0] text-[#787671] hover:bg-[#FBF5DB] w-full rounded-b-md py-1 px-2 flex items-center justify-center gap-1 text-sm font-normal h-[24px]">
+                          className="bg-white border border-t-0 border-[#D5D3D0] text-[#292929] hover:bg-[#FBF5DB] w-full rounded-b-md py-1 px-2 flex items-center justify-center gap-1 text-sm font-normal h-[24px]">
                           Vibe it
                         </button>
                       </div>
@@ -126,10 +126,10 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                       <>
                         <button
                           onClick={() => handleVote(story._id)}
-                          className="text-[#2A2825] hover:bg-[#FBF5DB] p-1 rounded">
+                          className="text-[#292929] hover:bg-[#FBF5DB] p-1 rounded">
                           <ChevronUp className="w-5 h-5" />
                         </button>
-                        <span className="text-[#2A2825] font-medium text-sm">{story.votes}</span>
+                        <span className="text-[#292929] font-medium text-sm">{story.votes}</span>
                       </>
                     )}
                   </div>
@@ -153,7 +153,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                 <div
                   className={`flex-1 min-w-0 ${viewMode === "vibe" ? "bg-white rounded-lg p-3.5 border border-[#D8E1EC]" : ""}`}>
                   {story.customMessage && (
-                    <div className="mb-4 text-sm text-[#ffffff] bg-[#2A2825] border border-[#D8E1EC] rounded-md p-3 italic">
+                    <div className="mb-4 text-sm text-[#ffffff] bg-[#292929] border border-[#D8E1EC] rounded-md p-3 italic">
                       {story.customMessage}
                     </div>
                   )}
@@ -168,14 +168,14 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                       <>
                         <button
                           onClick={() => handleVote(story._id)}
-                          className="text-[#2A2825] hover:bg-[#FBF5DB] p-1 rounded">
+                          className="text-[#292929] hover:bg-[#FBF5DB] p-1 rounded">
                           <ChevronUp className="w-5 h-5" />
                         </button>
-                        <span className="text-[#2A2825] font-medium text-sm">{story.votes}</span>
+                        <span className="text-[#292929] font-medium text-sm">{story.votes}</span>
                       </>
                     )}
-                    <h2 className="text-[#2A2825] font-bold truncate">
-                      <Link to={`/s/${story.slug}`} className="hover:text-[#2A2825] break-words">
+                    <h2 className="text-[#292929] font-bold truncate">
+                      <Link to={`/s/${story.slug}`} className="hover:text-[#292929] break-words">
                         {story.title}
                       </Link>
                     </h2>

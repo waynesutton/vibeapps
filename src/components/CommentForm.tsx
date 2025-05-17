@@ -49,7 +49,7 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
               ? "Write your comment... (Markdown supported)"
               : "Sign in to write your comment..."
           }
-          className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] min-h-[100px] disabled:opacity-50 disabled:bg-gray-100"
+          className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] min-h-[100px] disabled:opacity-50 disabled:bg-gray-100"
           required
           disabled={!canSubmit}
         />
@@ -59,7 +59,7 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
         <button
           type="submit"
           disabled={!canSubmit || !content.trim()}
-          className="mt-2 px-4 py-2 bg-[#2A2825] text-white rounded-md hover:bg-[#525252] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400"
+          className="mt-2 px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400"
           title={!canSubmit ? "Sign in to comment" : undefined}>
           {parentId ? "Reply" : "Comment"}
         </button>

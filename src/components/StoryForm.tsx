@@ -142,7 +142,7 @@ export function StoryForm() {
 
       <div className="bg-white p-6 rounded-lg border border-[#D8E1EC]">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <h2 className="text-2xl font-bold text-[#2A2825]">Submit your Vibe Coding app</h2>
+          <h2 className="text-2xl font-bold text-[#292929]">Submit your Vibe Coding app</h2>
 
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-[#525252] mb-1">
@@ -154,7 +154,7 @@ export function StoryForm() {
               placeholder="Site name"
               value={formData.title}
               onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
               required
               disabled={isSubmitting}
             />
@@ -170,7 +170,7 @@ export function StoryForm() {
               placeholder="One sentence pitch"
               value={formData.tagline}
               onChange={(e) => setFormData((prev) => ({ ...prev, tagline: e.target.value }))}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
               required
               disabled={isSubmitting}
             />
@@ -187,7 +187,7 @@ export function StoryForm() {
               placeholder="https://"
               value={formData.url}
               onChange={(e) => setFormData((prev) => ({ ...prev, url: e.target.value }))}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
               required
               disabled={isSubmitting}
             />
@@ -202,7 +202,7 @@ export function StoryForm() {
               id="image"
               accept="image/*"
               onChange={handleImageChange}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] border border-[#D8E1EC] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#F4F0ED] file:text-[#525252] hover:file:bg-[#e5e1de]"
+              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#F4F0ED] file:text-[#525252] hover:file:bg-[#e5e1de]"
               disabled={isSubmitting}
             />
             {formData.image && (
@@ -220,7 +220,7 @@ export function StoryForm() {
               placeholder="https://linkedin.com/post/..."
               value={formData.linkedinUrl}
               onChange={(e) => setFormData((prev) => ({ ...prev, linkedinUrl: e.target.value }))}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
               disabled={isSubmitting}
             />
           </div>
@@ -235,7 +235,7 @@ export function StoryForm() {
               placeholder="https://twitter.com/..."
               value={formData.twitterUrl}
               onChange={(e) => setFormData((prev) => ({ ...prev, twitterUrl: e.target.value }))}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
               disabled={isSubmitting}
             />
           </div>
@@ -250,7 +250,7 @@ export function StoryForm() {
               placeholder="https://github.com/..."
               value={formData.githubUrl}
               onChange={(e) => setFormData((prev) => ({ ...prev, githubUrl: e.target.value }))}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
               disabled={isSubmitting}
             />
           </div>
@@ -265,7 +265,7 @@ export function StoryForm() {
               placeholder="https://chef.app/..."
               value={formData.chefAppUrl}
               onChange={(e) => setFormData((prev) => ({ ...prev, chefAppUrl: e.target.value }))}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
               disabled={isSubmitting}
             />
           </div>
@@ -280,7 +280,7 @@ export function StoryForm() {
               placeholder="https://chef.show/..."
               value={formData.chefShowUrl}
               onChange={(e) => setFormData((prev) => ({ ...prev, chefShowUrl: e.target.value }))}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
               disabled={isSubmitting}
             />
           </div>
@@ -296,7 +296,7 @@ export function StoryForm() {
                   key={tag._id}
                   type="button"
                   onClick={() => toggleTag(tag._id)}
-                  className={`px-3 py-1 rounded-md text-sm transition-colors border ${selectedTagIds.includes(tag._id) ? "bg-[#F4F0ED] text-[#2A2825] border-[#D5D3D0]" : "bg-white text-[#545454] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"}`}>
+                  className={`px-3 py-1 rounded-md text-sm transition-colors border ${selectedTagIds.includes(tag._id) ? "bg-[#F4F0ED] text-[#292929] border-[#D5D3D0]" : "bg-white text-[#545454] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"}`}>
                   {tag.name}
                 </button>
               ))}
@@ -311,7 +311,7 @@ export function StoryForm() {
                 value={newTagInputValue}
                 onChange={(e) => setNewTagInputValue(e.target.value)}
                 placeholder="Enter new tag name..."
-                className="flex-1 px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] border border-[#D8E1EC] text-sm"
+                className="flex-1 px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
                 disabled={isSubmitting}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -360,7 +360,7 @@ export function StoryForm() {
                 !formData.tagline ||
                 !formData.url
               }
-              className="px-4 py-2 bg-[#2A2825] text-white rounded-md hover:bg-[#525252] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              className="px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               {isSubmitting ? "Submitting..." : "Submit App"}
             </button>
             <Link

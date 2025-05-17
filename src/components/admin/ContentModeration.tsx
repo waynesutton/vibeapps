@@ -186,7 +186,7 @@ export function ContentModeration() {
                 <Link
                   to={`/s/${item.slug}`}
                   target="_blank"
-                  className="font-medium text-[#525252] hover:text-[#2A2825] block truncate">
+                  className="font-medium text-[#525252] hover:text-[#292929] block truncate">
                   {item.title}
                 </Link>
               )}
@@ -197,7 +197,7 @@ export function ContentModeration() {
             </p>
             {/* Always show custom message if present, as editing is disabled */}
             {item.type === "story" && item.customMessage && (
-              <div className="mt-2 text-sm text-[#ffffff] bg-[#2A2825] border border-[#D8E1EC] rounded-md p-2 italic">
+              <div className="mt-2 text-sm text-[#ffffff] bg-[#292929] border border-[#D8E1EC] rounded-md p-2 italic">
                 Admin Message: {item.customMessage}
               </div>
             )}

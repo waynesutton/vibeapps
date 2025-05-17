@@ -14,7 +14,7 @@
   }
 
   body {
-    @apply bg-[#F3F4F6] text-[#525252];
+    @apply bg-[#F2F4F7] text-[#292929];
   }
   :root {
     --background: 0 0% 95.7%;

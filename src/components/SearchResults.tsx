@@ -13,7 +13,7 @@ export function SearchResults({ query, stories, viewMode }: SearchResultsProps) 
   return (
     <div>
       <div className="mb-4">
-        <Link to="/" className="text-[#2A2825] hover:underline text-sm">
+        <Link to="/" className="text-[#292929] hover:underline text-sm">
           ← Back to Apps
         </Link>
       </div>

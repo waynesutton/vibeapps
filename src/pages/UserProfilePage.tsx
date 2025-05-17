@@ -24,6 +24,7 @@ import {
   Bookmark,
   BookmarkCheck,
   BookmarkMinus,
+  BookKey,
 } from "lucide-react";
 import type { Story } from "../types"; // Import the Story type
 import "@fontsource/inter/400.css";
@@ -443,7 +444,7 @@ export default function UserProfilePage() {
                       type="text"
                       value={newUsername}
                       onChange={(e) => setNewUsername(e.target.value)}
-                      className="text-xl font-normal text-[#2A2825] w-auto px-2 py-1 border border-gray-300 rounded-md mr-2"
+                      className="text-xl font-normal text-[#292929] w-auto px-2 py-1 border border-gray-300 rounded-md mr-2"
                       placeholder="Enter username"
                       style={{ fontFamily: "Inter, sans-serif" }}
                     />
@@ -456,7 +457,7 @@ export default function UserProfilePage() {
                 ) : (
                   <>
                     <span
-                      className="text-xl font-normal text-[#2A2825] mr-2"
+                      className="text-xl font-normal text-[#292929] mr-2"
                       style={{ fontFamily: "Inter, sans-serif" }}>
                       {profileUser.name || "Anonymous User"}
                     </span>
@@ -471,7 +472,7 @@ export default function UserProfilePage() {
             ) : (
               <div className="flex items-baseline mb-1">
                 <h1
-                  className="text-lg font-normal text-[#2A2825] mr-2"
+                  className="text-lg font-normal text-[#292929] mr-2"
                   style={{ fontFamily: "Inter, sans-serif" }}>
                   {profileUser.name || "Anonymous User"}
                 </h1>
@@ -488,7 +489,7 @@ export default function UserProfilePage() {
                   value={newBio}
                   onChange={(e) => setNewBio(e.target.value.slice(0, 200))}
                   maxLength={200}
-                  className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-[#2A2825] focus:border-[#2A2825]"
+                  className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-[#292929] focus:border-[#292929]"
                   placeholder="Add a short bio (max 200 chars)"
                   style={{ fontFamily: "Inter, sans-serif" }}
                   rows={3}
@@ -552,7 +553,7 @@ export default function UserProfilePage() {
                       href={profileUser.website}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-gray-500 hover:text-[#2A2825]"
+                      className="text-xs text-gray-500 hover:text-[#292929]"
                       title="Website">
                       Website
                     </a>
@@ -562,7 +563,7 @@ export default function UserProfilePage() {
                       href={profileUser.twitter}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-gray-500 hover:text-[#2A2825]"
+                      className="text-xs text-gray-500 hover:text-[#292929]"
                       title="Twitter">
                       Twitter
                     </a>
@@ -572,7 +573,7 @@ export default function UserProfilePage() {
                       href={profileUser.bluesky}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-gray-500 hover:text-[#2A2825]"
+                      className="text-xs text-gray-500 hover:text-[#292929]"
                       title="Bluesky">
                       Bluesky
                     </a>
@@ -582,7 +583,7 @@ export default function UserProfilePage() {
                       href={profileUser.linkedin}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-gray-500 hover:text-[#2A2825]"
+                      className="text-xs text-gray-500 hover:text-[#292929]"
                       title="LinkedIn">
                       LinkedIn
                     </a>
@@ -594,7 +595,7 @@ export default function UserProfilePage() {
             {isOwnProfile && !isEditing && (
               <button
                 onClick={handleEditToggle}
-                className="mt-2 px-6 py-2 rounded-md bg-[#2A2825] border border-[#D8E1EC] text-[#ffffff] rounded-md text-sm font-medium hover:bg-[#F2F0ED] hover:text-[#2A2825] flex items-center justify-center sm:justify-start"
+                className="mt-2 px-6 py-2 rounded-md bg-[#292929] border border-[#D8E1EC] text-[#ffffff] rounded-md text-sm font-medium hover:bg-[#F2F0ED] hover:text-[#292929] flex items-center justify-center sm:justify-start"
                 style={{ fontFamily: "Inter, sans-serif" }}>
                 <Edit3 className="w-4 h-4 mr-2 text-md" /> Edit my profile
               </button>
@@ -642,7 +643,7 @@ export default function UserProfilePage() {
       <section
         className="mb-10 p-4 bg-[#fff] rounded-md border border-gray-200"
         style={{ fontFamily: "Inter, sans-serif" }}>
-        <h2 className="text-lg font-normal text-[#2A2825] mb-4 pb-2 border-b border-gray-300">
+        <h2 className="text-lg font-normal text-[#292929] mb-4 pb-2 border-b border-gray-300">
           Dashboard
         </h2>
         <div className="flex flex-row gap-8 justify-center sm:justify-start">
@@ -650,7 +651,7 @@ export default function UserProfilePage() {
             <a
               href="#submissions"
               onClick={() => setActiveTab("votes")}
-              className="text-xl text-[#2A2825] hover:underline">
+              className="text-xl text-[#292929] hover:underline">
               {stories.length}
             </a>
             <span className="text-sm text-gray-500">Submissions</span>
@@ -659,7 +660,7 @@ export default function UserProfilePage() {
             <a
               href="#tab-section-votes"
               onClick={() => setActiveTab("votes")}
-              className="text-xl text-[#2A2825] hover:underline">
+              className="text-xl text-[#292929] hover:underline">
               {votes.length}
             </a>
             <span className="text-sm text-gray-500">Votes</span>
@@ -668,7 +669,7 @@ export default function UserProfilePage() {
             <a
               href="#tab-section-ratings"
               onClick={() => setActiveTab("ratings")}
-              className="text-xl text-[#2A2825] hover:underline">
+              className="text-xl text-[#292929] hover:underline">
               {ratings.length}
             </a>
             <span className="text-sm text-gray-500">Ratings Given</span>
@@ -677,26 +678,28 @@ export default function UserProfilePage() {
             <a
               href="#tab-section-comments"
               onClick={() => setActiveTab("comments")}
-              className="text-xl text-[#2A2825] hover:underline">
+              className="text-xl text-[#292929] hover:underline">
               {comments.length}
             </a>
             <span className="text-sm text-gray-500">Comments</span>
           </div>
-          <div className="flex flex-col items-center">
-            <a
-              href="#tab-section-bookmarks"
-              onClick={() => setActiveTab("bookmarks")}
-              className="text-xl text-[#2A2825] hover:underline">
-              {userBookmarksCount ?? 0}
-            </a>
-            <span className="text-sm text-gray-500">Bookmarks</span>
-          </div>
+          {isOwnProfile && (
+            <div className="flex flex-col items-center">
+              <a
+                href="#tab-section-bookmarks"
+                onClick={() => setActiveTab("bookmarks")}
+                className="text-xl text-[#292929] hover:underline">
+                {userBookmarksCount ?? 0}
+              </a>
+              <span className="text-sm text-gray-500">Bookmarks</span>
+            </div>
+          )}
         </div>
       </section>
 
       {/* Section for User's Submissions (Stories) - Always Visible */}
       <section id="submissions" className="mb-6 p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
-        <h2 className="text-lg font-normal text-[#2A2825] mb-4 pb-2 border-b border-gray-300">
+        <h2 className="text-lg font-normal text-[#292929] mb-4 pb-2 border-b border-gray-300">
           Submissions
         </h2>
         {stories.length === 0 && <p className="text-gray-500 italic">No submissions yet.</p>}
@@ -709,7 +712,7 @@ export default function UserProfilePage() {
                 <div className="flex-grow mr-4">
                   <Link
                     to={`/s/${story.slug}`}
-                    className="text-lg font-semibold text-[#2A2825] hover:underline">
+                    className="text-lg font-semibold text-[#292929] hover:underline">
                     {story.title}
                   </Link>
                   <p className="text-sm text-gray-600 truncate">{story.description}</p>
@@ -738,7 +741,7 @@ export default function UserProfilePage() {
             onClick={() => setActiveTab("votes")}
             className={`py-2 px-4 text-sm font-medium focus:outline-none ${
               activeTab === "votes"
-                ? "border-b-2 border-[#2A2825] text-[#2A2825]"
+                ? "border-b-2 border-[#292929] text-[#292929]"
                 : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}>
             Votes ({votes?.length ?? 0})
@@ -747,7 +750,7 @@ export default function UserProfilePage() {
             onClick={() => setActiveTab("ratings")}
             className={`py-2 px-4 text-sm font-medium focus:outline-none ${
               activeTab === "ratings"
-                ? "border-b-2 border-[#2A2825] text-[#2A2825]"
+                ? "border-b-2 border-[#292929] text-[#292929]"
                 : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}>
             Ratings Given ({ratings?.length ?? 0})
@@ -756,20 +759,24 @@ export default function UserProfilePage() {
             onClick={() => setActiveTab("comments")}
             className={`py-2 px-4 text-sm font-medium focus:outline-none ${
               activeTab === "comments"
-                ? "border-b-2 border-[#2A2825] text-[#2A2825]"
+                ? "border-b-2 border-[#292929] text-[#292929]"
                 : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
             }`}>
             Comments ({comments?.length ?? 0})
           </button>
-          <button
-            onClick={() => setActiveTab("bookmarks")}
-            className={`py-2 px-4 text-sm font-medium focus:outline-none ${
-              activeTab === "bookmarks"
-                ? "border-b-2 border-[#2A2825] text-[#2A2825]"
-                : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}>
-            Bookmarks ({userBookmarksCount ?? 0})
-          </button>
+          {isOwnProfile && (
+            <button
+              onClick={() => setActiveTab("bookmarks")}
+              className={`py-2 px-4 text-sm font-medium focus:outline-none flex items-center ${
+                activeTab === "bookmarks"
+                  ? "border-b-2 border-[#292929] text-[#292929]"
+                  : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+              title="Bookmarks are private">
+              <BookKey className="w-4 h-4 mr-1" />
+              {isOwnProfile ? `Bookmarks (${userBookmarksCount ?? 0})` : "Bookmarks"}
+            </button>
+          )}
         </div>
 
         {/* Conditionally Rendered Content */}
@@ -788,7 +795,7 @@ export default function UserProfilePage() {
                     <div className="flex-grow mr-4">
                       <Link
                         to={`/s/${vote.storySlug}`}
-                        className="text-lg font-semibold text-[#2A2825] hover:underline">
+                        className="text-lg font-semibold text-[#292929] hover:underline">
                         {vote.storyTitle || "View Story"}
                       </Link>
                       <p className="text-xs text-gray-400">
@@ -824,7 +831,7 @@ export default function UserProfilePage() {
                     <div className="flex-grow mr-4">
                       <Link
                         to={`/s/${rating.storySlug}`}
-                        className="text-lg font-semibold text-[#2A2825] hover:underline">
+                        className="text-lg font-semibold text-[#292929] hover:underline">
                         {rating.storyTitle || "View Story"}
                       </Link>
                       <p className="text-sm text-yellow-500 flex items-center">
@@ -879,7 +886,7 @@ export default function UserProfilePage() {
                         Commented on{" "}
                         <Link
                           to={`/s/${comment.storySlug}#comments`}
-                          className="text-[#2A2825] hover:underline">
+                          className="text-[#292929] hover:underline">
                           {comment.storyTitle || "story"}
                         </Link>{" "}
                         - {new Date(comment._creationTime).toLocaleDateString()}
@@ -915,7 +922,7 @@ export default function UserProfilePage() {
                     <div className="flex-grow mr-4">
                       <Link
                         to={`/s/${bookmark.storySlug}`}
-                        className="text-lg font-semibold text-[#2A2825] hover:underline">
+                        className="text-lg font-semibold text-[#292929] hover:underline">
                         {bookmark.storyTitle || "View Story"}
                       </Link>
                       {bookmark.storyDescription && (
@@ -957,14 +964,14 @@ export default function UserProfilePage() {
           id="manage-profile"
           className="mb-10 p-6 bg-[#ffffff] rounded-lg border border-gray-200"
           style={{ fontFamily: "Inter, sans-serif" }}>
-          <h2 className="text-xl font-semibold text-[#2A2825] mb-6 pb-3 border-b border-gray-300">
+          <h2 className="text-xl font-semibold text-[#292929] mb-6 pb-3 border-b border-gray-300">
             Manage Profile & Account
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Column 1 */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-medium text-[#2A2825] mb-2">Profile Settings</h3>
+                <h3 className="text-lg font-medium text-[#292929] mb-2">Profile Settings</h3>
                 <button
                   onClick={() => {
                     if (!isEditing) {
@@ -972,21 +979,21 @@ export default function UserProfilePage() {
                     }
                     window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
-                  className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#2A2825] transition-colors disabled:opacity-50">
+                  className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors disabled:opacity-50">
                   <Edit3 className="w-4 h-4 inline-block mr-2" /> Edit Profile Details
                 </button>
               </div>
 
               <div>
-                <h3 className="text-lg font-medium text-[#2A2825] mb-2">Account Security</h3>
+                <h3 className="text-lg font-medium text-[#292929] mb-2">Account Security</h3>
                 <button
                   onClick={handleChangePassword}
-                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#2A2825] transition-colors">
+                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors">
                   <Lock className="w-4 h-4 inline-block mr-2" /> Change Password
                 </button>
                 <button
                   onClick={handleChangeEmail}
-                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#2A2825] transition-colors">
+                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors">
                   <Mail className="w-4 h-4 inline-block mr-2" /> Change Email Address
                 </button>
               </div>
@@ -995,18 +1002,18 @@ export default function UserProfilePage() {
             {/* Column 2 */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-medium text-[#2A2825] mb-2">Connected Services</h3>
+                <h3 className="text-lg font-medium text-[#292929] mb-2">Connected Services</h3>
                 <button
                   onClick={handleManageConnections}
-                  className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#2A2825] transition-colors">
+                  className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors">
                   <UserPlus className="w-4 h-4 inline-block mr-2" /> Manage Connected Accounts
                 </button>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-[#2A2825] mb-2">Account Actions</h3>
+                <h3 className="text-lg font-medium text-[#292929] mb-2">Account Actions</h3>
                 <button
                   onClick={handleSignOut}
-                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#2A2825] transition-colors">
+                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors">
                   <LogOut className="w-4 h-4 inline-block mr-2" /> Sign Out
                 </button>
                 <button

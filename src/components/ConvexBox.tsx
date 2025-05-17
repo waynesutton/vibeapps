@@ -35,7 +35,7 @@ export function ConvexBox() {
         href={config.linkUrl || "#"}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-sm text-[#525252] hover:text-[#2A2825] font-medium break-words">
+        className="text-sm text-[#525252] hover:text-[#292929] font-medium break-words">
         {config.displayText}
       </a>
     </div>

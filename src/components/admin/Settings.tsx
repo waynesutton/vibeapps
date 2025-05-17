@@ -166,7 +166,7 @@ export function Settings() {
               type="text"
               value={localSettings.siteTitle ?? ""}
               onChange={handleChange}
-              className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825]"
+              className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
               disabled={isSaving}
             />
           </div>
@@ -184,7 +184,7 @@ export function Settings() {
               max="100" // Example max value
               value={localSettings.itemsPerPage ?? ""}
               onChange={handleChange}
-              className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825]"
+              className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
               disabled={isSaving}
             />
           </div>
@@ -201,7 +201,7 @@ export function Settings() {
               name="defaultViewMode"
               value={localSettings.defaultViewMode || ""}
               onChange={handleChange}
-              className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825]"
+              className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
               disabled={isSaving}>
               <option value="list">List View</option>
               <option value="grid">Grid View</option>
@@ -221,7 +221,7 @@ export function Settings() {
               name="defaultSortPeriod"
               value={localSettings.defaultSortPeriod || "all"} // Default to 'all' if not set
               onChange={handleChange}
-              className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825]"
+              className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
               disabled={isSaving}>
               <option value="today">Today</option>
               <option value="week">This Week</option>
@@ -244,7 +244,7 @@ export function Settings() {
                 type="checkbox"
                 checked={localSettings.someBooleanSetting ?? false}
                 onChange={handleChange}
-                className="rounded border-[#D5D3D0] text-[#2A2825] focus:ring-[#2A2825]"
+                className="rounded border-[#D5D3D0] text-[#292929] focus:ring-[#292929]"
                 disabled={isSaving}
               />
               <span className="text-sm text-[#525252]">Enable Some Feature</span>

@@ -48,7 +48,7 @@ export function PublicResultsViewer() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      <h1 className="text-2xl font-medium text-[#2A2825] mb-4">Results for: {title}</h1>
+      <h1 className="text-2xl font-medium text-[#292929] mb-4">Results for: {title}</h1>
       <p className="text-sm text-gray-600">Total Submissions: {submissions.length}</p>
 
       {/* Results Table */}

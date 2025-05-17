@@ -175,7 +175,7 @@ export function FormBuilder() {
           value={field.label ?? ""}
           onChange={(e) => updateField(field.localId, { label: e.target.value })}
           placeholder="Field Label (e.g., Your Name)"
-          className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825]"
+          className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
         />
         {/* Field Type Selector */}
         <select
@@ -183,7 +183,7 @@ export function FormBuilder() {
           onChange={(e) =>
             updateField(field.localId, { fieldType: e.target.value as FormField["fieldType"] })
           }
-          className="px-2 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825]">
+          className="px-2 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]">
           {FIELD_TYPES.map((ft) => (
             <option key={ft} value={ft}>
               {ft}
@@ -209,7 +209,7 @@ export function FormBuilder() {
           value={field.placeholder ?? ""}
           onChange={(e) => updateField(field.localId, { placeholder: e.target.value })}
           placeholder="Placeholder Text (Optional)"
-          className="w-full px-3 py-1 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-500 focus:outline-none focus:ring-1 focus:ring-[#2A2825]"
+          className="w-full px-3 py-1 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-500 focus:outline-none focus:ring-1 focus:ring-[#292929]"
         />
       )}
 
@@ -228,7 +228,7 @@ export function FormBuilder() {
                   updateField(field.localId, { options: newOptions });
                 }}
                 placeholder={`Option ${index + 1}`}
-                className="flex-1 px-2 py-1 bg-white border border-gray-300 rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825]"
+                className="flex-1 px-2 py-1 bg-white border border-gray-300 rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
               />
               <button
                 onClick={() => {
@@ -259,7 +259,7 @@ export function FormBuilder() {
             type="checkbox"
             checked={field.required ?? false}
             onChange={(e) => updateField(field.localId, { required: e.target.checked })}
-            className="rounded border-gray-300 text-[#2A2825] focus:ring-[#2A2825] focus:ring-offset-0 h-4 w-4"
+            className="rounded border-gray-300 text-[#292929] focus:ring-[#292929] focus:ring-offset-0 h-4 w-4"
           />
           <span className="text-xs text-[#525252]">Required</span>
         </label>
@@ -270,7 +270,7 @@ export function FormBuilder() {
   // --- Render Helper for Form Preview ---
   const renderPreview = () => (
     <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-      <h1 className="text-2xl font-bold text-[#2A2825] mb-6">{title || "Untitled Form"}</h1>
+      <h1 className="text-2xl font-bold text-[#292929] mb-6">{title || "Untitled Form"}</h1>
       {fields.length === 0 && <p className="text-gray-500">Add some fields to see the preview.</p>}
       <form className="space-y-6">
         {fields.map((field) => (
@@ -318,7 +318,7 @@ export function FormBuilder() {
           <button
             onClick={handleSave}
             disabled={isSaving || !title.trim()}
-            className="px-4 py-1.5 bg-[#2A2825] text-white rounded-md hover:bg-[#525252] transition-colors flex items-center gap-2 disabled:opacity-50 text-sm font-medium">
+            className="px-4 py-1.5 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors flex items-center gap-2 disabled:opacity-50 text-sm font-medium">
             <Save className="w-4 h-4" />
             {isSaving ? "Saving..." : currentFormId ? "Save Changes" : "Save Form"}
           </button>
@@ -345,7 +345,7 @@ export function FormBuilder() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Enter form title (e.g., Contact Us)"
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#2A2825] text-sm"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] text-sm"
                 required
               />
             </div>
@@ -362,7 +362,7 @@ export function FormBuilder() {
                   type="checkbox"
                   checked={isPublic}
                   onChange={(e) => setIsPublic(e.target.checked)}
-                  className="rounded border-gray-300 text-[#2A2825] focus:ring-[#2A2825] focus:ring-offset-0 h-4 w-4"
+                  className="rounded border-gray-300 text-[#292929] focus:ring-[#292929] focus:ring-offset-0 h-4 w-4"
                 />
                 <span className="text-sm text-[#525252]">Make Form Publicly Accessible</span>
               </label>
@@ -374,7 +374,7 @@ export function FormBuilder() {
                   type="checkbox"
                   checked={resultsArePublic}
                   onChange={(e) => setResultsArePublic(e.target.checked)}
-                  className="rounded border-gray-300 text-[#2A2825] focus:ring-[#2A2825] focus:ring-offset-0 h-4 w-4"
+                  className="rounded border-gray-300 text-[#292929] focus:ring-[#292929] focus:ring-offset-0 h-4 w-4"
                 />
                 <span className="text-sm text-[#525252]">
                   Make Results Publicly Accessible (at /results/{slug})

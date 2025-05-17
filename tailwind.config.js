@@ -11,7 +11,7 @@ export default {
       colors: {
         background: "#F3F4F6",
         text: "#525252",
-        header: "#2A2825",
+        header: "#292929",
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
