@@ -2,7 +2,7 @@ import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
-import { getAuthenticatedUserId, requireAdminRole } from "./users"; // Import the centralized helper and requireAdminRole
+import { getAuthenticatedUserId, requireAdminRole, ensureUserNotBanned } from "./users"; // Import the centralized helper and requireAdminRole
 
 // We might not need this specific type if we don't enhance comments further yet
 // export type CommentWithDetails = Doc<"comments"> & {
@@ -166,8 +166,8 @@ export const add = mutation({
     parentId: v.optional(v.id("comments")),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthenticatedUserId(ctx); // Get authenticated user ID
-
+    await ensureUserNotBanned(ctx);
+    const userId = await getAuthenticatedUserId(ctx);
     const story = await ctx.db.get(args.storyId);
     if (!story) {
       throw new Error("Story not found");

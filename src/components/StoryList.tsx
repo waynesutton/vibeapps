@@ -139,7 +139,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                 {viewMode === "vibe" && story.screenshotUrl && (
                   <Link
                     to={`/s/${story.slug}`}
-                    className="flex-shrink-0 w-40 aspect-video block overflow-hidden rounded-md">
+                    className="flex-shrink-0 w-[195px] aspect-video block overflow-hidden rounded-md">
                     <img
                       src={story.screenshotUrl}
                       alt={`${story.title} thumbnail`}

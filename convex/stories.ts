@@ -4,7 +4,7 @@ import { paginationOptsValidator } from "convex/server";
 import { Doc, Id, DataModel } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api";
 import { GenericDatabaseReader, StorageReader } from "convex/server";
-import { getAuthenticatedUserId, requireAdminRole } from "./users"; // Import the centralized helper and requireAdminRole
+import { getAuthenticatedUserId, requireAdminRole, ensureUserNotBanned } from "./users"; // Import the centralized helper and requireAdminRole
 import { storyWithDetailsValidator, StoryWithDetailsPublic } from "./validators"; // Import StoryWithDetailsPublic
 
 // Validator for Doc<"tags">
@@ -298,6 +298,7 @@ export const submit = mutation({
     chefAppUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await ensureUserNotBanned(ctx); // Check if user is banned
     const userId = await getAuthenticatedUserId(ctx);
     const userRecord = await ctx.db.get(userId);
 
@@ -399,6 +400,7 @@ export const generateUploadUrl = mutation(async (ctx) => {
 export const voteStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
+    await ensureUserNotBanned(ctx); // Check if user is banned
     const userId = await getAuthenticatedUserId(ctx); // Ensure user is authenticated
 
     const story = await ctx.db.get(args.storyId);
@@ -440,6 +442,7 @@ export const rate = mutation({
     rating: v.number(), // Expecting 1-5
   },
   handler: async (ctx, args) => {
+    await ensureUserNotBanned(ctx); // Check if user is banned
     const userId = await getAuthenticatedUserId(ctx);
 
     if (args.rating < 1 || args.rating > 5) {
