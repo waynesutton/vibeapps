@@ -181,7 +181,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                     </h2>
                   </div>
                   {viewMode === "vibe" && (
-                    <p className="text-[#545454] text-sm mb-2 line-clamp-2">{story.description}</p>
+                    <p className="text-[#000000] text-sm mb-2 line-clamp-2">{story.description}</p>
                   )}
                   {viewMode === "grid" && story.screenshotUrl && (
                     <Link
@@ -196,7 +196,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                     </Link>
                   )}
                   {viewMode !== "vibe" && (
-                    <p className="text-[#545454] text-sm mb-4 line-clamp-3">{story.description}</p>
+                    <p className="text-[#000000] text-sm mb-4 line-clamp-3">{story.description}</p>
                   )}
 
                   <div className="flex items-center gap-2 text-sm text-[#545454] flex-wrap">

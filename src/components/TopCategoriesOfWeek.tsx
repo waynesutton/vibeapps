@@ -35,7 +35,7 @@ export function TopCategoriesOfWeek() {
             return (
               <li
                 key={category._id}
-                className="flex items-center gap-2 text-sm text-[#545454] py-1 opacity-50">
+                className="flex items-center gap-2 text-sm text-[#101828] py-1 opacity-90">
                 <Hash className="w-4 h-4 text-[#787672]" />
                 <span className="flex-grow truncate" title={`${category.name} (no slug)`}>
                   {category.name}

@@ -6,7 +6,11 @@
 
 @layer base {
   html {
-    font-family: "Inter", sans-serif;
+    /* font-family: "Inter", sans-serif; */
+    font-family: "Eudoxus Sans", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
   body {
@@ -68,7 +72,7 @@
 }
 
 .title-font {
-  font-family: "Space Mono", monospace;
+  font-family: "Eudoxus Sans", system-ui, sans-serif;
   font-weight: 700;
 }
 

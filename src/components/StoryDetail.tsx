@@ -1,6 +1,16 @@
 import React, { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronUp, MessageSquare, Star, Linkedin, Twitter, Github, Flag } from "lucide-react";
+import {
+  ChevronUp,
+  MessageSquare,
+  Star,
+  Linkedin,
+  Twitter,
+  Github,
+  Flag,
+  Bookmark,
+  BookmarkCheck,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useQuery, useMutation } from "convex/react"; // Import Convex hooks
 import { api } from "../../convex/_generated/api"; // Import Convex API
@@ -25,6 +35,72 @@ import { toast } from "sonner";
 interface StoryDetailProps {
   story: Story; // Expecting story with resolved tags (including colors and isHidden)
 }
+
+// Copied and adapted BookmarkButton from StoryList.tsx
+const BookmarkButton = ({ storyId }: { storyId: Id<"stories"> }) => {
+  const { isSignedIn, isLoaded: isClerkLoaded } = useAuth(); // Ensure useAuth is available
+  const isBookmarked = useQuery(api.bookmarks.isStoryBookmarked, isSignedIn ? { storyId } : "skip");
+  const addOrRemoveBookmarkMutation = useMutation(api.bookmarks.addOrRemoveBookmark);
+
+  const handleBookmarkClick = async () => {
+    if (!isClerkLoaded) return;
+    if (!isSignedIn) {
+      // Instead of alert, navigate or show a toast
+      // navigate("/sign-in"); // Assuming navigate is available in this scope or passed as prop
+      toast.error("Please sign in to bookmark stories.");
+      return;
+    }
+    try {
+      await addOrRemoveBookmarkMutation({ storyId });
+      // Optionally, show a success toast
+      // toast.success(isBookmarked ? "Bookmark removed" : "Story bookmarked!");
+    } catch (error) {
+      console.error("Failed to update bookmark:", error);
+      toast.error("Failed to update bookmark. Please try again.");
+    }
+  };
+
+  if (!isClerkLoaded) {
+    // Show a loading state or disabled button
+    return (
+      <button
+        className="flex items-center gap-1 text-[#787672] opacity-50 cursor-not-allowed"
+        disabled
+        title="Loading...">
+        <Bookmark className="w-4 h-4" />
+      </button>
+    );
+  }
+
+  if (!isSignedIn) {
+    return (
+      <button
+        className="flex items-center gap-1 text-[#787672] hover:text-[#525252]"
+        onClick={() => {
+          // Assuming navigate is available and you want to redirect
+          // navigate("/sign-in");
+          // Or, if toast is preferred for non-navigation action:
+          toast.info("Please sign in to bookmark stories.");
+        }}
+        title="Sign in to bookmark">
+        <Bookmark className="w-4 h-4" />
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={handleBookmarkClick}
+      className="flex items-center gap-1 text-[#787672] hover:text-[#525252]"
+      title={isBookmarked ? "Remove bookmark" : "Bookmark story"}>
+      {isBookmarked ? (
+        <BookmarkCheck className="w-4 h-4 text-black" />
+      ) : (
+        <Bookmark className="w-4 h-4" />
+      )}
+    </button>
+  );
+};
 
 export function StoryDetail({ story }: StoryDetailProps) {
   const navigate = useNavigate(); // Initialize navigate
@@ -217,10 +293,10 @@ export function StoryDetail({ story }: StoryDetailProps) {
             <span className="text-[#525252] font-medium text-sm">{story.votes}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl lg:text-2xl font-medium text-[#525252] mb-2">
+            <h1 className="text-xl lg:text-2xl font-bold  text-transform: capitalize text-[#000000] mb-2">
               <a
                 href={story.url}
-                className="hover:text-[#2A2825] break-words"
+                className="hover:text-[#555555] break-words"
                 target="_blank"
                 rel="noopener noreferrer">
                 {story.title}
@@ -241,7 +317,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 />
               </div>
             )}
-            <p className="text-[#525252] mb-4 prose prose-sm max-w-none">{story.description}</p>
+            <p className="text-[#000000] mb-4 mt-[20px] prose prose-base max-w-none">
+              {story.description}
+            </p>
             <div className="flex items-center gap-2 text-sm text-[#545454] flex-wrap mb-3">
               {story.authorUsername ? (
                 <Link
@@ -257,6 +335,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 <MessageSquare className="w-4 h-4" />
                 {comments?.length ?? 0} Comments
               </Link>
+              <BookmarkButton storyId={story._id} />
             </div>
           </div>
         </div>
