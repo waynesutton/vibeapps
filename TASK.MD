@@ -10,12 +10,12 @@ Brief description of the feature and its purpose.
 - [x] Add a ban member in /admin dashboard
 - [x] add sidebar leaderboard to list view
 - [x] update clerk admin role permissions in for mod view
-- [ ] remove state for profile and admin page to remove sidebar
+- [x] create 404 page
+- [x] remove state for profile and admin page to remove sidebar
 
 ## In Progress Tasks
 
 - [ ] add tag bar to header like https://www.ycombinator.com/launches
-- [ ] create 404 page
 - [ ] add follow profile features
 - [ ] test and add nav icons
 - [ ] setup resend for emails - tbd
