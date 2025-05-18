@@ -89,13 +89,13 @@ export function Footer() {
               <p>Vibe Apps is for developers who build in public and ship for fun.</p>
 
               <p>
-                <a
+                {/*} <a
                   href="https://github.com/waynesutton/vibeapps"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-[#525252]">
                   Vibe Apps is Open-Source on GitHub
-                </a>
+                </a> */}
               </p>
             </div>
           </Dialog.Content>

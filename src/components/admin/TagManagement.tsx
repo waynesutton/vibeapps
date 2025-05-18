@@ -1,5 +1,19 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Plus, X, Eye, EyeOff, Save, Trash2, Archive, ArchiveRestore, Palette } from "lucide-react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import {
+  Plus,
+  X,
+  Eye,
+  EyeOff,
+  Save,
+  Trash2,
+  Archive,
+  ArchiveRestore,
+  Palette,
+  Edit3,
+  Check,
+  Image as ImageIcon,
+  Smile,
+} from "lucide-react";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id, Doc } from "../../../convex/_generated/dataModel";
@@ -15,6 +29,9 @@ interface EditableTag extends Omit<Doc<"tags">, "backgroundColor" | "textColor">
   isHidden?: boolean;
   backgroundColor?: string | null;
   textColor?: string | null;
+  emoji?: string | null; // New: for emoji character
+  iconUrl?: string | null; // New: for uploaded icon URL
+  iconFile?: File | null; // New: for local file handling before upload
 
   // UI State Flags
   isNew?: boolean;
@@ -33,12 +50,18 @@ export function TagManagement() {
   const createTag = useMutation(api.tags.create);
   const updateTag = useMutation(api.tags.update);
   const deleteTagMutation = useMutation(api.tags.deleteTag);
+  const generateUploadUrl = useMutation(api.tags.generateIconUploadUrl); // Use the new mutation
 
   const [editableTags, setEditableTags] = useState<EditableTag[]>([]);
   const [newTagName, setNewTagName] = useState("");
   const [isProcessing, setIsProcessing] = useState(false); // Generic processing state
   const [error, setError] = useState<string | null>(null);
   const [editColorsTagId, setEditColorsTagId] = useState<Id<"tags"> | null>(null);
+  const [editNameTagId, setEditNameTagId] = useState<Id<"tags"> | null>(null); // For inline name editing
+  const [stagedName, setStagedName] = useState<string>(""); // Temp storage for new name
+  const [editIconEmojiTagId, setEditIconEmojiTagId] = useState<Id<"tags"> | null>(null); // For icon/emoji editor
+
+  const fileInputRef = useRef<HTMLInputElement>(null); // Ref for file input
 
   // Sync Convex data to local editable state
   useEffect(() => {
@@ -52,6 +75,9 @@ export function TagManagement() {
               ...tag,
               backgroundColor: tag.backgroundColor ?? null,
               textColor: tag.textColor ?? null,
+              emoji: tag.emoji ?? null,
+              iconUrl: tag.iconUrl ?? null,
+              iconFile: null, // Reset local file on refresh
               isNew: false,
               isModified: false,
               isDeleted: false,
@@ -97,6 +123,9 @@ export function TagManagement() {
       isHidden: false, // Default
       backgroundColor: null,
       textColor: null,
+      emoji: null,
+      iconUrl: null,
+      iconFile: null,
       _creationTime: Date.now(),
       isNew: true,
       isModified: true, // Mark as modified to be included in save
@@ -108,6 +137,9 @@ export function TagManagement() {
   };
 
   const handleDeleteTag = (tagId: Id<"tags">) => {
+    setEditNameTagId(null); // Cancel name edit if deleting
+    setEditColorsTagId(null); // Cancel color edit
+    setEditIconEmojiTagId(null); // Cancel icon/emoji edit
     handleFieldChange(tagId, "isDeleted", true);
   };
 
@@ -136,7 +168,80 @@ export function TagManagement() {
     const currentTag = editableTags.find((t) => t._id === tagId);
     if (currentTag) {
       handleFieldChange(tagId, "isHidden", !currentTag.isHidden);
+      // If hiding, also cancel any open editors for this tag
+      if (!currentTag.isHidden) {
+        setEditColorsTagId(null);
+        setEditNameTagId(null);
+        setEditIconEmojiTagId(null);
+      }
     }
+  };
+
+  // --- Name Editing Handlers ---
+  const handleEditName = (tag: EditableTag) => {
+    setEditNameTagId(tag._id);
+    setStagedName(tag.name);
+    setEditColorsTagId(null); // Close other editors
+    setEditIconEmojiTagId(null);
+  };
+
+  const handleSaveName = (tagId: Id<"tags">) => {
+    const trimmedName = stagedName.trim();
+    if (!trimmedName) {
+      setError("Tag name cannot be empty.");
+      return;
+    }
+    // Check for name collisions, excluding the current tag if it's not new
+    if (
+      editableTags.some(
+        (tag) =>
+          tag._id !== tagId &&
+          !tag.isDeleted &&
+          tag.name.toLowerCase() === trimmedName.toLowerCase()
+      )
+    ) {
+      setError("Tag name already exists.");
+      return;
+    }
+
+    handleFieldChange(tagId, "name", trimmedName);
+    setEditNameTagId(null);
+    setError(null);
+  };
+
+  const handleCancelName = () => {
+    setEditNameTagId(null);
+    setError(null);
+  };
+
+  // --- Icon/Emoji Handlers ---
+  const handleFileChange = (tagId: Id<"tags">, event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      if (file.type === "image/png") {
+        handleFieldChange(tagId, "iconFile", file); // Store the file locally
+        handleFieldChange(tagId, "iconUrl", null); // Clear existing URL, new file takes precedence
+        handleFieldChange(tagId, "emoji", null); // Clear emoji if icon is chosen
+        setError(null);
+      } else {
+        setError("Icon must be a PNG file.");
+      }
+      // Clear the file input value so the same file can be re-selected if needed after an error/clear
+      if (event.target) {
+        event.target.value = "";
+      }
+    }
+  };
+
+  const handleClearIcon = (tagId: Id<"tags">) => {
+    handleFieldChange(tagId, "iconFile", null); // Clear local file selection
+    handleFieldChange(tagId, "iconUrl", null); // Clear stored URL
+    // Mark as modified so save picks it up, will pass clearIcon: true or null iconStorageId
+    handleFieldChange(tagId, "isModified", true);
+  };
+
+  const handleClearEmoji = (tagId: Id<"tags">) => {
+    handleFieldChange(tagId, "emoji", null);
   };
 
   // --- Save Logic ---
@@ -151,33 +256,72 @@ export function TagManagement() {
 
     for (const tag of tagsToProcess) {
       try {
+        let iconStorageIdToSend: Id<"_storage"> | undefined = undefined;
+        let shouldClearIcon = !tag.iconFile && !tag.iconUrl; // True if both file and URL are null
+
+        if (tag.iconFile) {
+          try {
+            const uploadUrl = await generateUploadUrl();
+            const uploadResponse = await fetch(uploadUrl, {
+              method: "POST",
+              headers: { "Content-Type": tag.iconFile.type },
+              body: tag.iconFile,
+            });
+            if (!uploadResponse.ok) {
+              throw new Error(`Icon upload failed: ${uploadResponse.statusText}`);
+            }
+            // The response from a POST to the URL from generateUploadUrl() is the storageId as plain text.
+            const storageIdText = await uploadResponse.text();
+            if (!storageIdText || !storageIdText.startsWith("storageId_")) {
+              // Basic check for a valid-looking storage ID
+              console.error("Upload response text:", storageIdText);
+              throw new Error("Icon upload did not return a valid storageId string.");
+            }
+            iconStorageIdToSend = storageIdText as Id<"_storage">;
+            shouldClearIcon = false; // We have a new icon, so don't clear
+          } catch (uploadErr: any) {
+            console.error(`Failed to upload icon for tag ${tag.name}:`, uploadErr);
+            setError(`Error uploading icon for "${tag.name}": ${uploadErr.message}`);
+            success = false; // Mark overall save as failed
+            break; // Stop processing on upload error
+          }
+        }
+
         if (tag.isDeleted) {
           if (!tag.isNew) {
-            // Only delete if it exists on the server
             await deleteTagMutation({ tagId: tag._id });
           }
-          // If new and deleted, it just disappears locally (will be filtered out)
         } else if (tag.isNew) {
           await createTag({
             name: tag.name,
+            slug: tag.name
+              .toLowerCase()
+              .replace(/\s+/g, "-")
+              .replace(/[^\w-]+/g, ""), // Basic slug, ensure it's in args if needed by mutation
             showInHeader: tag.showInHeader,
             isHidden: tag.isHidden ?? false,
-            // Pass null as undefined for creation if needed, or let backend handle default
             backgroundColor: tag.backgroundColor ?? undefined,
             textColor: tag.textColor ?? undefined,
+            emoji: tag.emoji ?? undefined,
+            iconStorageId: iconStorageIdToSend, // Pass the storageId
           });
         } else {
           // Existing tag update
-          const updatePayload: Parameters<typeof updateTag>[0] = { tagId: tag._id };
-
-          // Explicitly include fields that might change
-          updatePayload.name = tag.name;
-          updatePayload.showInHeader = tag.showInHeader;
-          updatePayload.isHidden = tag.isHidden;
-          // Convert null to undefined when calling mutation for optional fields
-          updatePayload.backgroundColor = tag.backgroundColor ?? undefined;
-          updatePayload.textColor = tag.textColor ?? undefined;
-
+          const updatePayload: Parameters<typeof updateTag>[0] = {
+            tagId: tag._id,
+            name: tag.name,
+            slug: tag.name
+              .toLowerCase()
+              .replace(/\s+/g, "-")
+              .replace(/[^\w-]+/g, ""), // Basic slug
+            showInHeader: tag.showInHeader,
+            isHidden: tag.isHidden,
+            backgroundColor: tag.backgroundColor ?? undefined,
+            textColor: tag.textColor ?? undefined,
+            emoji: tag.emoji ?? undefined,
+            iconStorageId: iconStorageIdToSend, // Pass new storageId if an icon was uploaded
+            clearIcon: shouldClearIcon && !iconStorageIdToSend ? true : undefined, // Clear if no new icon and old one was removed
+          };
           await updateTag(updatePayload);
         }
         // If successful, mark the tag as no longer modified in the local state immediately
@@ -187,7 +331,13 @@ export function TagManagement() {
             prev
               .map((t) =>
                 t._id === tag._id
-                  ? { ...t, isModified: false, isNew: false, isDeleted: tag.isDeleted } // Keep isDeleted if it was deleted
+                  ? {
+                      ...t,
+                      isModified: false,
+                      isNew: false,
+                      isDeleted: tag.isDeleted,
+                      iconFile: null,
+                    } // Clear local file after "save"
                   : t
               )
               .filter((t) => !(t.isNew && t.isDeleted)) // Remove tags that were new and then deleted
@@ -291,20 +441,62 @@ export function TagManagement() {
               {/* Main Tag Row */}
               <div
                 className={`flex items-center justify-between p-3 ${tag.isDeleted ? "opacity-60" : ""}`}>
-                {/* Tag Name and Colors */}
+                {/* Tag Name and Colors/Icons - Modified for inline editing */}
                 <div className="flex items-center gap-2 flex-wrap min-w-0 mr-2">
-                  <span
-                    className="inline-block px-2 py-0.5 rounded text-sm font-medium max-w-full truncate"
-                    style={{
-                      backgroundColor: tag.backgroundColor || "#F4F0ED", // Default BG
-                      color: tag.textColor || "#525252", // Default Text
-                      // Add a subtle border if no custom BG color is set
-                      border: `1px solid ${tag.backgroundColor ? "transparent" : "#D5D3D0"}`,
-                    }}
-                    title={tag.name} // Show full name on hover if truncated
-                  >
-                    {tag.name}
-                  </span>
+                  {editNameTagId === tag._id && !tag.isDeleted ? (
+                    <div className="flex items-center gap-1 flex-grow">
+                      <input
+                        type="text"
+                        value={stagedName}
+                        onChange={(e) => setStagedName(e.target.value)}
+                        className="px-2 py-1 border border-blue-500 rounded-md text-sm flex-grow"
+                        autoFocus
+                        onKeyDown={(e) => e.key === "Enter" && handleSaveName(tag._id)}
+                      />
+                      <button
+                        onClick={() => handleSaveName(tag._id)}
+                        className="p-1 text-green-600 hover:text-green-800"
+                        title="Save name">
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={handleCancelName}
+                        className="p-1 text-red-600 hover:text-red-800"
+                        title="Cancel edit">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      className="flex items-center gap-2 cursor-pointer"
+                      onClick={() => !tag.isDeleted && handleEditName(tag)}>
+                      {tag.emoji && <span className="text-lg">{tag.emoji}</span>}
+                      {tag.iconUrl && !tag.emoji && (
+                        <img src={tag.iconUrl} alt="" className="w-5 h-5 rounded-sm object-cover" />
+                      )}
+                      {tag.iconFile && !tag.iconUrl && !tag.emoji && (
+                        <img
+                          src={URL.createObjectURL(tag.iconFile)}
+                          alt="preview"
+                          className="w-5 h-5 rounded-sm object-cover"
+                        />
+                      )}
+                      <span
+                        className="inline-block px-2 py-0.5 rounded text-sm font-medium max-w-full truncate"
+                        style={{
+                          backgroundColor: tag.backgroundColor || "#F4F0ED", // Default BG
+                          color: tag.textColor || "#525252", // Default Text
+                          border: `1px solid ${tag.backgroundColor ? "transparent" : "#D5D3D0"}`,
+                        }}
+                        title={tag.name} // Show full name on hover if truncated
+                      >
+                        {tag.name}
+                      </span>
+                      {!tag.isDeleted && (
+                        <Edit3 className="w-3 h-3 text-gray-400 group-hover:text-gray-600" />
+                      )}
+                    </div>
+                  )}
                   {tag.isHidden && (
                     <span className="text-xs text-gray-500 flex-shrink-0">(Hidden)</span>
                   )}
@@ -316,9 +508,22 @@ export function TagManagement() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex items-center gap-3 flex-shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                  {" "}
+                  {/* Adjusted gap for smaller screens */}
                   {!tag.isDeleted ? (
                     <>
+                      {/* Emoji/Icon Picker Toggle */}
+                      <button
+                        onClick={() =>
+                          setEditIconEmojiTagId(editIconEmojiTagId === tag._id ? null : tag._id)
+                        }
+                        className="text-[#545454] hover:text-[#525252] disabled:opacity-50 p-1"
+                        title="Edit Emoji/Icon"
+                        disabled={isProcessing}>
+                        <Smile className="w-4 h-4" />
+                      </button>
+
                       {/* Color Picker Toggle */}
                       <button
                         onClick={() =>
@@ -385,6 +590,7 @@ export function TagManagement() {
               {/* Color Editor (Collapsible) */}
               {editColorsTagId === tag._id && !tag.isDeleted && (
                 <div className="p-3 border-t border-gray-200 bg-gray-50 space-y-2">
+                  <p className="text-xs font-medium text-gray-700 mb-1">Edit Colors:</p>
                   <div className="flex items-center gap-3">
                     <label
                       htmlFor={`bg-color-${tag._id}`}
@@ -451,6 +657,84 @@ export function TagManagement() {
                   </div>
                 </div>
               )}
+
+              {/* Emoji/Icon Editor (Collapsible) */}
+              {editIconEmojiTagId === tag._id && !tag.isDeleted && (
+                <div className="p-3 border-t border-gray-200 bg-gray-50 space-y-3">
+                  <p className="text-xs font-medium text-gray-700 mb-1">Edit Emoji/Icon:</p>
+                  {/* Emoji Input */}
+                  <div className="flex items-center gap-3">
+                    <label
+                      htmlFor={`emoji-${tag._id}`}
+                      className="text-xs font-medium text-gray-600 w-20 flex-shrink-0">
+                      Emoji:
+                    </label>
+                    <input
+                      type="text"
+                      id={`emoji-${tag._id}`}
+                      value={tag.emoji || ""}
+                      onChange={(e) => {
+                        handleFieldChange(tag._id, "emoji", e.target.value || null);
+                        if (e.target.value) {
+                          // If emoji is set, clear icon
+                          handleFieldChange(tag._id, "iconFile", null);
+                          handleFieldChange(tag._id, "iconUrl", null);
+                        }
+                      }}
+                      placeholder="e.g. ✨"
+                      className="px-2 py-1 text-xs border border-gray-300 rounded w-20"
+                      maxLength={5} // Keep emoji input short
+                      disabled={isProcessing}
+                    />
+                    <button
+                      onClick={() => handleClearEmoji(tag._id)}
+                      className="text-xs text-gray-500 hover:text-black"
+                      disabled={isProcessing || !tag.emoji}>
+                      Clear Emoji
+                    </button>
+                  </div>
+
+                  {/* Icon Upload */}
+                  <div className="flex items-center gap-3">
+                    <label
+                      htmlFor={`icon-file-${tag._id}`}
+                      className="text-xs font-medium text-gray-600 w-20 flex-shrink-0">
+                      Icon (PNG):
+                    </label>
+                    <input
+                      type="file"
+                      id={`icon-file-${tag._id}`}
+                      accept="image/png"
+                      onChange={(e) => handleFileChange(tag._id, e)}
+                      className="text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+                      ref={fileInputRef} // Use ref if direct click needed
+                      disabled={isProcessing}
+                    />
+                    <button
+                      onClick={() => handleClearIcon(tag._id)}
+                      className="text-xs text-gray-500 hover:text-black"
+                      disabled={isProcessing || (!tag.iconFile && !tag.iconUrl)}>
+                      Clear Icon
+                    </button>
+                  </div>
+                  {tag.iconFile && (
+                    <div className="pl-24 text-xs text-gray-500">Selected: {tag.iconFile.name}</div>
+                  )}
+                  {tag.iconUrl && !tag.iconFile && (
+                    <div className="pl-24 text-xs text-gray-500">
+                      Current:{" "}
+                      <a
+                        href={tag.iconUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline">
+                        {tag.iconUrl.substring(0, 30)}...
+                      </a>
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-500 pl-24">Set emoji OR upload icon.</p>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -459,6 +743,12 @@ export function TagManagement() {
         <div className="mt-6 text-xs text-[#545454]">
           <p>Manage tags for submitted apps. Changes require saving.</p>
           <ul className="list-disc list-inside mt-1 space-y-0.5">
+            <li>
+              <Edit3 className="w-3 h-3 inline mr-1" />: Click tag name to edit.
+            </li>
+            <li>
+              <Smile className="w-3 h-3 inline mr-1" />: Edit emoji/icon.
+            </li>
             <li>
               <Palette className="w-3 h-3 inline mr-1" />: Edit background/text colors.
             </li>

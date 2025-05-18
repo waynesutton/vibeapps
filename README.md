@@ -2,14 +2,14 @@
 
 ### About
 
-Vibe Apps is a real-time feed of apps built by vibe coders. It’s where you go to show off what you’ve built with tools like Convex.dev, Cursor, Bolt, Windsurf, Lovable, and Tempo—and see what others are pushing live.
+Vibe Apps is a real-time feed of apps built by vibe coders. It's where you go to show off what you've built with tools like Convex.dev, Cursor, Bolt, Windsurf, Lovable, and Tempo—and see what others are pushing live.
 
 Powered by Convex, the site runs fast, syncs in real time, and makes it easy to:
 • Submit your app
-• Browse and vote on what’s trending
+• Browse and vote on what's trending
 • Leave feedback or get inspired
 
-Whether it’s a weekend build, a fresh SaaS idea, or something weird and experimental—drop it here. Vibe Apps is for developers who build in public and ship for fun.
+Whether it's a weekend build, a fresh SaaS idea, or something weird and experimental—drop it here. Vibe Apps is for developers who build in public and ship for fun.
 
 ## Features
 
@@ -142,37 +142,79 @@ npm run preview
 ## Project Structure
 
 ```
-.
-├── src/
-│   ├── components/         # React components
-│   │   ├── admin/         # Admin dashboard components
-│   │   │   ├── AdminDashboard.tsx         # Admin control panel, navigation, and overview statistics
-│   │   │   ├── ContentModeration.tsx      # Content moderation queue, report handling, and visibility controls
-│   │   │   ├── FormBuilder.tsx            # Custom form creation, field management, and preview
-│   │   │   ├── FormResults.tsx            # Form submission viewing, filtering, and CSV export
-│   │   │   ├── Forms.tsx                  # Form management interface, visibility controls, and export
-│   │   │   ├── Settings.tsx               # Global site settings and feature toggles
-│   │   │   └── TagManagement.tsx          # Tag creation, deletion, and organization
-│   │   ├── Comment.tsx                    # Displays a single comment with markdown rendering and reply support
-│   │   ├── CommentForm.tsx                # Form for adding new comments or replies, with validation
-│   │   ├── ConvexBox.tsx                  # Convex integration notice and dismissible notification
-│   │   ├── Footer.tsx                     # Application footer with links and about modal
-│   │   ├── Layout.tsx                     # Main application layout, header, navigation, view mode controls
-│   │   ├── SearchResults.tsx              # Displays search results, filtering, and empty state handling
-│   │   ├── StoryDetail.tsx                # Displays details of a single story, handles rating, comments, and metadata
-│   │   ├── StoryForm.tsx                  # Form for submitting new stories, handles file upload and validation
-│   │   └── StoryList.tsx                  # Displays a list or grid of stories, handles pagination, sorting, and filtering
-│   ├── convex/            # Convex backend functions
-│   │   ├── schema.ts      # Database schema
-│   │   └── _generated/    # Generated types
-│   ├── types/             # TypeScript type definitions
-│   ├── App.tsx           # Main application component
-│   ├── index.css         # Global styles
-│   └── main.tsx          # Application entry point
-├── public/               # Static assets
-├── files.md              # Overview of codebase structure
-├── changelog.md          # Developer-friendly changelog of new features added
-└── config files         # Various configuration files
+vibeapps/
+├── convex/ # Convex backend functions, schema, and configuration
+│   ├── _generated/ # Auto-generated Convex files
+│   ├── schema.ts # Database schema definition
+│   ├── http.ts # (Optional) HTTP action definitions
+│   ├── crons.ts # (Optional) Cron job definitions
+│   └── ... (other .ts files for queries, mutations, actions)
+├── public/ # Static assets (favicon, images, etc.)
+├── src/ # React frontend application code
+│   ├── components/
+│   │   ├── admin/ # Admin dashboard components
+│   │   │   ├── AdminDashboard.tsx
+│   │   │   ├── ContentModeration.tsx
+│   │   │   ├── FormBuilder.tsx
+│   │   │   ├── FormResults.tsx
+│   │   │   ├── Forms.tsx
+│   │   │   ├── Settings.tsx
+│   │   │   ├── TagManagement.tsx
+│   │   │   ├── UserModeration.tsx
+│   │   │   ├── ReportManagement.tsx
+│   │   │   ├── NumbersView.tsx
+│   │   │   └── ConvexBoxSettingsForm.tsx
+│   │   ├── ui/ # General UI components (buttons, inputs, etc.)
+│   │   ├── Layout.tsx
+│   │   ├── StoryList.tsx
+│   │   ├── StoryDetail.tsx
+│   │   ├── StoryForm.tsx
+│   │   ├── Comment.tsx
+│   │   ├── CommentForm.tsx
+│   │   ├── SearchResults.tsx
+│   │   ├── Footer.tsx
+│   │   ├── ConvexBox.tsx
+│   │   └── UserSyncer.tsx
+│   ├── lib/ # Utility functions and helpers (utils.ts, constants.ts)
+│   ├── pages/ # Top-level page components
+│   │   ├── HomePage.tsx
+│   │   ├── SubmitPage.tsx
+│   │   ├── StoryPage.tsx
+│   │   ├── SearchPage.tsx
+│   │   ├── SignInPage.tsx
+│   │   ├── SignUpPage.tsx
+│   │   ├── UserProfilePage.tsx
+│   │   ├── AdminPage.tsx
+│   │   ├── SetUsernamePage.tsx
+│   │   ├── NavTestPage.tsx
+│   │   └── NotFoundPage.tsx
+│   ├── types/ # TypeScript type definitions
+│   │   └── index.ts
+│   ├── App.tsx # Main application component
+│   ├── main.tsx # React application entry point
+│   └── index.css # Global styles and Tailwind CSS setup
+├── .DS_Store # macOS specific (usually in .gitignore)
+├── .env.local # Local environment variables (in .gitignore)
+├── .gitignore
+├── bun.lockb # Bun lockfile
+├── changelog.MD
+├── clerk-admin-fix.MD
+├── components.json # shadcn/ui configuration
+├── eslint.config.js
+├── files.MD # Detailed codebase file overview (this file)
+├── following-plan.MD
+├── index.html # Main HTML entry point for Vite
+├── llms.txt
+├── package-lock.json # NPM lockfile
+├── package.json # Project dependencies and scripts
+├── postcss.config.js
+├── README.md # This file
+├── tailwind.config.js
+├── TASK.MD
+├── tsconfig.app.json
+├── tsconfig.json
+├── tsconfig.node.json
+└── vite.config.ts
 ```
 
 ## Understanding Convex

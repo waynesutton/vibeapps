@@ -12,16 +12,16 @@ Brief description of the feature and its purpose.
 - [x] update clerk admin role permissions in for mod view
 - [x] create 404 page
 - [x] remove state for profile and admin page to remove sidebar
+- [x] add tag bar to header like https://www.ycombinator.com/launches
 
 ## In Progress Tasks
 
-- [ ] add tag bar to header like https://www.ycombinator.com/launches
 - [ ] add follow profile features
-- [ ] setup resend for emails - tbd
 - [ ] Setup hosting on Vercel
 - [ ] Setup domain name on Vercel
 - [ ] setup clerk production
 - [ ] Ask vibe coders for feedback and submissions
+- [ ] setup resend for emails - after dominan setup with https://demo.react.email/preview/reset-password/dropbox-reset-password
 - [ ] Share with team and launch
 
 ## Future Tasks

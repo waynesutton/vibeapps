@@ -83,6 +83,8 @@ export default defineSchema({
     isHidden: v.optional(v.boolean()),
     backgroundColor: v.optional(v.string()),
     textColor: v.optional(v.string()),
+    emoji: v.optional(v.string()),
+    iconUrl: v.optional(v.string()),
   })
     .index("by_name", ["name"])
     .index("by_slug", ["slug"]),
