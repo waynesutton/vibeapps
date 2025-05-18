@@ -158,16 +158,20 @@ export default function UserProfilePage() {
     }
   }, [isEditing, profileData, username]);
 
-  if (username === "user-settings") {
-    const searchParams = new URLSearchParams(location.search);
-    const tab = searchParams.get("tab");
-    let clerkProfilePath = "/account";
-    if (tab === "password") clerkProfilePath = "/account/security";
-    else if (tab === "email") clerkProfilePath = "/account/email-addresses";
-    else if (tab === "connections") clerkProfilePath = "/account/connected-accounts";
+  // Handle /user-settings route for Clerk's UserProfile component
+  if (username && username.startsWith("user-settings")) {
+    // Modified condition
+    // Removed searchParams and clerkProfilePath logic for selecting sub-sections
+    // The UserProfile component with routing="path" will handle sub-paths like /user-settings/security
     return (
-      <div className="max-w-4xl mx-auto p-4 sm:p-6 bg-white rounded-lg shadow min-h-screen">
-        <UserProfile path={clerkProfilePath} routing="path" />
+      <div className="max-w-5xl mx-auto p-4 sm:p-6 bg-white rounded-lg shadow min-h-screen">
+        <button
+          onClick={() => navigate(-1)}
+          className="text-sm text-[#545454] hover:text-[#525252] inline-block mb-6 bg-transparent border-none cursor-pointer p-0">
+          ← Back to previous page
+        </button>{" "}
+        {/* Set path to the base path where UserProfile is mounted */}
+        <UserProfile path="/user-settings" routing="path" />
       </div>
     );
   }
@@ -476,7 +480,7 @@ export default function UserProfilePage() {
               <img
                 src={currentImageUrl}
                 alt={`${profileUser.name || "User"}'s profile`}
-                className="w-24 h-24 rounded-full object-cover border-4 border-gray-300"
+                className="w-24  rounded-full object-cover border-2 border-gray-300"
               />
             ) : (
               <ProfileImagePlaceholder name={profileUser.name} size="w-24 h-24" />

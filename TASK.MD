@@ -14,19 +14,21 @@ Brief description of the feature and its purpose.
 
 ## In Progress Tasks
 
-- [ ] remove state for profile and admin page to remove sidebar
+- [x] remove state for profile and admin page to remove sidebar
+- [ ] add tag bar to header
 - [ ] create 404 page
+- [ ] add follow profile features
 - [ ] setup resend for emails - tbd
 - [ ] Setup hosting on Vercel
 - [ ] Setup domain name on Vercel
+- [ ] setup clerk production
 - [ ] Ask vibe coders for feedback and submissions
 - [ ] Share with team and launch
 
 ## Future Tasks
 
 - [ ] update category links in vibe view sidebar
-- [ ] add follow profile features
-- [ ] add pinned post to sidebare for storylist.tsx loytout.tsx line 283
+- [ ] add pinned post to sidebar for storylist.tsx layout.tsx line 283
 - [ ] add show 3 related products by tags below comments
 
 ## Implementation Plan

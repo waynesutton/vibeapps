@@ -71,6 +71,13 @@
   }
 }
 
+.cl-cardBox,
+.cl-internal-17dpwu0 {
+  background-color: #f2f4f7;
+  box-shadow: none;
+  border: none;
+}
+
 .title-font {
   font-family: "Eudoxus Sans", system-ui, sans-serif;
   font-weight: 700;

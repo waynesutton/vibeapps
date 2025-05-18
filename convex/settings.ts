@@ -78,6 +78,7 @@ export const update = mutation({
     ),
     // Add other updatable settings here
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     await requireAdminRole(ctx);
     const settings = await ctx.db.query("settings").first();
