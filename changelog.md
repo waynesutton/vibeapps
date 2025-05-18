@@ -14,3 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Detailed file documentation in `files.md` for all components, including admin dashboard and utility files.
 - Expanded admin dashboard components: `AdminDashboard.tsx`, `ContentModeration.tsx`, `FormBuilder.tsx`, `FormResults.tsx`, `Forms.tsx`, `Settings.tsx`, `TagManagement.tsx`.
 - Improved descriptions for all frontend and backend files.
+- Created a new blank page at `/navtest` for testing navigation components. This page includes the standard header and footer with an empty main content area.
+
+### Changed
+
+## [Unreleased] - YYYY-MM-DD

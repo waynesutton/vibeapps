@@ -10,6 +10,7 @@ import {
   Flag,
   Bookmark,
   BookmarkCheck,
+  Link2,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useQuery, useMutation } from "convex/react"; // Import Convex hooks
@@ -388,7 +389,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
       </div>
 
       {/* Project Links & Tags Section */}
-      {(story.linkedinUrl ||
+      {(story.url ||
+        story.linkedinUrl ||
         story.twitterUrl ||
         story.githubUrl ||
         story.chefShowUrl ||
@@ -397,6 +399,19 @@ export function StoryDetail({ story }: StoryDetailProps) {
         <div className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC]">
           <h2 className="text-lg font-medium text-[#525252] mb-4">Project Links & Tags</h2>
           <div className="space-y-3">
+            {story.url && (
+              <div className="flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                <a
+                  href={story.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                  title={story.url}>
+                  App Website
+                </a>
+              </div>
+            )}
             {story.githubUrl && (
               <div className="flex items-center gap-2">
                 <Github className="w-4 h-4 text-[#545454] flex-shrink-0" />
@@ -410,6 +425,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 </a>
               </div>
             )}
+
             {story.linkedinUrl && (
               <div className="flex items-center gap-2">
                 <Linkedin className="w-4 h-4 text-[#545454] flex-shrink-0" />
@@ -458,7 +474,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   rel="noopener noreferrer"
                   className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
                   title={story.chefShowUrl}>
-                  Chef.show Project
+                  Convex chef.show Project
                 </a>
               </div>
             )}

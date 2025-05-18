@@ -33,7 +33,7 @@ import "@fontsource/inter/400.css";
 import "@fontsource/inter/500.css";
 
 // Placeholder for loading and error states
-const Loading = () => <div className="text-center p-8">Loading profile...</div>;
+const Loading = () => <div className="text-center p-8"> </div>;
 const ErrorDisplay = ({ message }: { message: string }) => (
   <div className="text-center p-8 text-red-600">Error: {message}</div>
 );

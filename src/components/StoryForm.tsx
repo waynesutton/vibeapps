@@ -272,7 +272,7 @@ export function StoryForm() {
 
           <div>
             <label htmlFor="chefShowUrl" className="block text-sm font-medium text-[#525252] mb-1">
-              chef.show project link (Optional)
+              Convexchef.show project link (Optional)
             </label>
             <input
               type="url"

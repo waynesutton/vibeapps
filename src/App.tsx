@@ -21,6 +21,7 @@ import SignOutPage from "./pages/SignOutPage";
 import { ProtectedLayout } from "./components/ProtectedLayout";
 import UserProfilePage from "./pages/UserProfilePage";
 import SetUsernamePage from "./pages/SetUsernamePage";
+import NavTestPage from "./pages/NavTestPage";
 
 function HomePage() {
   const { viewMode, selectedTagId, sortPeriod } = useLayoutContext();
@@ -121,6 +122,7 @@ function App() {
           <Route path="/results/:slug" element={<PublicResultsViewer />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/:username" element={<UserProfilePage />} />
+          <Route path="/navtest" element={<NavTestPage />} />
         </Route>
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />

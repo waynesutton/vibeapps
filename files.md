@@ -45,9 +45,10 @@
     - `SearchPage.tsx`: Renders `SearchResults`.
     - `SignInPage.tsx`: Clerk sign-in page.
     - `SignUpPage.tsx`: Clerk sign-up page.
-    - `UserProfilePage.tsx`: Page for users to view/edit their profile.
+    - `UserProfilePage.tsx`: Displays a user's public profile.
     - `AdminPage.tsx`: Renders the `AdminDashboard`.
-    - `SetUsernamePage.tsx`: Page for new users to set their username after signing up.
+    - `SetUsernamePage.tsx`: Allows new users to set their initial username.
+    - `NavTestPage.tsx`: A blank page with header/footer for testing navigation components.
   - `hooks/`: Custom React hooks.
   - `lib/`: Utility functions and helper modules.
     - `utils.ts`: General utility functions.
@@ -306,8 +307,9 @@
   - `StoryPage.tsx`: Displays a single story using `StoryDetail`.
   - `SearchPage.tsx`: Shows search results using `SearchResults`.
   - `SignInPage.tsx`, `SignUpPage.tsx`: Clerk authentication pages.
-  - `UserProfilePage.tsx`: Allows users to view and potentially edit their profile information.
-  - `SetUsernamePage.tsx`: A page for new users, after initial sign-up with Clerk, to choose a unique username within the application, which is then stored in the Convex `users` table.
+  - `UserProfilePage.tsx`: Displays a user's public profile.
+  - `SetUsernamePage.tsx`: Allows new users to set their initial username.
+  - `NavTestPage.tsx`: A blank page with header/footer for testing navigation components.
   - `AdminPage.tsx`: The entry point for the admin section, usually rendering `AdminDashboard` and handling admin-specific routing or layout.
 
 ### Type Definitions (`src/types/`)
