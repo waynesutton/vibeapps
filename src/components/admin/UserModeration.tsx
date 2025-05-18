@@ -11,7 +11,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Ban, CheckCircle, Trash2, AlertTriangle } from "lucide-react";
+import {
+  Search,
+  Ban,
+  CheckCircle,
+  Trash2,
+  AlertTriangle,
+  PauseCircle,
+  PlayCircle,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { debounce } from "lodash-es";
 import { toast } from "sonner";
@@ -25,18 +33,19 @@ type AdminUserView = {
   username?: string;
   imageUrl?: string;
   isBanned: boolean;
+  isPaused: boolean;
 };
 
-type BanFilter = "all" | "banned" | "not_banned";
+type StatusFilter = "all" | "banned" | "not_banned" | "paused" | "not_paused";
 
 export function UserModeration() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [banFilter, setBanFilter] = useState<BanFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [confirmingAction, setConfirmingAction] = useState<{
     userId: Id<"users">;
     userName: string;
-    action: "ban" | "unban" | "delete";
+    action: "ban" | "unban" | "delete" | "pause" | "unpause";
   } | null>(null);
 
   const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
@@ -55,19 +64,24 @@ export function UserModeration() {
   };
 
   const queryArgs = useMemo(() => {
-    const args: any = {}; // paginationOpts will be added by usePaginatedQuery
+    const args: any = {};
     if (debouncedSearchTerm) {
       // The backend listAllUsersAdmin currently doesn't implement search.
       // This will be a client-side filter for now, or backend needs update.
       // args.searchQuery = debouncedSearchTerm;
     }
-    if (banFilter === "banned") {
+    if (statusFilter === "banned") {
       args.filterBanned = true;
-    } else if (banFilter === "not_banned") {
+    } else if (statusFilter === "not_banned") {
       args.filterBanned = false;
     }
+    if (statusFilter === "paused") {
+      args.filterPaused = true;
+    } else if (statusFilter === "not_paused") {
+      args.filterPaused = false;
+    }
     return args;
-  }, [debouncedSearchTerm, banFilter]);
+  }, [debouncedSearchTerm, statusFilter]);
 
   const { results, status, loadMore, isLoading } = usePaginatedQuery(
     api.users.listAllUsersAdmin,
@@ -78,6 +92,8 @@ export function UserModeration() {
   const banUserMutation = useMutation(api.users.banUserByAdmin);
   const unbanUserMutation = useMutation(api.users.unbanUserByAdmin);
   const deleteUserMutation = useMutation(api.users.deleteUserByAdmin);
+  const pauseUserMutation = useMutation(api.users.pauseUserByAdmin);
+  const unpauseUserMutation = useMutation(api.users.unpauseUserByAdmin);
 
   // Client-side search filtering because backend search is not yet implemented for users.ts
   const filteredResults = useMemo(() => {
@@ -106,6 +122,12 @@ export function UserModeration() {
       } else if (action === "delete") {
         await deleteUserMutation({ userId });
         toast.success(`User "${userName}" has been deleted.`);
+      } else if (action === "pause") {
+        await pauseUserMutation({ userId });
+        toast.success(`User "${userName}" has been paused.`);
+      } else if (action === "unpause") {
+        await unpauseUserMutation({ userId });
+        toast.success(`User "${userName}" has been unpaused.`);
       }
     } catch (error: any) {
       console.error(`Failed to ${action} user:`, error);
@@ -117,7 +139,7 @@ export function UserModeration() {
   const openConfirmModal = (
     userId: Id<"users">,
     userName: string,
-    action: "ban" | "unban" | "delete"
+    action: "ban" | "unban" | "delete" | "pause" | "unpause"
   ) => {
     setConfirmingAction({ userId, userName, action });
   };
@@ -151,14 +173,16 @@ export function UserModeration() {
               className="pl-10"
             />
           </div>
-          <Select value={banFilter} onValueChange={(v) => setBanFilter(v as BanFilter)}>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
             <SelectTrigger>
-              <SelectValue placeholder="Filter by ban status..." />
+              <SelectValue placeholder="Filter by status..." />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Users</SelectItem>
               <SelectItem value="banned">Banned Users</SelectItem>
               <SelectItem value="not_banned">Not Banned Users</SelectItem>
+              <SelectItem value="paused">Paused Users</SelectItem>
+              <SelectItem value="not_paused">Not Paused Users</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -183,57 +207,90 @@ export function UserModeration() {
                 </tr>
               </thead>
               <tbody>
-                {filteredResults.map((user: AdminUserView) => (
-                  <tr key={user._id} className="hover:bg-gray-50">
-                    <td className={tdClass}>
-                      <div className="flex items-center gap-2">
-                        {user.imageUrl && (
-                          <img
-                            src={user.imageUrl}
-                            alt={user.name}
-                            className="w-8 h-8 rounded-full"
-                          />
+                {filteredResults.map((user: AdminUserView) => {
+                  let userStatusDisplay: string;
+                  let statusClass: string;
+                  if (user.isBanned) {
+                    userStatusDisplay = "Banned";
+                    statusClass = "bg-red-100 text-red-800";
+                  } else if (user.isPaused) {
+                    userStatusDisplay = "Paused";
+                    statusClass = "bg-yellow-100 text-yellow-800";
+                  } else {
+                    userStatusDisplay = "Active";
+                    statusClass = "bg-green-100 text-green-800";
+                  }
+
+                  return (
+                    <tr key={user._id} className="hover:bg-gray-50">
+                      <td className={tdClass}>
+                        <div className="flex items-center gap-2">
+                          {user.imageUrl && (
+                            <img
+                              src={user.imageUrl}
+                              alt={user.name}
+                              className="w-8 h-8 rounded-full"
+                            />
+                          )}
+                          <span>{user.name}</span>
+                        </div>
+                      </td>
+                      <td className={tdClass}>{user.email || "N/A"}</td>
+                      <td className={tdClass}>{user.username || "N/A"}</td>
+                      <td className={tdClass}>
+                        {formatDistanceToNow(user._creationTime, { addSuffix: true })}
+                      </td>
+                      <td className={tdClass}>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusClass}`}>
+                          {userStatusDisplay}
+                        </span>
+                      </td>
+                      <td className={`${tdClass} text-right space-x-1 space-y-1 sm:space-y-0`}>
+                        {!user.isBanned && user.isPaused && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-green-600 border-green-300 hover:bg-green-50"
+                            onClick={() => openConfirmModal(user._id, user.name, "unpause")}>
+                            <PlayCircle className="w-4 h-4 mr-1" /> Unpause
+                          </Button>
                         )}
-                        <span>{user.name}</span>
-                      </div>
-                    </td>
-                    <td className={tdClass}>{user.email || "N/A"}</td>
-                    <td className={tdClass}>{user.username || "N/A"}</td>
-                    <td className={tdClass}>
-                      {formatDistanceToNow(user._creationTime, { addSuffix: true })}
-                    </td>
-                    <td className={tdClass}>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${user.isBanned ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}`}>
-                        {user.isBanned ? "Banned" : "Active"}
-                      </span>
-                    </td>
-                    <td className={`${tdClass} text-right space-x-2`}>
-                      {user.isBanned ? (
+                        {!user.isBanned && !user.isPaused && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-yellow-600 border-yellow-300 hover:bg-yellow-50"
+                            onClick={() => openConfirmModal(user._id, user.name, "pause")}>
+                            <PauseCircle className="w-4 h-4 mr-1" /> Pause
+                          </Button>
+                        )}
+                        {user.isBanned ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openConfirmModal(user._id, user.name, "unban")}>
+                            <CheckCircle className="w-4 h-4 mr-1" /> Unban
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                            onClick={() => openConfirmModal(user._id, user.name, "ban")}>
+                            <Ban className="w-4 h-4 mr-1" /> Ban
+                          </Button>
+                        )}
                         <Button
-                          variant="outline"
+                          variant="destructive_outline"
                           size="sm"
-                          onClick={() => openConfirmModal(user._id, user.name, "unban")}>
-                          <CheckCircle className="w-4 h-4 mr-1" /> Unban
+                          onClick={() => openConfirmModal(user._id, user.name, "delete")}>
+                          <Trash2 className="w-4 h-4 mr-1" /> Delete
                         </Button>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-orange-600 border-orange-300 hover:bg-orange-50"
-                          onClick={() => openConfirmModal(user._id, user.name, "ban")}>
-                          <Ban className="w-4 h-4 mr-1" /> Ban
-                        </Button>
-                      )}
-                      <Button
-                        variant="destructive_outline"
-                        size="sm"
-                        onClick={() => openConfirmModal(user._id, user.name, "delete")}>
-                        <Trash2 className="w-4 h-4 mr-1" /> Delete
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -253,7 +310,7 @@ export function UserModeration() {
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
             <div className="flex items-center mb-4">
               <AlertTriangle
-                className={`w-6 h-6 mr-3 ${confirmingAction.action === "delete" ? "text-red-500" : "text-orange-500"}`}
+                className={`w-6 h-6 mr-3 ${confirmingAction.action === "delete" ? "text-red-500" : confirmingAction.action === "ban" ? "text-orange-500" : "text-yellow-500"}`}
               />
               <h3 className="text-lg font-semibold text-gray-800">
                 Confirm{" "}
@@ -265,19 +322,31 @@ export function UserModeration() {
               <strong>{confirmingAction.userName}</strong>"?
               {confirmingAction.action === "delete" && " This action cannot be undone."}
               {confirmingAction.action === "ban" &&
-                " This will prevent them from posting, voting, commenting, etc."}
+                " This will prevent them from all interactions with the platform."}
+              {confirmingAction.action === "pause" &&
+                " This will allow them to log in and edit their profile, but not comment, vote, rate, bookmark, or submit new content."}
             </p>
             <div className="flex justify-end gap-3">
               <Button variant="ghost" onClick={() => setConfirmingAction(null)}>
                 Cancel
               </Button>
               <Button
-                variant={confirmingAction.action === "delete" ? "destructive" : "default"}
+                variant={
+                  confirmingAction.action === "delete"
+                    ? "destructive"
+                    : confirmingAction.action === "ban"
+                      ? "default"
+                      : "default"
+                }
                 onClick={handleAction}
                 className={
                   confirmingAction.action === "ban"
                     ? "bg-orange-500 hover:bg-orange-600 text-white"
-                    : ""
+                    : confirmingAction.action === "pause"
+                      ? "bg-yellow-500 hover:bg-yellow-600 text-white"
+                      : confirmingAction.action === "unpause"
+                        ? "bg-green-500 hover:bg-green-600 text-white"
+                        : ""
                 }>
                 Confirm{" "}
                 {confirmingAction.action.charAt(0).toUpperCase() + confirmingAction.action.slice(1)}

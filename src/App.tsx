@@ -17,6 +17,7 @@ import { Id } from "../convex/_generated/dataModel";
 import { Story } from "./types";
 import SignInPage from "./pages/SignInPage";
 import SignUpPage from "./pages/SignUpPage";
+import SignOutPage from "./pages/SignOutPage";
 import { ProtectedLayout } from "./components/ProtectedLayout";
 import UserProfilePage from "./pages/UserProfilePage";
 import SetUsernamePage from "./pages/SetUsernamePage";
@@ -123,6 +124,7 @@ function App() {
         </Route>
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />
+        <Route path="/signout" element={<SignOutPage />} />
       </Routes>
     </BrowserRouter>
   );

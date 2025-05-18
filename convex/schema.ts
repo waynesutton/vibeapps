@@ -15,6 +15,7 @@ export default defineSchema({
     bluesky: v.optional(v.string()), // Bluesky profile URL
     linkedin: v.optional(v.string()), // LinkedIn profile URL
     isBanned: v.optional(v.boolean()), // New field for banning users
+    isPaused: v.optional(v.boolean()), // New field for pausing users
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_username", ["username"]), // Index for fetching by username

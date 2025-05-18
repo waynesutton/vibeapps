@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useUser, useClerk } from "@clerk/clerk-react";
+import { useUser, useClerk, UserProfile } from "@clerk/clerk-react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   ThumbsUp,
   MessageCircle,
@@ -21,12 +21,14 @@ import {
   Mail,
   UserPlus,
   AlertTriangle,
+  Settings,
   Bookmark,
   BookmarkCheck,
   BookmarkMinus,
   BookKey,
 } from "lucide-react";
 import type { Story } from "../types"; // Import the Story type
+import AlertDialog from "../components/ui/AlertDialog"; // Corrected path
 import "@fontsource/inter/400.css";
 import "@fontsource/inter/500.css";
 
@@ -75,13 +77,14 @@ type BookmarkedStoryItem = Doc<"bookmarks"> & {
 
 export default function UserProfilePage() {
   const { username } = useParams<{ username: string }>();
+  const location = useLocation(); // Get location object for query params
   const { user: authUser, isLoaded: isClerkLoaded } = useUser();
   const { signOut } = useClerk();
   const navigate = useNavigate();
 
   const profileData = useQuery(
     api.users.getUserProfileByUsername,
-    username ? { username } : "skip"
+    username && username !== "user-settings" ? { username } : "skip"
   );
 
   const unvoteStoryMutation = useMutation(api.stories.voteStory);
@@ -90,7 +93,6 @@ export default function UserProfilePage() {
   const deleteOwnRatingMutation = useMutation(api.storyRatings.deleteOwnRating);
   const addOrRemoveBookmarkMutation = useMutation(api.bookmarks.addOrRemoveBookmark);
 
-  // New mutations and actions for profile editing
   const generateUploadUrl = useAction(api.users.generateUploadUrl);
   const setUserProfileImage = useMutation(api.users.setUserProfileImage);
   const updateUsernameMutation = useMutation(api.users.updateUsername);
@@ -98,11 +100,11 @@ export default function UserProfilePage() {
 
   const userBookmarksCount = useQuery(
     api.bookmarks.countUserBookmarks,
-    isClerkLoaded && authUser ? {} : "skip"
+    isClerkLoaded && authUser && username !== "user-settings" ? {} : "skip"
   );
   const userBookmarksWithDetails = useQuery(
     api.bookmarks.getUserBookmarksWithStoryDetails,
-    isClerkLoaded && authUser ? {} : "skip"
+    isClerkLoaded && authUser && username !== "user-settings" ? {} : "skip"
   );
 
   const [isEditing, setIsEditing] = useState(false);
@@ -118,13 +120,30 @@ export default function UserProfilePage() {
   const [newLinkedin, setNewLinkedin] = useState("");
   const [activeTab, setActiveTab] = useState<string>("votes");
   const [isRedirecting, setIsRedirecting] = useState(false);
-  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // State for confirmation dialogs
+  const [dialogState, setDialogState] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: React.ReactNode;
+    onConfirm: () => void;
+    confirmText?: string;
+    confirmVariant?: "default" | "destructive";
+    itemContext?: any; // For storing IDs or other context
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
+    onConfirm: () => {},
+  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Effect to initialize edit form when profileData loads or editing starts
   useEffect(() => {
+    if (username === "user-settings") {
+      return;
+    }
     if (isEditing && profileData?.user) {
       setNewUsername(profileData.user.username || "");
       setNewProfileImagePreview(profileData.user.imageUrl || null);
@@ -134,38 +153,33 @@ export default function UserProfilePage() {
       setNewBluesky(profileData.user.bluesky || "");
       setNewLinkedin(profileData.user.linkedin || "");
     } else if (!isEditing) {
-      // Reset form state when exiting edit mode
       setNewProfileImageFile(null);
-      // setNewProfileImagePreview(null); // Keep preview if not saved? Or reset?
       setEditError(null);
     }
-  }, [isEditing, profileData]);
+  }, [isEditing, profileData, username]);
 
-  // Initial check for username, which is crucial for the query
-  if (isRedirecting) {
-    return <Loading />;
-  }
-  if (!username) {
-    // If username is not available from params, show error or redirect.
-    // This check should ideally come very early.
-    return <ErrorDisplay message="Username not found in URL." />;
-  }
-
-  // Query is active because username is present.
-  // profileData can be: undefined (loading), null (user not found), or {data}
-  if (profileData === undefined) {
-    return <Loading />; // Query is loading
+  if (username === "user-settings") {
+    const searchParams = new URLSearchParams(location.search);
+    const tab = searchParams.get("tab");
+    let clerkProfilePath = "/account";
+    if (tab === "password") clerkProfilePath = "/account/security";
+    else if (tab === "email") clerkProfilePath = "/account/email-addresses";
+    else if (tab === "connections") clerkProfilePath = "/account/connected-accounts";
+    return (
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 bg-white rounded-lg shadow min-h-screen">
+        <UserProfile path={clerkProfilePath} routing="path" />
+      </div>
+    );
   }
 
+  if (isRedirecting) return <Loading />;
+  if (!username) return <ErrorDisplay message="Username not found in URL." />;
+  if (profileData === undefined) return <Loading />;
   if (profileData === null) {
-    // Query finished, user not found
-    // If we are redirecting, don't show error
     if (isRedirecting) return <Loading />;
     return <ErrorDisplay message={`Profile for user "${username}" not found.`} />;
   }
 
-  // If we reach here, profileData is guaranteed to be the actual data object
-  // because username is valid, profileData is not undefined, and profileData is not null.
   const { user: profileUser, stories, votes, comments, ratings } = profileData;
   const isOwnProfile = !!authUser && authUser.username === profileUser?.username;
 
@@ -178,7 +192,7 @@ export default function UserProfilePage() {
       setNewTwitter(profileUser.twitter || "");
       setNewBluesky(profileUser.bluesky || "");
       setNewLinkedin(profileUser.linkedin || "");
-      setNewProfileImageFile(null); // Clear previously selected file if any
+      setNewProfileImageFile(null);
       setEditError(null);
     }
     setIsEditing(!isEditing);
@@ -189,9 +203,7 @@ export default function UserProfilePage() {
     if (file) {
       setNewProfileImageFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewProfileImagePreview(reader.result as string);
-      };
+      reader.onloadend = () => setNewProfileImagePreview(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
@@ -201,16 +213,11 @@ export default function UserProfilePage() {
     setEditError(null);
     setIsSaving(true);
     let usernameChanged = false;
-    let imageChanged = false;
-    let detailsChanged = false;
     try {
       if (newUsername.trim() !== (profileUser.username || "").trim() && newUsername.trim() !== "") {
         await updateUsernameMutation({ newUsername: newUsername.trim() });
         usernameChanged = true;
-        if (authUser && authUser.update) {
-          await authUser.update({ username: newUsername.trim() });
-        }
-        // Immediately redirect to new profile URL and prevent further code from running
+        if (authUser && authUser.update) await authUser.update({ username: newUsername.trim() });
         setIsRedirecting(true);
         navigate(`/${newUsername.trim()}`, { replace: true });
         return;
@@ -229,7 +236,6 @@ export default function UserProfilePage() {
           bluesky: newBluesky,
           linkedin: newLinkedin,
         });
-        detailsChanged = true;
       }
       if (newProfileImageFile) {
         const uploadUrl = await generateUploadUrl();
@@ -239,37 +245,24 @@ export default function UserProfilePage() {
           body: newProfileImageFile,
         });
         const { storageId } = await result.json();
-        if (!storageId) {
-          throw new Error("Failed to get storageId from image upload.");
-        }
+        if (!storageId) throw new Error("Failed to get storageId from image upload.");
         await setUserProfileImage({ storageId });
-        imageChanged = true;
       }
       setIsEditing(false);
-      setNewProfileImageFile(null); // Clear file input
-      // Data should refetch automatically due to Convex reactivity or an explicit refetch can be added.
-      // If username changed, navigate to new profile URL
+      setNewProfileImageFile(null);
       if (usernameChanged && newUsername.trim() !== username) {
         navigate(`/${newUsername.trim()}`, { replace: true });
       }
-      // TODO: Add a success notification/toast
-      // alert("Profile updated successfully!"); // Removed as per request
     } catch (error: any) {
       console.error("Failed to save profile:", error);
       setEditError(error.data?.message || error.message || "Failed to save profile.");
-      // TODO: Add an error notification/toast
     } finally {
       setIsSaving(false);
     }
   };
 
-  const triggerFileEdit = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
+  const triggerFileEdit = () => fileInputRef.current?.click();
 
-  // Fallback for profile image if none is set
   const ProfileImagePlaceholder = ({
     name,
     size = "w-24 h-24",
@@ -285,116 +278,172 @@ export default function UserProfilePage() {
 
   const currentImageUrl = newProfileImagePreview || profileUser.imageUrl;
 
-  // --- Handler functions from original component ---
-  const handleUnvote = async (storyId: Id<"stories">) => {
-    try {
-      await unvoteStoryMutation({ storyId });
-      alert("Vote removed successfully!");
-    } catch (error) {
-      console.error("Failed to remove vote:", error);
-      alert("Failed to remove vote. See console for details.");
-    }
+  // --- Action Handlers with Confirmation ---
+  const confirmAndExecute = (
+    actionFn: () => Promise<void>,
+    successMsg: string,
+    errorMsg: string,
+    itemContext?: any
+  ) => {
+    setDialogState({ isOpen: false, title: "", description: "", onConfirm: () => {}, itemContext });
+    actionFn()
+      .then(() => {
+        // Success: Optionally show a toast/notification here later
+        // For now, errors are handled by setActionError within the specific confirm functions
+      })
+      .catch((error) => {
+        console.error(errorMsg, error);
+        setActionError(
+          errorMsg +
+            (error.data?.message || error.message
+              ? `: ${error.data?.message || error.message}`
+              : ".")
+        );
+      });
   };
 
-  const handleDeleteStory = async (storyId: Id<"stories">) => {
-    if (window.confirm("Are you sure you want to delete this submission?")) {
-      try {
-        await deleteOwnStoryMutation({ storyId });
-        alert("Submission deleted successfully!");
-      } catch (error) {
-        console.error("Failed to delete submission:", error);
-        alert("Failed to delete submission. See console for details.");
-      }
-    }
+  const handleUnvote = (storyId: Id<"stories">) => {
+    setDialogState({
+      isOpen: true,
+      title: "Confirm Unvote",
+      description: "Are you sure you want to remove your vote from this story?",
+      confirmText: "Unvote",
+      confirmVariant: "destructive",
+      onConfirm: () =>
+        confirmAndExecute(
+          async () => {
+            await unvoteStoryMutation({ storyId });
+          },
+          "Vote removed.",
+          "Failed to remove vote."
+        ),
+    });
   };
 
-  const handleDeleteComment = async (commentId: Id<"comments">) => {
-    if (window.confirm("Are you sure you want to delete this comment?")) {
-      try {
-        await deleteOwnCommentMutation({ commentId });
-        alert("Comment deleted successfully!");
-      } catch (error) {
-        console.error("Failed to delete comment:", error);
-        alert("Failed to delete comment. See console for details.");
-      }
-    }
+  const handleDeleteStory = (storyId: Id<"stories">) => {
+    setDialogState({
+      isOpen: true,
+      title: "Delete Submission?",
+      description:
+        "Are you sure you want to permanently delete this submission? This action cannot be undone.",
+      confirmText: "Delete Submission",
+      confirmVariant: "destructive",
+      onConfirm: () =>
+        confirmAndExecute(
+          async () => {
+            await deleteOwnStoryMutation({ storyId });
+          },
+          "Submission deleted.",
+          "Failed to delete submission."
+        ),
+    });
   };
 
-  const handleDeleteRating = async (ratingId: Id<"storyRatings">) => {
-    if (window.confirm("Are you sure you want to delete your rating?")) {
-      try {
-        await deleteOwnRatingMutation({ storyRatingId: ratingId });
-        // alert("Rating deleted successfully!"); // Removed as per request
-      } catch (error) {
-        console.error("Failed to delete rating:", error);
-        alert("Failed to delete rating. See console for details.");
-      }
-    }
-  };
-  // --- End of original handler functions ---
-
-  // Add new handler functions for account management
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate("/", { replace: true });
-    } catch (error) {
-      console.error("Failed to sign out:", error);
-      setActionError("Failed to sign out. Please try again.");
-    }
+  const handleDeleteComment = (commentId: Id<"comments">) => {
+    setDialogState({
+      isOpen: true,
+      title: "Delete Comment?",
+      description: "Are you sure you want to permanently delete this comment?",
+      confirmText: "Delete Comment",
+      confirmVariant: "destructive",
+      onConfirm: () =>
+        confirmAndExecute(
+          async () => {
+            await deleteOwnCommentMutation({ commentId });
+          },
+          "Comment deleted.",
+          "Failed to delete comment."
+        ),
+    });
   };
 
-  const handleDeleteAccount = async () => {
-    if (!isConfirmingDelete) {
-      setIsConfirmingDelete(true);
-      return;
-    }
-
-    try {
-      // First delete user data from Convex
-      // TODO: Implement a deleteUserData mutation in Convex to clean up user data
-      // await deleteUserDataMutation();
-
-      // Then delete the Clerk user account
-      if (authUser) {
-        await authUser.delete();
-      }
-
-      // Redirect to home page after successful deletion
-      navigate("/", { replace: true });
-    } catch (error) {
-      console.error("Failed to delete account:", error);
-      setActionError("Failed to delete account. Please try again.");
-    } finally {
-      setIsConfirmingDelete(false);
-    }
+  const handleDeleteRating = (ratingId: Id<"storyRatings">) => {
+    setDialogState({
+      isOpen: true,
+      title: "Delete Rating?",
+      description: "Are you sure you want to delete your rating for this story?",
+      confirmText: "Delete Rating",
+      confirmVariant: "destructive",
+      onConfirm: () =>
+        confirmAndExecute(
+          async () => {
+            await deleteOwnRatingMutation({ storyRatingId: ratingId });
+          },
+          "Rating deleted.",
+          "Failed to delete rating."
+        ),
+    });
   };
 
-  const handleChangePassword = () => {
-    // For password change, we'll open Clerk's User Profile component focused on password
-    if (authUser) {
-      // There are a couple of approaches:
-      // 1. Redirect to a page that shows Clerk's <UserProfile path="account" />
-      navigate("/user-settings?tab=password");
-
-      // 2. Or call the Clerk API directly if we have a custom UI
-      // authUser.update({ password: newPassword })
-    }
+  const handleRemoveBookmark = (storyId: Id<"stories">) => {
+    setDialogState({
+      isOpen: true,
+      title: "Remove Bookmark?",
+      description: "Are you sure you want to remove this story from your bookmarks?",
+      confirmText: "Remove",
+      confirmVariant: "destructive",
+      onConfirm: () =>
+        confirmAndExecute(
+          async () => {
+            await addOrRemoveBookmarkMutation({ storyId });
+          },
+          "Bookmark removed.",
+          "Failed to remove bookmark."
+        ),
+    });
   };
 
-  const handleChangeEmail = () => {
-    // Similar to password, redirect to Clerk's User Profile or custom page
-    navigate("/user-settings?tab=email");
+  const handleSignOut = () => {
+    setDialogState({
+      isOpen: true,
+      title: "Confirm Sign Out",
+      description: "Are you sure you want to sign out of your account?",
+      confirmText: "Sign Out",
+      confirmVariant: "default", // Or destructive if preferred
+      onConfirm: () =>
+        confirmAndExecute(
+          async () => {
+            await signOut();
+            navigate("/", { replace: true });
+          },
+          "Signed out successfully.",
+          "Failed to sign out."
+        ),
+    });
   };
 
-  const handleManageConnections = () => {
-    // Redirect to a page with Clerk's <UserProfile path="account/connections" />
-    navigate("/user-settings?tab=connections");
+  const handleDeleteAccount = () => {
+    setDialogState({
+      isOpen: true,
+      title: "Delete Account?",
+      description: (
+        <>
+          <p className="mb-2">Are you sure you want to permanently delete your account?</p>
+          <p className="font-semibold text-red-600">
+            This action cannot be undone and all your data will be lost.
+          </p>
+        </>
+      ),
+      confirmText: "Delete My Account",
+      confirmVariant: "destructive",
+      onConfirm: () =>
+        confirmAndExecute(
+          async () => {
+            // TODO: Implement a deleteUserData mutation in Convex to clean up user data
+            // await deleteUserDataMutation();
+            if (authUser) {
+              await authUser.delete();
+            }
+            navigate("/", { replace: true });
+          },
+          "Account deleted.",
+          "Failed to delete account."
+        ),
+    });
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6  from-slate-50 to-gray-100 min-h-screen">
-      {/* Profile Header - Product Hunt Inspired */}
+    <div className="max-w-4xl mx-auto p-4 sm:p-6 from-slate-50 to-gray-100 min-h-screen">
       <header
         className="mb-10 p-6 bg-[#ffffff] rounded-lg border border-gray-200"
         style={{ fontFamily: "Inter, sans-serif" }}>
@@ -427,7 +476,7 @@ export default function UserProfilePage() {
               <img
                 src={currentImageUrl}
                 alt={`${profileUser.name || "User"}'s profile`}
-                className="w-24  rounded-full object-cover border-4 border-gray-300"
+                className="w-24 h-24 rounded-full object-cover border-4 border-gray-300"
               />
             ) : (
               <ProfileImagePlaceholder name={profileUser.name} size="w-24 h-24" />
@@ -705,7 +754,7 @@ export default function UserProfilePage() {
         {stories.length === 0 && <p className="text-gray-500 italic">No submissions yet.</p>}
         {stories.length > 0 && (
           <ul className="space-y-4">
-            {stories.map((story: Story) => (
+            {stories.map((story: StoryInProfile) => (
               <li
                 key={story._id}
                 className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow">
@@ -784,7 +833,6 @@ export default function UserProfilePage() {
           <section
             id="tab-section-votes"
             className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
-            {/* Votes content from original section, no title needed here as it's on the tab */}
             {votes.length === 0 && <p className="text-gray-500 italic">No votes yet.</p>}
             {votes.length > 0 && (
               <ul className="space-y-4">
@@ -820,7 +868,6 @@ export default function UserProfilePage() {
           <section
             id="tab-section-ratings"
             className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
-            {/* Ratings content from original section */}
             {ratings.length === 0 && <p className="text-gray-500 italic">No ratings given yet.</p>}
             {ratings.length > 0 && (
               <ul className="space-y-4">
@@ -872,7 +919,6 @@ export default function UserProfilePage() {
           <section
             id="tab-section-comments"
             className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
-            {/* Comments content from original section */}
             {comments.length === 0 && <p className="text-gray-500 italic">No comments yet.</p>}
             {comments.length > 0 && (
               <ul className="space-y-4">
@@ -936,15 +982,7 @@ export default function UserProfilePage() {
                     </div>
                     {isOwnProfile && (
                       <button
-                        onClick={async () => {
-                          try {
-                            await addOrRemoveBookmarkMutation({ storyId: bookmark.storyId });
-                            // Optionally add a success alert or toast
-                          } catch (error) {
-                            console.error("Failed to remove bookmark:", error);
-                            alert("Failed to remove bookmark. Please try again.");
-                          }
-                        }}
+                        onClick={() => handleRemoveBookmark(bookmark.storyId)}
                         className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
                         title="Remove bookmark">
                         <BookmarkMinus className="w-4 h-4" /> Remove
@@ -968,66 +1006,46 @@ export default function UserProfilePage() {
             Manage Profile & Account
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Column 1 */}
+            {/* Column 1: Profile Settings and General Account Management */}
             <div className="space-y-4">
               <div>
                 <h3 className="text-lg font-medium text-[#292929] mb-2">Profile Settings</h3>
                 <button
                   onClick={() => {
-                    if (!isEditing) {
-                      handleEditToggle(); // Activate editing mode if not already active
-                    }
+                    if (!isEditing) handleEditToggle();
                     window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
-                  className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors disabled:opacity-50">
+                  className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors disabled:opacity-50 flex items-center">
                   <Edit3 className="w-4 h-4 inline-block mr-2" /> Edit Profile Details
                 </button>
               </div>
 
               <div>
-                <h3 className="text-lg font-medium text-[#292929] mb-2">Account Security</h3>
-                <button
-                  onClick={handleChangePassword}
-                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors">
-                  <Lock className="w-4 h-4 inline-block mr-2" /> Change Password
-                </button>
-                <button
-                  onClick={handleChangeEmail}
-                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors">
-                  <Mail className="w-4 h-4 inline-block mr-2" /> Change Email Address
-                </button>
+                <h3 className="text-lg font-medium text-[#292929] mb-2">Account Management</h3>
+                <Link
+                  to="/user-settings"
+                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors flex items-center">
+                  <Settings className="w-4 h-4 inline-block mr-2" /> Manage Account Settings
+                  (Password, Email, etc.)
+                </Link>
               </div>
             </div>
 
-            {/* Column 2 */}
+            {/* Column 2: Account Actions (Sign Out, Delete Account) */}
             <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-medium text-[#292929] mb-2">Connected Services</h3>
-                <button
-                  onClick={handleManageConnections}
-                  className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors">
-                  <UserPlus className="w-4 h-4 inline-block mr-2" /> Manage Connected Accounts
-                </button>
-              </div>
               <div>
                 <h3 className="text-lg font-medium text-[#292929] mb-2">Account Actions</h3>
                 <button
-                  onClick={handleSignOut}
-                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors">
+                  onClick={handleSignOut} // Updated to new handler
+                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors flex items-center">
                   <LogOut className="w-4 h-4 inline-block mr-2" /> Sign Out
                 </button>
                 <button
-                  onClick={handleDeleteAccount}
-                  className={`w-full mt-4 px-4 py-2 text-left ${
-                    isConfirmingDelete
-                      ? "bg-red-200 border-red-400"
-                      : "bg-red-50 hover:bg-red-100 border-red-300"
-                  } rounded-md text-sm text-red-700 transition-colors flex items-center justify-between`}>
+                  onClick={handleDeleteAccount} // Updated to new handler
+                  className={`w-full mt-4 px-4 py-2 text-left bg-red-50 hover:bg-red-100 border-red-300 rounded-md text-sm text-red-700 transition-colors flex items-center justify-between`}>
                   <span>
-                    <AlertTriangle className="w-4 h-4 inline-block mr-2" />{" "}
-                    {isConfirmingDelete ? "Confirm Account Deletion" : "Delete Account"}
+                    <AlertTriangle className="w-4 h-4 inline-block mr-2" /> Delete Account
                   </span>
-                  {isConfirmingDelete && <span className="text-xs">Click again to confirm</span>}
                 </button>
               </div>
             </div>
@@ -1042,6 +1060,17 @@ export default function UserProfilePage() {
           </p>
         </section>
       )}
+
+      {/* AlertDialog for confirmations */}
+      <AlertDialog
+        isOpen={dialogState.isOpen}
+        onClose={() => setDialogState({ ...dialogState, isOpen: false })}
+        onConfirm={dialogState.onConfirm}
+        title={dialogState.title}
+        description={dialogState.description}
+        confirmButtonText={dialogState.confirmText}
+        confirmButtonVariant={dialogState.confirmVariant}
+      />
     </div>
   );
 }

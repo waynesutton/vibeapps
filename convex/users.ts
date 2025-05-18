@@ -853,34 +853,31 @@ export const updateProfileDetails = mutation({
  */
 export const listAllUsersAdmin = query({
   args: {
-    paginationOpts: v.optional(paginationOptsValidator), // from convex/server
+    paginationOpts: paginationOptsValidator, // from convex/server
     searchQuery: v.optional(v.string()),
     filterBanned: v.optional(v.boolean()),
+    filterPaused: v.optional(v.boolean()), // New filter for paused status
   },
   handler: async (ctx, args) => {
     await requireAdminRole(ctx);
 
     let query = ctx.db.query("users").order("desc"); // Default order
 
-    // Apply search query if provided
-    // This is a basic text search. For more advanced search, consider search indexes.
-    if (args.searchQuery && args.searchQuery.trim() !== "") {
-      // To search across multiple fields, you'd typically use a search index.
-      // As a simpler alternative here, we might need to fetch and filter in code, or pick one field.
-      // For now, let's assume search by username primarily if no search index.
-      // Or, we can adjust this to be more flexible if a search index like "search_users_admin" exists.
-      // For simplicity, this example won't implement multi-field text search without an index.
-      // A search index on `name`, `username`, `email` would be ` .withSearchIndex("search_all_users", q => q.search("searchField", args.searchQuery!))`
-      // Without a search index, we can only efficiently query one indexed field or filter post-query (less efficient for large datasets).
-      // Let's allow filtering by username if a search query is provided, assuming by_username index helps.
-      // This part might need refinement based on actual indexing strategy for admin search.
-    }
+    // IMPORTANT: The original code comments that searchQuery is not implemented backend-side.
+    // Client-side filtering is used in UserModeration.tsx for search.
+    // We are keeping that behavior.
 
+    // Backend filtering for ban status
     if (args.filterBanned !== undefined) {
       query = query.filter((q) => q.eq(q.field("isBanned"), args.filterBanned));
     }
 
-    const result = await query.paginate(args.paginationOpts || { numItems: 10, cursor: null });
+    // Backend filtering for paused status
+    if (args.filterPaused !== undefined) {
+      query = query.filter((q) => q.eq(q.field("isPaused"), args.filterPaused));
+    }
+
+    const result = await query.paginate(args.paginationOpts);
 
     // We want to return a richer object than just Doc<"users">, explicitly define it.
     const page = result.page.map((user) => ({
@@ -891,6 +888,7 @@ export const listAllUsersAdmin = query({
       username: user.username,
       imageUrl: user.imageUrl,
       isBanned: user.isBanned ?? false,
+      isPaused: user.isPaused ?? false, // Add isPaused field
     }));
 
     return {
@@ -911,7 +909,8 @@ export const banUserByAdmin = mutation({
     if (!userToBan) {
       throw new Error("User not found.");
     }
-    await ctx.db.patch(args.userId, { isBanned: true });
+    // When banning, also unpause the user as ban is a stronger restriction.
+    await ctx.db.patch(args.userId, { isBanned: true, isPaused: false });
     console.log(`Admin: User ${args.userId} has been banned.`);
     return { success: true, userId: args.userId, newBanStatus: true };
   },
@@ -935,7 +934,51 @@ export const unbanUserByAdmin = mutation({
 });
 
 /**
- * [Admin] Deletes a user and their associated data.
+ * [Admin] Pauses a user.
+ * Paused users can log in and edit their profile but cannot comment, vote, rate, bookmark, or submit.
+ */
+export const pauseUserByAdmin = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
+    const userToPause = await ctx.db.get(args.userId);
+    if (!userToPause) {
+      throw new Error("User not found.");
+    }
+    // When pausing, ensure user is not also banned. If they are banned, ban takes precedence.
+    // However, the request implies these are additive states, or pause is softer.
+    // For now, setting isPaused to true. If user is also banned, banned rules apply.
+    // If we want pause to unban, that logic would be: { isPaused: true, isBanned: false }
+    // Let's assume they are independent, but if an action should override another,
+    // it's typically "ban" overriding "pause".
+    // If a user is banned, and we pause them, they are now isBanned:true, isPaused:true.
+    // If user is active, and we pause them, they are isBanned:false, isPaused:true.
+    // This seems fine. The UI will need to correctly represent the state.
+    await ctx.db.patch(args.userId, { isPaused: true });
+    console.log(`Admin: User ${args.userId} has been paused.`);
+    return { success: true, userId: args.userId, newPauseStatus: true };
+  },
+});
+
+/**
+ * [Admin] Unpauses a user.
+ */
+export const unpauseUserByAdmin = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
+    const userToUnpause = await ctx.db.get(args.userId);
+    if (!userToUnpause) {
+      throw new Error("User not found.");
+    }
+    await ctx.db.patch(args.userId, { isPaused: false });
+    console.log(`Admin: User ${args.userId} has been unpaused.`);
+    return { success: true, userId: args.userId, newPauseStatus: false };
+  },
+});
+
+/**
+ * [Admin] Deletes a user and all their associated content.
  * Note: This is a destructive action.
  * Consider if a soft delete (marking as deleted) is more appropriate.
  * For now, it deletes the user document.

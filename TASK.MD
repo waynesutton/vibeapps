@@ -6,13 +6,16 @@ Brief description of the feature and its purpose.
 
 - [x] updated bookmarks viewing
 - [x] changed site fonts
+- [x] change from /u/username to /username in url slugs
+- [x] Add a ban member in /admin dashboard
+- [x] add sidebar leaderboard to list view
+- [x] update clerk admin role permissions in for mod view
+- [ ]
 
 ## In Progress Tasks
 
-- [x] change from /u/username to /username in url slugs
-- [ ] Add a ban member in /admin dashboard
-- [x] add sidebar leaderboard to list view
-- [ ] update clerk admin role permissions in for mod view
+- [ ] remove state for profile and admin page to remove sidebar
+- [ ] create 404 page
 - [ ] setup resend for emails - tbd
 - [ ] Setup hosting on Vercel
 - [ ] Setup domain name on Vercel

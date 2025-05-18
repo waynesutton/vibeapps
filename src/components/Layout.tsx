@@ -1,5 +1,5 @@
 import React, { useState, createContext, useContext, ReactNode } from "react";
-import { Link, Outlet, useOutletContext, useNavigate } from "react-router-dom";
+import { Link, Outlet, useOutletContext, useNavigate, useLocation } from "react-router-dom";
 import { LayoutGrid, List, PlusCircle, Search, ThumbsUp, ChevronDown } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -35,6 +35,7 @@ export function Layout({ children }: { children?: ReactNode }) {
   const clerk = useClerk();
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
+  const location = useLocation();
 
   const settings = useQuery(api.settings.get);
   const [viewMode, setViewMode] = React.useState<"grid" | "list" | "vibe" | undefined>(undefined);
@@ -70,6 +71,37 @@ export function Layout({ children }: { children?: ReactNode }) {
       }
     }
   }, [settings, userChangedViewMode]);
+
+  // Effect to reset viewMode on specific pages like admin or profile
+  React.useEffect(() => {
+    const { pathname } = location;
+    const isAdminPage = pathname.startsWith("/admin");
+    const isSetUsernamePage = pathname === "/set-username";
+
+    let isProfilePage = false;
+    if (isSignedIn && convexUserDoc?.username) {
+      isProfilePage = pathname === `/${convexUserDoc.username}`;
+    }
+
+    if (isAdminPage || isSetUsernamePage || isProfilePage) {
+      // If a view mode is active or was actively chosen by user, reset it
+      // This ensures no view mode button is highlighted on these specific pages
+      // and that default view logic applies if navigating away from these pages
+      // (not via a view-mode button click).
+      if (viewMode !== undefined || userChangedViewMode) {
+        setViewMode(undefined);
+        setUserChangedViewMode(false);
+      }
+    }
+  }, [
+    location.pathname,
+    isSignedIn,
+    convexUserDoc,
+    viewMode,
+    setViewMode,
+    userChangedViewMode,
+    setUserChangedViewMode,
+  ]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
