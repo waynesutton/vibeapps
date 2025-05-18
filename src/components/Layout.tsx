@@ -306,6 +306,66 @@ export function Layout({ children }: { children?: ReactNode }) {
                 </div>
               </div>
             </div>
+
+            {/* Tags Navigation Row */}
+            {/* Conditionally render if there are tags to show and settings allow (future) */}
+            {headerTags &&
+              headerTags.filter((tag) => !tag.isHidden && tag.showInHeader).length > 0 && (
+                <div className="py-3 mt-1 border-t border-[#E5E7EB]">
+                  {" "}
+                  {/* Tailwind gray-200 */}
+                  <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-2">
+                    {/* "All" button */}
+                    <button
+                      onClick={() => {
+                        setSelectedTagId(undefined);
+                        if (location.pathname !== "/") navigate("/");
+                      }}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border focus:outline-none
+                                ${
+                                  selectedTagId === undefined
+                                    ? "bg-slate-100 text-slate-700 border-slate-400 ring-1 ring-slate-500 ring-offset-1"
+                                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                                }`}
+                      title="Show All Categories">
+                      All
+                    </button>
+
+                    {/* Tag buttons */}
+                    {headerTags
+                      .filter((tag) => !tag.isHidden && tag.showInHeader) // Ensure only relevant tags are mapped
+                      .map((tag) => (
+                        <button
+                          key={tag._id}
+                          onClick={() => {
+                            setSelectedTagId(selectedTagId === tag._id ? undefined : tag._id);
+                            if (location.pathname !== "/") navigate("/");
+                          }}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border focus:outline-none
+                                  ${selectedTagId === tag._id ? "ring-1 ring-offset-1 ring-gray-200" : ""}`}
+                          style={{
+                            backgroundColor:
+                              tag.backgroundColor ||
+                              (selectedTagId === tag._id ? "#D1FAE5" : "#F9FAFB"), // Tailwind green-100 or gray-50
+                            color:
+                              tag.textColor || (selectedTagId === tag._id ? "#065F46" : "#374151"), // Tailwind green-800 or gray-700
+                            borderColor:
+                              selectedTagId === tag._id
+                                ? tag.backgroundColor
+                                  ? tag.textColor || "#047857"
+                                  : "#6EE7B7" // More contrast for selected border with custom BG
+                                : tag.backgroundColor
+                                  ? "transparent"
+                                  : "#D1D5DB", // Tailwind gray-300
+                          }}
+                          title={tag.name}>
+                          {/* Future placeholder for icon: {tag.icon && <IconComponent ... />} */}
+                          {tag.name}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
           </div>
         </header>
         <main className="flex-grow container mx-auto px-4 py-8">

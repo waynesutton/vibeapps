@@ -17,7 +17,6 @@ Brief description of the feature and its purpose.
 
 - [ ] add tag bar to header like https://www.ycombinator.com/launches
 - [ ] add follow profile features
-- [ ] test and add nav icons
 - [ ] setup resend for emails - tbd
 - [ ] Setup hosting on Vercel
 - [ ] Setup domain name on Vercel
@@ -30,6 +29,7 @@ Brief description of the feature and its purpose.
 - [ ] update category links in vibe view sidebar
 - [ ] add pinned post to sidebar for storylist.tsx layout.tsx line 283
 - [ ] add show 3 related products by tags below comments
+- [ ] test and add nav icons
 
 ## Implementation Plan
 
