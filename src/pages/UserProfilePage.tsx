@@ -31,6 +31,7 @@ import type { Story } from "../types"; // Import the Story type
 import AlertDialog from "../components/ui/AlertDialog"; // Corrected path
 import "@fontsource/inter/400.css";
 import "@fontsource/inter/500.css";
+import { NotFoundPage } from "./NotFoundPage"; // Added import for NotFoundPage
 
 // Placeholder for loading and error states
 const Loading = () => <div className="text-center p-8"> </div>;
@@ -180,8 +181,8 @@ export default function UserProfilePage() {
   if (!username) return <ErrorDisplay message="Username not found in URL." />;
   if (profileData === undefined) return <Loading />;
   if (profileData === null) {
-    if (isRedirecting) return <Loading />;
-    return <ErrorDisplay message={`Profile for user "${username}" not found.`} />;
+    // if (isRedirecting) return <Loading />; // Commenting out this line as its purpose isn't immediately clear for a 404
+    return <NotFoundPage />;
   }
 
   const { user: profileUser, stories, votes, comments, ratings } = profileData;

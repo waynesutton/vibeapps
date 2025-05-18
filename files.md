@@ -49,6 +49,7 @@
     - `AdminPage.tsx`: Renders the `AdminDashboard`.
     - `SetUsernamePage.tsx`: Allows new users to set their initial username.
     - `NavTestPage.tsx`: A blank page with header/footer for testing navigation components.
+    - `NotFoundPage.tsx`: Displays a 404 error page when a route is not found, includes a search bar and a link to the homepage.
   - `hooks/`: Custom React hooks.
   - `lib/`: Utility functions and helper modules.
     - `utils.ts`: General utility functions.
@@ -311,6 +312,7 @@
   - `SetUsernamePage.tsx`: Allows new users to set their initial username.
   - `NavTestPage.tsx`: A blank page with header/footer for testing navigation components.
   - `AdminPage.tsx`: The entry point for the admin section, usually rendering `AdminDashboard` and handling admin-specific routing or layout.
+  - `NotFoundPage.tsx`: Displays a 404 error page when a route is not found, includes a search bar and a link to the homepage.
 
 ### Type Definitions (`src/types/`)
 

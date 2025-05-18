@@ -22,6 +22,7 @@ import { ProtectedLayout } from "./components/ProtectedLayout";
 import UserProfilePage from "./pages/UserProfilePage";
 import SetUsernamePage from "./pages/SetUsernamePage";
 import NavTestPage from "./pages/NavTestPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
 
 function HomePage() {
   const { viewMode, selectedTagId, sortPeriod } = useLayoutContext();
@@ -127,6 +128,7 @@ function App() {
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />
         <Route path="/signout" element={<SignOutPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   );
