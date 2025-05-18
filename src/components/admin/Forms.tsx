@@ -12,13 +12,15 @@ import {
   Lock,
   Unlock,
 } from "lucide-react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import type { CustomForm } from "../../types";
 
 export function Forms() {
-  const forms = useQuery(api.forms.listForms);
+  const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
+
+  const forms = useQuery(api.forms.listForms, authIsLoading || !isAuthenticated ? "skip" : {});
   const updateForm = useMutation(api.forms.updateForm);
   const deleteForm = useMutation(api.forms.deleteForm);
 
@@ -64,6 +66,10 @@ export function Forms() {
       setTimeout(() => setDeleteConfirmId(null), 5000);
     }
   };
+
+  if (authIsLoading) {
+    return <div className="space-y-6 text-center">Loading authentication...</div>;
+  }
 
   return (
     <div className="space-y-6">

@@ -41,6 +41,7 @@ export default defineSchema({
     isPinned: v.boolean(),
     customMessage: v.optional(v.string()),
     isApproved: v.optional(v.boolean()),
+    rejectionReason: v.optional(v.string()),
   })
     .index("by_slug", ["slug"])
     .index("by_status", ["status"])
@@ -138,7 +139,9 @@ export default defineSchema({
     userId: v.id("users"),
     storyId: v.id("stories"),
     value: v.number(),
-  }).index("by_user_story", ["userId", "storyId"]),
+  })
+    .index("by_user_story", ["userId", "storyId"])
+    .index("by_storyId", ["storyId"]),
 
   convexBoxConfig: defineTable({
     identifier: v.string(),

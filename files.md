@@ -27,13 +27,17 @@
     - `ConvexBox.tsx`: A dismissible notification or informational box, possibly related to Convex integration or site announcements.
     - `UserSyncer.tsx`: Component responsible for synchronizing Clerk user data with the Convex database.
     - `admin/`: Components related to the admin dashboard.
-      - `AdminDashboard.tsx`: Main entry point for the admin section. Provides navigation to various admin panels (Content Moderation, Form Management, Tag Management, Site Settings) and displays overview statistics.
+      - `AdminDashboard.tsx`: Main entry point for the admin section. Provides navigation to various admin panels (Content Moderation, Form Management, Tag Management, Site Settings, User Moderation, Report Management, ConvexBox Settings) and displays overview statistics.
       - `ContentModeration.tsx`: Interface for administrators to review and manage reported content (submissions and comments). Allows actions like hiding/showing, archiving, or deleting content, and adding custom messages to submissions.
       - `FormBuilder.tsx`: Component for creating and editing custom forms. Allows admins to define form fields (short text, long text, URL, email, yes/no, dropdown, multi-select), set required fields, add custom validation, and preview forms.
       - `FormResults.tsx`: Displays submissions received through the custom forms. Allows admins to view submissions by form, sort/filter results, and export data to CSV.
       - `Forms.tsx`: Management interface for all created forms. Admins can toggle form visibility (public/private), generate shareable form URLs, view submission counts, and organize forms.
       - `Settings.tsx`: Panel for administrators to configure global site settings. This includes default view mode (grid/list), submissions per page, anonymous submission/comment permissions, and other site-wide preferences.
       - `TagManagement.tsx`: Interface for managing the tag system. Admins can add, remove, and edit available tags, control which tags appear in the header navigation, and organize tags into categories.
+      - `UserModeration.tsx`: Interface for administrators to manage users, such as banning, muting, or changing user roles.
+      - `ReportManagement.tsx`: Interface for administrators to manage user-submitted reports about content or users.
+      - `NumbersView.tsx`: A component to display key metrics or numbers in the admin dashboard.
+      - `ConvexBoxSettingsForm.tsx`: A form for configuring settings related to the `ConvexBox` component, likely managed within the admin panel.
   - `pages/`: Contains top-level page components that are mapped to routes.
     - `HomePage.tsx`: Renders the main view, likely embedding `StoryList`.
     - `SubmitPage.tsx`: Renders the `StoryForm` for new submissions.
@@ -205,7 +209,7 @@
 ##### `src/components/admin/AdminDashboard.tsx`
 
 - The central hub for all administrative functions.
-- Provides navigation (e.g., sidebar or tabs) to different admin sections: Content Moderation, Form Management, Tag Management, Site Settings.
+- Provides navigation (e.g., sidebar or tabs) to different admin sections: Content Moderation, Form Management, Tag Management, Site Settings, User Moderation, Report Management, ConvexBox Settings.
 - May display summary statistics or an overview of site activity relevant to admins.
 
 ##### `src/components/admin/ContentModeration.tsx`
@@ -254,6 +258,24 @@
 - Admins can add new tags, edit existing tags (name, description), and delete tags.
 - Control which tags are prominently displayed in the header navigation or filtering options.
 - Organize tags, possibly into categories, for better discovery.
+
+##### `src/components/admin/UserModeration.tsx`
+
+- Interface for administrators to manage users.
+- Allows actions like viewing user details, banning users, muting users, or changing user roles/permissions.
+
+##### `src/components/admin/ReportManagement.tsx`
+
+- Enables administrators to review and act upon reports submitted by users regarding content (stories, comments) or other users.
+- Provides tools to dismiss reports, take action based on reports (e.g., moderate content, warn/ban user), and track report statuses.
+
+##### `src/components/admin/NumbersView.tsx`
+
+- A dedicated component within the admin dashboard to display important numerical data, statistics, or key performance indicators (KPIs) at a glance.
+
+##### `src/components/admin/ConvexBoxSettingsForm.tsx`
+
+- A form within the admin settings area that allows administrators to configure the properties and behavior of the `ConvexBox` component. This might include its content, visibility rules, or appearance.
 
 #### Utility Components
 

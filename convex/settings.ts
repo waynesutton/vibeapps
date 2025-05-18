@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
+import { requireAdminRole } from "./users"; // Import requireAdminRole
 
 // Define the type for SortPeriod based on schema/frontend usage
 export type SortPeriodConvex = Doc<"settings">["defaultSortPeriod"]; // Infer from schema
@@ -22,6 +23,7 @@ export type SettingsData = typeof DEFAULT_SETTINGS & Partial<Doc<"settings">>;
 export const get = query({
   args: {},
   handler: async (ctx): Promise<SettingsData> => {
+    // Publicly readable, but initialization/update requires admin
     const settingsDoc = await ctx.db.query("settings").first();
     if (!settingsDoc) {
       console.warn(
@@ -42,7 +44,7 @@ export const get = query({
 export const initialize = mutation({
   args: {},
   handler: async (ctx): Promise<Id<"settings"> | null> => {
-    // TODO: Add admin authentication check
+    await requireAdminRole(ctx);
     const existing = await ctx.db.query("settings").first();
     if (existing) {
       console.log("Settings already initialized.");
@@ -77,7 +79,7 @@ export const update = mutation({
     // Add other updatable settings here
   },
   handler: async (ctx, args) => {
-    // TODO: Add admin authentication check
+    await requireAdminRole(ctx);
     const settings = await ctx.db.query("settings").first();
     if (!settings) {
       throw new Error("Settings not initialized. Cannot update.");

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Plus, Save, Trash2, Eye, ArrowLeft } from "lucide-react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import type { CustomForm, FormField } from "../../types";
@@ -33,8 +33,17 @@ export function FormBuilder() {
   const navigate = useNavigate();
   const { formId } = useParams<{ formId?: Id<"forms"> }>(); // Get formId from URL if editing
 
+  const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth(); // Get auth state
+
   // Fetch existing form data if formId is present
-  const existingFormData = useQuery(api.forms.getFormWithFields, formId ? { formId } : "skip");
+  const existingFormData = useQuery(
+    api.forms.getFormWithFields,
+    // Skip logic:
+    // 1. If no formId (new form), always skip.
+    // 2. If formId exists, but auth is loading or user not authenticated, skip.
+    // 3. Otherwise (formId exists and auth is OK), pass { formId }.
+    !formId || (formId && (authIsLoading || !isAuthenticated)) ? "skip" : { formId }
+  );
 
   const createForm = useMutation(api.forms.createForm);
   const updateForm = useMutation(api.forms.updateForm);
@@ -150,12 +159,23 @@ export function FormBuilder() {
     }
   };
 
-  // Loading state for existing form
-  if (formId && existingFormData === undefined) {
+  // Handle auth loading state first
+  if (authIsLoading) {
+    return <div>Loading authentication...</div>;
+  }
+
+  // If trying to edit an existing form but not authenticated, show message
+  // This assumes the router might not have caught this edge case for a sub-route component.
+  if (formId && !isAuthenticated) {
+    return <div>Please log in to edit this form.</div>;
+  }
+
+  // Loading state for existing form (only if formId is present and auth is fine)
+  if (formId && isAuthenticated && existingFormData === undefined) {
     return <div>Loading form data...</div>;
   }
-  // Error state if formId provided but not found
-  if (formId && existingFormData === null) {
+  // Error state if formId provided but not found (and auth is fine)
+  if (formId && isAuthenticated && existingFormData === null) {
     return (
       <div>
         Form not found. <Link to="/admin/forms/new">Create a new one?</Link>

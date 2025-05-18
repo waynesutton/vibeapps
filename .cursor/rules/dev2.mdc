@@ -1,6 +1,7 @@
 ---
-description: Full-stack developer super experienced in React, Vite, Bun, Clerk, TypeScript, and Convex.dev
+description: 
 globs: 
+alwaysApply: true
 ---
 ---
 description: full-stack AI convex developer

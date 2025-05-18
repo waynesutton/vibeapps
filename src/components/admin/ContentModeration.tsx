@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { MessageSquare, Check, X, Eye, EyeOff, Trash2, Search, Pin, Send } from "lucide-react";
 import * as Tabs from "@radix-ui/react-tabs";
-import { usePaginatedQuery, useMutation } from "convex/react";
+import { usePaginatedQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import type { StoryWithDetails } from "../../../convex/stories";
@@ -34,6 +34,8 @@ export function ContentModeration() {
   // State for custom message editing - Commented out
   const [editingMessageId, setEditingMessageId] = useState<Id<"stories"> | null>(null);
   const [currentMessage, setCurrentMessage] = useState("");
+
+  const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
 
   const debouncedSetSearch = useCallback(
     debounce((value: string) => {
@@ -68,10 +70,12 @@ export function ContentModeration() {
     loadMore: loadMoreStories,
   } = usePaginatedQuery(
     api.stories.listAllStoriesAdmin,
-    {
-      filters: filters,
-      searchTerm: debouncedSearchTerm || undefined,
-    },
+    authIsLoading || !isAuthenticated
+      ? "skip"
+      : {
+          filters: filters,
+          searchTerm: debouncedSearchTerm || undefined,
+        },
     { initialNumItems: 10 }
   );
 
@@ -81,9 +85,11 @@ export function ContentModeration() {
     loadMore: loadMoreComments,
   } = usePaginatedQuery(
     api.comments.listAllCommentsAdmin,
-    {
-      filters: filters, // Assuming comments don't have search yet
-    },
+    authIsLoading || !isAuthenticated
+      ? "skip"
+      : {
+          filters: filters, // Assuming comments don't have search yet
+        },
     { initialNumItems: 10 }
   );
 
@@ -167,7 +173,13 @@ export function ContentModeration() {
     handleCancelEditMessage(); // Close editor on save
   };
 
-  const isLoading = storiesStatus === "LoadingFirstPage" || commentsStatus === "LoadingFirstPage";
+  // Combined loading state: check auth loading first, then query loading
+  const uiIsLoading =
+    authIsLoading || storiesStatus === "LoadingFirstPage" || commentsStatus === "LoadingFirstPage";
+
+  if (authIsLoading) {
+    return <div className="p-4">Loading authentication...</div>;
+  }
 
   const renderItem = (item: ModeratableItem) => {
     // Commented out editing state logic
@@ -403,17 +415,17 @@ export function ContentModeration() {
           </div>
         </div>
 
-        {isLoading && (
+        {uiIsLoading && (
           <div className="text-center py-6 text-lg font-medium text-[#545454]">Loading...</div>
         )}
 
-        {!isLoading && itemsToRender.length === 0 && (
+        {!uiIsLoading && itemsToRender.length === 0 && (
           <div className="text-center py-10 text-[#545454]">
             No {activeItemType} found matching the criteria.
           </div>
         )}
 
-        {!isLoading && itemsToRender.length > 0 && (
+        {!uiIsLoading && itemsToRender.length > 0 && (
           <div>
             {" "}
             {/* Removed redundant divide-y */}

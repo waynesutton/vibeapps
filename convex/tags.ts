@@ -1,7 +1,7 @@
 import { query, mutation, internalMutation } from "./_generated/server";
 import { v, type Infer } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { requireAuth } from "./auth"; // Import the auth helper
+import { requireAdminRole } from "./users"; // Updated to requireAdminRole
 
 // Helper function to generate a URL-friendly slug
 function generateSlug(name: string): string {
@@ -45,8 +45,7 @@ export const listHeader = query({
 export const listAllAdmin = query({
   args: {},
   handler: async (ctx): Promise<Doc<"tags">[]> => {
-    // TODO: Remove this comment and uncomment requireAuth once Clerk/Auth is set up!
-    // await requireAuth(ctx); // Ensure only admins can see hidden tags
+    await requireAdminRole(ctx); // Ensure only admins can see hidden tags
     return await ctx.db.query("tags").order("asc").collect();
   },
 });
@@ -61,7 +60,7 @@ export const create = mutation({
     textColor: v.optional(v.string()), // Optional hex
   },
   handler: async (ctx, args): Promise<Id<"tags">> => {
-    // await requireAuth(ctx);
+    await requireAdminRole(ctx);
     const name = args.name.trim();
     if (!name) {
       throw new Error("Tag name cannot be empty.");
@@ -116,7 +115,7 @@ export const update = mutation({
     textColor: v.optional(v.string()), // Can be null/undefined to clear
   },
   handler: async (ctx, args) => {
-    // await requireAuth(ctx);
+    await requireAdminRole(ctx);
     const { tagId, ...rest } = args;
 
     const updateData: Partial<Omit<Doc<"tags">, "_id" | "_creationTime">> = {};
@@ -174,8 +173,7 @@ export const update = mutation({
 export const deleteTag = mutation({
   args: { tagId: v.id("tags") },
   handler: async (ctx, args) => {
-    // TODO: Remove this comment and uncomment requireAuth once Clerk/Auth is set up!
-    // await requireAuth(ctx);
+    await requireAdminRole(ctx);
     // TODO: Consider implications: Remove tagId from stories? Or prevent deletion if used?
     // For now, just delete the tag document.
     await ctx.db.delete(args.tagId);

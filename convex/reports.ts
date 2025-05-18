@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { Id, Doc, TableNames } from "./_generated/dataModel";
 import { QueryCtx, MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api"; // Import internal API
+import { requireAdminRole } from "./users"; // Import requireAdminRole
 // import { Expression } from "convex/values"; // REMOVE THIS LINE
 // import { Users } from "./schema"; // REMOVE THIS LINE
 // import { DatabaseReader } from "convex/server"; // REMOVE THIS LINE
@@ -89,15 +90,7 @@ export const listAllReportsAdmin = query({
     ),
   },
   handler: async (ctx, args): Promise<ReportWithDetails[]> => {
-    // const { userIsAdmin } = await getAuthenticatedUserAndRole(ctx);
-    // if (!userIsAdmin) {
-    //   // For now, if you want to bypass admin check for dev without Clerk on /admin:
-    //   console.warn("Bypassing admin check for listAllReportsAdmin");
-    //   // } else {
-    //   // if (!userIsAdmin) { // Original check
-    //   throw new Error("User must be an admin to list reports.");
-    // }
-    console.warn("DEV MODE: Admin check bypassed for listAllReportsAdmin"); // TEMPORARY BYPASS
+    await requireAdminRole(ctx);
 
     let reports;
     if (args.filters?.status) {
@@ -139,11 +132,7 @@ export const updateReportStatusByAdmin = mutation({
     permanentlyDeleteStory: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    // const { userIsAdmin } = await getAuthenticatedUserAndRole(ctx);
-    // if (!userIsAdmin) {
-    //   console.warn("Bypassing admin check for updateReportStatusByAdmin");
-    // }
-    console.warn("DEV MODE: Admin check bypassed for updateReportStatusByAdmin"); // TEMPORARY BYPASS
+    await requireAdminRole(ctx);
 
     const report = await ctx.db.get(args.reportId);
     if (!report) {

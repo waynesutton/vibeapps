@@ -282,67 +282,44 @@ export async function requireAdminRole(ctx: QueryCtx | MutationCtx): Promise<voi
   }
 
   console.log("[requireAdminRole] Identity subject (Clerk User ID):", identity.subject);
-  // Limit logging of the full identity object to avoid overly verbose logs if it's huge
+  // Log the entire identity object to see all available fields including the top-level role
   console.log(
-    "[requireAdminRole] Full identity object (logging first 500 chars):",
-    JSON.stringify(identity, null, 2).substring(0, 500)
+    "[requireAdminRole] Full identity object (includes top-level claims):",
+    JSON.stringify(identity, null, 2)
   );
 
-  if (identity.publicMetadata === null || identity.publicMetadata === undefined) {
-    console.error("[requireAdminRole] identity.publicMetadata is null or undefined.");
-  } else {
-    console.log(
-      "[requireAdminRole] type of identity.publicMetadata:",
-      typeof identity.publicMetadata
-    );
-    // Attempt to log it directly, though complex objects might just show [object Object]
-    console.log(
-      "[requireAdminRole] identity.publicMetadata direct log (may be [object Object]):",
-      identity.publicMetadata
-    );
-    // More reliable way to see its content for simple JSON-like objects:
-    console.log(
-      "[requireAdminRole] identity.publicMetadata JSON.stringified:",
-      JSON.stringify(identity.publicMetadata, null, 2)
-    );
-    console.log(
-      "[requireAdminRole] Keys in identity.publicMetadata:",
-      Object.keys(identity.publicMetadata)
-    );
-    console.log(
-      "[requireAdminRole] Value of identity.publicMetadata.role (lowercase 'r'):",
-      (identity.publicMetadata as any).role
-    );
-    console.log(
-      "[requireAdminRole] Value of identity.publicMetadata.Role (uppercase 'R'):",
-      (identity.publicMetadata as any).Role
-    );
-  }
+  // Access role directly from the identity object
+  // The JWT template "role": "{{user.public_metadata.role}}" maps it to the top level
+  const clerkTokenRole = (identity as any).role;
 
-  const publicMetadata = identity.publicMetadata as { role?: string } | undefined;
-  const clerkTokenRole = publicMetadata?.role; // This is where we expect 'admin'
+  console.log("[requireAdminRole] Role directly from identity object:", clerkTokenRole);
+
+  // The old way of checking publicMetadata is no longer applicable with this JWT template
+  // const rawPublicMetadata = identity.publicMetadata;
+  // if (rawPublicMetadata && typeof rawPublicMetadata === 'object') {
+  //   console.log("[requireAdminRole] rawPublicMetadata (should be empty or not contain role):", JSON.stringify(rawPublicMetadata, null, 2));
+  //   // clerkTokenRole was previously attempted to be read from here
+  // } else {
+  //   console.log("[requireAdminRole] rawPublicMetadata is null, undefined, or not an object.");
+  // }
 
   console.log(
-    "[requireAdminRole] Parsed publicMetadata variable (after type assertion):",
-    JSON.stringify(publicMetadata, null, 2)
-  );
-  console.log(
-    "[requireAdminRole] Extracted clerkTokenRole variable (this should be 'admin'):",
+    "[requireAdminRole] Final determined clerkTokenRole before check:",
     JSON.stringify(clerkTokenRole)
   );
 
   if (clerkTokenRole === "admin") {
-    console.log("[requireAdminRole] 'admin' role FOUND in clerkTokenRole. Access GRANTED.");
+    console.log(
+      "[requireAdminRole] 'admin' role FOUND in Clerk token (top-level). Access GRANTED."
+    );
     return;
   }
 
   console.error(
-    "[requireAdminRole] 'admin' role NOT FOUND in clerkTokenRole. Access DENIED. Current role value in token:",
+    "[requireAdminRole] 'admin' role NOT FOUND in Clerk token (top-level). Access DENIED. Current role value in token:",
     clerkTokenRole
   );
-  throw new Error(
-    "Admin privileges required. Role 'admin' not found in Clerk token's publicMetadata."
-  );
+  throw new Error("Admin privileges required. Role 'admin' not found in Clerk token.");
 }
 
 // --- Queries for User Profile Page ---

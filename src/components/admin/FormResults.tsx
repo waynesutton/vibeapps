@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Download, ArrowLeft, ArrowUp, ArrowDown } from "lucide-react";
-import { useQuery } from "convex/react";
+import { useQuery, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import type { CustomForm, FormSubmission, FormField } from "../../types";
@@ -46,9 +46,12 @@ const generateCSV = (fields: FormField[], submissions: FormSubmission[]): string
 
 export function FormResults() {
   const { formId } = useParams<{ formId?: Id<"forms"> }>();
+  const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
 
-  const formData = useQuery(api.forms.getFormWithFields, formId ? { formId } : "skip");
-  const submissions = useQuery(api.forms.listSubmissions, formId ? { formId } : "skip");
+  const skipQuery = !formId || (formId && (authIsLoading || !isAuthenticated));
+
+  const formData = useQuery(api.forms.getFormWithFields, skipQuery ? "skip" : { formId: formId! });
+  const submissions = useQuery(api.forms.listSubmissions, skipQuery ? "skip" : { formId: formId! });
 
   const [sortField, setSortField] = useState<string>("_creationTime");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
@@ -99,15 +102,33 @@ export function FormResults() {
     });
   }, [submissions, sortField, sortDirection]);
 
-  if (formData === undefined || submissions === undefined) {
+  // Handle auth loading state first
+  if (authIsLoading) {
+    return <div>Loading authentication...</div>;
+  }
+
+  // If formId is required but user is not authenticated
+  if (formId && !isAuthenticated) {
+    return <div>Please log in to view form results.</div>;
+  }
+
+  // Loading state for data (only if formId is present and auth is fine)
+  if (formId && isAuthenticated && (formData === undefined || submissions === undefined)) {
     return <div>Loading results...</div>;
   }
 
-  if (!formData) {
+  // If formId was provided but formData is null (not found), and auth is fine
+  if (formId && isAuthenticated && !formData) {
     return <div>Form not found.</div>;
   }
 
-  const formFields = formData.fields || []; // Use fields from fetched form data
+  // If no formId, this page shouldn't be accessible or should show an error.
+  // This case should ideally be handled by routing.
+  if (!formId) {
+    return <div>No form specified.</div>; // Or redirect
+  }
+
+  const formFields = formData?.fields || []; // Use optional chaining as formData can be null here now if query skipped
 
   return (
     <div className="space-y-6">

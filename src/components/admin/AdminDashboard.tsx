@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { Link, useSearchParams } from "react-router-dom";
+import { useConvexAuth } from "convex/react";
 import { TagManagement } from "./TagManagement";
 import { ContentModeration } from "./ContentModeration";
 import { Settings } from "./Settings";
@@ -19,11 +20,26 @@ export function AdminDashboard() {
   const initialTab = (searchParams.get("tab") as AdminTab) || "content";
   const [activeTab, setActiveTab] = useState<AdminTab>(initialTab);
 
+  const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
+
   const handleTabChange = (value: string) => {
     const newTab = value as AdminTab;
     setActiveTab(newTab);
     setSearchParams({ tab: newTab }, { replace: true }); // Update URL query param
   };
+
+  if (authIsLoading) {
+    return <div className="max-w-6xl mx-auto px-4 py-8 text-center">Loading authentication...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-8 text-center">
+        Please log in to access the admin dashboard.
+        {/* Optionally, add a <SignInButton /> here if you have Clerk components readily available */}
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">

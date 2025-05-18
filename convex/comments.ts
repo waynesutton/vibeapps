@@ -91,6 +91,7 @@ export const listAllCommentsAdmin = query({
     ctx,
     args
   ): Promise<{ page: Doc<"comments">[]; isDone: boolean; continueCursor: string }> => {
+    await requireAdminRole(ctx);
     let queryBuilder;
     if (args.searchTerm && args.searchTerm.trim() !== "") {
       // Use full text search
@@ -213,6 +214,7 @@ export const updateStatus = mutation({
     status: v.union(v.literal("approved"), v.literal("rejected")),
   },
   handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
     const comment = await ctx.db.get(args.commentId);
     if (!comment) {
       throw new Error("Comment not found");
@@ -240,6 +242,7 @@ export const updateStatus = mutation({
 export const hideComment = mutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
     const comment = await ctx.db.get(args.commentId);
     if (!comment) {
       throw new Error("Comment not found");
@@ -252,6 +255,7 @@ export const hideComment = mutation({
 export const showComment = mutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
     const comment = await ctx.db.get(args.commentId);
     if (!comment) {
       throw new Error("Comment not found");
@@ -264,6 +268,7 @@ export const showComment = mutation({
 export const deleteComment = mutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
     // We will add a new mutation for users to delete their OWN comments
     const comment = await ctx.db.get(args.commentId);
     if (!comment) {

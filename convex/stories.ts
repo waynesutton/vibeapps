@@ -523,12 +523,26 @@ export const getUserRatingForStory = query({
 export const updateStatus = mutation({
   args: {
     storyId: v.id("stories"),
-    status: v.union(v.literal("approved"), v.literal("rejected")),
+    status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
+    rejectionReason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const story = await ctx.db.get(args.storyId);
-    if (!story) throw new Error("Story not found");
-    await ctx.db.patch(args.storyId, { status: args.status });
+    await requireAdminRole(ctx);
+    const existingStory = await ctx.db.get(args.storyId);
+    if (!existingStory) {
+      throw new Error("Story not found");
+    }
+
+    const updatePayload: Partial<Doc<"stories">> = { status: args.status };
+    if (args.status === "rejected") {
+      updatePayload.rejectionReason = args.rejectionReason || "No reason provided.";
+    } else {
+      // Clear rejection reason if moving to a non-rejected state
+      updatePayload.rejectionReason = undefined;
+    }
+
+    await ctx.db.patch(args.storyId, updatePayload);
+    return { success: true };
   },
 });
 
@@ -537,38 +551,79 @@ export const updateStatus = mutation({
 export const hideStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
-    const story = await ctx.db.get(args.storyId);
-    if (!story) throw new Error("Story not found");
+    await requireAdminRole(ctx);
     await ctx.db.patch(args.storyId, { isHidden: true });
+    return { success: true };
   },
 });
 
 export const showStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
-    const story = await ctx.db.get(args.storyId);
-    if (!story) throw new Error("Story not found");
+    await requireAdminRole(ctx);
     await ctx.db.patch(args.storyId, { isHidden: false });
+    return { success: true };
   },
 });
 
 export const deleteStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
     const story = await ctx.db.get(args.storyId);
-    if (!story) {
-      console.warn(`Story ${args.storyId} not found for deletion.`);
-      return;
+    if (!story) throw new Error("Story not found");
+
+    // 1. Delete associated comments
+    const comments = await ctx.db
+      .query("comments")
+      .withIndex("by_storyId_status", (q) => q.eq("storyId", args.storyId))
+      .collect();
+    for (const comment of comments) {
+      await ctx.db.delete(comment._id);
     }
+
+    // 2. Delete associated votes
+    const votes = await ctx.db
+      .query("votes")
+      .withIndex("by_story", (q) => q.eq("storyId", args.storyId))
+      .collect();
+    for (const vote of votes) {
+      await ctx.db.delete(vote._id);
+    }
+
+    // 3. Delete associated ratings
+    const ratings = await ctx.db
+      .query("storyRatings")
+      .withIndex("by_storyId", (q) => q.eq("storyId", args.storyId))
+      .collect();
+    for (const rating of ratings) {
+      await ctx.db.delete(rating._id);
+    }
+
+    // 4. Delete associated bookmarks
+    const bookmarks = await ctx.db
+      .query("bookmarks")
+      .withIndex("by_storyId", (q) => q.eq("storyId", args.storyId))
+      .collect();
+    for (const bookmark of bookmarks) {
+      await ctx.db.delete(bookmark._id);
+    }
+
+    // 5. Delete screenshot from storage if it exists
     if (story.screenshotId) {
       try {
         await ctx.storage.delete(story.screenshotId);
       } catch (error) {
-        console.error(`Failed to delete screenshot ${story.screenshotId}:`, error);
+        console.warn(
+          `Failed to delete screenshot ${story.screenshotId} for story ${args.storyId}: ${error}`
+        );
+        // Continue even if screenshot deletion fails
       }
     }
-    // Consider deleting associated comments here as well
+
+    // 6. Delete the story itself
     await ctx.db.delete(args.storyId);
+    return { success: true };
   },
 });
 
@@ -576,14 +631,14 @@ export const deleteStory = mutation({
 export const updateStoryCustomMessage = mutation({
   args: {
     storyId: v.id("stories"),
-    customMessage: v.optional(v.string()),
+    customMessage: v.optional(v.string()), // Pass undefined or empty string to clear
   },
   handler: async (ctx, args) => {
-    const story = await ctx.db.get(args.storyId);
-    if (!story) throw new Error("Story not found");
+    await requireAdminRole(ctx);
     await ctx.db.patch(args.storyId, {
-      customMessage: args.customMessage || undefined,
+      customMessage: args.customMessage || undefined, // Store empty string as undefined
     });
+    return { success: true };
   },
 });
 
@@ -591,11 +646,15 @@ export const updateStoryCustomMessage = mutation({
 export const toggleStoryPinStatus = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
     const story = await ctx.db.get(args.storyId);
-    if (!story) throw new Error("Story not found");
+    if (!story) {
+      throw new Error("Story not found");
+    }
     await ctx.db.patch(args.storyId, {
       isPinned: !story.isPinned,
     });
+    return { success: true, newPinStatus: !story.isPinned };
   },
 });
 
@@ -680,6 +739,7 @@ export const listAllStoriesAdmin = query({
     ctx,
     args
   ): Promise<{ page: StoryWithDetails[]; isDone: boolean; continueCursor: string }> => {
+    await requireAdminRole(ctx);
     let initialStories: Doc<"stories">[];
 
     if (args.searchTerm && args.searchTerm.trim() !== "") {

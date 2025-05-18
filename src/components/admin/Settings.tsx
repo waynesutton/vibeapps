@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Save, AlertCircle } from "lucide-react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { SiteSettings } from "../../types";
 import { ConvexBoxSettingsForm } from "./ConvexBoxSettingsForm";
@@ -21,6 +21,8 @@ type SortPeriod =
 type ViewMode = "list" | "grid" | "vibe";
 
 export function Settings() {
+  const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
+
   const currentSettings = useQuery(api.settings.get);
   const updateSettings = useMutation(api.settings.update);
   const initializeSettings = useMutation(api.settings.initialize); // For first-time setup
@@ -109,7 +111,19 @@ export function Settings() {
   // Check if settings need initialization (i.e., _id is missing)
   const needsInitialization = currentSettings !== undefined && !("_id" in currentSettings);
 
-  if (needsInitialization) {
+  // Handle auth loading state globally for the component if desired,
+  // though individual query loading is handled below.
+  if (authIsLoading) {
+    return <div className="space-y-8 text-center">Loading authentication...</div>;
+  }
+
+  // If settings data itself is loading (and auth is done)
+  if (!authIsLoading && currentSettings === undefined) {
+    return <div className="text-center">Loading settings...</div>;
+  }
+
+  // If settings need initialization (and auth is done)
+  if (!authIsLoading && needsInitialization) {
     return (
       <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-md text-sm text-yellow-800 space-y-3">
         <div className="flex items-center gap-2">
@@ -127,7 +141,7 @@ export function Settings() {
     );
   }
 
-  if (currentSettings === undefined) {
+  if (!authIsLoading && currentSettings === undefined) {
     return <div>Loading settings...</div>;
   }
 

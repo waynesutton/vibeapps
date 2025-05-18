@@ -1,5 +1,5 @@
 import React, { useState, useEffect, ChangeEvent } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner"; // Assuming you use sonner for toasts
 
 export function ConvexBoxSettingsForm() {
+  const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
+
   const currentSettings = useQuery(api.convexBoxConfig.get);
   const updateSettings = useMutation(api.convexBoxConfig.update);
   const generateUploadUrl = useMutation(api.convexBoxConfig.generateUploadUrl);
@@ -84,6 +86,14 @@ export function ConvexBoxSettingsForm() {
     }
     setIsSubmitting(false);
   };
+
+  if (authIsLoading) {
+    return (
+      <div className="space-y-6 bg-white p-6 rounded-lg shadow border text-center">
+        Loading authentication...
+      </div>
+    );
+  }
 
   if (currentSettings === undefined) {
     return <div>Loading settings...</div>;

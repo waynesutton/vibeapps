@@ -1,5 +1,5 @@
 import React from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 
 // Helper component for displaying each statistic
@@ -13,14 +13,27 @@ const StatCard = ({ title, value }: { title: string; value: number | string | un
 );
 
 export function NumbersView() {
-  const totalSubmissions = useQuery(api.adminQueries.getTotalSubmissions);
-  const totalUsers = useQuery(api.adminQueries.getTotalUsers);
-  const totalVotes = useQuery(api.adminQueries.getTotalVotes);
-  const totalComments = useQuery(api.adminQueries.getTotalComments);
-  const totalReportsData = useQuery(api.adminQueries.getTotalReports);
-  const solvedReportsData = useQuery(api.adminQueries.getTotalSolvedReports);
-  const totalBookmarksData = useQuery(api.adminQueries.getTotalBookmarks);
-  const totalRatingsData = useQuery(api.adminQueries.getTotalRatings);
+  const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
+
+  const skip = authIsLoading || !isAuthenticated;
+
+  const totalSubmissions = useQuery(api.adminQueries.getTotalSubmissions, skip ? "skip" : {});
+  const totalUsers = useQuery(api.adminQueries.getTotalUsers, skip ? "skip" : {});
+  const totalVotes = useQuery(api.adminQueries.getTotalVotes, skip ? "skip" : {});
+  const totalComments = useQuery(api.adminQueries.getTotalComments, skip ? "skip" : {});
+  const totalReportsData = useQuery(api.adminQueries.getTotalReports, skip ? "skip" : {});
+  const solvedReportsData = useQuery(api.adminQueries.getTotalSolvedReports, skip ? "skip" : {});
+  const totalBookmarksData = useQuery(api.adminQueries.getTotalBookmarks, skip ? "skip" : {});
+  const totalRatingsData = useQuery(api.adminQueries.getTotalRatings, skip ? "skip" : {});
+
+  if (authIsLoading) {
+    return (
+      <div>
+        <h2 className="text-xl font-semibold text-gray-800 mb-6">Key Metrics</h2>
+        <div className="text-center py-10">Loading authentication...</div>
+      </div>
+    );
+  }
 
   return (
     <div>

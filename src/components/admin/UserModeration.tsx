@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
-import { usePaginatedQuery, useMutation } from "convex/react";
+import { usePaginatedQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id, Doc } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,8 @@ export function UserModeration() {
     action: "ban" | "unban" | "delete";
   } | null>(null);
 
+  const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
+
   const debouncedSetSearch = useCallback(
     debounce((value: string) => {
       setDebouncedSearchTerm(value);
@@ -69,7 +71,7 @@ export function UserModeration() {
 
   const { results, status, loadMore, isLoading } = usePaginatedQuery(
     api.users.listAllUsersAdmin,
-    queryArgs,
+    authIsLoading || !isAuthenticated ? "skip" : queryArgs,
     { initialNumItems: 15 }
   );
 
@@ -120,7 +122,11 @@ export function UserModeration() {
     setConfirmingAction({ userId, userName, action });
   };
 
-  if (status === "LoadingFirstPage" && isLoading) {
+  if (authIsLoading) {
+    return <div className="text-center py-10">Loading authentication...</div>;
+  }
+
+  if (status === "LoadingFirstPage" && isLoading && isAuthenticated) {
     return <div className="text-center py-10">Loading users...</div>;
   }
 

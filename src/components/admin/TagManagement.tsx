@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Plus, X, Eye, EyeOff, Save, Trash2, Archive, ArchiveRestore, Palette } from "lucide-react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id, Doc } from "../../../convex/_generated/dataModel";
 
@@ -23,8 +23,13 @@ interface EditableTag extends Omit<Doc<"tags">, "backgroundColor" | "textColor">
 }
 
 export function TagManagement() {
+  const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
+
   // Use the admin query to fetch all tags, including hidden ones
-  const allTagsAdmin = useQuery(api.tags.listAllAdmin);
+  const allTagsAdmin = useQuery(
+    api.tags.listAllAdmin,
+    authIsLoading || !isAuthenticated ? "skip" : {}
+  );
   const createTag = useMutation(api.tags.create);
   const updateTag = useMutation(api.tags.update);
   const deleteTagMutation = useMutation(api.tags.deleteTag);
@@ -213,6 +218,17 @@ export function TagManagement() {
   };
 
   const hasPendingChanges = editableTags.some((tag) => tag.isModified);
+
+  // Handle auth loading state
+  if (authIsLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 text-center">
+          Loading authentication...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

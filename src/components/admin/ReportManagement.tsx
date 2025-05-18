@@ -11,7 +11,7 @@ import {
   RefreshCw,
   Eye,
 } from "lucide-react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id, Doc } from "../../../convex/_generated/dataModel";
 import type { ReportWithDetails } from "../../../convex/reports"; // Import the type
@@ -39,9 +39,15 @@ export function ReportManagement() {
     currentStoryIsHidden?: boolean;
   } | null>(null);
 
+  const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
+
+  const queryArgs = useMemo(() => {
+    return statusFilter === "all" ? {} : { filters: { status: statusFilter } };
+  }, [statusFilter]);
+
   const reportsData = useQuery(
     api.reports.listAllReportsAdmin,
-    statusFilter === "all" ? {} : { filters: { status: statusFilter } }
+    authIsLoading || !isAuthenticated ? "skip" : queryArgs
   );
   const updateReportStatus = useMutation(api.reports.updateReportStatusByAdmin);
   const showStoryMutation = useMutation(api.stories.showStory);
@@ -135,6 +141,16 @@ export function ReportManagement() {
   };
 
   const isLoading = reportsData === undefined;
+
+  if (authIsLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200 text-center">
+          Loading authentication...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

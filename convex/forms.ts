@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
+import { requireAdminRole } from "./users";
 
 // Helper to generate slugs (can be moved to a utility file)
 function generateSlug(title: string): string {
@@ -18,7 +19,7 @@ function generateSlug(title: string): string {
 export const listForms = query({
   args: {},
   handler: async (ctx): Promise<Doc<"forms">[]> => {
-    // TODO: Add admin authentication check
+    await requireAdminRole(ctx);
     return await ctx.db.query("forms").order("asc").collect();
   },
 });
@@ -52,7 +53,7 @@ export const getFormBySlug = query({
 export const getFormWithFields = query({
   args: { formId: v.id("forms") },
   handler: async (ctx, args): Promise<(Doc<"forms"> & { fields: Doc<"formFields">[] }) | null> => {
-    // TODO: Add admin authentication check
+    await requireAdminRole(ctx);
     const form = await ctx.db.get(args.formId);
     if (!form) {
       return null;
@@ -106,7 +107,7 @@ export const getFormResultsBySlug = query({
 export const createForm = mutation({
   args: { title: v.string() }, // Only need title to create
   handler: async (ctx, args): Promise<Id<"forms">> => {
-    // TODO: Add admin authentication check
+    await requireAdminRole(ctx);
     let slug = generateSlug(args.title);
     const existing = await ctx.db
       .query("forms")
@@ -138,7 +139,7 @@ export const updateForm = mutation({
     resultsArePublic: v.optional(v.boolean()), // Allow updating results visibility
   },
   handler: async (ctx, args) => {
-    // TODO: Add admin authentication check
+    await requireAdminRole(ctx);
     const { formId, ...updates } = args;
 
     // Note: We are intentionally NOT allowing slug updates here
@@ -153,7 +154,7 @@ export const updateForm = mutation({
 export const deleteForm = mutation({
   args: { formId: v.id("forms") },
   handler: async (ctx, args) => {
-    // TODO: Add admin authentication check
+    await requireAdminRole(ctx);
     // Delete associated fields
     const fields = await ctx.db
       .query("formFields")
@@ -200,7 +201,7 @@ export const saveFields = mutation({
     fields: v.array(fieldValidator), // Expecting an array of field definitions
   },
   handler: async (ctx, args) => {
-    // TODO: Add admin authentication check
+    await requireAdminRole(ctx);
     const form = await ctx.db.get(args.formId);
     if (!form) {
       throw new Error("Form not found");
@@ -258,7 +259,7 @@ export const submitForm = mutation({
 export const listSubmissions = query({
   args: { formId: v.id("forms") },
   handler: async (ctx, args): Promise<Doc<"formSubmissions">[]> => {
-    // TODO: Add admin authentication check
+    await requireAdminRole(ctx);
     return await ctx.db
       .query("formSubmissions")
       .withIndex("by_formId", (q) => q.eq("formId", args.formId))
