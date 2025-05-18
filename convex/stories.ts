@@ -17,16 +17,28 @@ import { storyWithDetailsValidator, StoryWithDetailsPublic } from "./validators"
 
 // Extend the Doc type for Story to include calculated fields and tags
 export type StoryWithDetails = Doc<"stories"> & {
-  voteScore: number; // Optional: if we want to calculate a score based on votes and time
+  voteScore: number;
   screenshotUrl: string | null;
-  tags: Doc<"tags">[]; // Include full tag documents
-  commentCount: number; // Ensure commentCount is part of the type
+  tags: Array<{
+    _id: Id<"tags">;
+    _creationTime: number;
+    name: string;
+    slug: string; // Ensure slug is string here, matching StoryWithDetailsPublic & tagDocValidator
+    showInHeader: boolean;
+    isHidden?: boolean;
+    backgroundColor?: string;
+    textColor?: string;
+    // Add any other fields from tagDocValidator if they were part of the local type before and are needed
+  }>;
+  commentsCount: number;
   authorName?: string;
   authorUsername?: string;
   authorImageUrl?: string;
+  averageRating: number;
+  votesCount: number;
 };
 
-// Helper to fetch tags and comment counts for stories
+// Helper to fetch tags and related counts for stories
 const fetchTagsAndCountsForStories = async (
   ctx: { db: GenericDatabaseReader<DataModel>; storage: StorageReader },
   stories: Doc<"stories">[]
@@ -34,10 +46,9 @@ const fetchTagsAndCountsForStories = async (
   const allTagIds = stories.flatMap((story) => story.tagIds || []);
   const uniqueTagIds = [...new Set(allTagIds)];
 
-  const tags = await Promise.all(uniqueTagIds.map((tagId) => ctx.db.get(tagId)));
-  const tagsMap = new Map(tags.filter(Boolean).map((tag) => [tag!._id, tag!]));
+  const tagsMapResults = await Promise.all(uniqueTagIds.map((tagId) => ctx.db.get(tagId)));
+  const tagsMap = new Map(tagsMapResults.filter(Boolean).map((tag) => [tag!._id, tag!]));
 
-  // Efficiently fetch all unique author details
   const uniqueUserIds = [...new Set(stories.map((story) => story.userId).filter(Boolean))];
   const users = await Promise.all(uniqueUserIds.map((userId) => ctx.db.get(userId as Id<"users">)));
   const usersMap = new Map(users.filter(Boolean).map((user) => [user!._id, user!]));
@@ -47,18 +58,64 @@ const fetchTagsAndCountsForStories = async (
       const screenshotUrl = story.screenshotId
         ? await ctx.storage.getUrl(story.screenshotId)
         : null;
-      const voteScore = story.votes;
-      const storyTags = (story.tagIds || [])
-        .map((id) => tagsMap.get(id))
-        .filter(Boolean) as Doc<"tags">[];
 
-      // Fetch approved, non-hidden comments and get the count
+      const storyTagsIntermediate = (story.tagIds || []).map((id) => tagsMap.get(id));
+
+      // Replace .filter().map() with a loop for explicit construction
+      const processedStoryTags: Array<{
+        _id: Id<"tags">;
+        _creationTime: number;
+        name: string;
+        slug: string; // Explicitly string
+        showInHeader: boolean;
+        isHidden?: boolean;
+        backgroundColor?: string;
+        textColor?: string;
+      }> = [];
+
+      for (const tag of storyTagsIntermediate) {
+        if (tag && typeof tag.slug === "string") {
+          processedStoryTags.push({
+            _id: tag._id,
+            _creationTime: tag._creationTime,
+            name: tag.name,
+            slug: tag.slug, // slug is string here
+            showInHeader: tag.showInHeader,
+            isHidden: tag.isHidden,
+            backgroundColor: tag.backgroundColor,
+            textColor: tag.textColor,
+          });
+        }
+      }
+
+      // Fetch comments for count
       const comments = await ctx.db
         .query("comments")
         .withIndex("by_storyId_status", (q) => q.eq("storyId", story._id).eq("status", "approved"))
         .filter((q) => q.neq(q.field("isHidden"), true))
         .collect();
-      const commentCount = comments.length;
+      const calculatedCommentsCount = comments.length;
+
+      // Fetch votes for count
+      const storyVotes = await ctx.db
+        .query("votes")
+        .withIndex("by_story", (q) => q.eq("storyId", story._id))
+        .collect();
+      const votesCount = storyVotes.length; // Actual number of vote documents
+
+      // Fetch ratings for average
+      const storyRatings = await ctx.db
+        .query("storyRatings")
+        .withIndex("by_storyId", (q) => q.eq("storyId", story._id))
+        .collect();
+      const averageRating =
+        storyRatings.length > 0
+          ? parseFloat(
+              (storyRatings.reduce((sum, r) => sum + r.value, 0) / storyRatings.length).toFixed(1)
+            )
+          : 0;
+
+      const voteScore = story.votes; // Assuming story.votes is the intended voteScore; if votesCount is preferred, change here.
 
       const author = story.userId ? usersMap.get(story.userId) : undefined;
 
@@ -66,11 +123,13 @@ const fetchTagsAndCountsForStories = async (
         ...story,
         voteScore,
         screenshotUrl,
-        tags: storyTags,
-        commentCount,
+        tags: processedStoryTags, // Use the new explicitly constructed array
+        commentsCount: calculatedCommentsCount,
         authorName: author?.name,
         authorUsername: author?.username,
         authorImageUrl: author?.imageUrl,
+        averageRating,
+        votesCount,
       };
     })
   );
@@ -256,8 +315,8 @@ export const listPending = query({
 // Updated getBySlug to fetch tags and counts and add explicit returns validator
 export const getBySlug = query({
   args: { slug: v.string() },
-  returns: v.union(storyWithDetailsValidator, v.null()), // Explicit returns validator
-  handler: async (ctx, args): Promise<StoryWithDetails | null> => {
+  returns: v.union(storyWithDetailsValidator, v.null()), // Explicit returns validator, uses StoryWithDetailsPublic implicitly
+  handler: async (ctx, args): Promise<StoryWithDetailsPublic | null> => {
     const story = await ctx.db
       .query("stories")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
@@ -818,25 +877,30 @@ export const listAllStoriesAdmin = query({
 // This will include author information and tags.
 export const _getStoryDetailsBatch = internalQuery({
   args: { storyIds: v.array(v.id("stories")) },
-  // The handler will return StoryWithDetailsPublic[], so the validator should match this structure.
-  // The storyWithDetailsValidator is used to validate the shape of each object.
   returns: v.array(storyWithDetailsValidator),
   handler: async (ctx, args): Promise<StoryWithDetailsPublic[]> => {
     const results: StoryWithDetailsPublic[] = [];
-    for (const storyId of args.storyIds) {
-      const story = await ctx.db.get(storyId);
-      if (!story) continue;
+    if (args.storyIds.length === 0) {
+      return [];
+    }
 
-      const author = await ctx.db.get(story.userId);
-      const tags = await Promise.all(story.tagIds.map((tagId) => ctx.db.get(tagId)));
-      const screenshotUrl = story.screenshotId
-        ? await ctx.storage.getUrl(story.screenshotId)
-        : null;
+    // Fetch base story docs
+    const stories = await Promise.all(args.storyIds.map((id) => ctx.db.get(id)));
+    const validStories = stories.filter(Boolean) as Doc<"stories">[];
+    if (validStories.length === 0) {
+      return [];
+    }
 
-      // Construct the story object according to StoryWithDetailsPublic type
+    // Enrich stories with tags, counts, author details using the helper
+    // fetchTagsAndCountsForStories returns Promise<StoryWithDetails[]> (local type)
+    // We need to ensure the object constructed matches StoryWithDetailsPublic
+    const enrichedStories = await fetchTagsAndCountsForStories(ctx, validStories);
+
+    for (const story of enrichedStories) {
+      // story is now of type StoryWithDetails (local, enriched type)
+      // We need to map it to StoryWithDetailsPublic
       results.push({
-        ...story, // Spread all fields from Doc<"stories">
-        // Explicitly list all fields required by StoryWithDetailsPublic that come from Doc<"stories">
+        // Spread common fields from Doc<"stories">
         _id: story._id,
         _creationTime: story._creationTime,
         title: story.title,
@@ -846,7 +910,7 @@ export const _getStoryDetailsBatch = internalQuery({
         tagIds: story.tagIds,
         userId: story.userId,
         votes: story.votes,
-        commentCount: story.commentCount,
+        commentCount: story.commentsCount,
         screenshotId: story.screenshotId,
         ratingSum: story.ratingSum,
         ratingCount: story.ratingCount,
@@ -860,13 +924,18 @@ export const _getStoryDetailsBatch = internalQuery({
         isPinned: story.isPinned,
         customMessage: story.customMessage,
         isApproved: story.isApproved,
-        // Joined data
-        authorName: author?.name,
-        authorUsername: author?.username,
-        authorImageUrl: author?.imageUrl,
-        tags: tags.filter(Boolean) as Doc<"tags">[],
-        screenshotUrl: screenshotUrl,
-        voteScore: story.votes, // Example: voteScore is just votes for now
+
+        // Joined and calculated data, ensuring alignment with StoryWithDetailsPublic
+        authorName: story.authorName,
+        authorUsername: story.authorUsername,
+        authorImageUrl: story.authorImageUrl,
+        tags: story.tags,
+        screenshotUrl: story.screenshotUrl,
+        voteScore: story.voteScore,
+        averageRating: story.averageRating,
+        commentsCount: story.commentsCount,
+        votesCount: story.votesCount,
+        _score: undefined,
       });
     }
     return results;

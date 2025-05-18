@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Follow/Following Feature**: Implemented a comprehensive follow and following system.
+  - **Backend**:
+    - Added `follows` table to `convex/schema.ts`.
+    - Created `convex/follows.ts` with mutations (`followUser`, `unfollowUser`) and queries (`getFollowers`, `getFollowing`, `getFollowStats`, `isFollowing`).
+    - Updated `convex/users.ts` to include follower/following counts and status in user profiles.
+    - Created `convex/adminFollowsQueries.ts` with queries for admin dashboard statistics (`getTopUsersByFollowers`, `getTopUsersByFollowing`, `getTotalFollowRelationships`).
+  - **Frontend**:
+    - Updated `src/pages/UserProfilePage.tsx` to display follow/unfollow buttons, follower/following counts, and new tabs for follower/following lists.
+    - Updated `src/components/admin/NumbersView.tsx` to display top followers/following users and total follow relationships.
 - Updated `files.md` with comprehensive descriptions for all files and directories, aligning with `README.md` features.
 - Initial project setup.
 - Detailed file documentation in `files.md` for all components, including admin dashboard and utility files.

@@ -1,6 +1,7 @@
 import React from "react";
 import { useQuery, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { Link } from "react-router-dom";
 
 // Helper component for displaying each statistic
 const StatCard = ({ title, value }: { title: string; value: number | string | undefined }) => (
@@ -26,6 +27,20 @@ export function NumbersView() {
   const totalBookmarksData = useQuery(api.adminQueries.getTotalBookmarks, skip ? "skip" : {});
   const totalRatingsData = useQuery(api.adminQueries.getTotalRatings, skip ? "skip" : {});
 
+  // Add new queries for follow stats
+  const totalFollowRelationships = useQuery(
+    api.adminFollowsQueries.getTotalFollowRelationships,
+    skip ? "skip" : {}
+  );
+  const topFollowers = useQuery(
+    api.adminFollowsQueries.getTopUsersByFollowers,
+    skip ? "skip" : { limit: 100 }
+  );
+  const topFollowing = useQuery(
+    api.adminFollowsQueries.getTopUsersByFollowing,
+    skip ? "skip" : { limit: 100 }
+  );
+
   if (authIsLoading) {
     return (
       <div>
@@ -47,6 +62,65 @@ export function NumbersView() {
         <StatCard title="Solved Reports" value={solvedReportsData} />
         <StatCard title="Total Bookmarks" value={totalBookmarksData} />
         <StatCard title="Total Ratings" value={totalRatingsData} />
+        <StatCard title="Total Follows" value={totalFollowRelationships} />
+      </div>
+
+      {/* Section for Top 100 Most Followed Users */}
+      <div className="mt-10">
+        <h2 className="text-xl font-semibold text-gray-800 mb-6">Top 100 Most Followed Users</h2>
+        {topFollowers === undefined && <p className="text-gray-600">Loading top followers...</p>}
+        {topFollowers && topFollowers.length === 0 && (
+          <p className="text-gray-600 italic">No follower data available.</p>
+        )}
+        {topFollowers && topFollowers.length > 0 && (
+          <div className="bg-white shadow rounded-lg p-4">
+            <ul className="divide-y divide-gray-200">
+              {topFollowers.map((user, index) =>
+                user ? (
+                  <li key={user._id} className="py-3 flex justify-between items-center">
+                    <span className="text-sm">
+                      {index + 1}.{" "}
+                      <Link to={`/${user.username}`} className="text-blue-600 hover:underline">
+                        {user.name || user.username || "Unnamed User"}
+                      </Link>
+                    </span>
+                    <span className="text-sm text-gray-600">{user.followerCount} followers</span>
+                  </li>
+                ) : null
+              )}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {/* Section for Top 100 Users Following Others Most */}
+      <div className="mt-10">
+        <h2 className="text-xl font-semibold text-gray-800 mb-6">
+          Top 100 Users Following Others Most
+        </h2>
+        {topFollowing === undefined && <p className="text-gray-600">Loading top following...</p>}
+        {topFollowing && topFollowing.length === 0 && (
+          <p className="text-gray-600 italic">No following data available.</p>
+        )}
+        {topFollowing && topFollowing.length > 0 && (
+          <div className="bg-white shadow rounded-lg p-4">
+            <ul className="divide-y divide-gray-200">
+              {topFollowing.map((user, index) =>
+                user ? (
+                  <li key={user._id} className="py-3 flex justify-between items-center">
+                    <span className="text-sm">
+                      {index + 1}.{" "}
+                      <Link to={`/${user.username}`} className="text-blue-600 hover:underline">
+                        {user.name || user.username || "Unnamed User"}
+                      </Link>
+                    </span>
+                    <span className="text-sm text-gray-600">following {user.followingCount}</span>
+                  </li>
+                ) : null
+              )}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -47,6 +47,7 @@ export default defineSchema({
     .index("by_slug", ["slug"])
     .index("by_status", ["status"])
     .index("by_user", ["userId"])
+    .index("by_userId_isApproved", ["userId", "isApproved"])
     .index("by_votes", ["votes"])
     .index("by_status_isHidden_votes", ["status", "isHidden", "votes"])
     .index("by_status_isHidden", ["status", "isHidden"])
@@ -64,6 +65,7 @@ export default defineSchema({
     .index("by_storyId_status", ["storyId", "status"])
     .index("by_user", ["userId"])
     .index("by_hidden_status", ["storyId", "isHidden", "status"])
+    .index("by_storyId", ["storyId"])
     .searchIndex("search_content", {
       searchField: "content",
       filterFields: ["status", "isHidden"],
@@ -74,7 +76,8 @@ export default defineSchema({
     storyId: v.id("stories"),
   })
     .index("by_user_story", ["userId", "storyId"])
-    .index("by_story", ["storyId"]),
+    .index("by_story", ["storyId"])
+    .index("by_userId", ["userId"]),
 
   tags: defineTable({
     name: v.string(),
@@ -144,7 +147,8 @@ export default defineSchema({
     value: v.number(),
   })
     .index("by_user_story", ["userId", "storyId"])
-    .index("by_storyId", ["storyId"]),
+    .index("by_storyId", ["storyId"])
+    .index("by_userId", ["userId"]),
 
   convexBoxConfig: defineTable({
     identifier: v.string(),
@@ -178,4 +182,13 @@ export default defineSchema({
     .index("by_user_story", ["userId", "storyId"])
     .index("by_userId", ["userId"])
     .index("by_storyId", ["storyId"]),
+
+  // New follows table
+  follows: defineTable({
+    followerId: v.id("users"), // The ID of the user who is performing the follow action
+    followingId: v.id("users"), // The ID of the user who is being followed
+  })
+    .index("by_followerId_followingId", ["followerId", "followingId"]) // Unique constraint and quick lookups for unfollow
+    .index("by_followingId", ["followingId"]) // To get all followers of a user
+    .index("by_followerId", ["followerId"]), // To get all users a user is following
 });

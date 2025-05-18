@@ -13,12 +13,14 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as adminFollowsQueries from "../adminFollowsQueries.js";
 import type * as adminQueries from "../adminQueries.js";
 import type * as auth from "../auth.js";
 import type * as bookmarks from "../bookmarks.js";
 import type * as clerk from "../clerk.js";
 import type * as comments from "../comments.js";
 import type * as convexBoxConfig from "../convexBoxConfig.js";
+import type * as follows from "../follows.js";
 import type * as forms from "../forms.js";
 import type * as http from "../http.js";
 import type * as reports from "../reports.js";
@@ -39,12 +41,14 @@ import type * as validators from "../validators.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  adminFollowsQueries: typeof adminFollowsQueries;
   adminQueries: typeof adminQueries;
   auth: typeof auth;
   bookmarks: typeof bookmarks;
   clerk: typeof clerk;
   comments: typeof comments;
   convexBoxConfig: typeof convexBoxConfig;
+  follows: typeof follows;
   forms: typeof forms;
   http: typeof http;
   reports: typeof reports;

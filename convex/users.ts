@@ -9,8 +9,14 @@ import {
 import { v } from "convex/values";
 import { Id, Doc } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api"; // Ensured internal is imported if needed by other funcs
-import type { StoryWithDetails } from "./stories"; // Import StoryWithDetails type
-import { storyWithDetailsValidator, StoryWithDetailsPublic } from "./validators"; // Updated import path
+import {
+  storyWithDetailsValidator,
+  StoryWithDetailsPublic,
+  userInProfileValidator,
+  voteWithStoryDetailsValidator,
+  commentDetailsForProfileValidator,
+  ratingWithStoryDetailsValidator,
+} from "./validators"; // Updated import path
 import { paginationOptsValidator } from "convex/server"; // Added import
 
 /**
@@ -396,61 +402,6 @@ export const listUserVotes = query({
   },
 });
 
-// Define the expected shape for the user object within the profile data
-const userInProfileValidator = v.object({
-  _id: v.id("users"),
-  _creationTime: v.number(),
-  name: v.string(),
-  clerkId: v.string(),
-  // role: v.optional(v.string()), // Role is no longer on the user document in Convex DB
-  email: v.optional(v.string()),
-  username: v.optional(v.string()),
-  imageUrl: v.optional(v.string()),
-  bio: v.optional(v.string()),
-  website: v.optional(v.string()),
-  twitter: v.optional(v.string()),
-  bluesky: v.optional(v.string()),
-  linkedin: v.optional(v.string()),
-});
-
-// Define the expected shape for a single vote item with story details
-const voteWithStoryDetailsValidator = v.object({
-  _id: v.id("votes"),
-  _creationTime: v.number(),
-  userId: v.id("users"),
-  storyId: v.id("stories"),
-  storyTitle: v.optional(v.string()),
-  storySlug: v.optional(v.string()),
-});
-
-// Validator for comments returned by listUserComments AND used in getUserProfileByUsername
-const commentDetailsForProfileValidator = v.object({
-  _id: v.id("comments"),
-  _creationTime: v.number(),
-  content: v.string(),
-  userId: v.id("users"), // User who wrote the comment
-  storyId: v.id("stories"),
-  parentId: v.optional(v.id("comments")),
-  status: v.string(),
-  votes: v.number(), // Votes on the comment itself
-  isHidden: v.boolean(),
-  storyTitle: v.optional(v.string()), // Title of the story commented on
-  storySlug: v.optional(v.string()), // Slug of the story commented on
-  authorName: v.optional(v.string()), // Name of the comment author
-  authorUsername: v.optional(v.string()), // Username of the comment author
-});
-
-// Define the expected shape for a single rating item with story details
-const ratingWithStoryDetailsValidator = v.object({
-  _id: v.id("storyRatings"),
-  _creationTime: v.number(),
-  userId: v.id("users"),
-  storyId: v.id("stories"),
-  value: v.number(),
-  storyTitle: v.optional(v.string()),
-  storySlug: v.optional(v.string()),
-});
-
 // TypeScript type for the object returned by listUserComments handler
 type CommentDetailsForProfile = Doc<"comments"> & {
   storyTitle?: string;
@@ -461,20 +412,22 @@ type CommentDetailsForProfile = Doc<"comments"> & {
   // votes: number; // This is already part of Doc<"comments"> schema
 };
 
-// Type for the entire profile data structure
-type UserProfileData = {
+// Type for the entire profile data structure (non-null part)
+// This defines the actual shape the handler must return when successful.
+// It uses the specific types for nested structures like StoryWithDetails, CommentDetailsForProfile etc.
+type UserProfileDataResolved = {
   user: Doc<"users">;
-  stories: StoryWithDetails[];
-  votes: {
+  stories: StoryWithDetailsPublic[]; // Changed from StoryWithDetails[] to StoryWithDetailsPublic[]
+  votes: Array<{
     _id: Id<"votes">;
     _creationTime: number;
     userId: Id<"users">;
     storyId: Id<"stories">;
     storyTitle?: string;
     storySlug?: string;
-  }[];
-  comments: CommentDetailsForProfile[]; // Use the specific type here
-  ratings: {
+  }>; // This should align with voteWithStoryDetailsValidator after mapping
+  comments: CommentDetailsForProfile[]; // This should align with commentDetailsForProfileValidator
+  ratings: Array<{
     _id: Id<"storyRatings">;
     _creationTime: number;
     userId: Id<"users">;
@@ -482,8 +435,11 @@ type UserProfileData = {
     value: number;
     storyTitle?: string;
     storySlug?: string;
-  }[];
-} | null;
+  }>; // This should align with ratingWithStoryDetailsValidator after mapping
+  followersCount: number;
+  followingCount: number;
+  isFollowedByCurrentUser: boolean;
+};
 
 // Query to list comments by a user, with author and story details for profile display
 export const listUserComments = query({
@@ -517,6 +473,18 @@ export const listUserComments = query({
   },
 });
 
+// Basic getUserByCtx for follows.ts, similar to getAuthenticatedUserDoc
+export async function getUserByCtx(ctx: QueryCtx | MutationCtx): Promise<Doc<"users"> | null> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    return null;
+  }
+  return await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .unique();
+}
+
 export const getUserProfileByUsername = query({
   args: { username: v.string() },
   returns: v.union(
@@ -525,35 +493,199 @@ export const getUserProfileByUsername = query({
       user: userInProfileValidator,
       stories: v.array(storyWithDetailsValidator),
       votes: v.array(voteWithStoryDetailsValidator),
-      comments: v.array(commentDetailsForProfileValidator), // Use the specific validator
+      comments: v.array(commentDetailsForProfileValidator),
       ratings: v.array(ratingWithStoryDetailsValidator),
+      followersCount: v.number(),
+      followingCount: v.number(),
+      isFollowedByCurrentUser: v.boolean(),
     })
   ),
-  handler: async (ctx, args): Promise<UserProfileData> => {
-    const user = await ctx.db
+  handler: async (ctx, args): Promise<UserProfileDataResolved | null> => {
+    const userDoc: Doc<"users"> | null = await ctx.db
       .query("users")
       .withIndex("by_username", (q) => q.eq("username", args.username))
       .unique();
 
-    if (!user) {
+    if (!userDoc) {
       return null;
     }
 
-    const stories: StoryWithDetails[] = await ctx.runQuery(api.users.listUserStories, {
-      userId: user._id,
+    // Explicitly shape the user object to match userInProfileValidator
+    const userForProfile = {
+      _id: userDoc._id,
+      _creationTime: userDoc._creationTime,
+      name: userDoc.name,
+      clerkId: userDoc.clerkId,
+      email: userDoc.email, // Will be undefined if not set, validator handles optional
+      username: userDoc.username,
+      imageUrl: userDoc.imageUrl,
+      bio: userDoc.bio,
+      website: userDoc.website,
+      twitter: userDoc.twitter,
+      bluesky: userDoc.bluesky,
+      linkedin: userDoc.linkedin,
+    };
+
+    const storiesFromDb = await ctx.db
+      .query("stories")
+      .withIndex("by_userId_isApproved", (q) => q.eq("userId", userDoc._id).eq("isApproved", true))
+      .order("desc")
+      .take(100);
+
+    const storyDetailsPromises = storiesFromDb.map(async (storyDoc: Doc<"stories">) => {
+      const author: Doc<"users"> | null = await ctx.db.get(storyDoc.userId);
+      const votesData = await ctx.db
+        .query("votes")
+        .withIndex("by_story", (q) => q.eq("storyId", storyDoc._id))
+        .collect();
+      const commentsData = await ctx.db
+        .query("comments")
+        .withIndex("by_storyId", (q) => q.eq("storyId", storyDoc._id))
+        .filter((q) => q.eq(q.field("isHidden"), false))
+        .collect();
+      const ratingsData = await ctx.db
+        .query("storyRatings")
+        .withIndex("by_storyId", (q) => q.eq("storyId", storyDoc._id))
+        .collect();
+
+      const averageRating =
+        ratingsData.length > 0
+          ? parseFloat(
+              (ratingsData.reduce((sum, r) => sum + r.value, 0) / ratingsData.length).toFixed(1)
+            )
+          : 0;
+      const commentsCount = commentsData.length;
+      const votesCount = votesData.length;
+
+      const screenshotUrl = storyDoc.screenshotId
+        ? await ctx.storage.getUrl(storyDoc.screenshotId)
+        : null;
+
+      const tagsDocsIntermediate = storyDoc.tagIds
+        ? await Promise.all(storyDoc.tagIds.map((id) => ctx.db.get(id)))
+        : [];
+
+      const validTags = tagsDocsIntermediate.reduce(
+        (acc, tag) => {
+          if (tag && typeof tag.slug === "string") {
+            // Explicitly construct the tag object to match tagDocValidator's expectation
+            acc.push({
+              _id: tag._id,
+              _creationTime: tag._creationTime,
+              name: tag.name,
+              slug: tag.slug, // Now definitely a string
+              showInHeader: tag.showInHeader,
+              isHidden: tag.isHidden,
+              backgroundColor: tag.backgroundColor,
+              textColor: tag.textColor,
+              // Add any other fields expected by tagDocValidator, ensuring types match
+            });
+          }
+          return acc;
+        },
+        [] as {
+          _id: Id<"tags">;
+          _creationTime: number;
+          name: string;
+          slug: string;
+          showInHeader: boolean;
+          isHidden?: boolean;
+          backgroundColor?: string;
+          textColor?: string;
+        }[]
+      );
+
+      // Constructing the object for StoryWithDetailsPublic
+      return {
+        ...storyDoc, // Base story fields
+        authorName: author?.name,
+        authorUsername: author?.username,
+        authorImageUrl: author?.imageUrl,
+        tags: validTags, // Use the explicitly constructed validTags
+        screenshotUrl: screenshotUrl,
+        voteScore: storyDoc.votes, // Assuming storyDoc.votes is the voteScore
+        averageRating: averageRating,
+        commentsCount: commentsCount,
+        votesCount: votesCount,
+        // _score is optional, so can be omitted if not applicable here
+      };
     });
-    const votes = await ctx.runQuery(api.users.listUserVotes, { userId: user._id });
-    const comments: CommentDetailsForProfile[] = await ctx.runQuery(api.users.listUserComments, {
-      userId: user._id,
+
+    const storiesWithDetails: StoryWithDetailsPublic[] = await Promise.all(storyDetailsPromises);
+
+    const userVotes = await ctx.db
+      .query("votes")
+      .withIndex("by_userId", (q) => q.eq("userId", userDoc._id))
+      .order("desc")
+      .collect();
+
+    const votesWithStoryDetails = await Promise.all(
+      userVotes.map(async (vote) => {
+        const story = await ctx.db.get(vote.storyId);
+        return {
+          ...vote,
+          storyTitle: story?.title,
+          storySlug: story?.slug,
+        };
+      })
+    );
+
+    const userComments = await ctx.db
+      .query("comments")
+      .withIndex("by_user", (q) => q.eq("userId", userDoc._id))
+      .order("desc")
+      .collect();
+
+    const commentsWithDetailsPromises = userComments.map(async (comment) => {
+      const story = await ctx.db.get(comment.storyId);
+      const author: Doc<"users"> | null = await ctx.db.get(comment.userId);
+      return {
+        ...comment,
+        storyTitle: story?.title,
+        storySlug: story?.slug,
+        authorName: author?.name,
+        authorUsername: author?.username,
+        isHidden: comment.isHidden ?? false,
+      };
     });
-    const ratings = await ctx.runQuery(api.users.listUserStoryRatings, { userId: user._id });
+    const commentsWithDetails: CommentDetailsForProfile[] = await Promise.all(
+      commentsWithDetailsPromises
+    );
+
+    const userRatings = await ctx.db
+      .query("storyRatings")
+      .withIndex("by_userId", (q) => q.eq("userId", userDoc._id))
+      .order("desc")
+      .collect();
+
+    const ratingsWithStoryDetails = await Promise.all(
+      userRatings.map(async (rating) => {
+        const story = await ctx.db.get(rating.storyId);
+        return {
+          ...rating,
+          storyTitle: story?.title,
+          storySlug: story?.slug,
+        };
+      })
+    );
+
+    const followStats: { followersCount: number; followingCount: number } = await ctx.runQuery(
+      api.follows.getFollowStats,
+      { userId: userDoc._id }
+    );
+    const isFollowedByCurrentUser: boolean = await ctx.runQuery(api.follows.isFollowing, {
+      profileUserId: userDoc._id,
+    });
 
     return {
-      user,
-      stories,
-      votes,
-      comments,
-      ratings,
+      user: userForProfile, // Use the shaped user object
+      stories: storiesWithDetails,
+      votes: votesWithStoryDetails,
+      comments: commentsWithDetails,
+      ratings: ratingsWithStoryDetails,
+      followersCount: followStats.followersCount,
+      followingCount: followStats.followingCount,
+      isFollowedByCurrentUser,
     };
   },
 });

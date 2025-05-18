@@ -20,6 +20,8 @@ import {
   Lock,
   Mail,
   UserPlus,
+  UserMinus,
+  Users,
   AlertTriangle,
   Settings,
   Bookmark,
@@ -74,6 +76,18 @@ type BookmarkedStoryItem = Doc<"bookmarks"> & {
   storyAuthorName?: string | null;
   storyAuthorUsername?: string | null;
   storyScreenshotUrl?: string | null;
+  followersCount?: number;
+  followingCount?: number;
+  isFollowedByCurrentUser?: boolean;
+};
+
+// Define a type for user items in follower/following lists
+// Ensure this matches the return type of api.follows.getFollowers/getFollowing
+type FollowUserListItem = Doc<"users"> & {
+  // username is already part of Doc<"users">, but ensure it's handled if optional
+  username?: string | null; // explicitly define if it can be null/undefined in the query result
+  name?: string | null;
+  imageUrl?: string | null;
 };
 
 export default function UserProfilePage() {
@@ -86,6 +100,19 @@ export default function UserProfilePage() {
   const profileData = useQuery(
     api.users.getUserProfileByUsername,
     username && username !== "user-settings" ? { username } : "skip"
+  );
+
+  const followUserMutation = useMutation(api.follows.followUser);
+  const unfollowUserMutation = useMutation(api.follows.unfollowUser);
+
+  // Queries for followers and following lists
+  const followersData = useQuery(
+    api.follows.getFollowers,
+    profileData?.user?._id ? { userId: profileData.user._id } : "skip"
+  );
+  const followingData = useQuery(
+    api.follows.getFollowing,
+    profileData?.user?._id ? { userId: profileData.user._id } : "skip"
   );
 
   const unvoteStoryMutation = useMutation(api.stories.voteStory);
@@ -122,6 +149,7 @@ export default function UserProfilePage() {
   const [activeTab, setActiveTab] = useState<string>("votes");
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [isLoadingFollowAction, setIsLoadingFollowAction] = useState(false);
 
   // State for confirmation dialogs
   const [dialogState, setDialogState] = useState<{
@@ -185,7 +213,16 @@ export default function UserProfilePage() {
     return <NotFoundPage />;
   }
 
-  const { user: profileUser, stories, votes, comments, ratings } = profileData;
+  const {
+    user: profileUser,
+    stories,
+    votes,
+    comments,
+    ratings,
+    followersCount,
+    followingCount,
+    isFollowedByCurrentUser,
+  } = profileData;
   const isOwnProfile = !!authUser && authUser.username === profileUser?.username;
 
   const handleEditToggle = () => {
@@ -263,6 +300,27 @@ export default function UserProfilePage() {
       setEditError(error.data?.message || error.message || "Failed to save profile.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleFollowToggle = async () => {
+    if (!profileUser || !authUser || isOwnProfile) return;
+    setIsLoadingFollowAction(true);
+    try {
+      if (isFollowedByCurrentUser) {
+        await unfollowUserMutation({ userIdToUnfollow: profileUser._id });
+        // Optionally, show a success toast/notification here
+      } else {
+        await followUserMutation({ userIdToFollow: profileUser._id });
+        // Optionally, show a success toast/notification here
+      }
+      // Data will refetch due to Convex reactivity, updating isFollowedByCurrentUser
+    } catch (error: any) {
+      // Explicitly type error
+      console.error("Follow/Unfollow failed:", error);
+      setActionError(error.data?.message || error.message || "Failed to update follow status.");
+    } finally {
+      setIsLoadingFollowAction(false);
     }
   };
 
@@ -646,6 +704,35 @@ export default function UserProfilePage() {
               )}
             </div>
 
+            {/* FOLLOW BUTTON - Placed after social links and before Edit Profile button for non-own profiles */}
+            {!isOwnProfile && authUser && profileUser && !isEditing && (
+              <div className="mt-3">
+                <button
+                  onClick={handleFollowToggle}
+                  disabled={isLoadingFollowAction}
+                  className={`px-6 py-2 rounded-md text-sm font-medium flex items-center justify-center transition-colors w-full sm:w-auto
+                    ${
+                      isFollowedByCurrentUser
+                        ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        : "bg-[#292929] text-white hover:bg-gray-700"
+                    }`}
+                  style={{ fontFamily: "Inter, sans-serif" }}>
+                  {isLoadingFollowAction ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  ) : isFollowedByCurrentUser ? (
+                    <UserMinus className="w-4 h-4 mr-2" />
+                  ) : (
+                    <UserPlus className="w-4 h-4 mr-2" />
+                  )}
+                  {isLoadingFollowAction
+                    ? "Processing..."
+                    : isFollowedByCurrentUser
+                      ? "Unfollow"
+                      : "Follow"}
+                </button>
+              </div>
+            )}
+
             {isOwnProfile && !isEditing && (
               <button
                 onClick={handleEditToggle}
@@ -748,6 +835,25 @@ export default function UserProfilePage() {
               <span className="text-sm text-gray-500">Bookmarks</span>
             </div>
           )}
+          {/* Followers and Following Counts */}
+          <div className="flex flex-col items-center">
+            <a
+              href="#tab-section-followers"
+              onClick={() => setActiveTab("followers")}
+              className="text-xl text-[#292929] hover:underline">
+              {followersCount ?? 0}
+            </a>
+            <span className="text-sm text-gray-500">Followers</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <a
+              href="#tab-section-following"
+              onClick={() => setActiveTab("following")}
+              className="text-xl text-[#292929] hover:underline">
+              {followingCount ?? 0}
+            </a>
+            <span className="text-sm text-gray-500">Following</span>
+          </div>
         </div>
       </section>
 
@@ -831,6 +937,26 @@ export default function UserProfilePage() {
               {isOwnProfile ? `Bookmarks (${userBookmarksCount ?? 0})` : "Bookmarks"}
             </button>
           )}
+          {/* Followers Tab Button */}
+          <button
+            onClick={() => setActiveTab("followers")}
+            className={`py-2 px-4 text-sm font-medium focus:outline-none flex items-center ${
+              activeTab === "followers"
+                ? "border-b-2 border-[#292929] text-[#292929]"
+                : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}>
+            <Users className="w-4 h-4 mr-1" /> Followers ({followersCount ?? 0})
+          </button>
+          {/* Following Tab Button */}
+          <button
+            onClick={() => setActiveTab("following")}
+            className={`py-2 px-4 text-sm font-medium focus:outline-none flex items-center ${
+              activeTab === "following"
+                ? "border-b-2 border-[#292929] text-[#292929]"
+                : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}>
+            <Users className="w-4 h-4 mr-1" /> Following ({followingCount ?? 0})
+          </button>
         </div>
 
         {/* Conditionally Rendered Content */}
@@ -995,6 +1121,95 @@ export default function UserProfilePage() {
                     )}
                   </li>
                 ))}
+              </ul>
+            )}
+          </section>
+        )}
+
+        {/* Followers Tab Content */}
+        {activeTab === "followers" && (
+          <section
+            id="tab-section-followers"
+            className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
+            {followersData === undefined && <Loading />}
+            {followersData && followersData.length === 0 && (
+              <p className="text-gray-500 italic">No followers yet.</p>
+            )}
+            {followersData && followersData.length > 0 && (
+              <ul className="space-y-3">
+                {followersData.map((follower: FollowUserListItem | null) =>
+                  follower ? (
+                    <li
+                      key={follower._id}
+                      className="p-3 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-between transition-shadow hover:shadow-sm">
+                      <Link
+                        to={`/${follower.username}`}
+                        className="flex items-center flex-grow mr-3">
+                        {follower.imageUrl ? (
+                          <img
+                            src={follower.imageUrl}
+                            alt={follower.name ?? "User"}
+                            className="w-10 h-10 rounded-full mr-3 object-cover border border-gray-200"
+                          />
+                        ) : (
+                          <ProfileImagePlaceholder name={follower.name} size="w-10 h-10" />
+                        )}
+                        <div>
+                          <span className="text-sm font-semibold text-[#292929] hover:underline">
+                            {follower.name || "Anonymous User"}
+                          </span>
+                          <p className="text-xs text-gray-500">@{follower.username || "N/A"}</p>
+                        </div>
+                      </Link>
+                      {/* Optional: Add follow/unfollow button for logged-in user viewing this list */}
+                      {/* This requires checking if authUser.id is follower._id and if authUser is following this follower */}
+                    </li>
+                  ) : null
+                )}
+              </ul>
+            )}
+          </section>
+        )}
+
+        {/* Following Tab Content */}
+        {activeTab === "following" && (
+          <section
+            id="tab-section-following"
+            className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
+            {followingData === undefined && <Loading />}
+            {followingData && followingData.length === 0 && (
+              <p className="text-gray-500 italic">Not following anyone yet.</p>
+            )}
+            {followingData && followingData.length > 0 && (
+              <ul className="space-y-3">
+                {followingData.map((followedUser: FollowUserListItem | null) =>
+                  followedUser ? (
+                    <li
+                      key={followedUser._id}
+                      className="p-3 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-between transition-shadow hover:shadow-sm">
+                      <Link
+                        to={`/${followedUser.username}`}
+                        className="flex items-center flex-grow mr-3">
+                        {followedUser.imageUrl ? (
+                          <img
+                            src={followedUser.imageUrl}
+                            alt={followedUser.name ?? "User"}
+                            className="w-10 h-10 rounded-full mr-3 object-cover border border-gray-200"
+                          />
+                        ) : (
+                          <ProfileImagePlaceholder name={followedUser.name} size="w-10 h-10" />
+                        )}
+                        <div>
+                          <span className="text-sm font-semibold text-[#292929] hover:underline">
+                            {followedUser.name || "Anonymous User"}
+                          </span>
+                          <p className="text-xs text-gray-500">@{followedUser.username || "N/A"}</p>
+                        </div>
+                      </Link>
+                      {/* Optional: Add follow/unfollow button for logged-in user viewing this list */}
+                    </li>
+                  ) : null
+                )}
               </ul>
             )}
           </section>

@@ -3,11 +3,11 @@
 - `vibeapps/`: The root directory of the project.
   - `convex/`: Directory for Convex backend functions, schema, and other Convex-specific files.
     - `_generated/`: Auto-generated Convex files (API definitions, data model types based on `schema.ts`).
-    - `schema.ts`: Defines the database schema for Convex, including tables like `stories`, `comments`, `users`, `tags`, `settings`, `forms`, `formSubmissions`, `votes`, `reports`, etc.
+    - `schema.ts`: Defines the database schema for Convex, including tables like `stories`, `comments`, `users`, `tags`, `settings`, `forms`, `formSubmissions`, `votes`, `reports`, `follows`, etc.
     - `http.ts`: (If present) Defines HTTP actions for Convex, allowing the app to handle HTTP requests.
     - `crons.ts`: (If present) Defines scheduled cron jobs for Convex.
     - `auth.config.js`: (If present) Configuration for Convex authentication.
-    - `*.ts`: Other TypeScript files containing Convex queries, mutations, and actions (e.g., `stories.ts`, `comments.ts`, `users.ts`, `tags.ts`, `settings.ts`, `forms.ts`, `formSubmissions.ts`, `votes.ts`, `reports.ts`).
+    - `*.ts`: Other TypeScript files containing Convex queries, mutations, and actions (e.g., `stories.ts`, `comments.ts`, `users.ts`, `tags.ts`, `settings.ts`, `forms.ts`, `formSubmissions.ts`, `votes.ts`, `reports.ts`, `follows.ts`, `adminFollowsQueries.ts`).
   - `public/`: Directory for static assets that are served directly by the web server (e.g., `favicon.ico`, images, `robots.txt`).
   - `src/`: Directory for the React frontend application code.
     - `components/`: Reusable React components.
