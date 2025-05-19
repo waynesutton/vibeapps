@@ -638,7 +638,7 @@ export default function UserProfilePage() {
                     type="url"
                     value={newWebsite}
                     onChange={(e) => setNewWebsite(e.target.value)}
-                    className="flex-grow  sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-black focus:border-black"
+                    className="flex-grow sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
                     placeholder="Website"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   />
@@ -654,7 +654,7 @@ export default function UserProfilePage() {
                     type="url"
                     value={newBluesky}
                     onChange={(e) => setNewBluesky(e.target.value)}
-                    className="flex-grow  sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-black focus:border-black"
+                    className="flex-grow  sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
                     placeholder="Bluesky"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   />
@@ -662,7 +662,7 @@ export default function UserProfilePage() {
                     type="url"
                     value={newLinkedin}
                     onChange={(e) => setNewLinkedin(e.target.value)}
-                    className="flex-grow  sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-black focus:border-black"
+                    className="flex-grow  sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
                     placeholder="LinkedIn"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   />
@@ -794,7 +794,7 @@ export default function UserProfilePage() {
         className="mb-4 p-4 bg-[#fff] rounded-md border border-gray-200"
         style={{ fontFamily: "Inter, sans-serif" }}>
         <h2 className="text-lg font-normal text-[#292929] mb-4 pb-2 border-b border-gray-300">
-          Dashboard
+          My Vibes
         </h2>
         <div className="flex flex-row gap-8 justify-center sm:justify-start">
           <div className="flex flex-col items-center">

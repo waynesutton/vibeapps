@@ -359,7 +359,17 @@ export function Layout({ children }: { children?: ReactNode }) {
                                   : "#D1D5DB", // Tailwind gray-300
                           }}
                           title={tag.name}>
-                          {/* Future placeholder for icon: {tag.icon && <IconComponent ... />} */}
+                          {/* Show emoji or icon if present */}
+                          {tag.emoji ? (
+                            <span className="mr-1 align-middle text-base">{tag.emoji}</span>
+                          ) : tag.iconUrl ? (
+                            <img
+                              src={tag.iconUrl}
+                              alt=""
+                              className="inline-block w-4 h-4 mr-1 align-middle object-cover rounded-sm"
+                              style={{ verticalAlign: "middle" }}
+                            />
+                          ) : null}
                           {tag.name}
                         </button>
                       ))}
