@@ -109,6 +109,18 @@ export default defineSchema({
         v.literal("votes_year")
       )
     ),
+    showListView: v.optional(v.boolean()),
+    showGridView: v.optional(v.boolean()),
+    showVibeView: v.optional(v.boolean()),
+    siteDefaultViewMode: v.optional(
+      v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"), v.literal("none"))
+    ),
+    profilePageDefaultViewMode: v.optional(
+      v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"), v.literal("none"))
+    ),
+    adminDashboardDefaultViewMode: v.optional(
+      v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"), v.literal("none"))
+    ),
   }),
 
   forms: defineTable({

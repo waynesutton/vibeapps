@@ -11,8 +11,15 @@ export type ViewModeConvex = Doc<"settings">["defaultViewMode"]; // Infer from s
 const DEFAULT_SETTINGS = {
   itemsPerPage: 20,
   siteTitle: "Vibe Apps",
-  defaultViewMode: "vibe" as ViewModeConvex, // Use the inferred type
+  defaultViewMode: "vibe" as ViewModeConvex, // This will be effectively replaced by siteDefaultViewMode
   defaultSortPeriod: "all" as SortPeriodConvex, // Add default and use inferred type
+  // New view mode settings
+  showListView: true,
+  showGridView: true,
+  showVibeView: true,
+  siteDefaultViewMode: "vibe" as ViewModeConvex | "none", // 'none' means user choice, no pre-selection
+  profilePageDefaultViewMode: "list" as ViewModeConvex | "none", // Default for profile pages, allow none
+  adminDashboardDefaultViewMode: "list" as ViewModeConvex | "none", // Default for admin dashboard, allow none
 };
 
 // Type for settings data returned by the 'get' query.
@@ -36,6 +43,15 @@ export const get = query({
     return {
       ...DEFAULT_SETTINGS,
       ...settingsDoc,
+      // Ensure new fields have defaults if settingsDoc is old
+      showListView: settingsDoc.showListView ?? DEFAULT_SETTINGS.showListView,
+      showGridView: settingsDoc.showGridView ?? DEFAULT_SETTINGS.showGridView,
+      showVibeView: settingsDoc.showVibeView ?? DEFAULT_SETTINGS.showVibeView,
+      siteDefaultViewMode: settingsDoc.siteDefaultViewMode ?? DEFAULT_SETTINGS.siteDefaultViewMode,
+      profilePageDefaultViewMode:
+        settingsDoc.profilePageDefaultViewMode ?? DEFAULT_SETTINGS.profilePageDefaultViewMode,
+      adminDashboardDefaultViewMode:
+        settingsDoc.adminDashboardDefaultViewMode ?? DEFAULT_SETTINGS.adminDashboardDefaultViewMode,
     } as SettingsData; // Assert to ensure type compatibility
   },
 });
@@ -48,6 +64,26 @@ export const initialize = mutation({
     const existing = await ctx.db.query("settings").first();
     if (existing) {
       console.log("Settings already initialized.");
+      // Patch existing with any new default fields if they are missing
+      const updates: Partial<typeof DEFAULT_SETTINGS> = {};
+      if (existing.showListView === undefined) updates.showListView = DEFAULT_SETTINGS.showListView;
+      if (existing.showGridView === undefined) updates.showGridView = DEFAULT_SETTINGS.showGridView;
+      if (existing.showVibeView === undefined) updates.showVibeView = DEFAULT_SETTINGS.showVibeView;
+      if (existing.siteDefaultViewMode === undefined)
+        updates.siteDefaultViewMode = DEFAULT_SETTINGS.siteDefaultViewMode;
+      if (existing.profilePageDefaultViewMode === undefined)
+        updates.profilePageDefaultViewMode = DEFAULT_SETTINGS.profilePageDefaultViewMode;
+      if (existing.adminDashboardDefaultViewMode === undefined)
+        updates.adminDashboardDefaultViewMode = DEFAULT_SETTINGS.adminDashboardDefaultViewMode;
+      // also ensure old defaultViewMode is updated if new one not present
+      if (existing.defaultViewMode && existing.siteDefaultViewMode === undefined) {
+        updates.siteDefaultViewMode = existing.defaultViewMode as ViewModeConvex | "none";
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await ctx.db.patch(existing._id, updates);
+        console.log("Patched existing settings with new default fields.");
+      }
       return existing._id; // Return existing ID
     }
     const settingsId = await ctx.db.insert("settings", DEFAULT_SETTINGS);
@@ -62,7 +98,7 @@ export const update = mutation({
   args: {
     itemsPerPage: v.optional(v.number()),
     siteTitle: v.optional(v.string()),
-    defaultViewMode: v.optional(v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"))),
+    defaultViewMode: v.optional(v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"))), // Keep for compatibility, but prefer siteDefaultViewMode
     defaultSortPeriod: v.optional(
       v.union(
         v.literal("today"),
@@ -77,6 +113,18 @@ export const update = mutation({
       )
     ),
     // Add other updatable settings here
+    showListView: v.optional(v.boolean()),
+    showGridView: v.optional(v.boolean()),
+    showVibeView: v.optional(v.boolean()),
+    siteDefaultViewMode: v.optional(
+      v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"), v.literal("none"))
+    ),
+    profilePageDefaultViewMode: v.optional(
+      v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"), v.literal("none"))
+    ),
+    adminDashboardDefaultViewMode: v.optional(
+      v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"), v.literal("none"))
+    ),
   },
   returns: v.null(),
   handler: async (ctx, args) => {

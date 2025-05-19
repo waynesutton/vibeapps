@@ -20,6 +20,20 @@ type SortPeriod =
 // Define ViewMode locally for type casting
 type ViewMode = "list" | "grid" | "vibe";
 
+// Define DEFAULT_SETTINGS at the top of the file, for example:
+const DEFAULT_SETTINGS = {
+  itemsPerPage: 20,
+  siteTitle: "Vibe Apps",
+  defaultViewMode: "vibe" as ViewMode,
+  defaultSortPeriod: "all" as SortPeriod,
+  showListView: true,
+  showGridView: true,
+  showVibeView: true,
+  siteDefaultViewMode: "vibe" as ViewMode | "none",
+  profilePageDefaultViewMode: "list" as ViewMode | "none",
+  adminDashboardDefaultViewMode: "list" as ViewMode | "none",
+};
+
 export function Settings() {
   const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
 
@@ -36,7 +50,20 @@ export function Settings() {
     if (currentSettings) {
       // Initialize local state with fetched settings, excluding system fields
       const { _id, _creationTime, ...editableSettings } = currentSettings;
-      setLocalSettings(editableSettings);
+      // Ensure all new fields are initialized in localSettings, even if not in currentSettings initially
+      setLocalSettings({
+        itemsPerPage: DEFAULT_SETTINGS.itemsPerPage,
+        siteTitle: DEFAULT_SETTINGS.siteTitle,
+        defaultViewMode: DEFAULT_SETTINGS.defaultViewMode, // old one, for reference
+        defaultSortPeriod: DEFAULT_SETTINGS.defaultSortPeriod,
+        showListView: DEFAULT_SETTINGS.showListView,
+        showGridView: DEFAULT_SETTINGS.showGridView,
+        showVibeView: DEFAULT_SETTINGS.showVibeView,
+        siteDefaultViewMode: DEFAULT_SETTINGS.siteDefaultViewMode,
+        profilePageDefaultViewMode: DEFAULT_SETTINGS.profilePageDefaultViewMode,
+        adminDashboardDefaultViewMode: DEFAULT_SETTINGS.adminDashboardDefaultViewMode,
+        ...editableSettings,
+      });
     }
   }, [currentSettings]);
 
@@ -53,6 +80,10 @@ export function Settings() {
     } else if (name === "defaultViewMode") {
       // Add specific handling for defaultViewMode
       processedValue = value as ViewMode;
+    } else if (name === "siteDefaultViewMode") {
+      processedValue = value as ViewMode | "none";
+    } else if (name === "profilePageDefaultViewMode" || name === "adminDashboardDefaultViewMode") {
+      processedValue = value as ViewMode | "none";
     }
 
     setLocalSettings((prev) => ({ ...prev, [name]: processedValue }));
@@ -78,6 +109,22 @@ export function Settings() {
         updates.defaultViewMode = localSettings.defaultViewMode;
       if (localSettings.defaultSortPeriod !== undefined) {
         updates.defaultSortPeriod = localSettings.defaultSortPeriod;
+      }
+      // Add new settings to updates
+      if (localSettings.showListView !== undefined)
+        updates.showListView = localSettings.showListView;
+      if (localSettings.showGridView !== undefined)
+        updates.showGridView = localSettings.showGridView;
+      if (localSettings.showVibeView !== undefined)
+        updates.showVibeView = localSettings.showVibeView;
+      if (localSettings.siteDefaultViewMode !== undefined) {
+        updates.siteDefaultViewMode = localSettings.siteDefaultViewMode;
+      }
+      if (localSettings.profilePageDefaultViewMode !== undefined) {
+        updates.profilePageDefaultViewMode = localSettings.profilePageDefaultViewMode;
+      }
+      if (localSettings.adminDashboardDefaultViewMode !== undefined) {
+        updates.adminDashboardDefaultViewMode = localSettings.adminDashboardDefaultViewMode;
       }
 
       await updateSettings(updates);
@@ -196,7 +243,7 @@ export function Settings() {
               type="number"
               min="5" // Example min value
               max="100" // Example max value
-              value={localSettings.itemsPerPage ?? ""}
+              value={localSettings.itemsPerPage ?? DEFAULT_SETTINGS.itemsPerPage}
               onChange={handleChange}
               className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
               disabled={isSaving}
@@ -208,15 +255,16 @@ export function Settings() {
             <label
               htmlFor="defaultViewMode"
               className="block text-sm font-medium text-[#525252] mb-1">
-              Default View Mode
+              Default View Mode (Legacy - use Site Default View Mode below)
             </label>
             <select
               id="defaultViewMode"
               name="defaultViewMode"
               value={localSettings.defaultViewMode || ""}
               onChange={handleChange}
-              className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
-              disabled={isSaving}>
+              className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] opacity-50"
+              disabled={isSaving || true} // Always disable, effectively making it read-only if shown
+              title="This setting is being phased out. Please use 'Site Default View Mode'.">
               <option value="list">List View</option>
               <option value="grid">Grid View</option>
               <option value="vibe">Vibe View</option>
@@ -249,22 +297,105 @@ export function Settings() {
             </select>
           </div>
 
-          {/* Add other settings fields here based on convex/settings.ts args */}
-          {/* Example Checkbox: 
-          <div>
-            <label className="flex items-center gap-2">
-              <input
-                name="someBooleanSetting" // Matches arg name in update mutation
-                type="checkbox"
-                checked={localSettings.someBooleanSetting ?? false}
+          {/* --- New View Mode Settings --- */}
+          <div className="pt-6 mt-6 border-t border-gray-200">
+            <h3 className="text-lg font-medium text-[#525252] mb-4">View Mode Configuration</h3>
+
+            {/* View Mode Visibility */}
+            <div className="space-y-3 mb-6">
+              <p className="text-sm font-medium text-[#525252]">Show View Mode Icons:</p>
+              {["showListView", "showGridView", "showVibeView"].map((key) => {
+                const typedKey = key as keyof Pick<
+                  SiteSettings,
+                  "showListView" | "showGridView" | "showVibeView"
+                >;
+                return (
+                  <label key={typedKey} className="flex items-center gap-2">
+                    <input
+                      name={typedKey}
+                      type="checkbox"
+                      checked={localSettings[typedKey] ?? true} // Default to true if undefined
+                      onChange={handleChange}
+                      className="rounded border-[#D5D3D0] text-[#292929] focus:ring-[#292929]"
+                      disabled={isSaving}
+                    />
+                    <span className="text-sm text-[#525252]">
+                      {typedKey.replace("show", "").replace("View", " View")}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+
+            {/* Site Default View Mode Setting */}
+            <div>
+              <label
+                htmlFor="siteDefaultViewMode"
+                className="block text-sm font-medium text-[#525252] mb-1">
+                Site Default View Mode (Homepage, etc.)
+              </label>
+              <select
+                id="siteDefaultViewMode"
+                name="siteDefaultViewMode"
+                value={localSettings.siteDefaultViewMode || "none"}
                 onChange={handleChange}
-                className="rounded border-[#D5D3D0] text-[#292929] focus:ring-[#292929]"
-                disabled={isSaving}
-              />
-              <span className="text-sm text-[#525252]">Enable Some Feature</span>
-            </label>
+                className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
+                disabled={isSaving}>
+                <option value="none">None (User selection or first available)</option>
+                {localSettings.showListView && <option value="list">List View</option>}
+                {localSettings.showGridView && <option value="grid">Grid View</option>}
+                {localSettings.showVibeView && <option value="vibe">Vibe View</option>}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                If a view mode is hidden, it cannot be set as default. 'None' means no view mode is
+                pre-selected.
+              </p>
+            </div>
+
+            {/* Profile Page Default View Mode */}
+            <div className="mt-4">
+              <label
+                htmlFor="profilePageDefaultViewMode"
+                className="block text-sm font-medium text-[#525252] mb-1">
+                Profile Page Default View Mode
+              </label>
+              <select
+                id="profilePageDefaultViewMode"
+                name="profilePageDefaultViewMode"
+                value={localSettings.profilePageDefaultViewMode || "list"}
+                onChange={handleChange}
+                className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
+                disabled={isSaving}>
+                {/* Profile page can always choose, not tied to show...View settings for header icons */}
+                <option value="none">None (User selection or first available)</option>
+                <option value="list">List View</option>
+                <option value="grid">Grid View</option>
+                <option value="vibe">Vibe View</option>
+              </select>
+            </div>
+
+            {/* Admin Dashboard Default View Mode */}
+            <div className="mt-4">
+              <label
+                htmlFor="adminDashboardDefaultViewMode"
+                className="block text-sm font-medium text-[#525252] mb-1">
+                Admin Dashboard Default View Mode
+              </label>
+              <select
+                id="adminDashboardDefaultViewMode"
+                name="adminDashboardDefaultViewMode"
+                value={localSettings.adminDashboardDefaultViewMode || "list"}
+                onChange={handleChange}
+                className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
+                disabled={isSaving}>
+                {/* Admin page can always choose */}
+                <option value="none">None (User selection or first available)</option>
+                <option value="list">List View</option>
+                <option value="grid">Grid View</option>
+                <option value="vibe">Vibe View</option>
+              </select>
+            </div>
           </div>
-          */}
         </div>
       </div>
 

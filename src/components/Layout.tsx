@@ -65,50 +65,98 @@ export function Layout({ children }: { children?: ReactNode }) {
   React.useEffect(() => {
     if (settings) {
       if (!userChangedViewMode) {
-        setViewMode(settings.defaultViewMode || "vibe");
+        // Determine initial view mode based on page type and settings
+        const { pathname } = location;
+        const isAdminPage = pathname.startsWith("/admin");
+        const isSetUsernamePage = pathname === "/set-username";
+        let isProfilePage = false;
+        if (isSignedIn && convexUserDoc?.username) {
+          isProfilePage = pathname === `/${convexUserDoc.username}`;
+        }
+
+        let newViewMode: "grid" | "list" | "vibe" | undefined = undefined;
+
+        if (isAdminPage) {
+          newViewMode =
+            settings.adminDashboardDefaultViewMode === "none"
+              ? undefined
+              : settings.adminDashboardDefaultViewMode || "list";
+        } else if (isProfilePage) {
+          newViewMode =
+            settings.profilePageDefaultViewMode === "none"
+              ? undefined
+              : settings.profilePageDefaultViewMode || "list";
+        } else if (isSetUsernamePage) {
+          newViewMode = undefined; // No view mode on set-username page
+        } else {
+          // General site pages
+          if (settings.siteDefaultViewMode === "none") {
+            newViewMode = undefined; // User choice or first available if icons clicked
+          } else if (settings.siteDefaultViewMode === "list" && settings.showListView) {
+            newViewMode = "list";
+          } else if (settings.siteDefaultViewMode === "grid" && settings.showGridView) {
+            newViewMode = "grid";
+          } else if (settings.siteDefaultViewMode === "vibe" && settings.showVibeView) {
+            newViewMode = "vibe";
+          } else {
+            // Fallback if default is hidden: pick first available shown view
+            if (settings.showListView) newViewMode = "list";
+            else if (settings.showGridView) newViewMode = "grid";
+            else if (settings.showVibeView) newViewMode = "vibe";
+            else newViewMode = undefined; // Or "none" if all hidden, though UI should prevent this
+          }
+        }
+        setViewMode(newViewMode);
       }
+      // Initialize sortPeriod if not already set by user or from settings
       if (sortPeriod === undefined) {
         setSortPeriod(settings.defaultSortPeriod || "all");
       }
     } else {
+      // Fallback if settings are not loaded yet
       if (!userChangedViewMode && viewMode === undefined) {
-        setViewMode("vibe");
+        setViewMode("vibe"); // Default pre-settings behavior
       }
       if (sortPeriod === undefined) {
         setSortPeriod("all");
       }
     }
-  }, [settings, userChangedViewMode]);
+  }, [
+    settings,
+    userChangedViewMode,
+    location.pathname,
+    isSignedIn,
+    convexUserDoc,
+    viewMode,
+    sortPeriod,
+  ]);
 
   // Effect to reset viewMode on specific pages like admin or profile
+  // This effect might need adjustment based on the new default logic above.
+  // The above useEffect already handles setting viewMode based on page type.
+  // This one might only be needed if we want to CLEAR userChangedViewMode on navigation to these pages.
   React.useEffect(() => {
     const { pathname } = location;
     const isAdminPage = pathname.startsWith("/admin");
     const isSetUsernamePage = pathname === "/set-username";
-
     let isProfilePage = false;
     if (isSignedIn && convexUserDoc?.username) {
       isProfilePage = pathname === `/${convexUserDoc.username}`;
     }
 
-    if (isAdminPage || isSetUsernamePage || isProfilePage) {
-      // If a view mode is active or was actively chosen by user, reset it
-      // This ensures no view mode button is highlighted on these specific pages
-      // and that default view logic applies if navigating away from these pages
-      // (not via a view-mode button click).
-      if (viewMode !== undefined || userChangedViewMode) {
-        setViewMode(undefined);
-        setUserChangedViewMode(false);
-      }
+    // If navigating to these pages and the user HAD manually changed view mode,
+    // we might want to reset that so the page-specific default takes over cleanly.
+    if ((isAdminPage || isSetUsernamePage || isProfilePage) && userChangedViewMode) {
+      // The main useEffect will set the appropriate default for admin/profile.
+      // Resetting userChangedViewMode allows the main effect to apply the page-specific default.
+      setUserChangedViewMode(false);
     }
   }, [
     location.pathname,
     isSignedIn,
     convexUserDoc,
-    viewMode,
-    setViewMode,
-    userChangedViewMode,
-    setUserChangedViewMode,
+    userChangedViewMode, // Only run if userChangedViewMode changes
+    // No dependency on viewMode or setViewMode here to avoid loops with the other effect
   ]);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -154,6 +202,13 @@ export function Layout({ children }: { children?: ReactNode }) {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showProfileMenu]);
+
+  // Determine if the sidebar should be shown based on view mode and settings
+  // Ensure settings is loaded before trying to access its properties for showSidebar
+  const showSidebar =
+    settings &&
+    (viewMode === "vibe" || viewMode === "list") &&
+    (settings.showListView || settings.showVibeView);
 
   return (
     <>
@@ -227,36 +282,42 @@ export function Layout({ children }: { children?: ReactNode }) {
                       Submit
                     </Link>
                   </SignedIn>
-                  <button
-                    onClick={() => {
-                      setViewMode("list");
-                      setUserChangedViewMode(true);
-                      navigate("/"); // Navigate to homepage
-                    }}
-                    className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "list" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
-                    aria-label="List View">
-                    <List className="w-5 h-5 text-[#545454]" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setViewMode("grid");
-                      setUserChangedViewMode(true);
-                      navigate("/"); // Navigate to homepage
-                    }}
-                    className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "grid" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
-                    aria-label="Grid View">
-                    <LayoutGrid className="w-5 h-5 text-[#545454]" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setViewMode("vibe");
-                      setUserChangedViewMode(true);
-                      navigate("/"); // Navigate to homepage
-                    }}
-                    className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "vibe" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
-                    aria-label="Vibe View">
-                    <ThumbsUp className="w-5 h-5 text-[#545454]" />
-                  </button>
+                  {settings?.showListView && (
+                    <button
+                      onClick={() => {
+                        setViewMode("list");
+                        setUserChangedViewMode(true);
+                        navigate("/"); // Navigate to homepage
+                      }}
+                      className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "list" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
+                      aria-label="List View">
+                      <List className="w-5 h-5 text-[#545454]" />
+                    </button>
+                  )}
+                  {settings?.showGridView && (
+                    <button
+                      onClick={() => {
+                        setViewMode("grid");
+                        setUserChangedViewMode(true);
+                        navigate("/"); // Navigate to homepage
+                      }}
+                      className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "grid" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
+                      aria-label="Grid View">
+                      <LayoutGrid className="w-5 h-5 text-[#545454]" />
+                    </button>
+                  )}
+                  {settings?.showVibeView && (
+                    <button
+                      onClick={() => {
+                        setViewMode("vibe");
+                        setUserChangedViewMode(true);
+                        navigate("/"); // Navigate to homepage
+                      }}
+                      className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "vibe" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
+                      aria-label="Vibe View">
+                      <ThumbsUp className="w-5 h-5 text-[#545454]" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Row 3 content: Dropdowns & Search */}
@@ -348,7 +409,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                                 ${
                                   selectedTagId === undefined
                                     ? "text-slate-700 ring-1 ring-gray-400 ring-offset-1"
-                                    : "bg-[#E5EAF0] text-gray-700 border-[#D8E1EC] hover:bg-[white]"
+                                    : "bg-[#F3F4F6] text-gray-700 border-[#D8E1EC] hover:bg-[white]"
                                 }`}
                       title="Show All Categories">
                       All
@@ -403,10 +464,10 @@ export function Layout({ children }: { children?: ReactNode }) {
         </header>
         <main className="flex-grow container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row gap-8">
-            <div className={viewMode === "vibe" || viewMode === "list" ? "md:w-3/4" : "w-full"}>
+            <div className={showSidebar ? "md:w-3/4" : "w-full"}>
               {children || <Outlet context={{ viewMode, selectedTagId, sortPeriod }} />}
             </div>
-            {(viewMode === "vibe" || viewMode === "list") && (
+            {showSidebar && (
               <aside className="md:w-1/4 space-y-6">
                 <WeeklyLeaderboard />
                 <TopCategoriesOfWeek />
