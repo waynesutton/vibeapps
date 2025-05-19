@@ -61,7 +61,7 @@ export const create = mutation({
     textColor: v.optional(v.union(v.string(), v.null())), // Allow null for clearing
     emoji: v.optional(v.union(v.string(), v.null())), // Allow null for clearing
     iconUrl: v.optional(v.union(v.string(), v.null())), // Accept iconUrl (for legacy, but not used)
-    // iconStorageId is not stored directly, but can be handled in handler if needed
+    iconStorageId: v.optional(v.id("_storage")), // Accept storageId for uploaded icon
   },
   handler: async (ctx, args): Promise<Id<"tags">> => {
     await requireAdminRole(ctx);
@@ -91,6 +91,11 @@ export const create = mutation({
         `Tag slug "${slug}" (derived from "${name}") already exists. Please choose a different name.`
       );
     }
+    let iconUrl: string | undefined = args.iconUrl ?? undefined;
+    if (args.iconStorageId) {
+      const url = await ctx.storage.getUrl(args.iconStorageId);
+      iconUrl = url ?? undefined;
+    }
     return await ctx.db.insert("tags", {
       name: name,
       slug: slug,
@@ -99,7 +104,7 @@ export const create = mutation({
       backgroundColor: args.backgroundColor ?? undefined,
       textColor: args.textColor ?? undefined,
       emoji: args.emoji ?? undefined,
-      iconUrl: args.iconUrl ?? undefined,
+      iconUrl: iconUrl,
     });
   },
 });
@@ -116,11 +121,12 @@ export const update = mutation({
     textColor: v.optional(v.union(v.string(), v.null())),
     emoji: v.optional(v.union(v.string(), v.null())),
     iconUrl: v.optional(v.union(v.string(), v.null())),
+    iconStorageId: v.optional(v.id("_storage")), // Accept storageId for uploaded icon
     clearIcon: v.optional(v.boolean()), // Allow clearing icon
   },
   handler: async (ctx, args) => {
     await requireAdminRole(ctx);
-    const { tagId, ...rest } = args;
+    const { tagId, iconStorageId, clearIcon, ...rest } = args;
     const updateData: Partial<Omit<Doc<"tags">, "_id" | "_creationTime">> = {};
     if (rest.name !== undefined) {
       const newName = rest.name.trim();
@@ -163,7 +169,11 @@ export const update = mutation({
     if (rest.emoji !== undefined) updateData.emoji = rest.emoji === null ? undefined : rest.emoji;
     if (rest.iconUrl !== undefined)
       updateData.iconUrl = rest.iconUrl === null ? undefined : rest.iconUrl;
-    if (rest.clearIcon) updateData.iconUrl = undefined;
+    if (iconStorageId) {
+      const url = await ctx.storage.getUrl(iconStorageId);
+      updateData.iconUrl = url ?? undefined;
+    }
+    if (clearIcon) updateData.iconUrl = undefined;
     if (Object.keys(updateData).length > 0) {
       await ctx.db.patch(tagId, updateData);
     }
@@ -329,5 +339,14 @@ export const getWeeklyTopCategories = query({
       .slice(0, args.limit);
 
     return visibleHeaderTagsWithCounts;
+  },
+});
+
+// Public mutation to generate an upload URL for tag icon PNGs
+export const generateIconUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdminRole(ctx);
+    return await ctx.storage.generateUploadUrl();
   },
 });

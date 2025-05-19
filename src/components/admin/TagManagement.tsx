@@ -29,8 +29,8 @@ interface EditableTag extends Omit<Doc<"tags">, "backgroundColor" | "textColor">
   isHidden?: boolean;
   backgroundColor?: string | null;
   textColor?: string | null;
-  emoji?: string | null; // New: for emoji character
-  iconUrl?: string | null; // New: for uploaded icon URL
+  emoji?: string; // Use string | undefined for compatibility with Doc<"tags">
+  iconUrl?: string; // Use string | undefined for compatibility with Doc<"tags">
   iconFile?: File | null; // New: for local file handling before upload
 
   // UI State Flags
@@ -73,10 +73,10 @@ export function TagManagement() {
           allTagsAdmin.map(
             (tag): EditableTag => ({
               ...tag,
-              backgroundColor: tag.backgroundColor ?? null,
-              textColor: tag.textColor ?? null,
-              emoji: tag.emoji ?? null,
-              iconUrl: tag.iconUrl ?? null,
+              backgroundColor: tag.backgroundColor ?? undefined,
+              textColor: tag.textColor ?? undefined,
+              emoji: tag.emoji ?? undefined,
+              iconUrl: tag.iconUrl ?? undefined,
               iconFile: null, // Reset local file on refresh
               isNew: false,
               isModified: false,
@@ -220,8 +220,8 @@ export function TagManagement() {
       const file = event.target.files[0];
       if (file.type === "image/png") {
         handleFieldChange(tagId, "iconFile", file); // Store the file locally
-        handleFieldChange(tagId, "iconUrl", null); // Clear existing URL, new file takes precedence
-        handleFieldChange(tagId, "emoji", null); // Clear emoji if icon is chosen
+        handleFieldChange(tagId, "iconUrl", undefined); // Clear existing URL, new file takes precedence
+        handleFieldChange(tagId, "emoji", undefined); // Clear emoji if icon is chosen
         setError(null);
       } else {
         setError("Icon must be a PNG file.");
@@ -235,13 +235,13 @@ export function TagManagement() {
 
   const handleClearIcon = (tagId: Id<"tags">) => {
     handleFieldChange(tagId, "iconFile", null); // Clear local file selection
-    handleFieldChange(tagId, "iconUrl", null); // Clear stored URL
+    handleFieldChange(tagId, "iconUrl", undefined); // Clear stored URL
     // Mark as modified so save picks it up, will pass clearIcon: true or null iconStorageId
     handleFieldChange(tagId, "isModified", true);
   };
 
   const handleClearEmoji = (tagId: Id<"tags">) => {
-    handleFieldChange(tagId, "emoji", null);
+    handleFieldChange(tagId, "emoji", undefined);
   };
 
   // --- Save Logic ---
@@ -267,17 +267,14 @@ export function TagManagement() {
               headers: { "Content-Type": tag.iconFile.type },
               body: tag.iconFile,
             });
-            if (!uploadResponse.ok) {
-              throw new Error(`Icon upload failed: ${uploadResponse.statusText}`);
-            }
-            // The response from a POST to the URL from generateUploadUrl() is the storageId as plain text.
-            const storageIdText = await uploadResponse.text();
-            if (!storageIdText || !storageIdText.startsWith("storageId_")) {
-              // Basic check for a valid-looking storage ID
-              console.error("Upload response text:", storageIdText);
+            // Parse as JSON and extract storageId (matches StoryForm.tsx)
+            const uploadJson = await uploadResponse.json();
+            const storageId = uploadJson.storageId;
+            if (!storageId || typeof storageId !== "string") {
+              console.error("Upload response json:", uploadJson);
               throw new Error("Icon upload did not return a valid storageId string.");
             }
-            iconStorageIdToSend = storageIdText as Id<"_storage">;
+            iconStorageIdToSend = storageId as Id<"_storage">;
             shouldClearIcon = false; // We have a new icon, so don't clear
           } catch (uploadErr: any) {
             console.error(`Failed to upload icon for tag ${tag.name}:`, uploadErr);
@@ -292,36 +289,39 @@ export function TagManagement() {
             await deleteTagMutation({ tagId: tag._id });
           }
         } else if (tag.isNew) {
-          await createTag({
+          const createPayload: any = {
             name: tag.name,
             slug: tag.name
               .toLowerCase()
               .replace(/\s+/g, "-")
-              .replace(/[^\w-]+/g, ""), // Basic slug, ensure it's in args if needed by mutation
+              .replace(/[^\w-]+/g, ""),
             showInHeader: tag.showInHeader,
             isHidden: tag.isHidden ?? false,
             backgroundColor: tag.backgroundColor ?? undefined,
             textColor: tag.textColor ?? undefined,
             emoji: tag.emoji ?? undefined,
-            iconStorageId: iconStorageIdToSend, // Pass the storageId
-          });
+            iconUrl: tag.iconUrl ?? undefined,
+          };
+          if (iconStorageIdToSend) createPayload.iconStorageId = iconStorageIdToSend;
+          await createTag(createPayload);
         } else {
           // Existing tag update
-          const updatePayload: Parameters<typeof updateTag>[0] = {
+          const updatePayload: any = {
             tagId: tag._id,
             name: tag.name,
             slug: tag.name
               .toLowerCase()
               .replace(/\s+/g, "-")
-              .replace(/[^\w-]+/g, ""), // Basic slug
+              .replace(/[^\w-]+/g, ""),
             showInHeader: tag.showInHeader,
             isHidden: tag.isHidden,
             backgroundColor: tag.backgroundColor ?? undefined,
             textColor: tag.textColor ?? undefined,
             emoji: tag.emoji ?? undefined,
-            iconStorageId: iconStorageIdToSend, // Pass new storageId if an icon was uploaded
-            clearIcon: shouldClearIcon && !iconStorageIdToSend ? true : undefined, // Clear if no new icon and old one was removed
+            iconUrl: tag.iconUrl ?? undefined,
+            clearIcon: shouldClearIcon && !iconStorageIdToSend ? true : undefined,
           };
+          if (iconStorageIdToSend) updatePayload.iconStorageId = iconStorageIdToSend;
           await updateTag(updatePayload);
         }
         // If successful, mark the tag as no longer modified in the local state immediately
