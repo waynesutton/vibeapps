@@ -65,7 +65,6 @@ export function Layout({ children }: { children?: ReactNode }) {
   React.useEffect(() => {
     if (settings) {
       if (!userChangedViewMode) {
-        // Determine initial view mode based on page type and settings
         const { pathname } = location;
         const isAdminPage = pathname.startsWith("/admin");
         const isSetUsernamePage = pathname === "/set-username";
@@ -89,9 +88,9 @@ export function Layout({ children }: { children?: ReactNode }) {
         } else if (isSetUsernamePage) {
           newViewMode = undefined; // No view mode on set-username page
         } else {
-          // General site pages
+          // General site pages - this is where siteDefaultViewMode is used
           if (settings.siteDefaultViewMode === "none") {
-            newViewMode = undefined; // User choice or first available if icons clicked
+            newViewMode = undefined;
           } else if (settings.siteDefaultViewMode === "list" && settings.showListView) {
             newViewMode = "list";
           } else if (settings.siteDefaultViewMode === "grid" && settings.showGridView) {
@@ -103,20 +102,27 @@ export function Layout({ children }: { children?: ReactNode }) {
             if (settings.showListView) newViewMode = "list";
             else if (settings.showGridView) newViewMode = "grid";
             else if (settings.showVibeView) newViewMode = "vibe";
-            else newViewMode = undefined; // Or "none" if all hidden, though UI should prevent this
+            else newViewMode = undefined;
           }
         }
-        setViewMode(newViewMode);
+        // Only update viewMode if it has actually changed to prevent potential loops if newViewMode is the same as current viewMode
+        if (viewMode !== newViewMode) {
+          setViewMode(newViewMode);
+        }
       }
-      // Initialize sortPeriod if not already set by user or from settings
-      if (sortPeriod === undefined) {
-        setSortPeriod(settings.defaultSortPeriod || "all");
+
+      // Directly set sortPeriod from settings if available, otherwise fallback
+      // This ensures sortPeriod always reflects the admin setting.
+      const newSortPeriod = settings.defaultSortPeriod || "all";
+      if (sortPeriod !== newSortPeriod) {
+        setSortPeriod(newSortPeriod);
       }
     } else {
       // Fallback if settings are not loaded yet
       if (!userChangedViewMode && viewMode === undefined) {
-        setViewMode("vibe"); // Default pre-settings behavior
+        setViewMode("vibe");
       }
+      // Set sortPeriod to fallback only if it's currently undefined
       if (sortPeriod === undefined) {
         setSortPeriod("all");
       }
@@ -129,7 +135,7 @@ export function Layout({ children }: { children?: ReactNode }) {
     convexUserDoc,
     viewMode,
     sortPeriod,
-  ]);
+  ]); // Added viewMode and sortPeriod to deps
 
   // Effect to reset viewMode on specific pages like admin or profile
   // This effect might need adjustment based on the new default logic above.

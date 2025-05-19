@@ -21,10 +21,9 @@ type SortPeriod =
 type ViewMode = "list" | "grid" | "vibe";
 
 // Define DEFAULT_SETTINGS at the top of the file, for example:
-const DEFAULT_SETTINGS = {
+const DEFAULT_SETTINGS_FRONTEND = {
   itemsPerPage: 20,
   siteTitle: "Vibe Apps",
-  defaultViewMode: "vibe" as ViewMode,
   defaultSortPeriod: "all" as SortPeriod,
   showListView: true,
   showGridView: true,
@@ -52,16 +51,15 @@ export function Settings() {
       const { _id, _creationTime, ...editableSettings } = currentSettings;
       // Ensure all new fields are initialized in localSettings, even if not in currentSettings initially
       setLocalSettings({
-        itemsPerPage: DEFAULT_SETTINGS.itemsPerPage,
-        siteTitle: DEFAULT_SETTINGS.siteTitle,
-        defaultViewMode: DEFAULT_SETTINGS.defaultViewMode, // old one, for reference
-        defaultSortPeriod: DEFAULT_SETTINGS.defaultSortPeriod,
-        showListView: DEFAULT_SETTINGS.showListView,
-        showGridView: DEFAULT_SETTINGS.showGridView,
-        showVibeView: DEFAULT_SETTINGS.showVibeView,
-        siteDefaultViewMode: DEFAULT_SETTINGS.siteDefaultViewMode,
-        profilePageDefaultViewMode: DEFAULT_SETTINGS.profilePageDefaultViewMode,
-        adminDashboardDefaultViewMode: DEFAULT_SETTINGS.adminDashboardDefaultViewMode,
+        itemsPerPage: DEFAULT_SETTINGS_FRONTEND.itemsPerPage,
+        siteTitle: DEFAULT_SETTINGS_FRONTEND.siteTitle,
+        defaultSortPeriod: DEFAULT_SETTINGS_FRONTEND.defaultSortPeriod,
+        showListView: DEFAULT_SETTINGS_FRONTEND.showListView,
+        showGridView: DEFAULT_SETTINGS_FRONTEND.showGridView,
+        showVibeView: DEFAULT_SETTINGS_FRONTEND.showVibeView,
+        siteDefaultViewMode: DEFAULT_SETTINGS_FRONTEND.siteDefaultViewMode,
+        profilePageDefaultViewMode: DEFAULT_SETTINGS_FRONTEND.profilePageDefaultViewMode,
+        adminDashboardDefaultViewMode: DEFAULT_SETTINGS_FRONTEND.adminDashboardDefaultViewMode,
         ...editableSettings,
       });
     }
@@ -77,9 +75,6 @@ export function Settings() {
       processedValue = value === "" ? 0 : parseInt(value, 10); // Handle empty input for numbers
     } else if (name === "defaultSortPeriod") {
       processedValue = value as SortPeriod; // Ensure it's treated as SortPeriod type
-    } else if (name === "defaultViewMode") {
-      // Add specific handling for defaultViewMode
-      processedValue = value as ViewMode;
     } else if (name === "siteDefaultViewMode") {
       processedValue = value as ViewMode | "none";
     } else if (name === "profilePageDefaultViewMode" || name === "adminDashboardDefaultViewMode") {
@@ -105,8 +100,6 @@ export function Settings() {
       if (localSettings.itemsPerPage !== undefined)
         updates.itemsPerPage = localSettings.itemsPerPage;
       if (localSettings.siteTitle !== undefined) updates.siteTitle = localSettings.siteTitle;
-      if (localSettings.defaultViewMode !== undefined)
-        updates.defaultViewMode = localSettings.defaultViewMode;
       if (localSettings.defaultSortPeriod !== undefined) {
         updates.defaultSortPeriod = localSettings.defaultSortPeriod;
       }
@@ -243,32 +236,11 @@ export function Settings() {
               type="number"
               min="5" // Example min value
               max="100" // Example max value
-              value={localSettings.itemsPerPage ?? DEFAULT_SETTINGS.itemsPerPage}
+              value={localSettings.itemsPerPage ?? DEFAULT_SETTINGS_FRONTEND.itemsPerPage}
               onChange={handleChange}
               className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
               disabled={isSaving}
             />
-          </div>
-
-          {/* Default View Mode Setting */}
-          <div>
-            <label
-              htmlFor="defaultViewMode"
-              className="block text-sm font-medium text-[#525252] mb-1">
-              Default View Mode (Legacy - use Site Default View Mode below)
-            </label>
-            <select
-              id="defaultViewMode"
-              name="defaultViewMode"
-              value={localSettings.defaultViewMode || ""}
-              onChange={handleChange}
-              className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] opacity-50"
-              disabled={isSaving || true} // Always disable, effectively making it read-only if shown
-              title="This setting is being phased out. Please use 'Site Default View Mode'.">
-              <option value="list">List View</option>
-              <option value="grid">Grid View</option>
-              <option value="vibe">Vibe View</option>
-            </select>
           </div>
 
           {/* Default Sort Period Setting */}

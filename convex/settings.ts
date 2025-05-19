@@ -11,8 +11,8 @@ export type ViewModeConvex = Doc<"settings">["defaultViewMode"]; // Infer from s
 const DEFAULT_SETTINGS = {
   itemsPerPage: 20,
   siteTitle: "Vibe Apps",
-  defaultViewMode: "vibe" as ViewModeConvex, // This will be effectively replaced by siteDefaultViewMode
-  defaultSortPeriod: "all" as SortPeriodConvex, // Add default and use inferred type
+  // defaultViewMode: "vibe" as ViewModeConvex, // LEGACY - siteDefaultViewMode is primary. Keep for potential old doc structure, but don't rely on it for new defaults.
+  defaultSortPeriod: "all" as SortPeriodConvex,
   // New view mode settings
   showListView: true,
   showGridView: true,
@@ -98,7 +98,7 @@ export const update = mutation({
   args: {
     itemsPerPage: v.optional(v.number()),
     siteTitle: v.optional(v.string()),
-    defaultViewMode: v.optional(v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"))), // Keep for compatibility, but prefer siteDefaultViewMode
+    // defaultViewMode: v.optional(v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"))), // REMOVED LEGACY FIELD
     defaultSortPeriod: v.optional(
       v.union(
         v.literal("today"),
