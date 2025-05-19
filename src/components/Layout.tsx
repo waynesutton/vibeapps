@@ -7,10 +7,18 @@ import { Id } from "../../convex/_generated/dataModel";
 import type { SiteSettings, Tag } from "../types";
 import { ConvexBox } from "./ConvexBox";
 import { Footer } from "./Footer";
-import { SignedIn, SignedOut, UserButton, useUser, useClerk } from "@clerk/clerk-react";
+import {
+  SignedIn,
+  SignedOut,
+  UserButton,
+  useUser,
+  useClerk,
+  SignInButton,
+} from "@clerk/clerk-react";
 import { UserSyncer } from "./UserSyncer";
 import { WeeklyLeaderboard } from "./WeeklyLeaderboard";
 import { TopCategoriesOfWeek } from "./TopCategoriesOfWeek";
+import { dark } from "@clerk/themes";
 
 interface LayoutContextType {
   viewMode: "list" | "grid" | "vibe";
@@ -167,11 +175,13 @@ export function Layout({ children }: { children?: ReactNode }) {
                 {/* Right: User/Sign-in */}
                 <div className="flex items-center gap-2 md:order-3">
                   <SignedOut>
-                    <button
-                      onClick={() => navigate("/sign-in")}
-                      className="px-4 py-2 bg-[#292929] border border-[#D8E1EC] text-[#ffffff] rounded-md text-xs font-normal hover:bg-[#F2F0ED] hover:text-[#292929] transition-colors">
-                      Sign in
-                    </button>
+                    <SignInButton mode="modal">
+                      <button
+                        className="px-4 py-2 bg-[#292929] border border-[#D8E1EC] text-[#ffffff] rounded-md text-xs font-normal hover:bg-[#F2F0ED] hover:text-[#292929] transition-colors"
+                        type="button">
+                        Sign in
+                      </button>
+                    </SignInButton>
                   </SignedOut>
                   <SignedIn>
                     <UserSyncer />
@@ -198,12 +208,25 @@ export function Layout({ children }: { children?: ReactNode }) {
               <div className="flex flex-col md:flex-row md:items-center md:gap-3 md:order-2">
                 {/* Row 2 content: Submit & View Options */}
                 <div className="flex w-full md:w-auto items-center gap-3">
-                  <Link
-                    to="/submit"
-                    className="flex items-center gap-2 text-[#545454] hover:text-[#525252] px-3 py-1 rounded-md text-sm">
-                    <PlusCircle className="w-4 h-4" />
-                    Submit
-                  </Link>
+                  {/* Submit Button: If not signed in, open Clerk modal. If signed in, navigate. */}
+                  <SignedOut>
+                    <SignInButton mode="modal">
+                      <button
+                        className="flex items-center gap-2 text-[#545454] hover:text-[#525252] px-3 py-1 rounded-md text-sm"
+                        type="button">
+                        <PlusCircle className="w-4 h-4" />
+                        Submit
+                      </button>
+                    </SignInButton>
+                  </SignedOut>
+                  <SignedIn>
+                    <Link
+                      to="/submit"
+                      className="flex items-center gap-2 text-[#545454] hover:text-[#525252] px-3 py-1 rounded-md text-sm">
+                      <PlusCircle className="w-4 h-4" />
+                      Submit
+                    </Link>
+                  </SignedIn>
                   <button
                     onClick={() => {
                       setViewMode("list");

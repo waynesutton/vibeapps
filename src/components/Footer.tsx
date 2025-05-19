@@ -2,6 +2,7 @@ import React from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { SignInButton, useAuth, useClerk } from "@clerk/clerk-react";
+import { dark } from "@clerk/themes";
 
 export function Footer() {
   const [showAboutModal, setShowAboutModal] = React.useState(false);
@@ -27,7 +28,9 @@ export function Footer() {
             </button>
           ) : (
             <SignInButton mode="modal">
-              <button className="bg-transparent border-none p-0 m-0 cursor-pointer hover:text-[#525252]">
+              <button
+                className="bg-transparent border-none p-0 m-0 cursor-pointer hover:text-[#525252]"
+                type="button">
                 Sign In
               </button>
             </SignInButton>
@@ -65,8 +68,8 @@ export function Footer() {
               <p>Vibe Apps – The place to share and discover new apps built by vibe coders.</p>
 
               <p>
-                Vibe Apps is a real-time feed of apps built by vibe coders. It’s where you go to
-                show off what you’ve built with tools like Convex.dev, Cursor, Bolt, Windsurf,
+                Vibe Apps is a real-time feed of apps built by vibe coders. It's where you go to
+                show off what you've built with tools like Convex.dev, Cursor, Bolt, Windsurf,
                 Lovable, and Tempo—and see what others are pushing live.{" "}
                 <a
                   href="https://convex.dev?utm_source=vibeapps-dev"
@@ -79,11 +82,11 @@ export function Footer() {
               </p>
               <ul>
                 <li>Submit your app</li>
-                <li>Browse and vote on what’s trending</li>
+                <li>Browse and vote on what's trending</li>
                 <li>Leave feedback or get inspired</li>
               </ul>
               <p>
-                Whether it’s a weekend build, a fresh SaaS idea, or something weird and
+                Whether it's a weekend build, a fresh SaaS idea, or something weird and
                 experimental—drop it here.{" "}
               </p>
               <p>Vibe Apps is for developers who build in public and ship for fun.</p>

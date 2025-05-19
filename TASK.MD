@@ -17,7 +17,7 @@ Brief description of the feature and its purpose.
 
 ## In Progress Tasks
 
-- [ ] setup clerk production
+- [ ] setup clerk production and link
 - [ ] Setup hosting on Vercel
 - [ ] Setup domain name on Vercel
 - [ ] Ask vibe coders for feedback and submissions
