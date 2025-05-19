@@ -25,6 +25,7 @@ Brief description of the feature and its purpose.
 - [ ] Ask vibe coders for feedback and submissions
 - [ ] setup resend for emails - after dominan setup with https://demo.react.email/preview/reset-password/dropbox-reset-password
 - [ ] Share with team and launch
+- [ ] add chat box to admin dashboard and front end
 
 ## Future Tasks
 

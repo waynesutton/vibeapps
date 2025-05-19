@@ -28,6 +28,8 @@ import {
   BookmarkCheck,
   BookmarkMinus,
   BookKey,
+  BookOpen,
+  Award,
 } from "lucide-react";
 import type { Story } from "../types"; // Import the Story type
 import AlertDialog from "../components/ui/AlertDialog"; // Corrected path
@@ -854,78 +856,71 @@ export default function UserProfilePage() {
 
       {/* Mini Dashboard Section */}
       <section
-        className="mb-4 p-4 bg-[#fff] rounded-md border border-gray-200"
+        className="mb-4 p-4 rounded-md border border-gray-200"
         style={{ fontFamily: "Inter, sans-serif" }}>
         <h2 className="text-lg font-normal text-[#292929] mb-4 pb-2 border-b border-gray-300">
           My Vibes
         </h2>
-        <div className="flex flex-row gap-8 justify-center sm:justify-start">
-          <div className="flex flex-col items-center">
-            <a
-              href="#submissions"
-              onClick={() => setActiveTab("votes")}
-              className="text-xl text-[#292929] hover:underline">
-              {stories.length}
-            </a>
-            <span className="text-sm text-gray-500">Submissions</span>
+        <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+          {/* Submissions */}
+          <div className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center">
+            <BookOpen className="w-6 h-6 mb-1 text-gray-600" />
+            <span className="text-xl font-bold text-[#292929]">{stories.length}</span>
+            <span className="text-xs text-gray-500 mt-0.5">Submissions</span>
           </div>
-          <div className="flex flex-col items-center">
-            <a
-              href="#tab-section-votes"
-              onClick={() => setActiveTab("votes")}
-              className="text-xl text-[#292929] hover:underline">
-              {votes.length}
-            </a>
-            <span className="text-sm text-gray-500">Votes</span>
+
+          {/* Votes */}
+          <div className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center">
+            <ThumbsUp className="w-6 h-6 mb-1 text-gray-600" />
+            <span className="text-xl font-bold text-[#292929]">{votes.length}</span>
+            <span className="text-xs text-gray-500 mt-0.5">Votes</span>
           </div>
-          <div className="flex flex-col items-center">
-            <a
-              href="#tab-section-ratings"
-              onClick={() => setActiveTab("ratings")}
-              className="text-xl text-[#292929] hover:underline">
-              {ratings.length}
-            </a>
-            <span className="text-sm text-gray-500">Ratings Given</span>
+
+          {/* Ratings Given */}
+          <div className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center">
+            <Star className="w-6 h-6 mb-1 text-gray-600" />
+            <span className="text-xl font-bold text-[#292929]">{ratings.length}</span>
+            <span className="text-xs text-gray-500 mt-0.5">Ratings</span>
           </div>
-          <div className="flex flex-col items-center">
-            <a
-              href="#tab-section-comments"
-              onClick={() => setActiveTab("comments")}
-              className="text-xl text-[#292929] hover:underline">
-              {comments.length}
-            </a>
-            <span className="text-sm text-gray-500">Comments</span>
+
+          {/* Comments */}
+          <div className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center">
+            <MessageCircle className="w-6 h-6 mb-1 text-gray-600" />
+            <span className="text-xl font-bold text-[#292929]">{comments.length}</span>
+            <span className="text-xs text-gray-500 mt-0.5">Comments</span>
           </div>
+
+          {/* Bookmarks (Own Profile Only) */}
           {isOwnProfile && (
-            <div className="flex flex-col items-center">
-              <a
-                href="#tab-section-bookmarks"
-                onClick={() => setActiveTab("bookmarks")}
-                className="text-xl text-[#292929] hover:underline">
-                {userBookmarksCount ?? 0}
-              </a>
-              <span className="text-sm text-gray-500">Bookmarks</span>
+            <div className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center">
+              <Bookmark className="w-6 h-6 mb-1 text-gray-600" />
+              <span className="text-xl font-bold text-[#292929]">{userBookmarksCount ?? 0}</span>
+              <span className="text-xs text-gray-500 mt-0.5">Bookmarks</span>
             </div>
           )}
-          {/* Followers and Following Counts */}
-          <div className="flex flex-col items-center">
-            <a
-              href="#tab-section-followers"
-              onClick={() => setActiveTab("followers")}
-              className="text-xl text-[#292929] hover:underline">
-              {followersCount ?? 0}
-            </a>
-            <span className="text-sm text-gray-500">Followers</span>
+
+          {/* Followers */}
+          <div className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center">
+            <Users className="w-6 h-6 mb-1 text-gray-600" />
+            <span className="text-xl font-bold text-[#292929]">{followersCount ?? 0}</span>
+            <span className="text-xs text-gray-500 mt-0.5">Followers</span>
           </div>
-          <div className="flex flex-col items-center">
-            <a
-              href="#tab-section-following"
-              onClick={() => setActiveTab("following")}
-              className="text-xl text-[#292929] hover:underline">
-              {followingCount ?? 0}
-            </a>
-            <span className="text-sm text-gray-500">Following</span>
+
+          {/* Following */}
+          <div className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center">
+            <UserPlus className="w-6 h-6 mb-1 text-gray-600" />
+            <span className="text-xl font-bold text-[#292929]">{followingCount ?? 0}</span>
+            <span className="text-xs text-gray-500 mt-0.5">Following</span>
           </div>
+
+          {/* Achievements (Hidden for later) */}
+          {/*
+          <div className="flex flex-col items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-32 md:w-36 flex-shrink-0 h-32 justify-center">
+            <Award className="w-7 h-7 mb-2 text-gray-600" />
+            <span className="text-2xl font-bold text-[#292929]">{0}</span>
+            <span className="text-xs text-gray-500 mt-0.5">Achievements</span>
+          </div>
+          */}
         </div>
       </section>
 
