@@ -48,6 +48,7 @@ export function Layout({ children }: { children?: ReactNode }) {
   const settings = useQuery(api.settings.get);
   const [viewMode, setViewMode] = React.useState<"grid" | "list" | "vibe" | undefined>(undefined);
   const [userChangedViewMode, setUserChangedViewMode] = React.useState(false);
+  const [userChangedSortPeriod, setUserChangedSortPeriod] = React.useState(false);
   const [sortPeriod, setSortPeriod] = React.useState<SortPeriod | undefined>(undefined);
   const [selectedTagId, setSelectedTagId] = React.useState<Id<"tags"> | undefined>(undefined);
 
@@ -111,31 +112,37 @@ export function Layout({ children }: { children?: ReactNode }) {
         }
       }
 
-      // Directly set sortPeriod from settings if available, otherwise fallback
-      // This ensures sortPeriod always reflects the admin setting.
-      const newSortPeriod = settings.defaultSortPeriod || "all";
-      if (sortPeriod !== newSortPeriod) {
-        setSortPeriod(newSortPeriod);
+      // Directly set sortPeriod from settings if available and user hasn't changed it, otherwise fallback
+      if (!userChangedSortPeriod) {
+        const newSortPeriod = settings.defaultSortPeriod || "all";
+        if (sortPeriod !== newSortPeriod) {
+          setSortPeriod(newSortPeriod);
+        }
+      } else if (sortPeriod === undefined) {
+        // If user has supposedly changed it, but it's undefined, set a fallback.
+        // This case should be rare.
+        setSortPeriod("all");
       }
     } else {
       // Fallback if settings are not loaded yet
       if (!userChangedViewMode && viewMode === undefined) {
         setViewMode("vibe");
       }
-      // Set sortPeriod to fallback only if it's currently undefined
-      if (sortPeriod === undefined) {
+      // Set sortPeriod to fallback only if it's currently undefined and user hasn't changed it
+      if (!userChangedSortPeriod && sortPeriod === undefined) {
         setSortPeriod("all");
       }
     }
   }, [
     settings,
     userChangedViewMode,
+    userChangedSortPeriod,
     location.pathname,
     isSignedIn,
     convexUserDoc,
     viewMode,
     sortPeriod,
-  ]); // Added viewMode and sortPeriod to deps
+  ]); // Added userChangedSortPeriod to deps
 
   // Effect to reset viewMode on specific pages like admin or profile
   // This effect might need adjustment based on the new default logic above.
@@ -356,7 +363,10 @@ export function Layout({ children }: { children?: ReactNode }) {
                   <div className="relative inline-block text-left">
                     <select
                       value={sortPeriod}
-                      onChange={(e) => setSortPeriod(e.target.value as SortPeriod)}
+                      onChange={(e) => {
+                        setSortPeriod(e.target.value as SortPeriod);
+                        setUserChangedSortPeriod(true); // User has made a selection
+                      }}
                       className="appearance-none cursor-pointer pl-3 pr-8 py-2 bg-white border border-[#D8E1EC] rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] hover:border-[#A8A29E]">
                       <option value="today">Today</option>
                       <option value="week">This Week</option>
