@@ -97,10 +97,25 @@ export default function UserProfilePage() {
   const { signOut } = useClerk();
   const navigate = useNavigate();
 
+  // Console log for authUser (Clerk user object)
+  useEffect(() => {
+    if (isClerkLoaded && authUser) {
+      // console.log("Auth User (Clerk):", JSON.stringify(authUser, null, 2));
+    }
+  }, [isClerkLoaded, authUser]);
+
   const profileData = useQuery(
     api.users.getUserProfileByUsername,
-    username && username !== "user-settings" ? { username } : "skip"
+    username && !username.startsWith("user-settings") ? { username } : "skip"
   );
+
+  // Corrected useEffect for logging Profile User (Convex user object)
+  useEffect(() => {
+    if (profileData?.user) {
+      // Safely access profileData.user
+      // console.log("Profile User (Convex) from top useEffect:", JSON.stringify(profileData.user, null, 2));
+    }
+  }, [profileData]); // Depend on the profileData object
 
   const followUserMutation = useMutation(api.follows.followUser);
   const unfollowUserMutation = useMutation(api.follows.unfollowUser);
@@ -194,7 +209,7 @@ export default function UserProfilePage() {
   }, [isEditing, profileData, username]);
 
   // Handle /user-settings route for Clerk's UserProfile component
-  if (username && username.startsWith("user-settings")) {
+  if (location.pathname.startsWith("/user-settings")) {
     // Modified condition
     // Removed searchParams and clerkProfilePath logic for selecting sub-sections
     // The UserProfile component with routing="path" will handle sub-paths like /user-settings/security
@@ -218,11 +233,27 @@ export default function UserProfilePage() {
     return <NotFoundPage />;
   }
 
-  // If profileData is undefined, render nothing for profile sections
-  if (!profileData) return null;
+  // If profileData is still undefined here for a non-"user-settings" path, it means it's loading.
+  if (profileData === undefined && !(username && username.startsWith("user-settings"))) {
+    return <Loading />;
+  }
 
+  // If it's user-settings path and profileData is undefined (skipped query), UserProfile component handles it.
+  // If it's another path and profileData is still undefined, the Loading component above handles it.
+  // If profileData is null, NotFoundPage handles it.
+  // So, if we reach here and it's not user-settings, profileData MUST be an object.
+  // For user-settings, profileData might be undefined, but that path returns <UserProfile> which doesn't use profileData directly.
+
+  // Fallback if somehow profileData is not an object for a page that needs it (excluding user-settings)
+  if (!profileData && !(username && username.startsWith("user-settings"))) {
+    console.error("UserProfilePage: profileData is unexpectedly not loaded for", username);
+    return <ErrorDisplay message={`Profile data could not be loaded for ${username}.`} />;
+  }
+
+  // Destructure AFTER all checks ensure profileData is the loaded object for the current path
+  // or it's the user-settings path where profileData might be undefined (query skipped)
   const {
-    user: profileUser,
+    user: loadedProfileUser,
     stories,
     votes,
     comments,
@@ -230,18 +261,47 @@ export default function UserProfilePage() {
     followersCount,
     followingCount,
     isFollowedByCurrentUser,
-  } = profileData;
-  const isOwnProfile = !!authUser && authUser.username === profileUser?.username;
+  } = profileData || {
+    user: null,
+    stories: [],
+    votes: [],
+    comments: [],
+    ratings: [],
+    followersCount: 0,
+    followingCount: 0,
+    isFollowedByCurrentUser: false,
+  };
+
+  // Correct calculation for isOwnProfile, using the reliably loadedProfileUser
+  const isOwnProfile =
+    !!authUser && !!loadedProfileUser && authUser.id === loadedProfileUser.clerkId;
+
+  // If we are on a specific user's profile page (not user-settings) and loadedProfileUser is null (due to fallback from destructuring)
+  // it implies an issue not caught by earlier checks, or profileData was an empty object without a 'user' field.
+  if (!(username && username.startsWith("user-settings")) && !loadedProfileUser) {
+    console.error(
+      "UserProfilePage: loadedProfileUser is null for",
+      username,
+      "profileData was:",
+      profileData
+    );
+    return <ErrorDisplay message={`User details could not be loaded for ${username}.`} />;
+  }
 
   const handleEditToggle = () => {
     if (!isEditing) {
-      setNewUsername(profileUser.username || "");
-      setNewProfileImagePreview(profileUser.imageUrl || null);
-      setNewBio(profileUser.bio || "");
-      setNewWebsite(profileUser.website || "");
-      setNewTwitter(profileUser.twitter || "");
-      setNewBluesky(profileUser.bluesky || "");
-      setNewLinkedin(profileUser.linkedin || "");
+      if (loadedProfileUser) {
+        setNewUsername(loadedProfileUser.username || "");
+        setNewProfileImagePreview(loadedProfileUser.imageUrl || null);
+        setNewBio(loadedProfileUser.bio || "");
+        setNewWebsite(loadedProfileUser.website || "");
+        setNewTwitter(loadedProfileUser.twitter || "");
+        setNewBluesky(loadedProfileUser.bluesky || "");
+        setNewLinkedin(loadedProfileUser.linkedin || "");
+      }
+    } else {
+      setNewProfileImageFile(null);
+      setEditError(null);
     }
     setIsEditing(!isEditing);
   };
@@ -257,12 +317,15 @@ export default function UserProfilePage() {
   };
 
   const handleSaveProfile = async () => {
-    if (!profileUser) return;
+    if (!loadedProfileUser) return;
     setEditError(null);
     setIsSaving(true);
     let usernameChanged = false;
     try {
-      if (newUsername.trim() !== (profileUser.username || "").trim() && newUsername.trim() !== "") {
+      if (
+        newUsername.trim() !== (loadedProfileUser.username || "").trim() &&
+        newUsername.trim() !== ""
+      ) {
         await updateUsernameMutation({ newUsername: newUsername.trim() });
         usernameChanged = true;
         if (authUser && authUser.update) await authUser.update({ username: newUsername.trim() });
@@ -271,11 +334,11 @@ export default function UserProfilePage() {
         return;
       }
       if (
-        newBio !== (profileUser.bio || "") ||
-        newWebsite !== (profileUser.website || "") ||
-        newTwitter !== (profileUser.twitter || "") ||
-        newBluesky !== (profileUser.bluesky || "") ||
-        newLinkedin !== (profileUser.linkedin || "")
+        newBio !== (loadedProfileUser.bio || "") ||
+        newWebsite !== (loadedProfileUser.website || "") ||
+        newTwitter !== (loadedProfileUser.twitter || "") ||
+        newBluesky !== (loadedProfileUser.bluesky || "") ||
+        newLinkedin !== (loadedProfileUser.linkedin || "")
       ) {
         await updateProfileDetails({
           bio: newBio,
@@ -310,14 +373,14 @@ export default function UserProfilePage() {
   };
 
   const handleFollowToggle = async () => {
-    if (!profileUser || !authUser || isOwnProfile) return;
+    if (!loadedProfileUser || !authUser || isOwnProfile) return;
     setIsLoadingFollowAction(true);
     try {
       if (isFollowedByCurrentUser) {
-        await unfollowUserMutation({ userIdToUnfollow: profileUser._id });
+        await unfollowUserMutation({ userIdToUnfollow: loadedProfileUser._id });
         // Optionally, show a success toast/notification here
       } else {
-        await followUserMutation({ userIdToFollow: profileUser._id });
+        await followUserMutation({ userIdToFollow: loadedProfileUser._id });
         // Optionally, show a success toast/notification here
       }
       // Data will refetch due to Convex reactivity, updating isFollowedByCurrentUser
@@ -345,7 +408,7 @@ export default function UserProfilePage() {
     </div>
   );
 
-  const currentImageUrl = newProfileImagePreview || profileUser.imageUrl;
+  const currentImageUrl = newProfileImagePreview || loadedProfileUser?.imageUrl;
 
   // --- Action Handlers with Confirmation ---
   const confirmAndExecute = (
@@ -528,7 +591,7 @@ export default function UserProfilePage() {
                     className="w-24 h-24 rounded-full object-cover border-4 border-gray-300 group-hover:opacity-75 transition-opacity"
                   />
                 ) : (
-                  <ProfileImagePlaceholder name={profileUser.name} size="w-24 h-24" />
+                  <ProfileImagePlaceholder name={loadedProfileUser?.name} size="w-24 h-24" />
                 )}
                 <div className="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                   <Camera className="w-8 h-8 text-white" />
@@ -544,11 +607,11 @@ export default function UserProfilePage() {
             ) : currentImageUrl ? (
               <img
                 src={currentImageUrl}
-                alt={`${profileUser.name || "User"}'s profile`}
+                alt={`${loadedProfileUser?.name || "User"}'s profile`}
                 className="w-24  rounded-full object-cover border-2 border-gray-300"
               />
             ) : (
-              <ProfileImagePlaceholder name={profileUser.name} size="w-24 h-24" />
+              <ProfileImagePlaceholder name={loadedProfileUser?.name} size="w-24 h-24" />
             )}
           </div>
 
@@ -556,7 +619,7 @@ export default function UserProfilePage() {
           <div className="flex-grow text-center sm:text-left">
             {isEditing ? (
               <div className="flex items-center mb-2">
-                {profileUser.username == null ? (
+                {loadedProfileUser?.username == null ? (
                   <>
                     <input
                       type="text"
@@ -577,12 +640,12 @@ export default function UserProfilePage() {
                     <span
                       className="text-xl font-normal text-[#292929] mr-2"
                       style={{ fontFamily: "Inter, sans-serif" }}>
-                      {profileUser.name || "Anonymous User"}
+                      {loadedProfileUser?.name || "Anonymous User"}
                     </span>
                     <span
                       className="text-lg text-gray-500"
                       style={{ fontFamily: "Inter, sans-serif" }}>
-                      @{profileUser.username}
+                      @{loadedProfileUser?.username}
                     </span>
                   </>
                 )}
@@ -592,10 +655,10 @@ export default function UserProfilePage() {
                 <h1
                   className="text-lg font-normal text-[#292929] mr-2"
                   style={{ fontFamily: "Inter, sans-serif" }}>
-                  {profileUser.name || "Anonymous User"}
+                  {loadedProfileUser?.name || "Anonymous User"}
                 </h1>
                 <p className="text-lg text-gray-600" style={{ fontFamily: "Inter, sans-serif" }}>
-                  @{profileUser.username || "N/A"}{" "}
+                  @{loadedProfileUser?.username || "N/A"}{" "}
                   {typeof userNumber === "number" && (
                     <span className="ml-2 text-xs text-gray-400">User #{userNumber}</span>
                   )}
@@ -615,11 +678,11 @@ export default function UserProfilePage() {
                   style={{ fontFamily: "Inter, sans-serif" }}
                   rows={3}
                 />
-              ) : profileUser.bio ? (
+              ) : loadedProfileUser?.bio ? (
                 <p
                   className="text-sm text-gray-700 w-full"
                   style={{ fontFamily: "Inter, sans-serif" }}>
-                  {profileUser.bio}
+                  {loadedProfileUser.bio}
                 </p>
               ) : (
                 <p
@@ -669,9 +732,9 @@ export default function UserProfilePage() {
                 </>
               ) : (
                 <>
-                  {profileUser.website && (
+                  {loadedProfileUser?.website && (
                     <a
-                      href={profileUser.website}
+                      href={loadedProfileUser.website}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-gray-500 hover:text-[#292929]"
@@ -679,9 +742,9 @@ export default function UserProfilePage() {
                       Website
                     </a>
                   )}
-                  {profileUser.twitter && (
+                  {loadedProfileUser?.twitter && (
                     <a
-                      href={profileUser.twitter}
+                      href={loadedProfileUser.twitter}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-gray-500 hover:text-[#292929]"
@@ -689,9 +752,9 @@ export default function UserProfilePage() {
                       Twitter
                     </a>
                   )}
-                  {profileUser.bluesky && (
+                  {loadedProfileUser?.bluesky && (
                     <a
-                      href={profileUser.bluesky}
+                      href={loadedProfileUser.bluesky}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-gray-500 hover:text-[#292929]"
@@ -699,9 +762,9 @@ export default function UserProfilePage() {
                       Bluesky
                     </a>
                   )}
-                  {profileUser.linkedin && (
+                  {loadedProfileUser?.linkedin && (
                     <a
-                      href={profileUser.linkedin}
+                      href={loadedProfileUser.linkedin}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-gray-500 hover:text-[#292929]"
@@ -714,7 +777,7 @@ export default function UserProfilePage() {
             </div>
 
             {/* FOLLOW BUTTON - Placed after social links and before Edit Profile button for non-own profiles */}
-            {!isOwnProfile && authUser && profileUser && !isEditing && (
+            {!isOwnProfile && authUser && loadedProfileUser && !isEditing && (
               <div className="mt-3">
                 <button
                   onClick={handleFollowToggle}
@@ -774,12 +837,12 @@ export default function UserProfilePage() {
               disabled={
                 isSaving ||
                 (!newProfileImageFile &&
-                  newUsername.trim() === (profileUser.username || "").trim() &&
-                  newBio === (profileUser.bio || "") &&
-                  newWebsite === (profileUser.website || "") &&
-                  newTwitter === (profileUser.twitter || "") &&
-                  newBluesky === (profileUser.bluesky || "") &&
-                  newLinkedin === (profileUser.linkedin || ""))
+                  newUsername.trim() === (loadedProfileUser?.username || "").trim() &&
+                  newBio === (loadedProfileUser?.bio || "") &&
+                  newWebsite === (loadedProfileUser?.website || "") &&
+                  newTwitter === (loadedProfileUser?.twitter || "") &&
+                  newBluesky === (loadedProfileUser?.bluesky || "") &&
+                  newLinkedin === (loadedProfileUser?.linkedin || ""))
               }
               className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors flex items-center justify-center disabled:opacity-50"
               style={{ fontFamily: "Inter, sans-serif" }}>
@@ -1270,13 +1333,6 @@ export default function UserProfilePage() {
                   onClick={handleSignOut} // Updated to new handler
                   className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors flex items-center">
                   <LogOut className="w-4 h-4 inline-block mr-2" /> Sign Out
-                </button>
-                <button
-                  onClick={handleDeleteAccount} // Updated to new handler
-                  className={`w-full mt-4 px-4 py-2 text-left bg-red-50 hover:bg-red-100 border-red-300 rounded-md text-sm text-red-700 transition-colors flex items-center justify-between`}>
-                  <span>
-                    <AlertTriangle className="w-4 h-4 inline-block mr-2" /> Delete Account
-                  </span>
                 </button>
               </div>
             </div>

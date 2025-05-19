@@ -18,6 +18,7 @@ Brief description of the feature and its purpose.
 ## In Progress Tasks
 
 - [ ] setup clerk production and link
+- [ ] update comments to have a 10 word minium
 - [ ] Setup hosting on Vercel
 - [ ] Setup domain name on Vercel
 - [ ] Ask vibe coders for feedback and submissions
