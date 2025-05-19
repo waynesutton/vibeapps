@@ -14,11 +14,12 @@ Brief description of the feature and its purpose.
 - [x] remove state for profile and admin page to remove sidebar
 - [x] add tag bar to header like https://www.ycombinator.com/launches
 - [x] add follow profile features
+- [x] update comments to have a 10 word minium
 
 ## In Progress Tasks
 
 - [ ] setup clerk production and link
-- [ ] update comments to have a 10 word minium
+- [ ] fix username and name clerk sync
 - [ ] Setup hosting on Vercel
 - [ ] Setup domain name on Vercel
 - [ ] Ask vibe coders for feedback and submissions

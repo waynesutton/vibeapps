@@ -124,6 +124,7 @@ function App() {
           <Route path="/search" element={<SearchPage />} />
           <Route path="/:username" element={<UserProfilePage />} />
           <Route path="/navtest" element={<NavTestPage />} />
+          <Route path="/user-settings/*" element={<UserProfilePage />} />
         </Route>
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />
