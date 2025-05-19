@@ -33,7 +33,7 @@ export function Footer() {
             </SignInButton>
           )}
           <a
-            href="https://convex.dev"
+            href="https://convex.dev?utm_source=vibeapps-dev"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-[#525252]">
@@ -69,7 +69,7 @@ export function Footer() {
                 show off what you’ve built with tools like Convex.dev, Cursor, Bolt, Windsurf,
                 Lovable, and Tempo—and see what others are pushing live.{" "}
                 <a
-                  href="https://convex.dev"
+                  href="https://convex.dev?utm_source=vibeapps-dev"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-[#525252]">

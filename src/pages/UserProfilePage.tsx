@@ -135,6 +135,12 @@ export default function UserProfilePage() {
     isClerkLoaded && authUser && username !== "user-settings" ? {} : "skip"
   );
 
+  // Add user number query
+  const userNumber = useQuery(
+    api.users.getUserNumber,
+    profileData?.user?._id ? { userId: profileData.user._id } : "skip"
+  );
+
   const [isEditing, setIsEditing] = useState(false);
   const [newUsername, setNewUsername] = useState("");
   const [newProfileImageFile, setNewProfileImageFile] = useState<File | null>(null);
@@ -208,11 +214,12 @@ export default function UserProfilePage() {
   if (isRedirecting) return <p className="text-center p-8">Loading...</p>;
   if (!username)
     return <p className="text-center p-8 text-red-600">Error: Username not found in URL.</p>;
-  if (profileData === undefined) return <p className="text-center p-8">Loading profile...</p>;
   if (profileData === null) {
-    // if (isRedirecting) return <Loading />; // Commenting out this line as its purpose isn't immediately clear for a 404
     return <NotFoundPage />;
   }
+
+  // If profileData is undefined, render nothing for profile sections
+  if (!profileData) return null;
 
   const {
     user: profileUser,
@@ -235,8 +242,6 @@ export default function UserProfilePage() {
       setNewTwitter(profileUser.twitter || "");
       setNewBluesky(profileUser.bluesky || "");
       setNewLinkedin(profileUser.linkedin || "");
-      setNewProfileImageFile(null);
-      setEditError(null);
     }
     setIsEditing(!isEditing);
   };
@@ -509,7 +514,7 @@ export default function UserProfilePage() {
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 from-slate-50 to-gray-100 min-h-screen">
       <header
-        className="mb-10 p-6 bg-[#ffffff] rounded-lg border border-gray-200"
+        className="mb-4 p-6 bg-[#ffffff] rounded-lg border border-gray-200"
         style={{ fontFamily: "Inter, sans-serif" }}>
         <div className="flex flex-col sm:flex-row items-center sm:items-start">
           {/* Profile Image Section */}
@@ -590,7 +595,10 @@ export default function UserProfilePage() {
                   {profileUser.name || "Anonymous User"}
                 </h1>
                 <p className="text-lg text-gray-600" style={{ fontFamily: "Inter, sans-serif" }}>
-                  @{profileUser.username || "N/A"}
+                  @{profileUser.username || "N/A"}{" "}
+                  {typeof userNumber === "number" && (
+                    <span className="ml-2 text-xs text-gray-400">User #{userNumber}</span>
+                  )}
                 </p>
               </div>
             )}
@@ -783,7 +791,7 @@ export default function UserProfilePage() {
 
       {/* Mini Dashboard Section */}
       <section
-        className="mb-10 p-4 bg-[#fff] rounded-md border border-gray-200"
+        className="mb-4 p-4 bg-[#fff] rounded-md border border-gray-200"
         style={{ fontFamily: "Inter, sans-serif" }}>
         <h2 className="text-lg font-normal text-[#292929] mb-4 pb-2 border-b border-gray-300">
           Dashboard
@@ -895,7 +903,7 @@ export default function UserProfilePage() {
       </section>
 
       {/* Tab Navigation and Content Area */}
-      <div className="mb-12">
+      <div className="mb-20">
         {/* Tab Buttons */}
         <div className="flex border-b border-gray-300 mb-4">
           <button
@@ -1159,7 +1167,7 @@ export default function UserProfilePage() {
                           <span className="text-sm font-semibold text-[#292929] hover:underline">
                             {follower.name || "Anonymous User"}
                           </span>
-                          <p className="text-xs text-gray-500">@{follower.username || "N/A"}</p>
+                          <p className="text-xs  text-gray-500">@{follower.username || "N/A"}</p>
                         </div>
                       </Link>
                       {/* Optional: Add follow/unfollow button for logged-in user viewing this list */}
@@ -1201,10 +1209,12 @@ export default function UserProfilePage() {
                           <ProfileImagePlaceholder name={followedUser.name} size="w-10 h-10" />
                         )}
                         <div>
-                          <span className="text-sm font-semibold text-[#292929] hover:underline">
+                          <span className="text-sm p-1 font-semibold text-[#292929] hover:underline">
                             {followedUser.name || "Anonymous User"}
                           </span>
-                          <p className="text-xs text-gray-500">@{followedUser.username || "N/A"}</p>
+                          <p className="text-xs  p-1 text-gray-500">
+                            @{followedUser.username || "N/A"}
+                          </p>
                         </div>
                       </Link>
                       {/* Optional: Add follow/unfollow button for logged-in user viewing this list */}
@@ -1221,16 +1231,16 @@ export default function UserProfilePage() {
       {isOwnProfile && (
         <section
           id="manage-profile"
-          className="mb-10 p-6 bg-[#ffffff] rounded-lg border border-gray-200"
+          className="mb-4 p-6 bg-[#ffffff] rounded-lg border border-gray-200"
           style={{ fontFamily: "Inter, sans-serif" }}>
-          <h2 className="text-xl font-semibold text-[#292929] mb-6 pb-3 border-b border-gray-300">
+          <h2 className="text-lg font-normal text-[#292929] mb-6 pb-3 border-b border-gray-300">
             Manage Profile & Account
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Column 1: Profile Settings and General Account Management */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-medium text-[#292929] mb-2">Profile Settings</h3>
+                <h3 className="text-base font-normal text-[#292929] mb-2">Profile Settings</h3>
                 <button
                   onClick={() => {
                     if (!isEditing) handleEditToggle();
@@ -1242,7 +1252,7 @@ export default function UserProfilePage() {
               </div>
 
               <div>
-                <h3 className="text-lg font-medium text-[#292929] mb-2">Account Management</h3>
+                <h3 className="text-base font-normal text-[#292929] mb-2">Account Management</h3>
                 <Link
                   to="/user-settings"
                   className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors flex items-center">
@@ -1255,7 +1265,7 @@ export default function UserProfilePage() {
             {/* Column 2: Account Actions (Sign Out, Delete Account) */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-medium text-[#292929] mb-2">Account Actions</h3>
+                <h3 className="text-base font-normal text-[#292929] mb-2">Account Actions</h3>
                 <button
                   onClick={handleSignOut} // Updated to new handler
                   className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors flex items-center">

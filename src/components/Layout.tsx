@@ -324,7 +324,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                       className={`px-3 py-1 rounded-full text-xs font-medium transition-colors  focus:outline-none
                                 ${
                                   selectedTagId === undefined
-                                    ? "text-slate-700 ring-1 ring-slate-300 ring-offset-1"
+                                    ? "text-slate-700 ring-1 ring-gray-400 ring-offset-1"
                                     : "bg-[#E5EAF0] text-gray-700 border-[#D8E1EC] hover:bg-[white]"
                                 }`}
                       title="Show All Categories">
@@ -342,7 +342,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                             if (location.pathname !== "/") navigate("/");
                           }}
                           className={`px-3 py-1 rounded-full text-xs font-medium transition-colors  focus:outline-none
-                                  ${selectedTagId === tag._id ? "ring-1 ring-offset-1 ring-gray-200" : ""}`}
+                                  ${selectedTagId === tag._id ? "ring-1 ring-offset-1 ring-gray-400" : ""}`}
                           style={{
                             backgroundColor:
                               tag.backgroundColor ||

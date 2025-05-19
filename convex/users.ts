@@ -1151,3 +1151,22 @@ export const deleteUserByAdmin = mutation({
     return { success: true, userId: args.userId };
   },
 });
+
+/**
+ * Returns the user's number (1-based) by order of account creation.
+ * Example: the first user is 1, the second is 2, etc.
+ */
+export const getUserNumber = query({
+  args: { userId: v.id("users") },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+    // Count users with _creationTime less than this user's
+    const earlierUsers = await ctx.db
+      .query("users")
+      .filter((q) => q.lt(q.field("_creationTime"), user._creationTime))
+      .collect();
+    return earlierUsers.length + 1;
+  },
+});
