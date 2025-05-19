@@ -2,6 +2,7 @@ import React from "react";
 import { useQuery, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Link } from "react-router-dom";
+import { Doc, Id } from "../../../convex/_generated/dataModel";
 
 // Helper component for displaying each statistic
 const StatCard = ({ title, value }: { title: string; value: number | string | undefined }) => (
@@ -12,6 +13,17 @@ const StatCard = ({ title, value }: { title: string; value: number | string | un
     </p>
   </div>
 );
+
+// Define types for the user objects returned by the queries
+type UserWithFollowerCount = Doc<"users"> & {
+  username: string; // Ensure username is always a string, defaulting to "N/A" if needed
+  followerCount: number;
+};
+
+type UserWithFollowingCount = Doc<"users"> & {
+  username: string; // Ensure username is always a string, defaulting to "N/A" if needed
+  followingCount: number;
+};
 
 export function NumbersView() {
   const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
@@ -75,7 +87,7 @@ export function NumbersView() {
         {topFollowers && topFollowers.length > 0 && (
           <div className="bg-white shadow rounded-lg p-4">
             <ul className="divide-y divide-gray-200">
-              {topFollowers.map((user, index) =>
+              {topFollowers.map((user: UserWithFollowerCount | null, index: number) =>
                 user ? (
                   <li key={user._id} className="py-3 flex justify-between items-center">
                     <span className="text-sm">
@@ -105,7 +117,7 @@ export function NumbersView() {
         {topFollowing && topFollowing.length > 0 && (
           <div className="bg-white shadow rounded-lg p-4">
             <ul className="divide-y divide-gray-200">
-              {topFollowing.map((user, index) =>
+              {topFollowing.map((user: UserWithFollowingCount | null, index: number) =>
                 user ? (
                   <li key={user._id} className="py-3 flex justify-between items-center">
                     <span className="text-sm">

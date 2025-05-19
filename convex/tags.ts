@@ -54,10 +54,14 @@ export const listAllAdmin = query({
 export const create = mutation({
   args: {
     name: v.string(),
+    slug: v.string(), // Accept slug from frontend
     showInHeader: v.boolean(),
     isHidden: v.optional(v.boolean()), // Optional: defaults to false
-    backgroundColor: v.optional(v.string()), // Optional hex
-    textColor: v.optional(v.string()), // Optional hex
+    backgroundColor: v.optional(v.union(v.string(), v.null())), // Allow null for clearing
+    textColor: v.optional(v.union(v.string(), v.null())), // Allow null for clearing
+    emoji: v.optional(v.union(v.string(), v.null())), // Allow null for clearing
+    iconUrl: v.optional(v.union(v.string(), v.null())), // Accept iconUrl (for legacy, but not used)
+    // iconStorageId is not stored directly, but can be handled in handler if needed
   },
   handler: async (ctx, args): Promise<Id<"tags">> => {
     await requireAdminRole(ctx);
@@ -65,12 +69,10 @@ export const create = mutation({
     if (!name) {
       throw new Error("Tag name cannot be empty.");
     }
-
-    const slug = generateSlug(name);
+    const slug = args.slug.trim();
     if (!slug) {
-      throw new Error("Could not generate a valid slug from the tag name.");
+      throw new Error("Slug cannot be empty.");
     }
-
     // Check for existing name
     const existingName = await ctx.db
       .query("tags")
@@ -79,27 +81,25 @@ export const create = mutation({
     if (existingName) {
       throw new Error(`Tag name "${name}" already exists.`);
     }
-
     // Check for existing slug
     const existingSlug = await ctx.db
       .query("tags")
       .withIndex("by_slug", (q) => q.eq("slug", slug))
       .first();
     if (existingSlug) {
-      // If slug exists but name doesn't, this is a problem (e.g. "My Tag" and "my-tag" and then "My Tag!" both make "my-tag")
-      // For now, throw an error. Could append a short random string or number if collisions are expected.
       throw new Error(
         `Tag slug "${slug}" (derived from "${name}") already exists. Please choose a different name.`
       );
     }
-
     return await ctx.db.insert("tags", {
       name: name,
       slug: slug,
       showInHeader: args.showInHeader,
-      isHidden: args.isHidden ?? false, // Default to not hidden
-      backgroundColor: args.backgroundColor,
-      textColor: args.textColor,
+      isHidden: args.isHidden ?? false,
+      backgroundColor: args.backgroundColor ?? undefined,
+      textColor: args.textColor ?? undefined,
+      emoji: args.emoji ?? undefined,
+      iconUrl: args.iconUrl ?? undefined,
     });
   },
 });
@@ -109,27 +109,28 @@ export const update = mutation({
   args: {
     tagId: v.id("tags"),
     name: v.optional(v.string()),
+    slug: v.optional(v.string()),
     showInHeader: v.optional(v.boolean()),
     isHidden: v.optional(v.boolean()),
-    backgroundColor: v.optional(v.string()), // Can be null/undefined to clear
-    textColor: v.optional(v.string()), // Can be null/undefined to clear
+    backgroundColor: v.optional(v.union(v.string(), v.null())),
+    textColor: v.optional(v.union(v.string(), v.null())),
+    emoji: v.optional(v.union(v.string(), v.null())),
+    iconUrl: v.optional(v.union(v.string(), v.null())),
+    clearIcon: v.optional(v.boolean()), // Allow clearing icon
   },
   handler: async (ctx, args) => {
     await requireAdminRole(ctx);
     const { tagId, ...rest } = args;
-
     const updateData: Partial<Omit<Doc<"tags">, "_id" | "_creationTime">> = {};
-
     if (rest.name !== undefined) {
       const newName = rest.name.trim();
       if (newName === "") {
         throw new Error("Tag name cannot be empty.");
       }
-      const newSlug = generateSlug(newName);
+      const newSlug = rest.slug ? rest.slug.trim() : generateSlug(newName);
       if (!newSlug) {
         throw new Error("Could not generate a valid slug from the new tag name.");
       }
-
       // Check if new name conflicts with an existing name (excluding current tag)
       const existingName = await ctx.db
         .query("tags")
@@ -139,7 +140,6 @@ export const update = mutation({
       if (existingName) {
         throw new Error(`Tag name "${newName}" is already in use.`);
       }
-
       // Check if new slug conflicts with an existing slug (excluding current tag)
       const existingSlug = await ctx.db
         .query("tags")
@@ -154,15 +154,16 @@ export const update = mutation({
       updateData.name = newName;
       updateData.slug = newSlug;
     }
-
-    // Directly assign optional boolean/string fields if they exist in args
     if (rest.showInHeader !== undefined) updateData.showInHeader = rest.showInHeader;
     if (rest.isHidden !== undefined) updateData.isHidden = rest.isHidden;
-
-    // Allow clearing color fields by passing null or undefined
-    if (rest.backgroundColor !== undefined) updateData.backgroundColor = rest.backgroundColor;
-    if (rest.textColor !== undefined) updateData.textColor = rest.textColor;
-
+    if (rest.backgroundColor !== undefined)
+      updateData.backgroundColor = rest.backgroundColor === null ? undefined : rest.backgroundColor;
+    if (rest.textColor !== undefined)
+      updateData.textColor = rest.textColor === null ? undefined : rest.textColor;
+    if (rest.emoji !== undefined) updateData.emoji = rest.emoji === null ? undefined : rest.emoji;
+    if (rest.iconUrl !== undefined)
+      updateData.iconUrl = rest.iconUrl === null ? undefined : rest.iconUrl;
+    if (rest.clearIcon) updateData.iconUrl = undefined;
     if (Object.keys(updateData).length > 0) {
       await ctx.db.patch(tagId, updateData);
     }

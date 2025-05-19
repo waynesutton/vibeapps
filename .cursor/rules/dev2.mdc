@@ -58,5 +58,7 @@ alwaysApply: true
 - do not do more than what the user ask for unless it related to fixing, adding, or updating the code to what the user is asking for
 - If any changes to existing code are required, they should be minimal and focused solely on enabling the new features or resolving specific bugs.
 - Clerk claims configuration - If you're using Clerk, the fields returned by getUserIdentity are determined by your JWT template's Claims config. If you've set custom claims, they will be returned by getUserIdentity as well.
+- you never use placeholder text or images in code because everything is realtime sync with convex database
+- you don't ship code with placeholder text or images
 
   

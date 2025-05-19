@@ -311,7 +311,7 @@ export function Layout({ children }: { children?: ReactNode }) {
             {/* Conditionally render if there are tags to show and settings allow (future) */}
             {headerTags &&
               headerTags.filter((tag) => !tag.isHidden && tag.showInHeader).length > 0 && (
-                <div className="py-3 mt-1 border-t border-[#E5E7EB]">
+                <div className="py-3 mt-1 border-t border-[#D8E1EC]">
                   {" "}
                   {/* Tailwind gray-200 */}
                   <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-2">
@@ -321,11 +321,11 @@ export function Layout({ children }: { children?: ReactNode }) {
                         setSelectedTagId(undefined);
                         if (location.pathname !== "/") navigate("/");
                       }}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border focus:outline-none
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors  focus:outline-none
                                 ${
                                   selectedTagId === undefined
-                                    ? "bg-slate-100 text-slate-700 border-slate-400 ring-1 ring-slate-500 ring-offset-1"
-                                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                                    ? "text-slate-700 ring-1 ring-slate-300 ring-offset-1"
+                                    : "bg-[#E5EAF0] text-gray-700 border-[#D8E1EC] hover:bg-[white]"
                                 }`}
                       title="Show All Categories">
                       All
@@ -341,7 +341,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                             setSelectedTagId(selectedTagId === tag._id ? undefined : tag._id);
                             if (location.pathname !== "/") navigate("/");
                           }}
-                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border focus:outline-none
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors  focus:outline-none
                                   ${selectedTagId === tag._id ? "ring-1 ring-offset-1 ring-gray-200" : ""}`}
                           style={{
                             backgroundColor:

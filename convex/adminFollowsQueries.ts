@@ -1,8 +1,8 @@
-import { internalQuery } from "./_generated/server";
+import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 
-export const getTopUsersByFollowers = internalQuery({
+export const getTopUsersByFollowers = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 100;
@@ -27,7 +27,7 @@ export const getTopUsersByFollowers = internalQuery({
   },
 });
 
-export const getTopUsersByFollowing = internalQuery({
+export const getTopUsersByFollowing = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 100;
@@ -52,7 +52,7 @@ export const getTopUsersByFollowing = internalQuery({
   },
 });
 
-export const getTotalFollowRelationships = internalQuery({
+export const getTotalFollowRelationships = query({
   args: {},
   handler: async (ctx) => {
     const allFollows = await ctx.db.query("follows").collect();

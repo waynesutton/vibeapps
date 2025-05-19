@@ -205,9 +205,10 @@ export default function UserProfilePage() {
     );
   }
 
-  if (isRedirecting) return <Loading />;
-  if (!username) return <ErrorDisplay message="Username not found in URL." />;
-  if (profileData === undefined) return <Loading />;
+  if (isRedirecting) return <p className="text-center p-8">Loading...</p>;
+  if (!username)
+    return <p className="text-center p-8 text-red-600">Error: Username not found in URL.</p>;
+  if (profileData === undefined) return <p className="text-center p-8">Loading profile...</p>;
   if (profileData === null) {
     // if (isRedirecting) return <Loading />; // Commenting out this line as its purpose isn't immediately clear for a 404
     return <NotFoundPage />;
@@ -1131,7 +1132,7 @@ export default function UserProfilePage() {
           <section
             id="tab-section-followers"
             className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
-            {followersData === undefined && <Loading />}
+            {followersData === undefined && <p className="text-center p-8">Loading followers...</p>}
             {followersData && followersData.length === 0 && (
               <p className="text-gray-500 italic">No followers yet.</p>
             )}
@@ -1176,7 +1177,7 @@ export default function UserProfilePage() {
           <section
             id="tab-section-following"
             className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
-            {followingData === undefined && <Loading />}
+            {followingData === undefined && <p className="text-center p-8">Loading following...</p>}
             {followingData && followingData.length === 0 && (
               <p className="text-gray-500 italic">Not following anyone yet.</p>
             )}
