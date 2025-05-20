@@ -13,7 +13,7 @@ export function Footer() {
     <footer className="mt-12">
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center gap-4 text-xs text-[#545454]">
-          <span className="text-[#545454]">©{new Date().getFullYear()} Convex, Inc.</span>
+          <span className="text-[#545454]">{new Date().getFullYear()} </span>
           <button onClick={() => setShowAboutModal(true)} className="hover:text-[#525252]">
             About
           </button>
@@ -42,20 +42,20 @@ export function Footer() {
             className="hover:text-[#525252]">
             Powered by Convex
           </a>
-          {/*<a
-            href="https://chef.convex.dev/"
+          <a
+            href="https://github.com/waynesutton/vibeapps"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-[#525252]">
-            Cooked with Chef
-          </a> */}
+            Open-Source on GitHub
+          </a>
         </div>
       </div>
 
       <Dialog.Root open={showAboutModal} onOpenChange={setShowAboutModal}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-xl w-[90vw] max-w-md">
+          <Dialog.Overlay className="fixed inset-0 bg-black/50 z-40" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-xl w-[90vw] max-w-md z-50">
             <div className="flex justify-between items-start mb-4">
               <Dialog.Title className="text-lg font-medium text-[#292929]">
                 About Vibe Apps
@@ -92,13 +92,13 @@ export function Footer() {
               <p>Vibe Apps is for developers who build in public and ship for fun.</p>
 
               <p>
-                {/*} <a
+                <a
                   href="https://github.com/waynesutton/vibeapps"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-[#525252]">
                   Vibe Apps is Open-Source on GitHub
-                </a> */}
+                </a>
               </p>
             </div>
           </Dialog.Content>
