@@ -1,12 +1,20 @@
 import React from "react";
 import { useQuery } from "convex/react";
-import { Link } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import type { WeeklyTopCategory } from "../../convex/tags"; // Import the type
 import { Hash } from "lucide-react"; // Example icon
+import type { Id } from "../../convex/_generated/dataModel";
 
-export function TopCategoriesOfWeek() {
+interface TopCategoriesOfWeekProps {
+  selectedTagId: Id<"tags"> | undefined;
+  setSelectedTagId: (tagId: Id<"tags"> | undefined) => void;
+}
+
+export function TopCategoriesOfWeek({ selectedTagId, setSelectedTagId }: TopCategoriesOfWeekProps) {
   const topCategories = useQuery(api.tags.getWeeklyTopCategories, { limit: 10 });
+  const navigate = useNavigate();
+  const location = useLocation();
 
   if (topCategories === undefined) {
     return (
@@ -27,6 +35,30 @@ export function TopCategoriesOfWeek() {
     <div className="p-4 bg-white rounded-lg border border-[#D8E1EC]">
       <h3 className="text-lg font-semibold text-[#292929] mb-3">Top Categories This Week</h3>
       <ul className="space-y-2">
+        {/* "All" button */}
+        <li>
+          <button
+            onClick={() => {
+              setSelectedTagId(undefined);
+              if (location.pathname !== "/") {
+                navigate("/");
+              }
+            }}
+            className={`flex items-center w-full text-left gap-2 text-sm py-1 rounded-md focus:outline-none
+                        ${
+                          selectedTagId === undefined
+                            ? "text-[#292929] font-semibold ring-1 ring-offset-1 bg-[#F3F4F6] ring-gray-400"
+                            : "text-[#545454] hover:text-[#292929] hover:underline"
+                        }`}
+            title="Show All Categories">
+            <Hash className="w-4 h-4 text-[#787672]" />
+            <span className="flex-grow truncate" title="All Categories">
+              All
+            </span>
+            {/* Optionally, you might want to hide or not show a count for "All" */}
+          </button>
+        </li>
+
         {topCategories.map((category) => {
           if (!category.slug) {
             // Optionally, render something different for tags without slugs, or just skip
@@ -44,17 +76,31 @@ export function TopCategoriesOfWeek() {
               </li>
             );
           }
+          // Category has a slug, make it a button
+          const isSelected = selectedTagId === category._id;
           return (
             <li key={category._id}>
-              <Link
-                to={`/t/${category.slug}`}
-                className="flex items-center gap-2 text-sm text-[#545454] hover:text-[#292929] hover:underline py-1">
+              <button
+                onClick={() => {
+                  const newSelectedId = isSelected ? undefined : category._id;
+                  setSelectedTagId(newSelectedId);
+                  if (location.pathname !== "/") {
+                    navigate("/");
+                  }
+                }}
+                className={`flex items-center w-full text-left gap-2 text-sm py-1 rounded-md focus:outline-none
+                            ${
+                              isSelected
+                                ? "text-[#292929] font-semibold ring-1 ring-offset-1  bg-[#F3F4F6] ring-gray-400"
+                                : "text-[#545454] hover:text-[#292929] hover:underline"
+                            }`}
+                title={category.name}>
                 <Hash className="w-4 h-4 text-[#787672]" />
                 <span className="flex-grow truncate" title={category.name}>
                   {category.name}
                 </span>
                 <span className="text-xs text-[#787672]">({category.count})</span>
-              </Link>
+              </button>
             </li>
           );
         })}

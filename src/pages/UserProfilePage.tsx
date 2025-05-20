@@ -983,7 +983,9 @@ export default function UserProfilePage() {
                     className="text-lg font-semibold text-[#292929] hover:underline">
                     {story.title}
                   </Link>
-                  <p className="text-sm text-gray-600 truncate">{story.description}</p>
+                  <p className="text-sm text-gray-600 whitespace-normal break-words">
+                    {story.description}
+                  </p>
                   <p className="text-xs text-gray-500">
                     Submitted by: {story.authorName || story.authorUsername || "Anonymous"}
                   </p>
@@ -1211,7 +1213,7 @@ export default function UserProfilePage() {
                         {bookmark.storyTitle || "View Story"}
                       </Link>
                       {bookmark.storyDescription && (
-                        <p className="text-sm text-gray-600 truncate mt-1">
+                        <p className="text-sm text-gray-600 whitespace-normal break-words mt-1">
                           {bookmark.storyDescription}
                         </p>
                       )}

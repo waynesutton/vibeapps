@@ -34,6 +34,7 @@
       - `Footer.tsx`: Application footer component.
       - `ConvexBox.tsx`: A dismissible notification/info box.
       - `UserSyncer.tsx`: Component for synchronizing Clerk user data with Convex DB.
+      - `TopCategoriesOfWeek.tsx`: Modified to handle category selection like header tags, using buttons and state passed via props. Fixes 404 errors from previous link-based navigation. It now accepts `selectedTagId` and `setSelectedTagId` props to interact with a shared state, typically managed in `Layout.tsx`.
     - `lib/`: Utility functions, helper modules, and library-specific configurations.
       - `utils.ts`: General utility functions.
       - `constants.ts`: Application-wide constants.
