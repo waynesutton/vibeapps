@@ -1,13 +1,31 @@
 User-agent: *
-allow:
-
-User-agent: CCBot
-allow: /
+Allow: /
 
 User-agent: GPTBot
-allow: /
+Allow: /
 
 User-agent: Google-Extended
-allow: /
+Allow: /
 
-# Add other LLM bots as needed 
+User-agent: CCBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ChatGPT
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: NeevaAI
+Allow: /
+
+# Optional: add more bots as needed

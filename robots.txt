@@ -1,0 +1,54 @@
+# robots.txt — Allow access to major LLM crawlers
+
+# Allow all general crawlers
+
+User-agent: \*
+Allow: /
+
+# OpenAI's GPTBot (ChatGPT)
+
+User-agent: GPTBot
+Allow: /
+
+# OpenAI's ChatGPT browsing user-agent
+
+User-agent: ChatGPT-User
+Allow: /
+
+# Anthropic's Claude
+
+User-agent: ClaudeBot
+Allow: /
+
+# Anthropic alternate identifier
+
+User-agent: anthropic-ai
+Allow: /
+
+# Google AI crawler (used for Bard, Gemini, and other LLMs)
+
+User-agent: Google-Extended
+Allow: /
+
+# Common Crawl bot (used in many AI training datasets)
+
+User-agent: CCBot
+Allow: /
+
+# Perplexity AI
+
+User-agent: PerplexityBot
+Allow: /
+
+# NeevaAI (acquired by Snowflake, but still seen)
+
+User-agent: NeevaAI
+Allow: /
+
+# Add more LLM bots as needed below
+
+# Example:
+
+# User-agent: YourCustomAIBot
+
+# Allow: /
