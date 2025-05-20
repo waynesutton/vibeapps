@@ -14,14 +14,16 @@ Brief description of the feature and its purpose.
 - [x] remove state for profile and admin page to remove sidebar
 - [x] add tag bar to header like https://www.ycombinator.com/launches
 - [x] add follow profile features
-- [x] update comments to have a 10 word minium
+- [x] update comments to have a 10 word minimum
+- [x] fix username and name clerk sync
+- [x] hide or show views in the dashboard
 
 ## In Progress Tasks
 
+- [ ] add show 3 related products by tags below comments
 - [ ] setup clerk production and link
-- [ ] fix username and name clerk sync
-- [ ] Setup hosting on Vercel
-- [ ] Setup domain name on Vercel
+- [ ] Setup hosting on netlify
+- [ ] Setup domain name on netlify
 - [ ] Ask vibe coders for feedback and submissions
 - [ ] setup resend for emails - after dominan setup with https://demo.react.email/preview/reset-password/dropbox-reset-password
 - [ ] Share with team and launch
@@ -31,9 +33,7 @@ Brief description of the feature and its purpose.
 
 - [ ] update category links in vibe view sidebar
 - [ ] add pinned post to sidebar for storylist.tsx layout.tsx line 283
-- [ ] add show 3 related products by tags below comments
 - [ ] test and add nav icons
-- [ ] hide or show views in the dashboard
 
 ## Implementation Plan
 
