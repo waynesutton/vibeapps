@@ -1,9 +1,10 @@
 import React from "react";
 // import * as Dialog from "@radix-ui/react-dialog"; // Dialog removed
 import { Id } from "../../convex/_generated/dataModel";
-import { useAuth } from "@clerk/clerk-react"; // Added
+import { useAuth, useUser } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom"; // Added
 import { Link } from "react-router-dom";
+import { toast } from "sonner"; // Corrected import for toast
 
 interface CommentFormProps {
   onSubmit: (content: string) => void; // Removed author from onSubmit
@@ -12,56 +13,60 @@ interface CommentFormProps {
 
 export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
   const [content, setContent] = React.useState("");
-  // const [author, setAuthor] = React.useState(""); // Removed author state
-  // const [showNameDialog, setShowNameDialog] = React.useState(false); // Removed dialog state
-  const [error, setError] = React.useState<string | null>(null); // Added for validation error
-
-  const { isSignedIn, isLoaded: isClerkLoaded } = useAuth();
+  const [error, setError] = React.useState<string | null>(null);
+  const { isSignedIn, isLoaded: isClerkLoaded, user } = useUser(); // Get user for author info
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null); // Clear previous errors
-    if (!isClerkLoaded) return; // Wait for Clerk
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!isClerkLoaded) return;
 
     if (!isSignedIn) {
+      toast.error("Please sign in to comment.");
+      // It might be better to redirect or show a modal for sign-in
       navigate("/sign-in");
       return;
     }
 
-    const wordCount = content.trim().split(/\s+/).length;
-    if (wordCount < 10) {
-      setError("Comment must be at least 10 words long.");
+    // Trim whitespace from the beginning and end of the content
+    const trimmedContent = content.trim();
+
+    // Validate character count instead of word count
+    if (trimmedContent.length < 50) {
+      setError("Comment must be at least 50 characters long.");
       return;
     }
-
-    // if (!author) { // Author check removed
-    //   setShowNameDialog(true);
-    //   return;
-    // }
-    onSubmit(content);
-    setContent("");
+    // Clear any previous error
+    setError(null);
+    onSubmit(trimmedContent); // Use trimmed content
+    setContent(""); // Clear the textarea after submission
   };
 
-  // const handleNameSubmit = (e: React.FormEvent) => { ... }; // Removed name submit handler
+  const handleContentChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setContent(event.target.value);
+    // Clear error when user starts typing
+    if (error && event.target.value.trim().length >= 50) {
+      setError(null);
+    }
+  };
+
+  // Placeholder for a sign-in action, adjust as per your app's routing/UI flow
+  const handleSignIn = () => {
+    navigate("/sign-in");
+  };
 
   const canSubmit = isClerkLoaded && isSignedIn;
-  const isContentValid = content.trim().split(/\s+/).length >= 10;
+  const isContentValid = content.trim().length >= 50;
 
   return (
     <>
       <form onSubmit={handleSubmit} className="mt-4">
         <textarea
           value={content}
-          onChange={(e) => {
-            setContent(e.target.value);
-            if (error && e.target.value.trim().split(/\s+/).length >= 10) {
-              setError(null); // Clear error when user starts typing valid comment
-            }
-          }}
+          onChange={handleContentChange}
           placeholder={
             canSubmit
-              ? "Write your comment... (Markdown supported, min. 10 words)"
+              ? "Write your comment... (Markdown supported, min. 50 characters)"
               : "Sign in to write your comment..."
           }
           className={`w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] min-h-[100px] disabled:opacity-50 disabled:bg-gray-100 ${
@@ -82,7 +87,7 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
             !canSubmit
               ? "Sign in to comment"
               : !isContentValid && content.trim()
-                ? "Comment must be at least 10 words."
+                ? "Comment must be at least 50 characters."
                 : undefined
           }>
           {parentId ? "Reply" : "Comment"}
@@ -98,7 +103,27 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
         )}
       </form>
 
-      {/* Dialog.Root and related code removed */}
+      {!isClerkLoaded && <p className="mt-2 text-sm text-gray-500">Loading user status...</p>}
+
+      {isClerkLoaded && !isSignedIn && (
+        <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-md text-sm">
+          <p className="text-gray-700">
+            Please{" "}
+            <button
+              onClick={handleSignIn}
+              className="text-blue-600 hover:underline font-medium focus:outline-none">
+              sign in
+            </button>{" "}
+            or{" "}
+            <button
+              onClick={handleSignIn}
+              className="text-blue-600 hover:underline font-medium focus:outline-none">
+              sign up
+            </button>{" "}
+            to leave a comment.
+          </p>
+        </div>
+      )}
     </>
   );
 }

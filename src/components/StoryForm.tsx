@@ -29,6 +29,8 @@ export function StoryForm() {
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [showSuccessMessage, setShowSuccessMessage] = React.useState(false);
 
+  const MAX_TAGLINE_LENGTH = 140;
+
   const availableTags = useQuery(api.tags.list);
 
   const generateUploadUrl = useMutation(api.stories.generateUploadUrl);
@@ -167,13 +169,21 @@ export function StoryForm() {
             <input
               type="text"
               id="tagline"
-              placeholder="One sentence pitch"
+              placeholder="One sentence pitch or description"
               value={formData.tagline}
-              onChange={(e) => setFormData((prev) => ({ ...prev, tagline: e.target.value }))}
+              onChange={(e) => {
+                if (e.target.value.length <= MAX_TAGLINE_LENGTH) {
+                  setFormData((prev) => ({ ...prev, tagline: e.target.value }));
+                }
+              }}
+              maxLength={MAX_TAGLINE_LENGTH}
               className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
               required
               disabled={isSubmitting}
             />
+            <div className="text-xs text-right text-[#545454] mt-1">
+              {formData.tagline.length}/{MAX_TAGLINE_LENGTH}
+            </div>
           </div>
 
           <div>
@@ -358,6 +368,7 @@ export function StoryForm() {
                 (selectedTagIds.length === 0 && newTagNames.length === 0) ||
                 !formData.title ||
                 !formData.tagline ||
+                formData.tagline.length > MAX_TAGLINE_LENGTH ||
                 !formData.url
               }
               className="px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
