@@ -99,6 +99,34 @@ export default function UserProfilePage() {
   const { signOut } = useClerk();
   const navigate = useNavigate();
 
+  // Effect to manage global view mode based on path
+  useEffect(() => {
+    const isSettingsPath = location.pathname.toLowerCase().startsWith("/user-settings");
+
+    // Define known view mode classes. Adjust these to match your application's actual classes.
+    const viewModeClasses = [
+      "view-mode-list",
+      "view-mode-grid",
+      "view-mode-vibe",
+      "site-default-view", // Example class for a default view
+      "vibe-view", // Example class for a vibe view
+    ];
+
+    if (isSettingsPath) {
+      // If on a settings path, remove all known view mode classes
+      viewModeClasses.forEach((cls) => document.body.classList.remove(cls));
+    } else {
+      // On other paths (e.g., main profile), this effect does nothing,
+      // allowing other logic to manage view modes.
+      // If the main profile itself should *also* clear these and then set its own,
+      // that logic would be separate or could be integrated here if needed.
+    }
+
+    // Optional: If you need to re-apply a specific class when navigating *away* from settings
+    // to a non-profile page that expects a default, that would be more complex and
+    // likely handled by a more global layout component.
+  }, [location.pathname]);
+
   // Console log for authUser (Clerk user object)
   useEffect(() => {
     if (isClerkLoaded && authUser) {
@@ -211,7 +239,7 @@ export default function UserProfilePage() {
   }, [isEditing, profileData, username]);
 
   // Handle /user-settings route for Clerk's UserProfile component
-  if (location.pathname.startsWith("/user-settings")) {
+  if (location.pathname.toLowerCase().startsWith("/user-settings")) {
     // Modified condition
     // Removed searchParams and clerkProfilePath logic for selecting sub-sections
     // The UserProfile component with routing="path" will handle sub-paths like /user-settings/security
@@ -223,7 +251,17 @@ export default function UserProfilePage() {
           ← Back to previous page
         </button>{" "}
         {/* Set path to the base path where UserProfile is mounted */}
-        <UserProfile path="/user-settings" routing="path" />
+        <UserProfile
+          path="/user-settings"
+          routing="path"
+          appearance={{
+            elements: {
+              card: "max-w-[850px] w-full mx-auto",
+              // You might need to target other elements if `card` isn't the primary outer container
+              // or if specific inner elements are causing width issues.
+            },
+          }}
+        />
       </div>
     );
   }
@@ -236,7 +274,10 @@ export default function UserProfilePage() {
   }
 
   // If profileData is still undefined here for a non-"user-settings" path, it means it's loading.
-  if (profileData === undefined && !(username && username.startsWith("user-settings"))) {
+  if (
+    profileData === undefined &&
+    !(username && username.toLowerCase().startsWith("user-settings"))
+  ) {
     return <Loading />;
   }
 
@@ -247,7 +288,7 @@ export default function UserProfilePage() {
   // For user-settings, profileData might be undefined, but that path returns <UserProfile> which doesn't use profileData directly.
 
   // Fallback if somehow profileData is not an object for a page that needs it (excluding user-settings)
-  if (!profileData && !(username && username.startsWith("user-settings"))) {
+  if (!profileData && !(username && username.toLowerCase().startsWith("user-settings"))) {
     console.error("UserProfilePage: profileData is unexpectedly not loaded for", username);
     return <ErrorDisplay message={`Profile data could not be loaded for ${username}.`} />;
   }
@@ -280,7 +321,7 @@ export default function UserProfilePage() {
 
   // If we are on a specific user's profile page (not user-settings) and loadedProfileUser is null (due to fallback from destructuring)
   // it implies an issue not caught by earlier checks, or profileData was an empty object without a 'user' field.
-  if (!(username && username.startsWith("user-settings")) && !loadedProfileUser) {
+  if (!(username && username.toLowerCase().startsWith("user-settings")) && !loadedProfileUser) {
     console.error(
       "UserProfilePage: loadedProfileUser is null for",
       username,
@@ -1314,8 +1355,8 @@ export default function UserProfilePage() {
                 <Link
                   to="/user-settings"
                   className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors flex items-center">
-                  <Settings className="w-4 h-4 inline-block mr-2" /> Manage Account Settings
-                  (Password, Email, etc.)
+                  <Settings className="w-4 h-4 inline-block mr-2" /> Account Settings (Change photo,
+                  Name, Password, Delete account, etc.)
                 </Link>
               </div>
             </div>

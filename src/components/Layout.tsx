@@ -69,6 +69,7 @@ export function Layout({ children }: { children?: ReactNode }) {
         const { pathname } = location;
         const isAdminPage = pathname.startsWith("/admin");
         const isSetUsernamePage = pathname === "/set-username";
+        const isUserSettingsPage = pathname.toLowerCase().startsWith("/user-settings");
         let isProfilePage = false;
         if (isSignedIn && convexUserDoc?.username) {
           isProfilePage = pathname === `/${convexUserDoc.username}`;
@@ -88,6 +89,8 @@ export function Layout({ children }: { children?: ReactNode }) {
               : settings.profilePageDefaultViewMode || "list";
         } else if (isSetUsernamePage) {
           newViewMode = undefined; // No view mode on set-username page
+        } else if (isUserSettingsPage) {
+          newViewMode = undefined; // No view mode on user-settings pages
         } else {
           // General site pages - this is where siteDefaultViewMode is used
           if (settings.siteDefaultViewMode === "none") {
