@@ -1025,3 +1025,69 @@ export const getWeeklyLeaderboardStories = query({
     return storiesToReturn;
   },
 });
+
+export const getRelatedStoriesByTags = query({
+  args: {
+    currentStoryId: v.id("stories"),
+    tagIds: v.array(v.id("tags")),
+    limit: v.number(),
+  },
+  handler: async (ctx, args) => {
+    if (args.tagIds.length === 0) {
+      return [];
+    }
+
+    // This initial fetch of all stories is not scalable for large datasets.
+    // Consider a more optimized approach with join tables or search indexes for production.
+    const allStories = await ctx.db
+      .query("stories")
+      // .withIndex("by_status_votes", q => q.eq("status", "approved")) // Example: if you have a combined index
+      .filter((q) => q.eq(q.field("status"), "approved")) // Filter for approved stories first
+      .order("desc") // This will use the default _creationTime or you need a specific index like by_votes
+      .collect();
+
+    const relatedStories = allStories
+      .filter(
+        (story) =>
+          story._id !== args.currentStoryId &&
+          story.tagIds?.some((tagId) => args.tagIds.includes(tagId))
+      )
+      .sort((a, b) => {
+        const voteDiff = (b.votes ?? 0) - (a.votes ?? 0);
+        if (voteDiff !== 0) return voteDiff;
+        // Assuming 'commentCount' exists on the story document
+        const commentCountDiff = (b.commentCount ?? 0) - (a.commentCount ?? 0);
+        if (commentCountDiff !== 0) return commentCountDiff;
+        return b._creationTime - a._creationTime;
+      })
+      .slice(0, args.limit);
+
+    const enrichedStories = await Promise.all(
+      relatedStories.map(async (story) => {
+        let authorUsername: string | null = null;
+        let authorName: string | null = null;
+        if (story.userId) {
+          // Ensure userId is correctly typed. It should be Id<"users">
+          const author = await ctx.db.get(story.userId as Id<"users">);
+          if (author) {
+            authorUsername = author.username || null;
+            authorName = author.name || null;
+          }
+        }
+
+        const resolvedTags = story.tagIds
+          ? await Promise.all(story.tagIds.map((tagId) => ctx.db.get(tagId as Id<"tags">)))
+          : [];
+
+        return {
+          ...story,
+          authorUsername,
+          authorName,
+          tags: resolvedTags.filter((tag) => tag !== null) as Doc<"tags">[],
+        };
+      })
+    );
+
+    return enrichedStories;
+  },
+});

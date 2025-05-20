@@ -30,6 +30,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button"; // For modal buttons
 import { toast } from "sonner";
+import { slugify } from "../lib/utils"; // Import slugify
 
 // Removed MOCK_COMMENTS
 
@@ -131,6 +132,18 @@ export function StoryDetail({ story }: StoryDetailProps) {
   const [reportReason, setReportReason] = React.useState("");
   const [isReporting, setIsReporting] = React.useState(false);
   const [reportModalError, setReportModalError] = React.useState<string | null>(null);
+
+  // Fetch related stories
+  const relatedStories = useQuery(
+    api.stories.getRelatedStoriesByTags,
+    story.tags && story.tags.length > 0
+      ? {
+          currentStoryId: story._id,
+          tagIds: story.tags.map((tag: Doc<"tags">) => tag._id),
+          limit: 3, // Already limits to 3 max from backend
+        }
+      : "skip"
+  );
 
   const handleVote = () => {
     if (!isClerkLoaded) return; // Don't do anything if Clerk hasn't loaded
@@ -274,7 +287,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
   // const reportUrl = `https://github.com/waynesutton/vibeapps/issues/new?q=is%3Aissue+state%3Aopen+Flagged&labels=flagged&title=Flagged+Content%3A+${encodeURIComponent(story.title)}&body=Reporting+issue+for+story%3A+%0A-+Title%3A+${encodeURIComponent(story.title)}%0A-+Slug%3A+${storySlug}%0A-+URL%3A+${encodeURIComponent(story.url)}%0A-+Reason%3A+`;
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto pb-10">
       <Link to="/" className="text-[#545454] hover:text-[#525252] inline-block mb-6 text-sm">
         ← Back to Apps
       </Link>
@@ -532,6 +545,53 @@ export function StoryDetail({ story }: StoryDetailProps) {
           )}
         </div>
       </div>
+
+      {/* Related Apps Section */}
+      {relatedStories && relatedStories.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-xl font-medium text-[#525252] mb-6">Related Apps</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {relatedStories.map((relatedStory: Story) => (
+              <div
+                key={relatedStory._id}
+                className="bg-white rounded-lg p-4 border border-[#D8E1EC] flex flex-col group">
+                {relatedStory.screenshotUrl && (
+                  <Link
+                    to={`/s/${relatedStory.slug}`}
+                    className="mb-3 block overflow-hidden rounded-md aspect-video">
+                    <img
+                      src={relatedStory.screenshotUrl}
+                      alt={`${relatedStory.title} screenshot`}
+                      className="w-full h-full object-cover bg-gray-100 group-hover:scale-105 transition-transform duration-300 ease-in-out"
+                      loading="lazy"
+                    />
+                  </Link>
+                )}
+                <h3 className="text-lg font-semibold text-[#292929] mb-1 truncate">
+                  <Link
+                    to={`/s/${relatedStory.slug}`}
+                    className="hover:text-[#555555] hover:underline">
+                    {relatedStory.title}
+                  </Link>
+                </h3>
+                {relatedStory.description && (
+                  <p className="text-sm text-[#545454] mb-2 line-clamp-2 flex-grow">
+                    {relatedStory.description}
+                  </p>
+                )}
+                <p
+                  className={`text-xs text-[#545454] mb-2 ${relatedStory.description ? "" : "flex-grow"}`}>
+                  By {relatedStory.authorName || relatedStory.authorUsername || "Anonymous"}
+                </p>
+                <div className="flex items-center text-xs text-[#545454] gap-3 mt-auto pt-2 border-t border-[#F4F0ED]">
+                  <span>{relatedStory.votes} vibes</span>
+                  {/* <span>{relatedStory.commentCount ?? 0} comments</span> */}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Flag/Report Section */}
       <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between text-sm text-gray-600">
