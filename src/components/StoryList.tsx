@@ -157,7 +157,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                       {story.customMessage}
                     </div>
                   )}
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-1">
                     {story.isPinned && (
                       <Pin
                         className="w-4 h-4 text-[#787671] flex-shrink-0"
@@ -181,7 +181,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                     </h2>
                   </div>
                   {viewMode === "vibe" && (
-                    <p className="text-[#000000] text-[0.9375rem] leading-[1.625rem] mb-2 line-clamp-2">
+                    <p className="text-[#000000] text-[14px] leading-[20px] mb-1 line-clamp-2">
                       {story.description}
                     </p>
                   )}
@@ -198,7 +198,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                     </Link>
                   )}
                   {viewMode !== "vibe" && (
-                    <p className="text-[#000000] text-[0.9375rem] leading-[1.625rem] mb-4 line-clamp-3">
+                    <p className="text-[#000000] text-[14px] leading-[20px] mb-2 line-clamp-3">
                       {story.description}
                     </p>
                   )}

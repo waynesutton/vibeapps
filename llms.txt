@@ -1,13 +1,13 @@
 User-agent: *
-Disallow:
+allow:
 
 User-agent: CCBot
-Disallow: /
+allow: /
 
 User-agent: GPTBot
-Disallow: /
+allow: /
 
 User-agent: Google-Extended
-Disallow: /
+allow: /
 
 # Add other LLM bots as needed 
