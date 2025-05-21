@@ -157,7 +157,17 @@ export function ConvexBoxSettingsForm() {
         {currentLogoUrl && !selectedFile && (
           <div className="mt-2">
             <p className="text-xs text-gray-600 mb-1">Current logo:</p>
-            <img src={currentLogoUrl} alt="Current logo" className="max-h-20 border rounded" />
+            {linkUrl && linkUrl.trim() !== "" ? (
+              <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="inline-block">
+                <img src={currentLogoUrl} alt="Current logo" className="max-h-20 border rounded" />
+              </a>
+            ) : (
+              <img
+                src={currentLogoUrl}
+                alt="Current logo"
+                className="max-h-20 border rounded inline-block"
+              />
+            )}
             <Button
               type="button"
               variant="link"

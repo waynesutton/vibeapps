@@ -32,6 +32,7 @@ Brief description of the feature and its purpose.
 
 ## In Progress Tasks
 
+- [ ] link image in setting popup box
 - [ ] - setup llms.txt, sitemap.xml and robots.txt
 - [ ] Ask vibe coders for feedback and submissions
 - [ ] setup resend for emails - after dominan setup with https://demo.react.email/preview/reset-password/dropbox-reset-password

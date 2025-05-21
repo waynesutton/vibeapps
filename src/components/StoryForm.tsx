@@ -144,8 +144,8 @@ export function StoryForm() {
 
       <div className="bg-white p-6 rounded-lg border border-[#D8E1EC]">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <h2 className="text-2xl font-bold text-[#292929]">Submit your Vibe Coding app</h2>
-
+          <h2 className="text-2xl font-bold text-[#292929]">Submit your Vibe Coding app</h2>{" "}
+          <span className="ml-2 text-sm text-gray-600">What did you build while vibe coding?</span>
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-[#525252] mb-1">
               App Title *
@@ -161,7 +161,6 @@ export function StoryForm() {
               disabled={isSubmitting}
             />
           </div>
-
           <div>
             <label htmlFor="tagline" className="block text-sm font-medium text-[#525252] mb-1">
               App Project Tagline or Description*
@@ -185,7 +184,6 @@ export function StoryForm() {
               {formData.tagline.length}/{MAX_TAGLINE_LENGTH}
             </div>
           </div>
-
           <div>
             <label htmlFor="url" className="block text-sm font-medium text-[#525252] mb-1">
               App Website Link *
@@ -202,7 +200,6 @@ export function StoryForm() {
               disabled={isSubmitting}
             />
           </div>
-
           <div>
             <label htmlFor="image" className="block text-sm font-medium text-[#525252] mb-1">
               Upload Screenshot (Optional)
@@ -219,7 +216,6 @@ export function StoryForm() {
               <div className="text-sm text-[#545454] mt-1">Selected: {formData.image.name}</div>
             )}
           </div>
-
           <div>
             <label htmlFor="linkedinUrl" className="block text-sm font-medium text-[#525252] mb-1">
               LinkedIn Profile or LinkedIn Announcement Post URL (Optional)
@@ -234,7 +230,6 @@ export function StoryForm() {
               disabled={isSubmitting}
             />
           </div>
-
           <div>
             <label htmlFor="twitterUrl" className="block text-sm font-medium text-[#525252] mb-1">
               X (Twitter) or Bluesky Profile or Announcement Post URL (Optional)
@@ -249,7 +244,6 @@ export function StoryForm() {
               disabled={isSubmitting}
             />
           </div>
-
           <div>
             <label htmlFor="githubUrl" className="block text-sm font-medium text-[#525252] mb-1">
               GitHub Repo URL (Optional)
@@ -264,7 +258,6 @@ export function StoryForm() {
               disabled={isSubmitting}
             />
           </div>
-
           <div>
             <label htmlFor="chefAppUrl" className="block text-sm font-medium text-[#525252] mb-1">
               Chef deployment convex.app link (Optional)
@@ -279,7 +272,6 @@ export function StoryForm() {
               disabled={isSubmitting}
             />
           </div>
-
           <div>
             <label htmlFor="chefShowUrl" className="block text-sm font-medium text-[#525252] mb-1">
               Convexchef.show project link (Optional)
@@ -294,9 +286,9 @@ export function StoryForm() {
               disabled={isSubmitting}
             />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-[#525252] mb-2">Select Tags *</label>
+            <label className="block text-sm font-medium text-[#525252] mb-2">Select Tags *</label>{" "}
+            <span className="ml-2 text-xs text-gray-600">What vibe coding app did use?</span>
             <div className="flex flex-wrap gap-2 mb-4">
               {availableTags === undefined && (
                 <span className="text-sm text-gray-500">Loading tags...</span>
@@ -311,7 +303,6 @@ export function StoryForm() {
                 </button>
               ))}
             </div>
-
             <label className="block text-sm font-medium text-[#525252] mb-2">
               Add New Tags (optional)
             </label>
@@ -354,12 +345,10 @@ export function StoryForm() {
                 </span>
               ))}
             </div>
-
             {selectedTagIds.length === 0 && newTagNames.length === 0 && (
               <p className="text-xs text-red-500 mt-1">Please select or add at least one tag.</p>
             )}
           </div>
-
           <div className="flex gap-4 items-center pt-4 border-t border-[#F4F0ED]">
             <button
               type="submit"
@@ -380,15 +369,12 @@ export function StoryForm() {
               Cancel
             </Link>
           </div>
-
           <div className="text-sm text-[#545454]">
             To maintain quality and prevent spam, you can submit up to 10 projects per day.
           </div>
-
           {submitError && (
             <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">{submitError}</div>
           )}
-
           {showSuccessMessage && (
             <div className="mt-4 p-4 bg-green-100 text-green-700 rounded-md text-sm">
               Thanks for sharing!

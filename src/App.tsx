@@ -43,7 +43,11 @@ function HomePage() {
   }
 
   if (!stories || stories.length === 0) {
-    return <div>No stories found. Why not submit one?</div>;
+    return (
+      <div>
+        No vibe coding apps found in this category. <a href="/submit">Why not submit one?</a>
+      </div>
+    );
   }
 
   return (

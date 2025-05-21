@@ -22,7 +22,7 @@
         - `UserModeration.tsx`: Interface for managing users.
         - `ReportManagement.tsx`: Interface for managing user reports.
         - `NumbersView.tsx`: Component for displaying key metrics.
-        - `ConvexBoxSettingsForm.tsx`: Form for configuring the `ConvexBox` component.
+        - `ConvexBoxSettingsForm.tsx`: A form component for configuring the ConvexBox settings, allowing administrators to enable/disable the box, set display text, link URL, and upload a logo. The logo, if present, links to the specified URL.
       - `ui/`: General-purpose UI components (e.g., buttons, inputs, cards) potentially from a library like shadcn/ui.
       - `Layout.tsx`: Main application layout component, potentially managing shared state for things like selected tags.
       - `StoryList.tsx`: Component for displaying a list/grid of stories.
