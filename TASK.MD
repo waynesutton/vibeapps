@@ -21,11 +21,14 @@ Brief description of the feature and its purpose.
 - [x] update category links in vibe view sidebar
 - [x] add rabbit analytics https://app.rybbit.io/
 - [x] Joined vibe apps date
+- [x] setup clerk production and link
+- [x] link to sections on profile page
 
 ## In Progress Tasks
 
-- [ ] setup clerk production and link
 - [ ] download icons for all the apps
+- [ ] sort tags in dashboard
+- [ ] test forms
 - [ ] update readme and files
 - [ ] Setup hosting on netlify
 - [ ] Setup domain name on netlify

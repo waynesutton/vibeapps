@@ -945,6 +945,7 @@ export const updateUsername = mutation({
 
 export const updateProfileDetails = mutation({
   args: {
+    name: v.optional(v.string()),
     bio: v.optional(v.string()),
     website: v.optional(v.string()),
     twitter: v.optional(v.string()),
@@ -959,7 +960,12 @@ export const updateProfileDetails = mutation({
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
       .unique();
     if (!user) throw new Error("User record not found.");
+
     const updates: Partial<Doc<"users">> = {};
+
+    if (args.name !== undefined) {
+      updates.name = args.name.trim();
+    }
     if (args.bio !== undefined) {
       if (args.bio && args.bio.length > 200) {
         throw new Error("Bio must be 200 characters or less.");
@@ -970,6 +976,7 @@ export const updateProfileDetails = mutation({
     if (args.twitter !== undefined) updates.twitter = args.twitter;
     if (args.bluesky !== undefined) updates.bluesky = args.bluesky;
     if (args.linkedin !== undefined) updates.linkedin = args.linkedin;
+
     if (Object.keys(updates).length > 0) {
       await ctx.db.patch(user._id, updates);
     }
