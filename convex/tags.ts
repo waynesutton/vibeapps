@@ -22,22 +22,33 @@ export const list = query({
     return await ctx.db
       .query("tags")
       .filter((q) => q.neq(q.field("isHidden"), true)) // Exclude hidden tags
-      .order("asc")
+      .order("asc") // This likely sorts by _creationTime or another default
       .collect();
   },
 });
 
 // Query to list only tags shown in the header (excluding hidden) - Publicly accessible
+// Sorted by manual order, then by name.
 export const listHeader = query({
   args: {},
   handler: async (ctx): Promise<Doc<"tags">[]> => {
-    // Filter out hidden tags and those not shown in header
-    return await ctx.db
+    const tags = await ctx.db
       .query("tags")
       .filter((q) => q.eq(q.field("showInHeader"), true))
-      .filter((q) => q.neq(q.field("isHidden"), true)) // Exclude hidden tags
-      .order("asc") // Or order by name if preferred
+      .filter((q) => q.neq(q.field("isHidden"), true))
       .collect();
+
+    // Sort by order (ascending, undefined/null last), then by name for stability
+    tags.sort((a, b) => {
+      const orderA = a.order ?? Infinity;
+      const orderB = b.order ?? Infinity;
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      return (a.name ?? "").localeCompare(b.name ?? "");
+    });
+
+    return tags;
   },
 });
 
@@ -46,7 +57,17 @@ export const listAllAdmin = query({
   args: {},
   handler: async (ctx): Promise<Doc<"tags">[]> => {
     await requireAdminRole(ctx); // Ensure only admins can see hidden tags
-    return await ctx.db.query("tags").order("asc").collect();
+    const tags = await ctx.db.query("tags").collect();
+    // Sort by order (ascending, undefined/null last), then by name for admin view consistency
+    tags.sort((a, b) => {
+      const orderA = a.order ?? Infinity;
+      const orderB = b.order ?? Infinity;
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      return (a.name ?? "").localeCompare(b.name ?? "");
+    });
+    return tags;
   },
 });
 
@@ -55,13 +76,14 @@ export const create = mutation({
   args: {
     name: v.string(),
     slug: v.string(), // Accept slug from frontend
-    showInHeader: v.boolean(),
+    showInHeader: v.optional(v.boolean()),
     isHidden: v.optional(v.boolean()), // Optional: defaults to false
     backgroundColor: v.optional(v.union(v.string(), v.null())), // Allow null for clearing
     textColor: v.optional(v.union(v.string(), v.null())), // Allow null for clearing
     emoji: v.optional(v.union(v.string(), v.null())), // Allow null for clearing
     iconUrl: v.optional(v.union(v.string(), v.null())), // Accept iconUrl (for legacy, but not used)
     iconStorageId: v.optional(v.id("_storage")), // Accept storageId for uploaded icon
+    order: v.optional(v.number()), // Added order
   },
   handler: async (ctx, args): Promise<Id<"tags">> => {
     await requireAdminRole(ctx);
@@ -99,12 +121,13 @@ export const create = mutation({
     return await ctx.db.insert("tags", {
       name: name,
       slug: slug,
-      showInHeader: args.showInHeader,
+      showInHeader: args.showInHeader ?? false,
       isHidden: args.isHidden ?? false,
       backgroundColor: args.backgroundColor ?? undefined,
       textColor: args.textColor ?? undefined,
       emoji: args.emoji ?? undefined,
       iconUrl: iconUrl,
+      order: args.order,
     });
   },
 });
@@ -123,6 +146,7 @@ export const update = mutation({
     iconUrl: v.optional(v.union(v.string(), v.null())),
     iconStorageId: v.optional(v.id("_storage")), // Accept storageId for uploaded icon
     clearIcon: v.optional(v.boolean()), // Allow clearing icon
+    order: v.optional(v.union(v.number(), v.null())), // Added order, allow null to unset
   },
   handler: async (ctx, args) => {
     await requireAdminRole(ctx);
@@ -169,11 +193,20 @@ export const update = mutation({
     if (rest.emoji !== undefined) updateData.emoji = rest.emoji === null ? undefined : rest.emoji;
     if (rest.iconUrl !== undefined)
       updateData.iconUrl = rest.iconUrl === null ? undefined : rest.iconUrl;
+
     if (iconStorageId) {
       const url = await ctx.storage.getUrl(iconStorageId);
       updateData.iconUrl = url ?? undefined;
+      if (url) updateData.emoji = undefined; // Clear emoji if new icon is set
+    } else if (clearIcon) {
+      updateData.iconUrl = undefined;
     }
-    if (clearIcon) updateData.iconUrl = undefined;
+
+    // Handle order: if null is passed, unset it (undefined). Otherwise, use the value.
+    if (rest.order !== undefined) {
+      updateData.order = rest.order === null ? undefined : rest.order;
+    }
+
     if (Object.keys(updateData).length > 0) {
       await ctx.db.patch(tagId, updateData);
     }

@@ -110,7 +110,7 @@ Whether it's a weekend build, a fresh SaaS idea, or something weird and experime
 - **Rich Text**: React Markdown for comment formatting
 - **UI Components**: Radix UI primitives for accessible components
 - **Database**: Convex for real-time data synchronization
-- **Authentication**: Built-in Convex auth system
+- **Authentication**: Clerk auth system
 
 ## Color Scheme
 
@@ -197,7 +197,6 @@ vibeapps/
 ├── .env.local # Local environment variables (in .gitignore)
 ├── .gitignore
 ├── bun.lockb # Bun lockfile
-├── changelog.MD
 ├── clerk-admin-fix.MD
 ├── components.json # shadcn/ui configuration
 ├── eslint.config.js
@@ -210,7 +209,6 @@ vibeapps/
 ├── postcss.config.js
 ├── README.md # This file
 ├── tailwind.config.js
-├── TASK.MD
 ├── tsconfig.app.json
 ├── tsconfig.json
 ├── tsconfig.node.json
@@ -221,10 +219,6 @@ vibeapps/
 
 Based on the project's task list, upcoming enhancements include:
 
-- **Clerk Production Setup**: Finalizing and linking the Clerk authentication for a production environment.
-- **App Icon Downloads**: Acquiring and integrating icons for all listed applications.
-- **Netlify Hosting & Domain**: Site is live on Netlify. Domain configuration is pending.
-- **Cookie Consent**: Ensuring `cookieyes.com` or a similar cookie consent mechanism is properly configured.
 - **Community Engagement**: Actively seeking feedback and app submissions from "vibe coders."
 - **Email Integration (Resend)**: Setting up Resend for transactional emails, such as password resets, after domain configuration.
 - **Team Collaboration & Launch**: Sharing the platform with the team and preparing for a public launch.

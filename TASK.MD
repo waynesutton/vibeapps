@@ -23,19 +23,18 @@ Brief description of the feature and its purpose.
 - [x] Joined vibe apps date
 - [x] setup clerk production and link
 - [x] link to sections on profile page
+- [x] download icons for all the apps
+- [x] sort tags in dashboard
+- [x] Setup hosting on netlify
+- [x] Setup domain name on netlify
+- [x] confirm https://www.cookieyes.com/ is setup
+- [ ] test forms
 
 ## In Progress Tasks
 
-- [ ] download icons for all the apps
-- [ ] sort tags in dashboard
-- [ ] test forms
-- [ ] update readme and files
-- [ ] Setup hosting on netlify
-- [ ] Setup domain name on netlify
-- [ ] confirm https://www.cookieyes.com/ is setup
+- [ ] - setup llms.txt, sitemap.xml and robots.txt
 - [ ] Ask vibe coders for feedback and submissions
 - [ ] setup resend for emails - after dominan setup with https://demo.react.email/preview/reset-password/dropbox-reset-password
-- [ ] Share with team and launch
 
 ## Future Tasks
 

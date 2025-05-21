@@ -88,6 +88,7 @@ export default defineSchema({
     textColor: v.optional(v.string()),
     emoji: v.optional(v.string()),
     iconUrl: v.optional(v.string()),
+    order: v.optional(v.number()),
   })
     .index("by_name", ["name"])
     .index("by_slug", ["slug"]),

@@ -11,8 +11,11 @@ import {
   Palette,
   Edit3,
   Check,
-  Image as ImageIcon,
+  ImageIcon,
   Smile,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -20,7 +23,8 @@ import { Id, Doc } from "../../../convex/_generated/dataModel";
 
 // Interface matching the updated Convex schema for tags
 // Use string | null for colors locally to represent clearing, but handle conversion for mutation
-interface EditableTag extends Omit<Doc<"tags">, "backgroundColor" | "textColor"> {
+interface EditableTag
+  extends Omit<Doc<"tags">, "backgroundColor" | "textColor" | "emoji" | "iconUrl" | "order"> {
   // Omit to redefine
   _id: Id<"tags">; // Existing or temporary client-side
   _creationTime: number;
@@ -29,9 +33,10 @@ interface EditableTag extends Omit<Doc<"tags">, "backgroundColor" | "textColor">
   isHidden?: boolean;
   backgroundColor?: string | null;
   textColor?: string | null;
-  emoji?: string; // Use string | undefined for compatibility with Doc<"tags">
-  iconUrl?: string; // Use string | undefined for compatibility with Doc<"tags">
+  emoji?: string | undefined; // Corrected type
+  iconUrl?: string | undefined; // Corrected type
   iconFile?: File | null; // New: for local file handling before upload
+  order?: number | undefined; // Corrected type: should align with Doc<"tags">
 
   // UI State Flags
   isNew?: boolean;
@@ -68,16 +73,26 @@ export function TagManagement() {
     if (allTagsAdmin) {
       // Only update local state if not currently processing to avoid overwriting pending changes
       if (!isProcessing) {
+        // Sort initially fetched tags by their existing order, then by name for stability
+        const sortedTags = [...allTagsAdmin].sort((a, b) => {
+          const orderA = a.order ?? Infinity;
+          const orderB = b.order ?? Infinity;
+          if (orderA !== orderB) {
+            return orderA - orderB;
+          }
+          return (a.name ?? "").localeCompare(b.name ?? "");
+        });
+
         setEditableTags(
-          // Ensure incoming data conforms to EditableTag, handling potentially undefined colors
-          allTagsAdmin.map(
+          sortedTags.map(
             (tag): EditableTag => ({
               ...tag,
               backgroundColor: tag.backgroundColor ?? undefined,
               textColor: tag.textColor ?? undefined,
               emoji: tag.emoji ?? undefined,
               iconUrl: tag.iconUrl ?? undefined,
-              iconFile: null, // Reset local file on refresh
+              iconFile: null,
+              order: tag.order ?? undefined, // Keep existing order
               isNew: false,
               isModified: false,
               isDeleted: false,
@@ -93,11 +108,35 @@ export function TagManagement() {
 
   const handleFieldChange = (tagId: Id<"tags">, field: keyof EditableTag, value: any) => {
     setEditableTags((prevTags) =>
-      prevTags.map((tag) =>
-        tag._id === tagId ? { ...tag, [field]: value, isModified: true } : tag
-      )
+      prevTags.map((tag) => {
+        if (tag._id === tagId) {
+          return { ...tag, [field]: value, isModified: true };
+        }
+        return tag;
+      })
     );
     setError(null); // Clear error on modification
+  };
+
+  const handleMoveTag = (tagId: Id<"tags">, direction: "up" | "down") => {
+    setEditableTags((prevTags) => {
+      const newTags = [...prevTags];
+      const index = newTags.findIndex((t) => t._id === tagId);
+      if (index === -1) return prevTags;
+
+      const newIndex = direction === "up" ? index - 1 : index + 1;
+
+      if (newIndex < 0 || newIndex >= newTags.length) return prevTags;
+
+      // Swap elements
+      [newTags[index], newTags[newIndex]] = [newTags[newIndex], newTags[index]];
+
+      // Mark all tags as modified because their order relative to others might change
+      // or at least the ones involved in the swap and potentially their new neighbors
+      // For simplicity, marking all as modified if any move happens ensures save considers order.
+      // A more granular approach could mark only affected tags if performance becomes an issue.
+      return newTags.map((t) => ({ ...t, isModified: true }));
+    });
   };
 
   const handleAddTag = (e: React.FormEvent) => {
@@ -123,9 +162,10 @@ export function TagManagement() {
       isHidden: false, // Default
       backgroundColor: null,
       textColor: null,
-      emoji: null,
-      iconUrl: null,
+      emoji: undefined, // Corrected type
+      iconUrl: undefined, // Corrected type
       iconFile: null,
+      order: undefined, // Default order for new tags is undefined
       _creationTime: Date.now(),
       isNew: true,
       isModified: true, // Mark as modified to be included in save
@@ -252,12 +292,37 @@ export function TagManagement() {
     let success = true;
     let encounteredError: string | null = null;
 
-    const tagsToProcess = editableTags.filter((tag) => tag.isModified);
+    // Filter out deleted tags for reordering, but keep them for deletion processing later if not new
+    const tagsToReorderAndSave = editableTags.filter((tag) => !tag.isDeleted);
+    const updatedTagsWithOrder = tagsToReorderAndSave.map((tag, index) => ({
+      ...tag,
+      order: index, // Assign order based on current visual position
+      isModified: true, // Ensure it's marked as modified if order changed or other fields changed
+    }));
 
-    for (const tag of tagsToProcess) {
+    // Combine with tags marked for deletion that are not new
+    const tagsMarkedForDeletion = editableTags.filter((tag) => tag.isDeleted && !tag.isNew);
+
+    // Create a comprehensive list of tags to process for backend operations
+    // This includes tags that had their order changed, new tags, modified tags, and tags to be deleted.
+    const allTagsToProcess = [...updatedTagsWithOrder, ...tagsMarkedForDeletion].reduce(
+      (acc, current) => {
+        // Deduplicate based on _id, prioritizing the one from updatedTagsWithOrder if present
+        if (!acc.find((item) => item._id === current._id)) {
+          acc.push(current);
+        }
+        return acc;
+      },
+      [] as EditableTag[]
+    );
+
+    for (const tag of allTagsToProcess) {
+      // Only proceed if the tag is genuinely modified (content or order) or needs deletion/creation
+      if (!tag.isModified && !tag.isNew && !tag.isDeleted) continue;
+
       try {
         let iconStorageIdToSend: Id<"_storage"> | undefined = undefined;
-        let shouldClearIcon = !tag.iconFile && !tag.iconUrl; // True if both file and URL are null
+        let shouldClearIcon = !tag.iconFile && !tag.iconUrl;
 
         if (tag.iconFile) {
           try {
@@ -301,6 +366,7 @@ export function TagManagement() {
             textColor: tag.textColor ?? undefined,
             emoji: tag.emoji ?? undefined,
             iconUrl: tag.iconUrl ?? undefined,
+            order: tag.order,
           };
           if (iconStorageIdToSend) createPayload.iconStorageId = iconStorageIdToSend;
           await createTag(createPayload);
@@ -320,6 +386,7 @@ export function TagManagement() {
             emoji: tag.emoji ?? undefined,
             iconUrl: tag.iconUrl ?? undefined,
             clearIcon: shouldClearIcon && !iconStorageIdToSend ? true : undefined,
+            order: tag.order,
           };
           if (iconStorageIdToSend) updatePayload.iconStorageId = iconStorageIdToSend;
           await updateTag(updatePayload);
@@ -434,15 +501,38 @@ export function TagManagement() {
 
         {/* Tag List */}
         <div className="space-y-3">
-          {editableTags.map((tag) => (
+          {editableTags.map((tag, index) => (
             <div
               key={tag._id}
               className={`border rounded-md overflow-hidden transition-all duration-200 ease-in-out ${tag.isDeleted ? "border-red-300 bg-red-50" : tag.isNew ? "border-green-300 bg-green-50" : tag.isModified ? "border-blue-300 bg-blue-50" : "border-gray-200 bg-white"}`}>
               {/* Main Tag Row */}
               <div
                 className={`flex items-center justify-between p-3 ${tag.isDeleted ? "opacity-60" : ""}`}>
+                {/* Move Buttons */}
+                {!tag.isDeleted && (
+                  <div className="flex flex-col mr-2">
+                    <button
+                      onClick={() => handleMoveTag(tag._id, "up")}
+                      disabled={index === 0 || isProcessing}
+                      className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Move Up">
+                      <ArrowUp className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleMoveTag(tag._id, "down")}
+                      disabled={
+                        index === editableTags.filter((t) => !t.isDeleted).length - 1 ||
+                        isProcessing
+                      } // Consider only non-deleted tags for last item check
+                      className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Move Down">
+                      <ArrowDown className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
                 {/* Tag Name and Colors/Icons - Modified for inline editing */}
-                <div className="flex items-center gap-2 flex-wrap min-w-0 mr-2">
+                <div className="flex items-center gap-2 flex-wrap min-w-0 mr-2 flex-grow">
                   {editNameTagId === tag._id && !tag.isDeleted ? (
                     <div className="flex items-center gap-1 flex-grow">
                       <input
@@ -744,6 +834,11 @@ export function TagManagement() {
           <p>Manage tags for submitted apps. Changes require saving.</p>
           <ul className="list-disc list-inside mt-1 space-y-0.5">
             <li>
+              <ArrowUp className="w-3 h-3 inline mr-0.5" />
+              <ArrowDown className="w-3 h-3 inline mr-1" />: Click to reorder tags for header
+              display.
+            </li>
+            <li>
               <Edit3 className="w-3 h-3 inline mr-1" />: Click tag name to edit.
             </li>
             <li>
@@ -753,13 +848,16 @@ export function TagManagement() {
               <Palette className="w-3 h-3 inline mr-1" />: Edit background/text colors.
             </li>
             <li>
-              <Archive className="w-3 h-3 inline mr-1" /> /{" "}
+              <Archive className="w-3 h-3 inline mr-1" />
+              /
               <ArchiveRestore className="w-3 h-3 inline mr-1" />: Archive/unarchive tag (hides from
               public view).
             </li>
             <li>
-              <Eye className="w-3 h-3 inline mr-1" /> / <EyeOff className="w-3 h-3 inline mr-1" />:
-              Toggle header visibility (only affects non-archived tags).
+              <Eye className="w-3 h-3 inline mr-1" />
+              /
+              <EyeOff className="w-3 h-3 inline mr-1" />: Toggle header visibility (only affects
+              non-archived tags).
             </li>
             <li>
               <Trash2 className="w-3 h-3 inline mr-1" />: Mark for deletion.
