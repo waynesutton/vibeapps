@@ -19,12 +19,17 @@ Brief description of the feature and its purpose.
 - [x] hide or show views in the dashboard
 - [x] add show 3 related products by tags below comments
 - [x] update category links in vibe view sidebar
+- [x] add rabbit analytics https://app.rybbit.io/
+- [x] Joined vibe apps date
 
 ## In Progress Tasks
 
 - [ ] setup clerk production and link
+- [ ] download icons for all the apps
+- [ ] update readme and files
 - [ ] Setup hosting on netlify
 - [ ] Setup domain name on netlify
+- [ ] confirm https://www.cookieyes.com/ is setup
 - [ ] Ask vibe coders for feedback and submissions
 - [ ] setup resend for emails - after dominan setup with https://demo.react.email/preview/reset-password/dropbox-reset-password
 - [ ] Share with team and launch

@@ -24,7 +24,7 @@
         - `NumbersView.tsx`: Component for displaying key metrics.
         - `ConvexBoxSettingsForm.tsx`: Form for configuring the `ConvexBox` component.
       - `ui/`: General-purpose UI components (e.g., buttons, inputs, cards) potentially from a library like shadcn/ui.
-      - `Layout.tsx`: Main application layout component.
+      - `Layout.tsx`: Main application layout component, potentially managing shared state for things like selected tags.
       - `StoryList.tsx`: Component for displaying a list/grid of stories.
       - `StoryDetail.tsx`: Component for displaying the details of a single story.
       - `StoryForm.tsx`: Form for submitting new stories.
@@ -61,7 +61,7 @@
   - `.DS_Store`: macOS specific file, typically ignored by Git.
   - `.env.local`: Local environment variables (e.g., `VITE_CONVEX_URL`, Clerk keys). Should be in `.gitignore`.
   - `.gitignore`: Specifies intentionally untracked files for Git.
-  - `bun.lockb`: Bun's lockfile for dependency management.
+  - `bun.lockb`: Bun's lock file for dependency management.
   - `changelog.MD`: A log of changes and new features added to the project.
   - `clerk-admin-fix.MD`: Markdown file, likely containing notes or documentation related to a specific Clerk admin fix.
   - `components.json`: Configuration file, often used by `shadcn/ui` to track installed components.
@@ -69,8 +69,8 @@
   - `files.MD`: This file - an overview of the codebase structure.
   - `following-plan.MD`: Markdown file, likely for project planning or task tracking.
   - `index.html`: The main HTML entry point for the Vite frontend application.
-  - `llms.txt`: Text file, purpose unknown without content but could be notes related to LLMs.
-  - `package-lock.json`: NPM's lockfile for ensuring consistent installs of project dependencies. (Note: `bun.lockb` is also present, indicating potential use of Bun as the package manager).
+  - `llms.txt`: Text file, purpose unknown without content but could be notes related to LLMs, AI, or similar topics.
+  - `package-lock.json`: NPM's lock file for ensuring consistent installs of project dependencies. (Note: `bun.lockb` is also present, indicating potential use of Bun as the package manager).
   - `package.json`: Defines project metadata, dependencies, and scripts.
   - `postcss.config.js`: Configuration file for PostCSS, a tool for transforming CSS with JavaScript plugins.
   - `README.md`: Main documentation file for the project, providing an overview, setup instructions, etc.

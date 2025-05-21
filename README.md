@@ -19,7 +19,7 @@ Whether it's a weekend build, a fresh SaaS idea, or something weird and experime
 
 - **Submit Your Applications**: Easily share your innovative applications with the community. Provide custom titles, detailed descriptions, and catchy taglines.
 - **Visual Showcase**: Upload up to 4 screenshots per submission to visually represent your app's interface and functionality.
-- **Social Integration**: Link your submissions to announcements on platforms like LinkedIn, Twitter/X, Bluesky, and Reddit to broaden your reach.
+- **Social Integration**: Link your submissions to announcements on platforms like LinkedIn, Twitter/X, Blue Sky, and Reddit to broaden your reach.
 - **Categorize with Tags**: Select relevant tags from a curated list (e.g., AI, SaaS, Hackathon, Productivity, Social) to help users discover your app.
 - **Submission Cadence**: A limit of one submission per day per user helps maintain content quality and ensures diverse visibility.
 
@@ -104,7 +104,7 @@ Whether it's a weekend build, a fresh SaaS idea, or something weird and experime
 
 - **Frontend**: React with TypeScript
 - **Styling**: Tailwind CSS with custom color scheme
-- **Icons**: Lucide React
+- **Icons**: Lucid React
 - **Routing**: React Router v6
 - **Date Handling**: date-fns
 - **Rich Text**: React Markdown for comment formatting
@@ -201,7 +201,7 @@ vibeapps/
 ├── clerk-admin-fix.MD
 ├── components.json # shadcn/ui configuration
 ├── eslint.config.js
-├── files.MD # Detailed codebase file overview (this file)
+├── files.MD # Detailed codebase file overview
 ├── following-plan.MD
 ├── index.html # Main HTML entry point for Vite
 ├── llms.txt
@@ -216,6 +216,21 @@ vibeapps/
 ├── tsconfig.node.json
 └── vite.config.ts
 ```
+
+## Future Features
+
+Based on the project's task list, upcoming enhancements include:
+
+- **Clerk Production Setup**: Finalizing and linking the Clerk authentication for a production environment.
+- **App Icon Downloads**: Acquiring and integrating icons for all listed applications.
+- **Netlify Hosting & Domain**: Setting up hosting on Netlify and configuring the domain name.
+- **Cookie Consent**: Ensuring `cookieyes.com` or a similar cookie consent mechanism is properly configured.
+- **Community Engagement**: Actively seeking feedback and app submissions from "vibe coders."
+- **Email Integration (Resend)**: Setting up Resend for transactional emails, such as password resets, after domain configuration.
+- **Team Collaboration & Launch**: Sharing the platform with the team and preparing for a public launch.
+- **Pinned Posts**: Adding a feature to pin important posts in the sidebar of the story list.
+- **Navigation Icons**: Testing and implementing icons for improved navigation.
+- **Admin/Frontend Chat**: Integrating a chat box for communication within the admin dashboard and on the frontend.
 
 ## Understanding Convex
 
@@ -234,4 +249,4 @@ For more detailed instructions, visit the [Convex deployment guide](https://docs
 
 ## 📝 License
 
-This project is open source and available under the MIT License.# vibeapps
+This project is open source and available under the MIT License.

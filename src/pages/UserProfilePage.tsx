@@ -901,6 +901,16 @@ export default function UserProfilePage() {
         style={{ fontFamily: "Inter, sans-serif" }}>
         <h2 className="text-lg font-normal text-[#292929] mb-4 pb-2 border-b border-gray-300">
           My Vibes
+          {loadedProfileUser?._creationTime && (
+            <span className="ml-2 text-xs text-gray-400">
+              Joined Vibe Apps{" "}
+              {new Date(loadedProfileUser._creationTime).toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </span>
+          )}
         </h2>
         <div className="flex flex-wrap gap-3 justify-center md:justify-start">
           {/* Submissions */}

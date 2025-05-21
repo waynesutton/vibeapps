@@ -89,7 +89,7 @@ export function Footer() {
                 Whether it's a weekend build, a fresh SaaS idea, or something weird and
                 experimental—drop it here.{" "}
               </p>
-              <p>Vibe Apps is for developers who build in public and ship for fun.</p>
+              <p></p>
 
               <p>
                 <a
