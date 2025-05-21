@@ -223,7 +223,7 @@ Based on the project's task list, upcoming enhancements include:
 
 - **Clerk Production Setup**: Finalizing and linking the Clerk authentication for a production environment.
 - **App Icon Downloads**: Acquiring and integrating icons for all listed applications.
-- **Netlify Hosting & Domain**: Setting up hosting on Netlify and configuring the domain name.
+- **Netlify Hosting & Domain**: Site is live on Netlify. Domain configuration is pending.
 - **Cookie Consent**: Ensuring `cookieyes.com` or a similar cookie consent mechanism is properly configured.
 - **Community Engagement**: Actively seeking feedback and app submissions from "vibe coders."
 - **Email Integration (Resend)**: Setting up Resend for transactional emails, such as password resets, after domain configuration.
@@ -243,9 +243,11 @@ Learn more about the concepts and best practices behind Convex:
 - [Environment Variables](https://docs.convex.dev/production/environment-variables)
 - [AI Code Generation](https://docs.convex.dev/ai)
 
-## Hosting on
+## Hosting on Netlify
 
-For more detailed instructions, visit the [Convex deployment guide](https://docs.convex.dev/production/hosting/).
+The Vibe Apps platform is hosted on Netlify, leveraging its robust infrastructure for continuous deployment and global content delivery.
+
+For more detailed instructions on Convex and Netlify, visit the [Convex deployment guide](https://docs.convex.dev/production/hosting/).
 
 ## 📝 License
 

@@ -18,11 +18,11 @@ export default function SetUsernamePage() {
   );
 
   useEffect(() => {
-    if (convexUser && convexUser.username) {
-      // Username got set, maybe by another tab or a quick sync after ensureUser
+    if (isClerkLoaded && convexUser && convexUser.username) {
+      // Username is set and available
       navigate(`/${convexUser.username}`);
     }
-  }, [convexUser, navigate]);
+  }, [isClerkLoaded, convexUser, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,14 +33,24 @@ export default function SetUsernamePage() {
       setIsLoading(false);
       return;
     }
+    if (!clerkUser) {
+      setError("User not authenticated. Please sign in again.");
+      setIsLoading(false);
+      return;
+    }
     try {
-      await setUsernameMutation({ newUsername: username.trim() });
-      // On success, Convex query for user (convexUser) should update,
-      // which will trigger useEffect above to navigate.
-      // Or, navigate directly if preferred, but ensure clerkUser.username is updated too.
-      // For now, relying on useEffect.
-      // If Clerk's user object also needs update for username, that's a separate step.
-      // This flow assumes a Convex username is primary for /@username routes.
+      const newTrimmedUsername = username.trim();
+      await setUsernameMutation({ newUsername: newTrimmedUsername });
+      // Successfully set username in Convex.
+      // Navigate directly. The useEffect will also catch this if this navigation fails
+      // or if the component re-renders before navigation fully happens.
+      navigate(`/${newTrimmedUsername}`);
+      // Optionally, you might want to update Clerk's user session if it stores username
+      // and your app relies on clerkUser.username for UI elements immediately.
+      // This typically involves calling a Clerk function to update user metadata.
+      // e.g., await clerkUser.update({ username: newTrimmedUsername });
+      // However, this depends on how your Clerk instance is configured and if 'username' is a standard or custom attribute.
+      // For now, we'll rely on Convex as the source of truth for profile URLs.
     } catch (err: any) {
       console.error("Error setting username:", err);
       setError(
