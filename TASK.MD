@@ -28,19 +28,22 @@ Brief description of the feature and its purpose.
 - [x] Setup hosting on netlify
 - [x] Setup domain name on netlify
 - [x] confirm https://www.cookieyes.com/ is setup
-- [ ] test forms
+- [x] test forms
+- [x] setup llms.txt, sitemap.xml and robots.txt
 
 ## In Progress Tasks
 
-- [ ] link image in setting popup box
-- [ ] - setup llms.txt, sitemap.xml and robots.txt
 - [ ] Ask vibe coders for feedback and submissions
 - [ ] setup resend for emails - after dominan setup with https://demo.react.email/preview/reset-password/dropbox-reset-password
 
-## Future Tasks
+## Bugs
+
+- [ ] link image in setting popup box
+
+## Future Tasks - Roadmap
 
 - [ ] add pinned post to sidebar for storylist.tsx layout.tsx line 283
-- [ ] test and add nav icons
+- [ ] test and add nav airbnb like viewmode icons
 - [ ] add chat box to admin dashboard and front end
 
 ## Implementation Plan

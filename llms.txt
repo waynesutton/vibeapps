@@ -1,31 +1,39 @@
 User-agent: *
 Allow: /
 
+# OpenAI's GPTBot (ChatGPT)
 User-agent: GPTBot
 Allow: /
 
-User-agent: Google-Extended
-Allow: /
-
-User-agent: CCBot
-Allow: /
-
-User-agent: ClaudeBot
-Allow: /
-
-User-agent: anthropic-ai
-Allow: /
-
+# OpenAI's ChatGPT browsing user-agent
 User-agent: ChatGPT-User
 Allow: /
 
-User-agent: ChatGPT
+# Anthropic's Claude
+User-agent: ClaudeBot
 Allow: /
 
+# Anthropic alternate identifier
+User-agent: anthropic-ai
+Allow: /
+
+# Google AI crawler (used for Bard, Gemini, and other LLMs)
+User-agent: Google-Extended
+Allow: /
+
+# Common Crawl bot (used in many AI training datasets)
+User-agent: CCBot
+Allow: /
+
+# Perplexity AI
 User-agent: PerplexityBot
 Allow: /
 
+# NeevaAI (acquired by Snowflake, but still seen)
 User-agent: NeevaAI
 Allow: /
 
-# Optional: add more bots as needed
+# Add more LLM bots as needed below
+# Example:
+# User-agent: YourCustomAIBot
+# Allow: /

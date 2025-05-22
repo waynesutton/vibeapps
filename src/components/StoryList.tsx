@@ -102,7 +102,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
             {stories.map((story) => (
               <article
                 key={story._id}
-                className={`flex ${viewMode === "grid" ? "flex-col bg-white rounded-lg p-4 border border-[#D8E1EC]" : viewMode === "vibe" ? "items-start" : "flex-row bg-white rounded-lg p-4 border border-[#D8E1EC]"} gap-4`}>
+                className={`flex ${viewMode === "grid" ? "flex-col bg-white rounded-lg p-4 border border-[#D8E1EC]" : viewMode === "vibe" ? "flex-col md:flex-row items-start" : "flex-row bg-white rounded-lg p-4 border border-[#D8E1EC]"} gap-4`}>
                 {viewMode !== "grid" && (
                   <div
                     className={`flex ${
@@ -139,7 +139,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                 {viewMode === "vibe" && story.screenshotUrl && (
                   <Link
                     to={`/s/${story.slug}`}
-                    className="flex-shrink-0 w-[195px] aspect-video block overflow-hidden rounded-md">
+                    className="w-full md:w-[195px] md:flex-shrink-0 aspect-video block overflow-hidden rounded-md">
                     <img
                       src={story.screenshotUrl}
                       alt={`${story.title} thumbnail`}

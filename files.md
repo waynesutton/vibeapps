@@ -8,7 +8,9 @@
     - `crons.ts`: (If present) Defines scheduled cron jobs for Convex.
     - `auth.config.js`: (If present) Configuration for Convex authentication.
     - `*.ts`: Other TypeScript files containing Convex queries, mutations, and actions (e.g., `stories.ts`, `comments.ts`, `users.ts`, `tags.ts`, `settings.ts`, `forms.ts`, `formSubmissions.ts`, `votes.ts`, `reports.ts`, `follows.ts`, `adminFollowsQueries.ts`).
-  - `public/`: Directory for static assets that are served directly by the web server (e.g., `favicon.ico`, images, `robots.txt`).
+  - `public/`: Directory for static assets that are served directly by the web server (e.g., `favicon.ico`, images).
+    - `robots.txt`: Tells search engine crawlers which pages or files the crawler can or can't request from your site.
+    - `sitemap.xml`: Helps search engines understand the structure of your site and find all of your pages.
   - `src/`: Directory for the React frontend application code.
     - `components/`: Reusable React components.
       - `admin/`: Components specifically for the admin dashboard/interface.

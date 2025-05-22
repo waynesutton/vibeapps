@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Created a 404 Not Found page (`src/pages/NotFoundPage.tsx`) with a design inspired by the provided example, featuring a search bar and a link to the homepage.
 - Updated application routing in `src/App.tsx` to display the new 404 page for any undefined routes.
 - ConvexBox logo now links to the specified URL if provided.
+- Created `public/robots.txt` to guide search engine crawlers.
+- Created `public/sitemap.xml` to help search engines understand site structure.
 
 ### Changed
 
