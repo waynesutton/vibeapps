@@ -43,6 +43,13 @@ export function Footer() {
             Powered by Convex
           </a>
           <a
+            href="https://chef.convex.dev/?utm_source=vibeapps-dev"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-[#525252]">
+            Cooked on Chef
+          </a>
+          <a
             href="https://github.com/waynesutton/vibeapps"
             target="_blank"
             rel="noopener noreferrer"
