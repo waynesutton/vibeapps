@@ -3,11 +3,11 @@
 - `vibeapps/`: The root directory of the project.
   - `convex/`: Directory for Convex backend functions, schema, and other Convex-specific files.
     - `_generated/`: Auto-generated Convex files (API definitions, data model types based on `schema.ts`).
-    - `schema.ts`: Defines the database schema for Convex, including tables like `stories`, `comments`, `users`, `tags`, `settings`, `forms`, `formSubmissions`, `votes`, `reports`, `follows`, etc.
+    - `schema.ts`: Defines the database schema for Convex, including tables like `stories`, `comments`, `users` (with verification status), `tags`, `settings`, `forms`, `formSubmissions`, `votes`, `reports`, `follows`, etc.
     - `http.ts`: (If present) Defines HTTP actions for Convex, allowing the app to handle HTTP requests.
     - `crons.ts`: (If present) Defines scheduled cron jobs for Convex.
     - `auth.config.js`: (If present) Configuration for Convex authentication.
-    - `*.ts`: Other TypeScript files containing Convex queries, mutations, and actions (e.g., `stories.ts`, `comments.ts`, `users.ts`, `tags.ts`, `settings.ts`, `forms.ts`, `formSubmissions.ts`, `votes.ts`, `reports.ts`, `follows.ts`, `adminFollowsQueries.ts`).
+    - `*.ts`: Other TypeScript files containing Convex queries, mutations, and actions (e.g., `stories.ts`, `comments.ts`, `users.ts` with verification functions, `tags.ts`, `settings.ts`, `forms.ts`, `formSubmissions.ts`, `votes.ts`, `reports.ts`, `follows.ts`, `adminFollowsQueries.ts`).
   - `public/`: Directory for static assets that are served directly by the web server (e.g., `favicon.ico`, images).
     - `robots.txt`: Tells search engine crawlers which pages or files the crawler can or can't request from your site.
     - `sitemap.xml`: Helps search engines understand the structure of your site and find all of your pages.
@@ -21,7 +21,7 @@
         - `Forms.tsx`: Management interface for all created forms.
         - `Settings.tsx`: Panel for site-wide settings.
         - `TagManagement.tsx`: Interface for managing tags.
-        - `UserModeration.tsx`: Interface for managing users. Displays the 20 most recent users with full search functionality across all users and clickable user names for profile navigation.
+        - `UserModeration.tsx`: Interface for managing users. Displays the 20 most recent users with full search functionality across all users, clickable user names for profile navigation, and user verification management (verify/unverify with blue checkmarks).
         - `ReportManagement.tsx`: Interface for managing user reports.
         - `NumbersView.tsx`: Component for displaying key metrics.
         - `ConvexBoxSettingsForm.tsx`: A form component for configuring the ConvexBox settings, allowing administrators to enable/disable the box, set display text, link URL, and upload a logo. The logo, if present, links to the specified URL.
@@ -48,7 +48,7 @@
       - `SearchPage.tsx`: Renders the search results page.
       - `SignInPage.tsx`: Clerk sign-in page.
       - `SignUpPage.tsx`: Clerk sign-up page.
-      - `UserProfilePage.tsx`: Displays a user's public profile.
+      - `UserProfilePage.tsx`: Displays a user's public profile with verified badge display for verified users (blue checkmark next to username).
       - `AdminPage.tsx`: Renders the admin dashboard.
       - `SetUsernamePage.tsx`: Allows new users to set their username.
       - `NavTestPage.tsx`: A test page for navigation components.

@@ -51,6 +51,7 @@ Whether it's a weekend build, a fresh SaaS idea, or something weird and experime
   - **View Metrics**: See comment counts and upvote statistics for each submission.
 - **Social Sharing**: Easily share interesting submissions via direct links.
 - **Stay Informed**: View submission timestamps and author information to know who built what, and when.
+- **Verified Users**: Trusted community members are marked with blue verification checkmarks next to their names, helping you identify credible contributors and high-quality submissions.
 
 ### For Administrators
 
@@ -61,6 +62,18 @@ Whether it's a weekend build, a fresh SaaS idea, or something weird and experime
   - **Content Actions**: Hide, show, archive, or delete inappropriate or irrelevant content.
   - **Custom Messages**: Add admin-defined messages to submissions, which appear on the frontend (e.g., for clarifications or warnings).
   - **Filter & Search**: Efficiently navigate and manage the moderation queue.
+
+#### 👥 User Management & Verification
+
+- **User Moderation Tools**: Comprehensive user management capabilities.
+  - **User Search & Filtering**: Search across all users by name, email, or username with real-time filtering by status (banned, paused, verified).
+  - **User Actions**: Ban, unban, pause, unpause, or delete user accounts with confirmation dialogs.
+  - **User Verification System**: Verify trusted community members with blue checkmarks that appear next to their names throughout the platform.
+    - **Verify/Unverify**: Mark users as verified to build trust and credibility in the community.
+    - **Verification Filtering**: Filter users by verification status to manage verified members efficiently.
+    - **Visual Indicators**: Verified users display a distinctive blue checkmark badge on their profiles and next to their submissions.
+  - **Profile Navigation**: Click on user names to view their public profiles directly from the admin interface.
+  - **User Statistics**: View user join dates and activity metrics for informed moderation decisions.
 
 #### 📝 Form Management
 
