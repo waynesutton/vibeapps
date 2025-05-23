@@ -47,6 +47,7 @@ export const storyWithDetailsValidator = v.object({
   authorName: v.optional(v.string()),
   authorUsername: v.optional(v.string()),
   authorImageUrl: v.optional(v.string()),
+  authorIsVerified: v.optional(v.boolean()),
   tags: v.array(tagDocValidator), // Array of full tag objects
   screenshotUrl: v.union(v.string(), v.null()), // URL for the screenshot
   voteScore: v.number(), // Made non-optional
@@ -70,6 +71,7 @@ export const userInProfileValidator = v.object({
   twitter: v.optional(v.string()),
   bluesky: v.optional(v.string()),
   linkedin: v.optional(v.string()),
+  isVerified: v.optional(v.boolean()),
   // role is not on the user doc in DB currently
   // isBanned & isPaused are usually admin-facing, but can be included if profile needs it
 });
@@ -141,6 +143,7 @@ export type StoryWithDetailsPublic = {
   authorName?: string;
   authorUsername?: string;
   authorImageUrl?: string;
+  authorIsVerified?: boolean;
   tags: Array<{
     _id: Id<"tags">;
     _creationTime: number;

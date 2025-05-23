@@ -38,4 +38,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+## [2024-12-XX] - User Moderation Enhancements
+
+### Changed
+
+- **User Moderation Dashboard**: Updated `src/components/admin/UserModeration.tsx` to display the 20 most recent users by default (increased from 15).
+- **Search Functionality**: Implemented backend search across all users in `convex/users.ts` - the `listAllUsersAdmin` function now supports searching through all users by name, email, or username instead of only client-side filtering on loaded results.
+- **User Profile Navigation**: Added clickable user names in the User Moderation table that navigate to user profiles.
+
+### Technical Details
+
+- Updated `listAllUsersAdmin` query in `convex/users.ts` to handle search queries by collecting all users and filtering server-side when a search term is provided.
+- Removed client-side filtering in favor of backend search to enable searching across all users.
+- Added React Router navigation support to user moderation component.
+- Enhanced user experience with hover effects on clickable user names.
+- Fixed user profile navigation to use username-based URLs (`/{username}`) instead of ID-based URLs (`/profile/{id}`) to match the routing system.
+- Added visual feedback for users without usernames (grayed out, non-clickable).
+
 ## [Unreleased] - YYYY-MM-DD

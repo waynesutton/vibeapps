@@ -16,6 +16,7 @@ export default defineSchema({
     linkedin: v.optional(v.string()), // LinkedIn profile URL
     isBanned: v.optional(v.boolean()), // New field for banning users
     isPaused: v.optional(v.boolean()), // New field for pausing users
+    isVerified: v.optional(v.boolean()), // New field for verifying users
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_username", ["username"]), // Index for fetching by username

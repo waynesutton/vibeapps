@@ -21,7 +21,7 @@
         - `Forms.tsx`: Management interface for all created forms.
         - `Settings.tsx`: Panel for site-wide settings.
         - `TagManagement.tsx`: Interface for managing tags.
-        - `UserModeration.tsx`: Interface for managing users.
+        - `UserModeration.tsx`: Interface for managing users. Displays the 20 most recent users with full search functionality across all users and clickable user names for profile navigation.
         - `ReportManagement.tsx`: Interface for managing user reports.
         - `NumbersView.tsx`: Component for displaying key metrics.
         - `ConvexBoxSettingsForm.tsx`: A form component for configuring the ConvexBox settings, allowing administrators to enable/disable the box, set display text, link URL, and upload a logo. The logo, if present, links to the specified URL.

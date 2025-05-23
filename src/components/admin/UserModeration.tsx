@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { usePaginatedQuery, useMutation, useConvexAuth } from "convex/react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../../../convex/_generated/api";
 import { Id, Doc } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,8 @@ import {
   AlertTriangle,
   PauseCircle,
   PlayCircle,
+  ShieldCheck,
+  ShieldOff,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { debounce } from "lodash-es";
@@ -34,9 +37,17 @@ type AdminUserView = {
   imageUrl?: string;
   isBanned: boolean;
   isPaused: boolean;
+  isVerified: boolean;
 };
 
-type StatusFilter = "all" | "banned" | "not_banned" | "paused" | "not_paused";
+type StatusFilter =
+  | "all"
+  | "banned"
+  | "not_banned"
+  | "paused"
+  | "not_paused"
+  | "verified"
+  | "not_verified";
 
 export function UserModeration() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -45,10 +56,11 @@ export function UserModeration() {
   const [confirmingAction, setConfirmingAction] = useState<{
     userId: Id<"users">;
     userName: string;
-    action: "ban" | "unban" | "delete" | "pause" | "unpause";
+    action: "ban" | "unban" | "delete" | "pause" | "unpause" | "verify" | "unverify";
   } | null>(null);
 
   const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
+  const navigate = useNavigate();
 
   const debouncedSetSearch = useCallback(
     debounce((value: string) => {
@@ -66,9 +78,8 @@ export function UserModeration() {
   const queryArgs = useMemo(() => {
     const args: any = {};
     if (debouncedSearchTerm) {
-      // The backend listAllUsersAdmin currently doesn't implement search.
-      // This will be a client-side filter for now, or backend needs update.
-      // args.searchQuery = debouncedSearchTerm;
+      // Pass search query to backend for searching all users
+      args.searchQuery = debouncedSearchTerm;
     }
     if (statusFilter === "banned") {
       args.filterBanned = true;
@@ -80,13 +91,18 @@ export function UserModeration() {
     } else if (statusFilter === "not_paused") {
       args.filterPaused = false;
     }
+    if (statusFilter === "verified") {
+      args.filterVerified = true;
+    } else if (statusFilter === "not_verified") {
+      args.filterVerified = false;
+    }
     return args;
   }, [debouncedSearchTerm, statusFilter]);
 
   const { results, status, loadMore, isLoading } = usePaginatedQuery(
     api.users.listAllUsersAdmin,
     authIsLoading || !isAuthenticated ? "skip" : queryArgs,
-    { initialNumItems: 15 }
+    { initialNumItems: 20 }
   );
 
   const banUserMutation = useMutation(api.users.banUserByAdmin);
@@ -94,19 +110,21 @@ export function UserModeration() {
   const deleteUserMutation = useMutation(api.users.deleteUserByAdmin);
   const pauseUserMutation = useMutation(api.users.pauseUserByAdmin);
   const unpauseUserMutation = useMutation(api.users.unpauseUserByAdmin);
+  const verifyUserMutation = useMutation(api.users.verifyUserByAdmin);
+  const unverifyUserMutation = useMutation(api.users.unverifyUserByAdmin);
 
-  // Client-side search filtering because backend search is not yet implemented for users.ts
-  const filteredResults = useMemo(() => {
-    if (!results) return [];
-    if (!debouncedSearchTerm) return results;
-    const lowerSearchTerm = debouncedSearchTerm.toLowerCase();
-    return results.filter(
-      (user) =>
-        user.name?.toLowerCase().includes(lowerSearchTerm) ||
-        user.email?.toLowerCase().includes(lowerSearchTerm) ||
-        user.username?.toLowerCase().includes(lowerSearchTerm)
-    );
-  }, [results, debouncedSearchTerm]);
+  // Navigate to user profile
+  const handleUserClick = (username: string | undefined) => {
+    if (!username) {
+      // If no username is set, we can't navigate to their profile
+      console.warn("User has no username set, cannot navigate to profile");
+      return;
+    }
+    navigate(`/${username}`);
+  };
+
+  // Use results directly since search is now handled by backend
+  const filteredResults = results || [];
 
   const handleAction = async () => {
     if (!confirmingAction) return;
@@ -128,6 +146,12 @@ export function UserModeration() {
       } else if (action === "unpause") {
         await unpauseUserMutation({ userId });
         toast.success(`User "${userName}" has been unpaused.`);
+      } else if (action === "verify") {
+        await verifyUserMutation({ userId });
+        toast.success(`User "${userName}" has been verified.`);
+      } else if (action === "unverify") {
+        await unverifyUserMutation({ userId });
+        toast.success(`User "${userName}" has been unverified.`);
       }
     } catch (error: any) {
       console.error(`Failed to ${action} user:`, error);
@@ -139,7 +163,7 @@ export function UserModeration() {
   const openConfirmModal = (
     userId: Id<"users">,
     userName: string,
-    action: "ban" | "unban" | "delete" | "pause" | "unpause"
+    action: "ban" | "unban" | "delete" | "pause" | "unpause" | "verify" | "unverify"
   ) => {
     setConfirmingAction({ userId, userName, action });
   };
@@ -183,6 +207,8 @@ export function UserModeration() {
               <SelectItem value="not_banned">Not Banned Users</SelectItem>
               <SelectItem value="paused">Paused Users</SelectItem>
               <SelectItem value="not_paused">Not Paused Users</SelectItem>
+              <SelectItem value="verified">Verified Users</SelectItem>
+              <SelectItem value="not_verified">Not Verified Users</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -216,6 +242,9 @@ export function UserModeration() {
                   } else if (user.isPaused) {
                     userStatusDisplay = "Paused";
                     statusClass = "bg-yellow-100 text-yellow-800";
+                  } else if (user.isVerified) {
+                    userStatusDisplay = "Verified";
+                    statusClass = "bg-blue-100 text-blue-800";
                   } else {
                     userStatusDisplay = "Active";
                     statusClass = "bg-green-100 text-green-800";
@@ -232,7 +261,16 @@ export function UserModeration() {
                               className="w-8 h-8 rounded-full"
                             />
                           )}
-                          <span>{user.name}</span>
+                          <span
+                            className={`${user.username ? "cursor-pointer hover:text-blue-600 hover:underline transition-colors" : "cursor-default text-gray-500"}`}
+                            onClick={() => handleUserClick(user.username)}
+                            title={
+                              user.username
+                                ? `View ${user.username}'s profile`
+                                : "User has no username set"
+                            }>
+                            {user.name}
+                          </span>
                         </div>
                       </td>
                       <td className={tdClass}>{user.email || "N/A"}</td>
@@ -247,6 +285,23 @@ export function UserModeration() {
                         </span>
                       </td>
                       <td className={`${tdClass} text-right space-x-1 space-y-1 sm:space-y-0`}>
+                        {user.isVerified ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-gray-600 border-gray-300 hover:bg-gray-100"
+                            onClick={() => openConfirmModal(user._id, user.name, "unverify")}>
+                            <ShieldOff className="w-4 h-4 mr-1" /> Unverify
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                            onClick={() => openConfirmModal(user._id, user.name, "verify")}>
+                            <ShieldCheck className="w-4 h-4 mr-1" /> Verify
+                          </Button>
+                        )}
                         {!user.isBanned && user.isPaused && (
                           <Button
                             variant="outline"
@@ -310,7 +365,7 @@ export function UserModeration() {
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
             <div className="flex items-center mb-4">
               <AlertTriangle
-                className={`w-6 h-6 mr-3 ${confirmingAction.action === "delete" ? "text-red-500" : confirmingAction.action === "ban" ? "text-orange-500" : "text-yellow-500"}`}
+                className={`w-6 h-6 mr-3 ${confirmingAction.action === "delete" ? "text-red-500" : confirmingAction.action === "ban" ? "text-orange-500" : confirmingAction.action === "verify" ? "text-blue-500" : "text-yellow-500"}`}
               />
               <h3 className="text-lg font-semibold text-gray-800">
                 Confirm{" "}
@@ -325,6 +380,10 @@ export function UserModeration() {
                 " This will prevent them from all interactions with the platform."}
               {confirmingAction.action === "pause" &&
                 " This will allow them to log in and edit their profile, but not comment, vote, rate, bookmark, or submit new content."}
+              {confirmingAction.action === "verify" &&
+                " This will mark the user as verified with a blue checkmark."}
+              {confirmingAction.action === "unverify" &&
+                " This will remove the verified status from the user."}
             </p>
             <div className="flex justify-end gap-3">
               <Button variant="ghost" onClick={() => setConfirmingAction(null)}>
@@ -336,7 +395,10 @@ export function UserModeration() {
                     ? "destructive"
                     : confirmingAction.action === "ban"
                       ? "default"
-                      : "default"
+                      : confirmingAction.action === "verify" ||
+                          confirmingAction.action === "unverify"
+                        ? "default"
+                        : "default"
                 }
                 onClick={handleAction}
                 className={
@@ -346,7 +408,11 @@ export function UserModeration() {
                       ? "bg-yellow-500 hover:bg-yellow-600 text-white"
                       : confirmingAction.action === "unpause"
                         ? "bg-green-500 hover:bg-green-600 text-white"
-                        : ""
+                        : confirmingAction.action === "verify"
+                          ? "bg-blue-500 hover:bg-blue-600 text-white"
+                          : confirmingAction.action === "unverify"
+                            ? "bg-gray-500 hover:bg-gray-600 text-white"
+                            : ""
                 }>
                 Confirm{" "}
                 {confirmingAction.action.charAt(0).toUpperCase() + confirmingAction.action.slice(1)}

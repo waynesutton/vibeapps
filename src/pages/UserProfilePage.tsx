@@ -43,6 +43,29 @@ const ErrorDisplay = ({ message }: { message: string }) => (
   <div className="text-center p-8 text-red-600">Error: {message}</div>
 );
 
+// Inline SVG component for verified badge
+const VerifiedBadge = () => (
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 20 20"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="inline-block ml-2">
+    <path
+      d="M10 0L12.0451 2.8885L15.7063 1.90983L16.6957 5.57107L20 6.90983L18.0902 9.79508L20 12.6803L16.6957 14.0191L15.7063 17.6803L12.0451 16.7016L10 19.5902L7.95492 16.7016L4.29366 17.6803L3.30423 14.0191L0 12.6803L1.90983 9.79508L0 6.90983L3.30423 5.57107L4.29366 1.90983L7.95492 2.8885L10 0Z"
+      fill="#3B82F6"
+    />
+    <path
+      d="M14 8L9 13L6 10"
+      stroke="white"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 // Explicitly define types for the items in arrays if not perfectly inferred
 // These should align with what api.users.getUserProfileByUsername returns for these arrays
 type StoryInProfile = Doc<"stories"> & {
@@ -52,6 +75,7 @@ type StoryInProfile = Doc<"stories"> & {
   status: string;
   authorName?: string | null;
   authorUsername?: string | null;
+  authorIsVerified?: boolean;
 };
 
 type VoteInProfile = Doc<"votes"> & {
@@ -230,7 +254,7 @@ export default function UserProfilePage() {
     }
     if (isEditing && profileData?.user) {
       setNewName(profileData.user.name || "");
-      setNewUsername(profileData.user.username || "");
+      // setNewUsername(profileData.user.username || "");
       setNewProfileImagePreview(profileData.user.imageUrl || null);
       setNewBio(profileData.user.bio || "");
       setNewWebsite(profileData.user.website || "");
@@ -360,7 +384,7 @@ export default function UserProfilePage() {
     if (!isEditing) {
       if (loadedProfileUser) {
         setNewName(loadedProfileUser.name || "");
-        setNewUsername(loadedProfileUser.username || "");
+        // setNewUsername(loadedProfileUser.username || "");
         setNewProfileImagePreview(loadedProfileUser.imageUrl || null);
         setNewBio(loadedProfileUser.bio || "");
         setNewWebsite(loadedProfileUser.website || "");
@@ -393,20 +417,20 @@ export default function UserProfilePage() {
     let detailsChanged = false;
 
     try {
-      if (
-        newUsername.trim() !== (loadedProfileUser.username || "").trim() &&
-        newUsername.trim() !== ""
-      ) {
-        await updateUsernameMutation({ newUsername: newUsername.trim() });
-        if (authUser && authUser.update) {
-          try {
-            await authUser.update({ username: newUsername.trim() });
-          } catch (clerkError) {
-            console.warn("Clerk username update failed:", clerkError);
-          }
-        }
-        usernameChanged = true;
-      }
+      // if (
+      //   newUsername.trim() !== (loadedProfileUser.username || "").trim() &&
+      //   newUsername.trim() !== ""
+      // ) {
+      //   await updateUsernameMutation({ newUsername: newUsername.trim() });
+      //   if (authUser && authUser.update) {
+      //     try {
+      //       await authUser.update({ username: newUsername.trim() });
+      //     } catch (clerkError) {
+      //       console.warn("Clerk username update failed:", clerkError);
+      //     }
+      //   }
+      //   usernameChanged = true;
+      // }
 
       const currentName = loadedProfileUser.name || "";
       const currentBio = loadedProfileUser.bio || "";
@@ -445,12 +469,6 @@ export default function UserProfilePage() {
         if (!storageId) throw new Error("Failed to get storageId from image upload.");
         await setUserProfileImage({ storageId });
         detailsChanged = true;
-      }
-
-      if (usernameChanged) {
-        setIsRedirecting(true);
-        navigate(`/${newUsername.trim()}`, { replace: true });
-        return;
       }
 
       if (detailsChanged) {
@@ -724,7 +742,7 @@ export default function UserProfilePage() {
                   style={{ fontFamily: "Inter, sans-serif" }}
                 />
                 {/* Username Input */}
-                <div className="flex items-center">
+                {/* <div className="flex items-center">
                   <span
                     className="text-lg text-gray-500 mr-1"
                     style={{ fontFamily: "Inter, sans-serif" }}>
@@ -738,7 +756,7 @@ export default function UserProfilePage() {
                     placeholder="username"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   />
-                </div>
+                </div> */}
               </div>
             ) : (
               <div className="flex items-baseline mb-1">
@@ -746,11 +764,12 @@ export default function UserProfilePage() {
                   className="text-lg font-normal text-[#292929] mr-2"
                   style={{ fontFamily: "Inter, sans-serif" }}>
                   {loadedProfileUser?.name || "Anonymous User"}
+                  {!isEditing && loadedProfileUser?.isVerified && <VerifiedBadge />}
                 </h1>
                 <p className="text-lg text-gray-600" style={{ fontFamily: "Inter, sans-serif" }}>
-                  @{loadedProfileUser?.username || "N/A"}{" "}
+                  {/* @{loadedProfileUser?.username || "N/A"}{" "} */}
                   {typeof userNumber === "number" && (
-                    <span className="ml-2 text-xs text-gray-400">User #{userNumber}</span>
+                    <span className="ml-0 text-xs text-gray-400">User #{userNumber}</span>
                   )}
                 </p>
               </div>
@@ -928,7 +947,6 @@ export default function UserProfilePage() {
                 isSaving ||
                 (!newProfileImageFile &&
                   newName.trim() === (loadedProfileUser?.name || "").trim() &&
-                  newUsername.trim() === (loadedProfileUser?.username || "").trim() &&
                   newBio === (loadedProfileUser?.bio || "") &&
                   newWebsite === (loadedProfileUser?.website || "") &&
                   newTwitter === (loadedProfileUser?.twitter || "") &&
@@ -1070,6 +1088,7 @@ export default function UserProfilePage() {
                   </p>
                   <p className="text-xs text-gray-500">
                     Submitted by: {story.authorName || story.authorUsername || "Anonymous"}
+                    {story.authorIsVerified && <VerifiedBadge />}
                   </p>
                 </div>
                 {isOwnProfile && (

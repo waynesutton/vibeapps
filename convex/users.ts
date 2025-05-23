@@ -247,6 +247,7 @@ export const getMyUserDocument = query({
       twitter: v.optional(v.string()),
       bluesky: v.optional(v.string()),
       linkedin: v.optional(v.string()),
+      isVerified: v.optional(v.boolean()),
       // add other fields from your users table if any
     })
   ),
@@ -524,6 +525,7 @@ export const getUserProfileByUsername = query({
       twitter: userDoc.twitter,
       bluesky: userDoc.bluesky,
       linkedin: userDoc.linkedin,
+      isVerified: userDoc.isVerified ?? false, // Include isVerified field
     };
 
     const storiesFromDb = await ctx.db
@@ -601,6 +603,7 @@ export const getUserProfileByUsername = query({
         authorName: author?.name,
         authorUsername: author?.username,
         authorImageUrl: author?.imageUrl,
+        authorIsVerified: author?.isVerified ?? false, // Add verified status for author
         tags: validTags, // Use the explicitly constructed validTags
         screenshotUrl: screenshotUrl,
         voteScore: storyDoc.votes, // Assuming storyDoc.votes is the voteScore
@@ -992,20 +995,96 @@ export const updateProfileDetails = mutation({
  */
 export const listAllUsersAdmin = query({
   args: {
-    paginationOpts: paginationOptsValidator, // from convex/server
+    paginationOpts: paginationOptsValidator,
     searchQuery: v.optional(v.string()),
     filterBanned: v.optional(v.boolean()),
-    filterPaused: v.optional(v.boolean()), // New filter for paused status
+    filterPaused: v.optional(v.boolean()),
+    filterVerified: v.optional(v.boolean()),
   },
+  returns: v.object({
+    page: v.array(
+      v.object({
+        _id: v.id("users"),
+        _creationTime: v.number(),
+        name: v.string(),
+        email: v.optional(v.string()),
+        username: v.optional(v.string()),
+        imageUrl: v.optional(v.string()),
+        isBanned: v.boolean(),
+        isPaused: v.boolean(),
+        isVerified: v.boolean(),
+      })
+    ),
+    isDone: v.boolean(),
+    continueCursor: v.string(),
+  }),
   handler: async (ctx, args) => {
     await requireAdminRole(ctx);
 
     let query = ctx.db.query("users").order("desc"); // Default order
 
-    // IMPORTANT: The original code comments that searchQuery is not implemented backend-side.
-    // Client-side filtering is used in UserModeration.tsx for search.
-    // We are keeping that behavior.
+    // Search functionality: when searchQuery is provided, search all users
+    if (args.searchQuery && args.searchQuery.trim()) {
+      const searchTerm = args.searchQuery.toLowerCase().trim();
 
+      // Get all users and filter client-side for search
+      // Note: Convex doesn't support full-text search on regular fields,
+      // so we need to collect all users and filter them
+      const allUsers = await ctx.db.query("users").collect();
+
+      const filteredUsers = allUsers.filter((user) => {
+        return (
+          user.name?.toLowerCase().includes(searchTerm) ||
+          user.email?.toLowerCase().includes(searchTerm) ||
+          user.username?.toLowerCase().includes(searchTerm)
+        );
+      });
+
+      // Apply status filters on search results
+      let finalFilteredUsers = filteredUsers;
+
+      if (args.filterBanned !== undefined) {
+        finalFilteredUsers = finalFilteredUsers.filter(
+          (user) => (user.isBanned ?? false) === args.filterBanned
+        );
+      }
+
+      if (args.filterPaused !== undefined) {
+        finalFilteredUsers = finalFilteredUsers.filter(
+          (user) => (user.isPaused ?? false) === args.filterPaused
+        );
+      }
+
+      // Sort by creation time (desc) to match the default order
+      finalFilteredUsers.sort((a, b) => b._creationTime - a._creationTime);
+
+      // Manual pagination for search results
+      const { numItems, cursor } = args.paginationOpts;
+      const startIndex = cursor ? parseInt(cursor) : 0;
+      const endIndex = startIndex + numItems;
+      const paginatedResults = finalFilteredUsers.slice(startIndex, endIndex);
+      const hasMore = endIndex < finalFilteredUsers.length;
+
+      const page = paginatedResults.map((user) => ({
+        _id: user._id,
+        _creationTime: user._creationTime,
+        name: user.name,
+        email: user.email,
+        username: user.username,
+        imageUrl: user.imageUrl,
+        isBanned: user.isBanned ?? false,
+        isPaused: user.isPaused ?? false,
+        isVerified: user.isVerified ?? false,
+      }));
+
+      return {
+        page,
+        isDone: !hasMore,
+        continueCursor: hasMore ? endIndex.toString() : "",
+      };
+    }
+
+    // Default behavior: show recent users with pagination when no search
     // Backend filtering for ban status
     if (args.filterBanned !== undefined) {
       query = query.filter((q) => q.eq(q.field("isBanned"), args.filterBanned));
@@ -1027,12 +1106,14 @@ export const listAllUsersAdmin = query({
       username: user.username,
       imageUrl: user.imageUrl,
       isBanned: user.isBanned ?? false,
-      isPaused: user.isPaused ?? false, // Add isPaused field
+      isPaused: user.isPaused ?? false,
+      isVerified: user.isVerified ?? false,
     }));
 
     return {
-      ...result,
       page,
+      isDone: result.isDone,
+      continueCursor: result.continueCursor,
     };
   },
 });
@@ -1156,6 +1237,50 @@ export const deleteUserByAdmin = mutation({
     // This part is complex and depends on Clerk SDK setup, so it's commented out.
 
     return { success: true, userId: args.userId };
+  },
+});
+
+/**
+ * [Admin] Verifies a user, marking them as verified with a blue checkmark.
+ */
+export const verifyUserByAdmin = mutation({
+  args: { userId: v.id("users") },
+  returns: v.object({
+    success: v.boolean(),
+    userId: v.id("users"),
+    newVerifiedStatus: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
+    const userToVerify = await ctx.db.get(args.userId);
+    if (!userToVerify) {
+      throw new Error("User not found.");
+    }
+    await ctx.db.patch(args.userId, { isVerified: true });
+    console.log(`Admin: User ${args.userId} has been verified.`);
+    return { success: true, userId: args.userId, newVerifiedStatus: true };
+  },
+});
+
+/**
+ * [Admin] Unverifies a user, removing their verified status.
+ */
+export const unverifyUserByAdmin = mutation({
+  args: { userId: v.id("users") },
+  returns: v.object({
+    success: v.boolean(),
+    userId: v.id("users"),
+    newVerifiedStatus: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
+    const userToUnverify = await ctx.db.get(args.userId);
+    if (!userToUnverify) {
+      throw new Error("User not found.");
+    }
+    await ctx.db.patch(args.userId, { isVerified: false });
+    console.log(`Admin: User ${args.userId} has been unverified.`);
+    return { success: true, userId: args.userId, newVerifiedStatus: false };
   },
 });
 

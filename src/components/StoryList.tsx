@@ -250,7 +250,7 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
             </div>
           )}
           {status === "Exhausted" && stories.length > 0 && (
-            <div className="text-center mt-8 text-[#545454]">No more stories.</div>
+            <div className="text-center mt-8 text-[#545454]">Submit your vibe app</div>
           )}
         </div>
       </div>
