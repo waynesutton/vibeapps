@@ -283,7 +283,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                   <SignedOut>
                     <SignInButton mode="modal">
                       <button
-                        className="flex items-center gap-2 text-[#545454] hover:text-[#525252] px-3 py-1 rounded-md text-sm"
+                        className="flex items-center gap-2 bg-[#292929] text-white px-3 py-1 rounded-md text-sm hover:bg-[#525252] transition-colors"
                         type="button">
                         <PlusCircle className="w-4 h-4" />
                         Submit
@@ -293,7 +293,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                   <SignedIn>
                     <Link
                       to="/submit"
-                      className="flex items-center gap-2 text-[#545454] hover:text-[#525252] px-3 py-1 rounded-md text-sm">
+                      className="flex items-center gap-2 bg-[#292929] text-white px-3 py-1 rounded-md text-sm hover:bg-[#525252] transition-colors">
                       <PlusCircle className="w-4 h-4" />
                       Submit
                     </Link>
