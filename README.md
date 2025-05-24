@@ -152,6 +152,58 @@ npm run build
 npm run preview
 ```
 
+## Admin Setup
+
+To access the admin dashboard at `/admin`, you need to set up the admin role in Clerk for your user account.
+
+### Setting Up Admin Role
+
+1. **Go to the Clerk Dashboard**: Navigate to your Clerk application dashboard at [https://dashboard.clerk.com](https://dashboard.clerk.com)
+
+2. **Navigate to Users**: In the left sidebar, click on "Users" to view all registered users
+
+3. **Select Your User**: Find and click on your user account that you want to make an admin
+
+4. **Edit User Metadata**:
+
+   - Scroll down to the "Metadata" section
+   - Click on "Public metadata"
+   - Add the following JSON:
+
+   ```json
+   {
+     "role": "admin"
+   }
+   ```
+
+   - Click "Save" to apply the changes
+
+5. **Sign Out and Sign Back In**: For the role changes to take effect, sign out of your Vibe Apps application and sign back in
+
+6. **Access Admin Dashboard**: You should now be able to access the admin dashboard at `/admin`
+
+### Admin Features Available
+
+Once you have admin access, you can:
+
+- Moderate content (approve/hide submissions and comments)
+- Manage users (ban, verify, view profiles)
+- Create and manage custom forms
+- Configure site settings and default behaviors
+- Manage tags and categories
+- View platform analytics and metrics
+
+### Troubleshooting Admin Access
+
+If you can't access the admin dashboard after setting the role:
+
+- Ensure you've signed out and back in after setting the metadata
+- Check that the JSON is properly formatted in the Clerk dashboard
+- Verify the role is set as "admin" (case-sensitive)
+- Check your browser's developer console for any authentication errors
+
+For more details on Clerk's role-based access control, visit the [Clerk RBAC documentation](https://clerk.com/docs/references/nextjs/basic-rbac).
+
 ## Project Structure
 
 ```
