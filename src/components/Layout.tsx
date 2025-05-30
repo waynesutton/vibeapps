@@ -14,6 +14,7 @@ import {
   useUser,
   useClerk,
   SignInButton,
+  SignUpButton,
 } from "@clerk/clerk-react";
 import { UserSyncer } from "./UserSyncer";
 import { WeeklyLeaderboard } from "./WeeklyLeaderboard";
@@ -246,6 +247,13 @@ export function Layout({ children }: { children?: ReactNode }) {
                 {/* Right: User/Sign-in */}
                 <div className="flex items-center gap-2 md:order-3">
                   <SignedOut>
+                    <SignUpButton mode="modal">
+                      <button
+                        className="px-4 py-2 bg-[#292929] border border-[#D8E1EC] text-[#ffffff] rounded-md text-xs font-normal hover:bg-[#F2F0ED] hover:text-[#292929] transition-colors"
+                        type="button">
+                        Sign up
+                      </button>
+                    </SignUpButton>
                     <SignInButton mode="modal">
                       <button
                         className="px-4 py-2 bg-[#292929] border border-[#D8E1EC] text-[#ffffff] rounded-md text-xs font-normal hover:bg-[#F2F0ED] hover:text-[#292929] transition-colors"
