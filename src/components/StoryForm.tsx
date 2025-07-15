@@ -18,13 +18,11 @@ export function StoryForm() {
     title: "",
     tagline: "",
     url: "",
+    videoUrl: "",
     image: null as File | null,
-    linkedinUrl: "",
-    twitterUrl: "",
-    githubUrl: "",
-    chefShowUrl: "",
-    chefAppUrl: "",
   });
+
+  const [dynamicFormData, setDynamicFormData] = React.useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [showSuccessMessage, setShowSuccessMessage] = React.useState(false);
@@ -32,6 +30,7 @@ export function StoryForm() {
   const MAX_TAGLINE_LENGTH = 140;
 
   const availableTags = useQuery(api.tags.listHeader);
+  const formFields = useQuery(api.storyFormFields.listEnabled);
 
   const generateUploadUrl = useMutation(api.stories.generateUploadUrl);
   const submitStory = useMutation(api.stories.submit);
@@ -90,14 +89,15 @@ export function StoryForm() {
         title: formData.title,
         tagline: formData.tagline,
         url: formData.url,
+        videoUrl: formData.videoUrl || undefined,
         tagIds: selectedTagIds,
         newTagNames: newTagNames,
         screenshotId: screenshotId,
-        linkedinUrl: formData.linkedinUrl || undefined,
-        twitterUrl: formData.twitterUrl || undefined,
-        githubUrl: formData.githubUrl || undefined,
-        chefShowUrl: formData.chefShowUrl || undefined,
-        chefAppUrl: formData.chefAppUrl || undefined,
+        linkedinUrl: dynamicFormData.linkedinUrl || undefined,
+        twitterUrl: dynamicFormData.twitterUrl || undefined,
+        githubUrl: dynamicFormData.githubUrl || undefined,
+        chefShowUrl: dynamicFormData.chefShowUrl || undefined,
+        chefAppUrl: dynamicFormData.chefAppUrl || undefined,
       });
 
       setShowSuccessMessage(true);
@@ -201,6 +201,23 @@ export function StoryForm() {
             />
           </div>
           <div>
+            <label htmlFor="videoUrl" className="block text-sm font-medium text-[#525252] mb-1">
+              Video Demo (Optional)
+            </label>
+            <div className="text-sm text-[#545454] mb-2">
+              Share a video demo of your app (YouTube, Vimeo, etc.)
+            </div>
+            <input
+              type="url"
+              id="videoUrl"
+              placeholder="https://youtube.com/watch?v=..."
+              value={formData.videoUrl}
+              onChange={(e) => setFormData((prev) => ({ ...prev, videoUrl: e.target.value }))}
+              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              disabled={isSubmitting}
+            />
+          </div>
+          <div>
             <label htmlFor="image" className="block text-sm font-medium text-[#525252] mb-1">
               Upload Screenshot (Optional)
             </label>
@@ -216,79 +233,35 @@ export function StoryForm() {
               <div className="text-sm text-[#545454] mt-1">Selected: {formData.image.name}</div>
             )}
           </div>
-          <div>
-            <label htmlFor="linkedinUrl" className="block text-sm font-medium text-[#525252] mb-1">
-              LinkedIn Profile or LinkedIn Announcement Post URL (Optional)
-            </label>
-            <input
-              type="url"
-              id="linkedinUrl"
-              placeholder="https://linkedin.com/post/..."
-              value={formData.linkedinUrl}
-              onChange={(e) => setFormData((prev) => ({ ...prev, linkedinUrl: e.target.value }))}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
-              disabled={isSubmitting}
-            />
-          </div>
-          <div>
-            <label htmlFor="twitterUrl" className="block text-sm font-medium text-[#525252] mb-1">
-              X (Twitter) or Bluesky Profile or Announcement Post URL (Optional)
-            </label>
-            <input
-              type="url"
-              id="twitterUrl"
-              placeholder="https://twitter.com/..."
-              value={formData.twitterUrl}
-              onChange={(e) => setFormData((prev) => ({ ...prev, twitterUrl: e.target.value }))}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
-              disabled={isSubmitting}
-            />
-          </div>
-          <div>
-            <label htmlFor="githubUrl" className="block text-sm font-medium text-[#525252] mb-1">
-              GitHub Repo URL (Optional)
-            </label>
-            <input
-              type="url"
-              id="githubUrl"
-              placeholder="https://github.com/..."
-              value={formData.githubUrl}
-              onChange={(e) => setFormData((prev) => ({ ...prev, githubUrl: e.target.value }))}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
-              disabled={isSubmitting}
-            />
-          </div>
-          <div>
-            <label htmlFor="chefAppUrl" className="block text-sm font-medium text-[#525252] mb-1">
-              Chef deployment convex.app link (Optional)
-            </label>
-            <input
-              type="url"
-              id="chefAppUrl"
-              placeholder="https://chef.app/..."
-              value={formData.chefAppUrl}
-              onChange={(e) => setFormData((prev) => ({ ...prev, chefAppUrl: e.target.value }))}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
-              disabled={isSubmitting}
-            />
-          </div>
-          <div>
-            <label htmlFor="chefShowUrl" className="block text-sm font-medium text-[#525252] mb-1">
-              Convexchef.show project link (Optional)
-            </label>
-            <input
-              type="url"
-              id="chefShowUrl"
-              placeholder="https://chef.show/..."
-              value={formData.chefShowUrl}
-              onChange={(e) => setFormData((prev) => ({ ...prev, chefShowUrl: e.target.value }))}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
-              disabled={isSubmitting}
-            />
-          </div>
+          {/* Dynamic Form Fields */}
+          {formFields?.map((field) => (
+            <div key={field.key}>
+              <label htmlFor={field.key} className="block text-sm font-medium text-[#525252] mb-1">
+                {field.label}
+              </label>
+              {field.description && (
+                <div className="text-sm text-[#545454] mb-2">{field.description}</div>
+              )}
+              <input
+                type={field.fieldType}
+                id={field.key}
+                placeholder={field.placeholder}
+                value={dynamicFormData[field.key] || ""}
+                onChange={(e) =>
+                  setDynamicFormData((prev) => ({ ...prev, [field.key]: e.target.value }))
+                }
+                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                required={field.isRequired}
+                disabled={isSubmitting}
+              />
+            </div>
+          ))}
+          {formFields === undefined && (
+            <div className="text-sm text-gray-500">Loading form fields...</div>
+          )}
           <div>
             <label className="block text-sm font-medium text-[#525252] mb-2">Select Tags *</label>{" "}
-            <span className="ml-2 text-xs text-gray-600">What vibe coding app did use?</span>
+            <span className="ml-2 text-xs text-gray-600">What apps did use?</span>
             <div className="flex flex-wrap gap-2 mb-4">
               {availableTags === undefined && (
                 <span className="text-sm text-gray-500">Loading tags...</span>

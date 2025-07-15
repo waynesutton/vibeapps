@@ -33,6 +33,7 @@ export default defineSchema({
     screenshotId: v.optional(v.id("_storage")),
     ratingSum: v.number(),
     ratingCount: v.number(),
+    videoUrl: v.optional(v.string()),
     linkedinUrl: v.optional(v.string()),
     twitterUrl: v.optional(v.string()),
     githubUrl: v.optional(v.string()),
@@ -205,4 +206,20 @@ export default defineSchema({
     .index("by_followerId_followingId", ["followerId", "followingId"]) // Unique constraint and quick lookups for unfollow
     .index("by_followingId", ["followingId"]) // To get all followers of a user
     .index("by_followerId", ["followerId"]), // To get all users a user is following
+
+  // Form fields configuration for dynamic story form management
+  storyFormFields: defineTable({
+    key: v.string(), // Unique identifier for the field (e.g., "linkedinUrl", "twitterUrl")
+    label: v.string(), // Display label for the field
+    placeholder: v.string(), // Placeholder text
+    isEnabled: v.boolean(), // Whether the field is shown in the form
+    isRequired: v.boolean(), // Whether the field is required
+    order: v.number(), // Display order in the form
+    fieldType: v.union(v.literal("url"), v.literal("text"), v.literal("email")), // Field input type
+    description: v.optional(v.string()), // Optional description text
+    storyPropertyName: v.string(), // Property name in stories table (e.g., "linkedinUrl")
+  })
+    .index("by_key", ["key"])
+    .index("by_order", ["order"])
+    .index("by_enabled", ["isEnabled"]),
 });

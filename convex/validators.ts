@@ -28,6 +28,7 @@ export const baseStoryValidator = {
   screenshotId: v.optional(v.id("_storage")),
   ratingSum: v.number(),
   ratingCount: v.number(),
+  videoUrl: v.optional(v.string()),
   linkedinUrl: v.optional(v.string()),
   twitterUrl: v.optional(v.string()),
   githubUrl: v.optional(v.string()),

@@ -9,11 +9,12 @@ import { Forms } from "./Forms";
 import { ReportManagement } from "./ReportManagement";
 import { NumbersView } from "./NumbersView";
 import { UserModeration } from "./UserModeration";
+import { FormFieldManagement } from "./FormFieldManagement";
 // FormResults is typically viewed via a specific form, not as a main tab.
 // Consider removing it from the main tabs if it doesn't show an overview.
 
 // Define the possible tabs
-type AdminTab = "content" | "tags" | "forms" | "reports" | "numbers" | "users" | "settings";
+type AdminTab = "content" | "tags" | "form-fields" | "forms" | "reports" | "numbers" | "users" | "settings";
 
 export function AdminDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -55,6 +56,7 @@ export function AdminDashboard() {
             [
               { value: "content", label: "Moderation" },
               { value: "tags", label: "Tags" },
+              { value: "form-fields", label: "Form Fields" },
               { value: "forms", label: "Forms" },
               { value: "reports", label: "Reports" },
               { value: "numbers", label: "Numbers" },
@@ -77,6 +79,10 @@ export function AdminDashboard() {
 
         <Tabs.Content value="tags" className="focus:outline-none">
           <TagManagement />
+        </Tabs.Content>
+
+        <Tabs.Content value="form-fields" className="focus:outline-none">
+          <FormFieldManagement />
         </Tabs.Content>
 
         <Tabs.Content value="forms" className="focus:outline-none">

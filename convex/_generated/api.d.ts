@@ -26,6 +26,7 @@ import type * as http from "../http.js";
 import type * as reports from "../reports.js";
 import type * as settings from "../settings.js";
 import type * as stories from "../stories.js";
+import type * as storyFormFields from "../storyFormFields.js";
 import type * as storyRatings from "../storyRatings.js";
 import type * as tags from "../tags.js";
 import type * as users from "../users.js";
@@ -54,6 +55,7 @@ declare const fullApi: ApiFromModules<{
   reports: typeof reports;
   settings: typeof settings;
   stories: typeof stories;
+  storyFormFields: typeof storyFormFields;
   storyRatings: typeof storyRatings;
   tags: typeof tags;
   users: typeof users;

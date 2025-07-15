@@ -11,6 +11,7 @@ import {
   Bookmark,
   BookmarkCheck,
   Link2,
+  Play,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useQuery, useMutation } from "convex/react"; // Import Convex hooks
@@ -144,6 +145,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
         }
       : "skip"
   );
+
+  // Fetch enabled form fields for dynamic link display
+  const enabledFormFields = useQuery(api.storyFormFields.listEnabled);
 
   const handleVote = () => {
     if (!isClerkLoaded) return; // Don't do anything if Clerk hasn't loaded
@@ -287,73 +291,201 @@ export function StoryDetail({ story }: StoryDetailProps) {
   // const reportUrl = `https://github.com/waynesutton/vibeapps/issues/new?q=is%3Aissue+state%3Aopen+Flagged&labels=flagged&title=Flagged+Content%3A+${encodeURIComponent(story.title)}&body=Reporting+issue+for+story%3A+%0A-+Title%3A+${encodeURIComponent(story.title)}%0A-+Slug%3A+${storySlug}%0A-+URL%3A+${encodeURIComponent(story.url)}%0A-+Reason%3A+`;
 
   return (
-    <div className="max-w-4xl mx-auto pb-10">
+    <div className="max-w-7xl mx-auto pb-10">
       <Link to="/" className="text-[#545454] hover:text-[#525252] inline-block mb-6 text-sm">
         ← Back to Apps
       </Link>
 
-      <article className="bg-white rounded-lg p-4 sm:p-6 border border-[#D8E1EC]">
-        <div className="flex gap-4">
-          <div className="flex flex-col items-center gap-1 pt-1 min-w-[40px]">
-            <button
-              onClick={handleVote}
-              disabled={!isClerkLoaded} // Disable while Clerk is loading to prevent premature clicks
-              className={`text-[#292929] hover:bg-[#F4F0ED] p-1 rounded ${
-                !isSignedIn && isClerkLoaded ? "opacity-50 cursor-help" : ""
-              }`}
-              title={!isSignedIn && isClerkLoaded ? "Sign in to vote" : "Vote for this app"}>
-              <ChevronUp className="w-5 h-5" />
-            </button>
-            <span className="text-[#525252] font-medium text-sm">{story.votes}</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl lg:text-2xl font-bold  text-transform: capitalize text-[#000000] mb-2">
-              <a
-                href={story.url}
-                className="hover:text-[#555555] break-words"
-                target="_blank"
-                rel="noopener noreferrer">
-                {story.title}
-              </a>
-            </h1>
-            {story.customMessage && (
-              <div className="mb-4 text-sm text-[#ffffff] bg-[#292929] border border-[#D8E1EC] rounded-md p-3 italic">
-                {story.customMessage}
+      <div className="flex gap-8">
+        {/* Main Content */}
+        <div className="flex-1 min-w-0">
+          <article className="bg-white rounded-lg p-4 sm:p-6 border border-[#D8E1EC]">
+            <div className="flex gap-4">
+              <div className="flex flex-col items-center gap-1 pt-1 min-w-[40px]">
+                <button
+                  onClick={handleVote}
+                  disabled={!isClerkLoaded} // Disable while Clerk is loading to prevent premature clicks
+                  className={`text-[#292929] hover:bg-[#F4F0ED] p-1 rounded ${
+                    !isSignedIn && isClerkLoaded ? "opacity-50 cursor-help" : ""
+                  }`}
+                  title={!isSignedIn && isClerkLoaded ? "Sign in to vote" : "Vote for this app"}>
+                  <ChevronUp className="w-5 h-5" />
+                </button>
+                <span className="text-[#525252] font-medium text-sm">{story.votes}</span>
               </div>
-            )}
-            {story.screenshotUrl && (
-              <div className="mb-4 rounded-md overflow-hidden border border-[#F4F0ED]">
-                <img
-                  src={story.screenshotUrl}
-                  alt={`${story.title} screenshot`}
-                  className="w-full max-h-[60vh] object-contain bg-gray-100"
-                  loading="lazy"
-                />
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl lg:text-2xl font-bold  text-transform: capitalize text-[#000000] mb-2">
+                  <a
+                    href={story.url}
+                    className="hover:text-[#555555] break-words"
+                    target="_blank"
+                    rel="noopener noreferrer">
+                    {story.title}
+                  </a>
+                </h1>
+                {story.customMessage && (
+                  <div className="mb-4 text-sm text-[#ffffff] bg-[#292929] border border-[#D8E1EC] rounded-md p-3 italic">
+                    {story.customMessage}
+                  </div>
+                )}
+                {story.screenshotUrl && (
+                  <div className="mb-4 rounded-md overflow-hidden border border-[#F4F0ED]">
+                    <img
+                      src={story.screenshotUrl}
+                      alt={`${story.title} screenshot`}
+                      className="w-full max-h-[60vh] object-contain bg-gray-100"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+                <p className="text-[#000000] mb-4 mt-[20px] prose prose-base max-w-none">
+                  {story.description}
+                </p>
+                <div className="flex items-center gap-2 text-sm text-[#545454] flex-wrap mb-3">
+                  {story.authorUsername ? (
+                    <Link
+                      to={`/${story.authorUsername}`}
+                      className="hover:text-[#525252] hover:underline">
+                      by {story.authorName || story.authorUsername}
+                    </Link>
+                  ) : (
+                    <span>by {story.authorName || "Anonymous User"}</span>
+                  )}
+                  <span>{formatDistanceToNow(story._creationTime)} ago</span>
+                  <Link to="#comments" className="flex items-center gap-1 hover:text-[#525252]">
+                    <MessageSquare className="w-4 h-4" />
+                    {comments?.length ?? 0} Comments
+                  </Link>
+                  <BookmarkButton storyId={story._id} />
+                </div>
               </div>
-            )}
-            <p className="text-[#000000] mb-4 mt-[20px] prose prose-base max-w-none">
-              {story.description}
-            </p>
-            <div className="flex items-center gap-2 text-sm text-[#545454] flex-wrap mb-3">
-              {story.authorUsername ? (
-                <Link
-                  to={`/${story.authorUsername}`}
-                  className="hover:text-[#525252] hover:underline">
-                  by {story.authorName || story.authorUsername}
-                </Link>
-              ) : (
-                <span>by {story.authorName || "Anonymous User"}</span>
-              )}
-              <span>{formatDistanceToNow(story._creationTime)} ago</span>
-              <Link to="#comments" className="flex items-center gap-1 hover:text-[#525252]">
-                <MessageSquare className="w-4 h-4" />
-                {comments?.length ?? 0} Comments
-              </Link>
-              <BookmarkButton storyId={story._id} />
+            </div>
+          </article>
+        </div>
+
+        {/* Project Links & Tags Sidebar */}
+        {(story.url ||
+          enabledFormFields?.some((field) => (story as any)[field.storyPropertyName]) ||
+          story.tags?.length > 0) && (
+          <div className="w-80 flex-shrink-0 hidden lg:block">
+            <div className="bg-[#F9F9F9] rounded-lg p-4 border border-[#E5E5E5] sticky top-4">
+              <h2 className="text-base font-medium text-[#525252] mb-3">Project Links & Tags</h2>
+              <div className="space-y-2">
+                {story.url && (
+                  <div className="flex items-center gap-2">
+                    <Link2 className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                    <a
+                      href={story.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                      title={story.url}>
+                      App Website
+                    </a>
+                  </div>
+                )}
+
+                {story.videoUrl && (
+                  <div className="flex items-center gap-2">
+                    <Play className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                    <a
+                      href={story.videoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                      title={story.videoUrl}>
+                      Video Demo
+                    </a>
+                  </div>
+                )}
+
+                {/* Dynamic Form Fields */}
+                {enabledFormFields?.map((field) => {
+                  const fieldValue = (story as any)[field.storyPropertyName];
+                  if (!fieldValue) return null;
+
+                  // Get appropriate icon based on field key or type
+                  const getIcon = () => {
+                    if (field.key.toLowerCase().includes("github")) {
+                      return <Github className="w-4 h-4 text-[#545454] flex-shrink-0" />;
+                    } else if (field.key.toLowerCase().includes("linkedin")) {
+                      return <Linkedin className="w-4 h-4 text-[#545454] flex-shrink-0" />;
+                    } else if (
+                      field.key.toLowerCase().includes("twitter") ||
+                      field.key.toLowerCase().includes("x")
+                    ) {
+                      return <Twitter className="w-4 h-4 text-[#545454] flex-shrink-0" />;
+                    } else if (field.key.toLowerCase().includes("chef")) {
+                      return <span className="w-4 h-4 text-[#545454] flex-shrink-0">🍲</span>;
+                    } else if (field.fieldType === "url") {
+                      return <Link2 className="w-4 h-4 text-[#545454] flex-shrink-0" />;
+                    } else if (field.fieldType === "email") {
+                      return <span className="w-4 h-4 text-[#545454] flex-shrink-0">✉️</span>;
+                    } else {
+                      return <span className="w-4 h-4 text-[#545454] flex-shrink-0">🔗</span>;
+                    }
+                  };
+
+                  // Get display label
+                  const getDisplayLabel = () => {
+                    // Remove "(Optional)" and other common suffixes for cleaner display
+                    return field.label.replace(/\s*\(Optional\).*$/i, "").trim();
+                  };
+
+                  return (
+                    <div key={field._id} className="flex items-center gap-2">
+                      {getIcon()}
+                      {field.fieldType === "url" ? (
+                        <a
+                          href={fieldValue}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                          title={fieldValue}>
+                          {getDisplayLabel()}
+                        </a>
+                      ) : field.fieldType === "email" ? (
+                        <a
+                          href={`mailto:${fieldValue}`}
+                          className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                          title={fieldValue}>
+                          {getDisplayLabel()}
+                        </a>
+                      ) : (
+                        <span className="text-sm text-[#525252] truncate" title={fieldValue}>
+                          {getDisplayLabel()}: {fieldValue}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Tags */}
+                {story.tags && story.tags.length > 0 && (
+                  <div className="flex gap-1.5 flex-wrap pt-2 border-t border-[#E5E5E5] mt-3">
+                    {(story.tags || []).map(
+                      (tag: Doc<"tags">) =>
+                        !tag.isHidden && (
+                          <Link
+                            key={tag._id}
+                            to={`/?tag=${tag._id}`}
+                            className="px-2 py-0.5 rounded text-xs font-medium transition-opacity hover:opacity-80"
+                            style={{
+                              backgroundColor: tag.backgroundColor || "#F4F0ED",
+                              color: tag.textColor || "#525252",
+                              border: tag.backgroundColor ? "none" : `1px solid #D5D3D0`,
+                            }}>
+                            {tag.name}
+                          </Link>
+                        )
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </article>
+        )}
+      </div>
 
       {/* Rating Section */}
       <div className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC]">
@@ -400,122 +532,6 @@ export function StoryDetail({ story }: StoryDetailProps) {
         </div>
         <p className="text-sm text-[#545454]">Your rating helps others discover great apps.</p>
       </div>
-
-      {/* Project Links & Tags Section */}
-      {(story.url ||
-        story.linkedinUrl ||
-        story.twitterUrl ||
-        story.githubUrl ||
-        story.chefShowUrl ||
-        story.chefAppUrl ||
-        story.tags?.length > 0) && (
-        <div className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC]">
-          <h2 className="text-lg font-medium text-[#525252] mb-4">Project Links & Tags</h2>
-          <div className="space-y-3">
-            {story.url && (
-              <div className="flex items-center gap-2">
-                <Link2 className="w-4 h-4 text-[#545454] flex-shrink-0" />
-                <a
-                  href={story.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
-                  title={story.url}>
-                  App Website
-                </a>
-              </div>
-            )}
-            {story.githubUrl && (
-              <div className="flex items-center gap-2">
-                <Github className="w-4 h-4 text-[#545454] flex-shrink-0" />
-                <a
-                  href={story.githubUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
-                  title={story.githubUrl}>
-                  GitHub Repo
-                </a>
-              </div>
-            )}
-
-            {story.linkedinUrl && (
-              <div className="flex items-center gap-2">
-                <Linkedin className="w-4 h-4 text-[#545454] flex-shrink-0" />
-                <a
-                  href={story.linkedinUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
-                  title={story.linkedinUrl}>
-                  LinkedIn URL
-                </a>
-              </div>
-            )}
-            {story.twitterUrl && (
-              <div className="flex items-center gap-2">
-                <Twitter className="w-4 h-4 text-[#545454] flex-shrink-0" />
-                <a
-                  href={story.twitterUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
-                  title={story.twitterUrl}>
-                  X/Bluesky URL
-                </a>
-              </div>
-            )}
-            {story.chefAppUrl && (
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 text-[#545454] flex-shrink-0">🍲</span>
-                <a
-                  href={story.chefAppUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
-                  title={story.chefAppUrl}>
-                  Convex.app Project
-                </a>
-              </div>
-            )}
-            {story.chefShowUrl && (
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 text-[#545454] flex-shrink-0">🍳</span>
-                <a
-                  href={story.chefShowUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
-                  title={story.chefShowUrl}>
-                  Convex chef.show Project
-                </a>
-              </div>
-            )}
-
-            {/* Moved Tags Here */}
-            {story.tags && story.tags.length > 0 && (
-              <div className="flex gap-1.5 flex-wrap pt-3 border-t border-[#F4F0ED] mt-3">
-                {(story.tags || []).map(
-                  (tag: Doc<"tags">) =>
-                    !tag.isHidden && (
-                      <Link
-                        key={tag._id}
-                        to={`/?tag=${tag._id}`}
-                        className="px-2 py-0.5 rounded text-xs font-medium transition-opacity hover:opacity-80"
-                        style={{
-                          backgroundColor: tag.backgroundColor || "#F4F0ED",
-                          color: tag.textColor || "#525252",
-                          border: tag.backgroundColor ? "none" : `1px solid #D5D3D0`,
-                        }}>
-                        {tag.name}
-                      </Link>
-                    )
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Comments Section */}
       <div id="comments" className="mt-8 scroll-mt-20">

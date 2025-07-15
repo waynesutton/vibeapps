@@ -18,7 +18,7 @@ export function WeeklyLeaderboard() {
     return (
       <div className="p-4 boohide bg-white rounded-lg border border-[#D8E1EC]">
         <h3 className="text-lg font-semibold text-[#292929] mb-3">Most Vibes This Week</h3>
-        <p className="text-sm text-[#545454]">No stories trending this week yet.</p>
+        <p className="text-sm text-[#545454]">No apps trending this week yet.</p>
       </div>
     );
   }

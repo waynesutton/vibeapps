@@ -72,12 +72,12 @@ export function Footer() {
               </Dialog.Close>
             </div>
             <div className="prose prose-sm">
-              <p>Vibe Apps – The place to share and discover new apps built by vibe coders.</p>
+              <p>Vibe Apps – The place to share and discover new apps.</p>
 
               <p>
-                Vibe Apps is a real-time feed of apps built by vibe coders. It's where you go to
-                show off what you've built with tools like Convex.dev, Cursor, Bolt, Windsurf,
-                Lovable, and Tempo—and see what others are pushing live.{" "}
+                Vibe Apps is a real-time feed of apps. It's where you go to show off what you've
+                built with tools like Convex.dev, Cursor, Bolt, Windsurf, Lovable, and Tempo—and see
+                what others are pushing live.{" "}
                 <a
                   href="https://convex.dev?utm_source=vibeapps-dev"
                   target="_blank"

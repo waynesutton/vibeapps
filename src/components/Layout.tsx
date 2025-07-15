@@ -222,8 +222,11 @@ export function Layout({ children }: { children?: ReactNode }) {
 
   // Determine if the sidebar should be shown based on view mode and settings
   // Ensure settings is loaded before trying to access its properties for showSidebar
+  // Never show sidebar on story detail pages
+  const isStoryDetailPage = location.pathname.startsWith('/s/');
   const showSidebar =
     settings &&
+    !isStoryDetailPage &&
     (viewMode === "vibe" || viewMode === "list") &&
     (settings.showListView || settings.showVibeView);
 
