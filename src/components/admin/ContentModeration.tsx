@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from "react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { MessageSquare, Check, X, Eye, EyeOff, Trash2, Search, Pin, Send } from "lucide-react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { usePaginatedQuery, useMutation, useConvexAuth } from "convex/react";
@@ -243,7 +243,7 @@ export function ContentModeration() {
               {item.type === "story" && item.email && (
                 <span className="text-gray-400">({item.email})</span>
               )}
-              <span>{formatDistanceToNow(item._creationTime)} ago</span>
+              <span>{format(item._creationTime, "MMM dd, yyyy 'at' h:mm a")}</span>
               {item.type === "story" && (
                 <>
                   <span>{item.votes} votes</span>

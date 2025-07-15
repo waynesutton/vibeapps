@@ -31,7 +31,7 @@ export function StoryForm() {
 
   const MAX_TAGLINE_LENGTH = 140;
 
-  const availableTags = useQuery(api.tags.list);
+  const availableTags = useQuery(api.tags.listHeader);
 
   const generateUploadUrl = useMutation(api.stories.generateUploadUrl);
   const submitStory = useMutation(api.stories.submit);
@@ -144,8 +144,8 @@ export function StoryForm() {
 
       <div className="bg-white p-6 rounded-lg border border-[#D8E1EC]">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <h2 className="text-2xl font-bold text-[#292929]">Submit your Vibe Coding app</h2>{" "}
-          <span className="ml-2 text-sm text-gray-600">What did you build while vibe coding?</span>
+          <h2 className="text-2xl font-bold text-[#292929]">Submit your app</h2>{" "}
+          <span className="ml-2 text-sm text-gray-600">What did you build?</span>
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-[#525252] mb-1">
               App Title *

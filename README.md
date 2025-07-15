@@ -306,6 +306,8 @@ Learn more about the concepts and best practices behind Convex:
 
 The Vibe Apps platform is hosted on Netlify, leveraging its robust infrastructure for continuous deployment and global content delivery.
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/f0a88276-c702-4734-875f-543acede51ff/deploy-status)](https://app.netlify.com/projects/vibeapps/deploys)
+
 For more detailed instructions on Convex and Netlify, visit the [Convex deployment guide](https://docs.convex.dev/production/hosting/).
 
 ## 📝 License
