@@ -237,7 +237,7 @@ export function ResendForm() {
             <input
               type="url"
               id="videoUrl"
-              placeholder="https://youtube.com/watch?v=..."
+              placeholder="https://youtube.com/.."
               value={formData.videoUrl}
               onChange={(e) => setFormData((prev) => ({ ...prev, videoUrl: e.target.value }))}
               className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"

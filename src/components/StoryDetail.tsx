@@ -375,6 +375,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
         {/* Project Links & Tags Sidebar */}
         {(story.url ||
+          story.videoUrl ||
           enabledFormFields?.some((field) => (story as any)[field.storyPropertyName]) ||
           story.tags?.length > 0) && (
           <div className="w-80 flex-shrink-0 hidden lg:block">
@@ -395,7 +396,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   </div>
                 )}
 
-                {story.videoUrl && (
+                {story.videoUrl && story.videoUrl.trim() && (
                   <div className="flex items-center gap-2">
                     <Play className="w-4 h-4 text-[#545454] flex-shrink-0" />
                     <a

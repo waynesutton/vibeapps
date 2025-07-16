@@ -135,6 +135,7 @@ export type StoryWithDetailsPublic = {
   screenshotId?: Id<"_storage">;
   ratingSum: number;
   ratingCount: number;
+  videoUrl?: string;
   linkedinUrl?: string;
   twitterUrl?: string;
   githubUrl?: string;
