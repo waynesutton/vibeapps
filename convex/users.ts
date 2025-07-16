@@ -535,7 +535,7 @@ export const getUserProfileByUsername = query({
       .take(100);
 
     const storyDetailsPromises = storiesFromDb.map(async (storyDoc: Doc<"stories">) => {
-      const author: Doc<"users"> | null = await ctx.db.get(storyDoc.userId);
+      const author: Doc<"users"> | null = storyDoc.userId ? await ctx.db.get(storyDoc.userId) : null;
       const votesData = await ctx.db
         .query("votes")
         .withIndex("by_story", (q) => q.eq("storyId", storyDoc._id))

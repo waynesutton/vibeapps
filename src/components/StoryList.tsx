@@ -17,6 +17,7 @@ import { api } from "../../convex/_generated/api";
 import { useAuth } from "@clerk/clerk-react";
 import { WeeklyLeaderboard } from "./WeeklyLeaderboard";
 import { TopCategoriesOfWeek } from "./TopCategoriesOfWeek";
+import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
 
 interface StoryListProps {
   stories: Story[];
@@ -26,14 +27,20 @@ interface StoryListProps {
   itemsPerPage: number;
 }
 
-const BookmarkButton = ({ storyId }: { storyId: Id<"stories"> }) => {
+const BookmarkButton = ({
+  storyId,
+  onAuthRequired,
+}: {
+  storyId: Id<"stories">;
+  onAuthRequired: () => void;
+}) => {
   const { isSignedIn } = useAuth();
   const isBookmarked = useQuery(api.bookmarks.isStoryBookmarked, isSignedIn ? { storyId } : "skip");
   const addOrRemoveBookmarkMutation = useMutation(api.bookmarks.addOrRemoveBookmark);
 
   const handleBookmarkClick = async () => {
     if (!isSignedIn) {
-      alert("Please sign in to bookmark stories.");
+      onAuthRequired();
       return;
     }
     try {
@@ -69,9 +76,22 @@ const BookmarkButton = ({ storyId }: { storyId: Id<"stories"> }) => {
 };
 
 export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }: StoryListProps) {
+  const { isSignedIn, isLoaded: isClerkLoaded } = useAuth();
   const voteStory = useMutation(api.stories.voteStory);
 
+  // Auth required dialog state
+  const [showAuthDialog, setShowAuthDialog] = React.useState(false);
+  const [authDialogAction, setAuthDialogAction] = React.useState("");
+
   const handleVote = (storyId: Id<"stories">) => {
+    if (!isClerkLoaded) return;
+
+    if (!isSignedIn) {
+      setAuthDialogAction("vote");
+      setShowAuthDialog(true);
+      return;
+    }
+
     voteStory({ storyId });
   };
 
@@ -208,10 +228,10 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                       <Link
                         to={`/${story.authorUsername}`}
                         className="hover:text-[#525252] hover:underline">
-                        by {story.authorName || story.authorUsername}
+                        by {story.submitterName || story.authorName || story.authorUsername}
                       </Link>
                     ) : (
-                      <span>by {story.authorName || "Anonymous User"}</span>
+                      <span>by {story.submitterName || story.authorName || "Anonymous User"}</span>
                     )}
                     <span>{formatDate(story._creationTime)}</span>
                     <Link
@@ -220,7 +240,13 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                       <MessageSquare className="w-4 h-4" />
                       {story.commentCount}
                     </Link>
-                    <BookmarkButton storyId={story._id} />
+                    <BookmarkButton
+                      storyId={story._id}
+                      onAuthRequired={() => {
+                        setAuthDialogAction("bookmark");
+                        setShowAuthDialog(true);
+                      }}
+                    />
                     {story.githubUrl && (
                       <a
                         href={story.githubUrl}
@@ -261,6 +287,13 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
           <TopCategoriesOfWeek />
         </aside>
       )} */}
+
+      {/* Auth Required Dialog */}
+      <AuthRequiredDialog
+        isOpen={showAuthDialog}
+        onClose={() => setShowAuthDialog(false)}
+        action={authDialogAction}
+      />
     </div>
   );
 }

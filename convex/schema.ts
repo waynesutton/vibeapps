@@ -25,9 +25,11 @@ export default defineSchema({
     title: v.string(),
     slug: v.string(),
     url: v.string(),
-    description: v.string(),
+    description: v.string(), // Short tagline
+    longDescription: v.optional(v.string()), // Detailed description
+    submitterName: v.optional(v.string()), // Name from form input
     tagIds: v.array(v.id("tags")),
-    userId: v.id("users"),
+    userId: v.optional(v.id("users")), // Made optional to support anonymous submissions
     votes: v.number(),
     commentCount: v.number(),
     screenshotId: v.optional(v.id("_storage")),

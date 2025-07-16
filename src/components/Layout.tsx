@@ -223,7 +223,7 @@ export function Layout({ children }: { children?: ReactNode }) {
   // Determine if the sidebar should be shown based on view mode and settings
   // Ensure settings is loaded before trying to access its properties for showSidebar
   // Never show sidebar on story detail pages
-  const isStoryDetailPage = location.pathname.startsWith('/s/');
+  const isStoryDetailPage = location.pathname.startsWith("/s/");
   const showSidebar =
     settings &&
     !isStoryDetailPage &&
@@ -290,25 +290,13 @@ export function Layout({ children }: { children?: ReactNode }) {
               <div className="flex flex-col md:flex-row md:items-center md:gap-3 md:order-2">
                 {/* Row 2 content: Submit & View Options */}
                 <div className="flex w-full md:w-auto items-center gap-3">
-                  {/* Submit Button: If not signed in, open Clerk modal. If signed in, navigate. */}
-                  <SignedOut>
-                    <SignInButton mode="modal">
-                      <button
-                        className="flex items-center gap-2 bg-[#292929] text-white px-3 py-1 rounded-md text-sm hover:bg-[#525252] transition-colors"
-                        type="button">
-                        <PlusCircle className="w-4 h-4" />
-                        Submit
-                      </button>
-                    </SignInButton>
-                  </SignedOut>
-                  <SignedIn>
+                  {/* Submit Button: Allow all users to access submit page */}
                     <Link
                       to="/submit"
                       className="flex items-center gap-2 bg-[#292929] text-white px-3 py-1 rounded-md text-sm hover:bg-[#525252] transition-colors">
                       <PlusCircle className="w-4 h-4" />
                       Submit
                     </Link>
-                  </SignedIn>
                   {settings?.showListView && (
                     <button
                       onClick={() => {

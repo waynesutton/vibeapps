@@ -20,9 +20,11 @@ export const baseStoryValidator = {
   title: v.string(),
   slug: v.string(),
   url: v.string(),
-  description: v.string(),
+  description: v.string(), // Short tagline
+  longDescription: v.optional(v.string()), // Detailed description
+  submitterName: v.optional(v.string()), // Name from form input
   tagIds: v.array(v.id("tags")),
-  userId: v.id("users"),
+  userId: v.optional(v.id("users")), // Made optional to support anonymous submissions
   votes: v.number(),
   commentCount: v.number(), // This should be updated by a separate mechanism or a trigger
   screenshotId: v.optional(v.id("_storage")),
@@ -123,9 +125,11 @@ export type StoryWithDetailsPublic = {
   title: string;
   slug: string;
   url: string;
-  description: string;
+  description: string; // Short tagline
+  longDescription?: string; // Detailed description
+  submitterName?: string; // Name from form input
   tagIds: Id<"tags">[];
-  userId: Id<"users">;
+  userId?: Id<"users">; // Made optional to support anonymous submissions
   votes: number;
   commentCount: number;
   screenshotId?: Id<"_storage">;

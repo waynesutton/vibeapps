@@ -242,7 +242,7 @@ export function ContentModeration() {
               <span>
                 by{" "}
                 {item.type === "story"
-                  ? (item as any).authorName || "Unknown"
+                  ? (item as any).submitterName || (item as any).authorName || "Unknown"
                   : (item as any).authorName || "Unknown"}
               </span>
               {item.type === "story" && (item as any).authorUsername && (

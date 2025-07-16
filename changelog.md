@@ -7,6 +7,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### Enhanced Submission Forms & User Identity 👤
+
+**Form Improvements**
+
+- **Updated Tagline Field**: Changed "App Project Tagline or Description" to "App/Project Tagline" (kept required)
+- **New Description Field**: Added optional long-form description textarea with structured placeholder:
+  - What it does
+  - Key Features
+  - How you built it
+  - How are you using Resend
+- **New "Your Name" Field**: Added required name field above email in both StoryForm and ResendForm
+  - Required for all submissions (authenticated and anonymous)
+  - Improves user attribution and communication
+
+**Display & Admin Improvements**
+
+- **Better Author Attribution**: Stories now show submitter's name from "Your Name" field instead of "Anonymous User"
+  - Authenticated users: Shows form name + links to profile
+  - Anonymous users: Shows form name only
+- **Enhanced Admin Panel**: ContentModeration now displays submitter name alongside email instead of "Unknown"
+  - Shows both logged-in user data AND form input name for better identification
+
+**Backend Changes**
+
+- **Schema Updates**: Added `longDescription` and `submitterName` fields to stories table
+- **Mutation Updates**: Both `submit` and `submitAnonymous` now handle the new fields
+- **Type Safety**: Updated all validators and type definitions for new fields
+
+### Anonymous Submission System 📝
+
+**Added**
+
+- **New Anonymous Submission Route**: `/resend` allows users to submit apps without creating an account
+  - Dedicated ResendForm component for anonymous submissions
+  - Email required for communication purposes
+  - Same functionality as authenticated submissions (tags, screenshots, social links)
+  - Submissions appear in main app feed and admin panel like regular submissions
+
+**Backend Changes**
+
+- **New `submitAnonymous` Mutation**: Handles submissions without authentication requirements
+  - Rate limiting by email (10 submissions per day per email)
+  - Auto-approval for anonymous submissions
+  - Proper logging for anonymous submissions
+- **Schema Update**: Made `userId` optional in stories table to support anonymous submissions
+- **TypeScript Fixes**: Resolved type compatibility issues for optional userId in validators and queries
+
+### Authentication UX Improvements 🔐
+
+**Added**
+
+- **New AuthRequiredDialog Component**: Beautiful popup modal for authentication prompts
+  - Matches app's design system with consistent styling
+  - Provides clear call-to-action for sign-in with Clerk modal integration
+  - Includes "Maybe Later" option for non-intrusive UX
+
+**Changed**
+
+- **Submit Page Access**: Removed login requirement to access `/submit` page
+
+  - All users can now view the submit form and see what's required
+  - Authentication check happens at form submission instead of route protection
+  - Shows popup dialog if user attempts to submit without signing in
+
+- **User Action Authentication**: Replaced redirects with popup notifications
+  - **Voting/Upvoting**: Now shows popup instead of redirecting to sign-in page
+  - **Rating**: Shows popup dialog instead of redirect
+  - **Commenting**: Shows popup dialog instead of redirect (in StoryDetail)
+  - **Bookmarking**: Updated to use popup instead of alert messages
+
+**Improved**
+
+- **Better User Experience**: Users can explore the submit form before deciding to sign in
+- **Consistent Authentication Flow**: All user actions now use the same popup pattern
+- **Non-intrusive Prompts**: Users aren't forced to sign in immediately, can continue browsing
+
+**Technical Details**
+
+- Created `AuthRequiredDialog` component using Radix UI Dialog
+- Updated authentication handling in `StoryDetail.tsx`, `StoryList.tsx`, and `StoryForm.tsx`
+- Removed `ProtectedLayout` wrapper from `/submit` route in `App.tsx`
+- Updated navigation submit button to show as link for all users
+- Maintained all existing authentication requirements for backend mutations
+
 ### Email Field for Story Submissions ✨
 
 - **Story Form**: Added optional email input field with description "Hidden and for hackathon notifications"

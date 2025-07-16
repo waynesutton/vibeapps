@@ -32,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button"; // For modal buttons
 import { toast } from "sonner";
 import { slugify } from "../lib/utils"; // Import slugify
+import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
 
 // Removed MOCK_COMMENTS
 
@@ -80,9 +81,6 @@ const BookmarkButton = ({ storyId }: { storyId: Id<"stories"> }) => {
       <button
         className="flex items-center gap-1 text-[#787672] hover:text-[#525252]"
         onClick={() => {
-          // Assuming navigate is available and you want to redirect
-          // navigate("/sign-in");
-          // Or, if toast is preferred for non-navigation action:
           toast.info("Please sign in to bookmark stories.");
         }}
         title="Sign in to bookmark">
@@ -134,6 +132,10 @@ export function StoryDetail({ story }: StoryDetailProps) {
   const [isReporting, setIsReporting] = React.useState(false);
   const [reportModalError, setReportModalError] = React.useState<string | null>(null);
 
+  // Auth required dialog state
+  const [showAuthDialog, setShowAuthDialog] = React.useState(false);
+  const [authDialogAction, setAuthDialogAction] = React.useState("");
+
   // Fetch related stories
   const relatedStories = useQuery(
     api.stories.getRelatedStoriesByTags,
@@ -153,7 +155,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
     if (!isClerkLoaded) return; // Don't do anything if Clerk hasn't loaded
 
     if (!isSignedIn) {
-      navigate("/sign-in"); // Redirect to sign-in if not logged in
+      setAuthDialogAction("vote");
+      setShowAuthDialog(true);
       return;
     }
     voteStory({ storyId: story._id })
@@ -171,7 +174,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
     if (!isClerkLoaded) return;
 
     if (!isSignedIn) {
-      navigate("/sign-in");
+      setAuthDialogAction("rate");
+      setShowAuthDialog(true);
       return;
     }
     if (hasRated) {
@@ -194,7 +198,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
   const handleCommentSubmit = (content: string) => {
     if (!isClerkLoaded) return;
     if (!isSignedIn) {
-      navigate("/sign-in");
+      setAuthDialogAction("comment");
+      setShowAuthDialog(true);
       return;
     }
     addComment({
@@ -341,6 +346,11 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 <p className="text-[#000000] mb-4 mt-[20px] prose prose-base max-w-none">
                   {story.description}
                 </p>
+                {story.longDescription && (
+                  <div className="text-[#525252] mb-4 prose prose-base max-w-none whitespace-pre-line">
+                    {story.longDescription}
+                  </div>
+                )}
                 <div className="flex items-center gap-2 text-sm text-[#545454] flex-wrap mb-3">
                   {story.authorUsername ? (
                     <Link
@@ -686,6 +696,13 @@ export function StoryDetail({ story }: StoryDetailProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Auth Required Dialog */}
+      <AuthRequiredDialog
+        isOpen={showAuthDialog}
+        onClose={() => setShowAuthDialog(false)}
+        action={authDialogAction}
+      />
     </div>
   );
 }

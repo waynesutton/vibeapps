@@ -4,16 +4,13 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
 import { Github, Plus, X } from "lucide-react";
-import { useAuth } from "@clerk/clerk-react";
-import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
 
 interface Tag extends Doc<"tags"> {
   // Inherits _id, _creationTime, name, showInHeader, isHidden?, backgroundColor?, textColor?
 }
 
-export function StoryForm() {
+export function ResendForm() {
   const navigate = useNavigate();
-  const { isSignedIn, isLoaded: isClerkLoaded } = useAuth();
   const [selectedTagIds, setSelectedTagIds] = React.useState<Id<"tags">[]>([]);
   const [newTagInputValue, setNewTagInputValue] = React.useState("");
   const [newTagNames, setNewTagNames] = React.useState<string[]>([]);
@@ -33,16 +30,13 @@ export function StoryForm() {
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [showSuccessMessage, setShowSuccessMessage] = React.useState(false);
 
-  // Auth required dialog state
-  const [showAuthDialog, setShowAuthDialog] = React.useState(false);
-
   const MAX_TAGLINE_LENGTH = 140;
 
   const availableTags = useQuery(api.tags.listHeader);
   const formFields = useQuery(api.storyFormFields.listEnabled);
 
   const generateUploadUrl = useMutation(api.stories.generateUploadUrl);
-  const submitStory = useMutation(api.stories.submit);
+  const submitStoryAnonymous = useMutation(api.stories.submitAnonymous);
 
   const handleAddNewTag = () => {
     const tagName = newTagInputValue.trim();
@@ -65,13 +59,6 @@ export function StoryForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Check authentication first
-    if (!isClerkLoaded) return;
-    if (!isSignedIn) {
-      setShowAuthDialog(true);
-      return;
-    }
 
     const totalTagsSelected = selectedTagIds.length + newTagNames.length;
     if (isSubmitting || totalTagsSelected === 0) {
@@ -102,16 +89,16 @@ export function StoryForm() {
         screenshotId = storageId;
       }
 
-      await submitStory({
+      await submitStoryAnonymous({
         title: formData.title,
         tagline: formData.tagline,
         longDescription: formData.longDescription || undefined,
-        submitterName: formData.submitterName || undefined,
+        submitterName: formData.submitterName,
         url: formData.url,
         videoUrl: formData.videoUrl || undefined,
-        email: formData.email || undefined,
+        email: formData.email,
         tagIds: selectedTagIds,
-        newTagNames: newTagNames,
+        newTagNames: [...newTagNames, "resendhackathon"], // Auto-add hidden tracking tag
         screenshotId: screenshotId,
         linkedinUrl: dynamicFormData.linkedinUrl || undefined,
         twitterUrl: dynamicFormData.twitterUrl || undefined,
@@ -164,7 +151,9 @@ export function StoryForm() {
 
       <div className="bg-white p-6 rounded-lg border border-[#D8E1EC]">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <h2 className="text-2xl font-bold text-[#292929]">Submit your app</h2>{" "}
+          <h2 className="text-2xl font-bold text-[#292929]">
+            Convex & Resend Hackathon Submissions
+          </h2>{" "}
           <span className="ml-2 text-sm text-gray-600">What did you build?</span>
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-[#525252] mb-1">
@@ -274,10 +263,10 @@ export function StoryForm() {
           </div>
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-[#525252] mb-1">
-              Email (Optional)
+              Email *
             </label>
             <div className="text-sm text-[#545454] mb-2">
-              Hidden and for hackathon notifications
+              Required for anonymous submissions (used for communication only)
             </div>
             <input
               type="email"
@@ -286,6 +275,7 @@ export function StoryForm() {
               value={formData.email}
               onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
               className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              required
               disabled={isSubmitting}
             />
           </div>
@@ -404,7 +394,8 @@ export function StoryForm() {
                 !formData.tagline ||
                 formData.tagline.length > MAX_TAGLINE_LENGTH ||
                 !formData.url ||
-                !formData.submitterName
+                !formData.submitterName ||
+                !formData.email
               }
               className="px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               {isSubmitting ? "Submitting..." : "Submit App"}
@@ -415,9 +406,7 @@ export function StoryForm() {
               Cancel
             </Link>
           </div>
-          <div className="text-sm text-[#545454]">
-            To maintain quality and prevent spam, you can submit up to 10 projects per day.
-          </div>
+          <div className="text-sm text-[#545454]">You can submit up to 10 projects per day.</div>
           {submitError && (
             <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">{submitError}</div>
           )}
@@ -428,15 +417,6 @@ export function StoryForm() {
           )}
         </form>
       </div>
-
-      {/* Auth Required Dialog */}
-      <AuthRequiredDialog
-        isOpen={showAuthDialog}
-        onClose={() => setShowAuthDialog(false)}
-        action="submit your app"
-        title="Sign in to submit"
-        description="You need to be signed in to submit apps to the community. Join to share your projects!"
-      />
     </div>
   );
 }

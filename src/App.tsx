@@ -5,6 +5,7 @@ import { api } from "../convex/_generated/api";
 import { Layout } from "./components/Layout";
 import { StoryList } from "./components/StoryList";
 import { StoryForm } from "./components/StoryForm";
+import { ResendForm } from "./components/ResendForm";
 import { StoryDetail } from "./components/StoryDetail";
 import { SearchResults } from "./components/SearchResults";
 import { AdminDashboard } from "./components/admin/AdminDashboard";
@@ -70,7 +71,7 @@ function StoryPage() {
     return <div>Loading story...</div>;
   }
   if (story === null) {
-    return <div>Story not found or not approved.</div>;
+    return <div>App not found or not approved.</div>;
   }
 
   return <StoryDetail story={story as Story} />;
@@ -114,8 +115,9 @@ function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<HomePage />} />
+          <Route path="/submit" element={<StoryForm />} />
+          <Route path="/resend" element={<ResendForm />} />
           <Route element={<ProtectedLayout />}>
-            <Route path="/submit" element={<StoryForm />} />
             <Route path="/set-username" element={<SetUsernamePage />} />
           </Route>
           <Route path="/admin" element={<AdminDashboard />} />

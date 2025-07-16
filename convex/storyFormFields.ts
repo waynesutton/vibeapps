@@ -212,7 +212,7 @@ export const initializeDefaultFields = internalMutation({
       {
         key: "linkedinUrl",
         label: "LinkedIn Profile or LinkedIn Announcement Post URL (Optional)",
-        placeholder: "https://linkedin.com/post/...",
+        placeholder: "https://linkedin.com/...",
         isEnabled: true,
         isRequired: false,
         order: 0,

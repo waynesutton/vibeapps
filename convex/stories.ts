@@ -330,7 +330,48 @@ export const getBySlug = query({
     }
 
     const storiesWithDetails = await fetchTagsAndCountsForStories(ctx, [story]);
-    return storiesWithDetails[0];
+    const storyWithDetails = storiesWithDetails[0];
+
+    // Map StoryWithDetails to StoryWithDetailsPublic
+    return {
+      _id: storyWithDetails._id,
+      _creationTime: storyWithDetails._creationTime,
+      title: storyWithDetails.title,
+      slug: storyWithDetails.slug,
+      url: storyWithDetails.url,
+      description: storyWithDetails.description,
+      longDescription: storyWithDetails.longDescription,
+      submitterName: storyWithDetails.submitterName,
+      tagIds: storyWithDetails.tagIds,
+      userId: storyWithDetails.userId,
+      votes: storyWithDetails.votes,
+      commentCount: storyWithDetails.commentCount,
+      screenshotId: storyWithDetails.screenshotId,
+      ratingSum: storyWithDetails.ratingSum,
+      ratingCount: storyWithDetails.ratingCount,
+      linkedinUrl: storyWithDetails.linkedinUrl,
+      twitterUrl: storyWithDetails.twitterUrl,
+      githubUrl: storyWithDetails.githubUrl,
+      chefShowUrl: storyWithDetails.chefShowUrl,
+      chefAppUrl: storyWithDetails.chefAppUrl,
+      status: storyWithDetails.status,
+      isHidden: storyWithDetails.isHidden,
+      isPinned: storyWithDetails.isPinned,
+      customMessage: storyWithDetails.customMessage,
+      isApproved: storyWithDetails.isApproved,
+      email: storyWithDetails.email,
+      // Mapped fields
+      authorName: storyWithDetails.authorName,
+      authorUsername: storyWithDetails.authorUsername,
+      authorImageUrl: storyWithDetails.authorImageUrl,
+      authorEmail: storyWithDetails.authorEmail,
+      tags: storyWithDetails.tags,
+      screenshotUrl: storyWithDetails.screenshotUrl,
+      voteScore: storyWithDetails.voteScore,
+      averageRating: storyWithDetails.averageRating,
+      commentsCount: storyWithDetails.commentsCount,
+      votesCount: storyWithDetails.votesCount,
+    };
   },
 });
 
@@ -348,6 +389,8 @@ export const submit = mutation({
   args: {
     title: v.string(),
     tagline: v.string(),
+    longDescription: v.optional(v.string()),
+    submitterName: v.optional(v.string()),
     url: v.string(),
     videoUrl: v.optional(v.string()),
     tagIds: v.array(v.id("tags")),
@@ -382,6 +425,112 @@ export const submit = mutation({
           q // IMPORTANT: This index needs to be added to submissionLogs in schema.ts
         ) => q.eq("userId", userId).gt("submissionTime", twentyFourHoursAgo)
       )
+      .collect();
+
+    if (recentSubmissions.length >= 20) {
+      throw new Error("Submission limit reached. You can submit up to 10 projects per day.");
+    }
+
+    const slug = generateSlug(args.title);
+
+    const existing = await ctx.db
+      .query("stories")
+      .withIndex("by_slug", (q) => q.eq("slug", slug))
+      .first();
+    if (existing) {
+      throw new Error(`Slug "${slug}" already exists for story: ${existing.title}`);
+    }
+
+    let allTagIds: Id<"tags">[] = [...args.tagIds];
+
+    if (args.newTagNames && args.newTagNames.length > 0) {
+      const newCreatedTagIds = await ctx.runMutation(internal.tags.ensureTags, {
+        tagNames: args.newTagNames,
+      });
+      allTagIds = [...new Set([...allTagIds, ...newCreatedTagIds])];
+    }
+
+    for (const tagId of allTagIds) {
+      const tag = await ctx.db.get(tagId);
+      if (!tag) {
+        console.warn(`Tag with ID ${tagId} not found during final check.`);
+        allTagIds = allTagIds.filter((id) => id !== tagId);
+      }
+    }
+
+    if (allTagIds.length === 0) {
+      throw new Error("At least one valid tag is required to submit a story.");
+    }
+
+    const storyId = await ctx.db.insert("stories", {
+      title: args.title,
+      slug: slug,
+      url: args.url,
+      description: args.tagline,
+      longDescription: args.longDescription,
+      submitterName: args.submitterName,
+      tagIds: allTagIds,
+      userId: userId,
+      votes: 1,
+      commentCount: 0,
+      screenshotId: args.screenshotId,
+      ratingSum: 0,
+      ratingCount: 0,
+      videoUrl: args.videoUrl,
+      linkedinUrl: args.linkedinUrl,
+      twitterUrl: args.twitterUrl,
+      githubUrl: args.githubUrl,
+      chefShowUrl: args.chefShowUrl,
+      chefAppUrl: args.chefAppUrl,
+      status: "approved",
+      isHidden: false,
+      isPinned: false,
+      customMessage: undefined,
+      isApproved: true,
+      email: args.email,
+    });
+
+    // Log the submission
+    await ctx.db.insert("submissionLogs", {
+      submitterEmail: userRecord.email || "unknown@example.com",
+      userId: userId,
+      submissionTime: Date.now(),
+    });
+
+    return { storyId, slug };
+  },
+});
+
+// Anonymous submission mutation for /resend route
+export const submitAnonymous = mutation({
+  args: {
+    title: v.string(),
+    tagline: v.string(),
+    longDescription: v.optional(v.string()),
+    submitterName: v.string(), // Required for anonymous submissions
+    url: v.string(),
+    videoUrl: v.optional(v.string()),
+    tagIds: v.array(v.id("tags")),
+    newTagNames: v.array(v.string()),
+    screenshotId: v.optional(v.id("_storage")),
+    linkedinUrl: v.optional(v.string()),
+    twitterUrl: v.optional(v.string()),
+    githubUrl: v.optional(v.string()),
+    chefShowUrl: v.optional(v.string()),
+    chefAppUrl: v.optional(v.string()),
+    email: v.string(), // Required for anonymous submissions
+  },
+  handler: async (ctx, args) => {
+    // No authentication required for anonymous submissions
+
+    // Basic rate limiting by email - allow up to 10 submissions per day per email
+    const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
+    const recentSubmissions = await ctx.db
+      .query("submissionLogs")
+      .withIndex("by_user_time", (q) =>
+        q.eq("userId", undefined).gt("submissionTime", twentyFourHoursAgo)
+      )
+      .filter((q) => q.eq(q.field("submitterEmail"), args.email))
       .collect();
 
     if (recentSubmissions.length >= 10) {
@@ -424,8 +573,10 @@ export const submit = mutation({
       slug: slug,
       url: args.url,
       description: args.tagline,
+      longDescription: args.longDescription,
+      submitterName: args.submitterName,
       tagIds: allTagIds,
-      userId: userId,
+      userId: undefined, // No user ID for anonymous submissions
       votes: 1,
       commentCount: 0,
       screenshotId: args.screenshotId,
@@ -437,7 +588,7 @@ export const submit = mutation({
       githubUrl: args.githubUrl,
       chefShowUrl: args.chefShowUrl,
       chefAppUrl: args.chefAppUrl,
-      status: "approved",
+      status: "approved", // Anonymous submissions are auto-approved
       isHidden: false,
       isPinned: false,
       customMessage: undefined,
@@ -445,10 +596,10 @@ export const submit = mutation({
       email: args.email,
     });
 
-    // Log the submission
+    // Log the anonymous submission
     await ctx.db.insert("submissionLogs", {
-      submitterEmail: userRecord.email || "unknown@example.com",
-      userId: userId,
+      submitterEmail: args.email,
+      userId: undefined, // No user ID for anonymous submissions
       submissionTime: Date.now(),
     });
 
@@ -913,10 +1064,12 @@ export const _getStoryDetailsBatch = internalQuery({
         slug: story.slug,
         url: story.url,
         description: story.description,
+        longDescription: story.longDescription,
+        submitterName: story.submitterName,
         tagIds: story.tagIds,
         userId: story.userId,
         votes: story.votes,
-        commentCount: story.commentsCount,
+        commentCount: story.commentCount,
         screenshotId: story.screenshotId,
         ratingSum: story.ratingSum,
         ratingCount: story.ratingCount,
