@@ -380,7 +380,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                       rel="noopener noreferrer"
                       className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
                       title={story.url}>
-                      App Website
+                      {story.url}
                     </a>
                   </div>
                 )}

@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Latest Updates
+
+### Email Field for Story Submissions ✨
+
+- **Story Form**: Added optional email input field with description "Hidden and for hackathon notifications"
+- **Database**: Added email field to stories table schema to store submission emails
+- **Admin Panel**: Updated ContentModeration component to display submitter email addresses and author information
+- **Backend**: Enhanced story submission mutation to handle email field storage
+- **Type Safety**: Updated all validators and TypeScript types to include email field support
+
+### Content Moderation Improvements 🔧
+
+- **Author Display**: Fixed ContentModeration to properly show author names and usernames for both stories and comments
+- **Comment Enhancement**: Updated comment admin queries to include author information (name and username)
+- **Better Organization**: Improved display formatting to show submitter details before timestamps
+- **Type Safety**: Fixed TypeScript issues with proper type assertions for author data
+
+## Previous Updates
+
 ## [YYYY-MM-DD] - Update TopCategoriesOfWeek Navigation
 
 - **Fixed**: Clicking tags in "Top Categories This Week" no longer leads to a 404 page.

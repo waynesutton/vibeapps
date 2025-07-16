@@ -39,6 +39,7 @@ export const baseStoryValidator = {
   isPinned: v.boolean(),
   customMessage: v.optional(v.string()),
   isApproved: v.optional(v.boolean()),
+  email: v.optional(v.string()),
 };
 
 // Validator for StoryWithDetails - includes author and tag details
@@ -140,11 +141,13 @@ export type StoryWithDetailsPublic = {
   isPinned: boolean;
   customMessage?: string;
   isApproved?: boolean;
+  email?: string;
   // Joined data
   authorName?: string;
   authorUsername?: string;
   authorImageUrl?: string;
   authorIsVerified?: boolean;
+  authorEmail?: string;
   tags: Array<{
     _id: Id<"tags">;
     _creationTime: number;

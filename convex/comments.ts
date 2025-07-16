@@ -90,7 +90,11 @@ export const listAllCommentsAdmin = query({
   handler: async (
     ctx,
     args
-  ): Promise<{ page: Doc<"comments">[]; isDone: boolean; continueCursor: string }> => {
+  ): Promise<{
+    page: Array<Doc<"comments"> & { authorName?: string; authorUsername?: string }>;
+    isDone: boolean;
+    continueCursor: string;
+  }> => {
     await requireAdminRole(ctx);
     let queryBuilder;
     if (args.searchTerm && args.searchTerm.trim() !== "") {
@@ -108,7 +112,24 @@ export const listAllCommentsAdmin = query({
       // Do NOT call .order() on search index queries
       // Execute pagination directly
       const paginatedComments = await queryBuilder.paginate(args.paginationOpts);
-      return paginatedComments;
+
+      // Enrich with author information
+      const commentsWithAuthors = await Promise.all(
+        paginatedComments.page.map(async (comment) => {
+          const author = comment.userId ? await ctx.db.get(comment.userId) : null;
+          return {
+            ...comment,
+            authorName: author?.name,
+            authorUsername: author?.username,
+          };
+        })
+      );
+
+      return {
+        page: commentsWithAuthors,
+        isDone: paginatedComments.isDone,
+        continueCursor: paginatedComments.continueCursor,
+      };
     } else {
       // Fallback to previous logic
       if (args.filters.storyId && args.filters.isHidden !== undefined && args.filters.status) {
@@ -154,7 +175,24 @@ export const listAllCommentsAdmin = query({
       const orderedQuery = queryBuilder.order("desc"); // Default order: newest first
       // Execute pagination
       const paginatedComments = await orderedQuery.paginate(args.paginationOpts);
-      return paginatedComments;
+
+      // Enrich with author information
+      const commentsWithAuthors = await Promise.all(
+        paginatedComments.page.map(async (comment) => {
+          const author = comment.userId ? await ctx.db.get(comment.userId) : null;
+          return {
+            ...comment,
+            authorName: author?.name,
+            authorUsername: author?.username,
+          };
+        })
+      );
+
+      return {
+        page: commentsWithAuthors,
+        isDone: paginatedComments.isDone,
+        continueCursor: paginatedComments.continueCursor,
+      };
     }
   },
 });

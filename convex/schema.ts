@@ -45,6 +45,7 @@ export default defineSchema({
     customMessage: v.optional(v.string()),
     isApproved: v.optional(v.boolean()),
     rejectionReason: v.optional(v.string()),
+    email: v.optional(v.string()),
   })
     .index("by_slug", ["slug"])
     .index("by_status", ["status"])

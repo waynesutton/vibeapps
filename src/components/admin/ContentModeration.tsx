@@ -20,7 +20,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { debounce } from "lodash-es";
 
-type Comment = Doc<"comments">;
+type Comment = Doc<"comments"> & { authorName?: string; authorUsername?: string };
 
 type ModeratableItem = (StoryWithDetails & { type: "story" }) | (Comment & { type: "comment" });
 
@@ -239,9 +239,20 @@ export function ContentModeration() {
               </div>
             )}
             <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-[#545454]">
-              <span>by {item.type === "story" ? item.name : item.author}</span>
-              {item.type === "story" && item.email && (
-                <span className="text-gray-400">({item.email})</span>
+              <span>
+                by{" "}
+                {item.type === "story"
+                  ? (item as any).authorName || "Unknown"
+                  : (item as any).authorName || "Unknown"}
+              </span>
+              {item.type === "story" && (item as any).authorUsername && (
+                <span className="text-gray-400">(@{(item as any).authorUsername})</span>
+              )}
+              {item.type === "comment" && (item as any).authorUsername && (
+                <span className="text-gray-400">(@{(item as any).authorUsername})</span>
+              )}
+              {item.type === "story" && (item as any).email && (
+                <span className="text-gray-400">({(item as any).email})</span>
               )}
               <span>{format(item._creationTime, "MMM dd, yyyy 'at' h:mm a")}</span>
               {item.type === "story" && (

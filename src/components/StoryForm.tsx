@@ -19,6 +19,7 @@ export function StoryForm() {
     tagline: "",
     url: "",
     videoUrl: "",
+    email: "",
     image: null as File | null,
   });
 
@@ -90,6 +91,7 @@ export function StoryForm() {
         tagline: formData.tagline,
         url: formData.url,
         videoUrl: formData.videoUrl || undefined,
+        email: formData.email || undefined,
         tagIds: selectedTagIds,
         newTagNames: newTagNames,
         screenshotId: screenshotId,
@@ -218,6 +220,23 @@ export function StoryForm() {
             />
           </div>
           <div>
+            <label htmlFor="email" className="block text-sm font-medium text-[#525252] mb-1">
+              Email (Optional)
+            </label>
+            <div className="text-sm text-[#545454] mb-2">
+              Hidden and for hackathon notifications
+            </div>
+            <input
+              type="email"
+              id="email"
+              placeholder="your@email.com"
+              value={formData.email}
+              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              disabled={isSubmitting}
+            />
+          </div>
+          <div>
             <label htmlFor="image" className="block text-sm font-medium text-[#525252] mb-1">
               Upload Screenshot (Optional)
             </label>
@@ -261,7 +280,7 @@ export function StoryForm() {
           )}
           <div>
             <label className="block text-sm font-medium text-[#525252] mb-2">Select Tags *</label>{" "}
-            <span className="ml-2 text-xs text-gray-600">What apps did use?</span>
+            <span className="ml-2 text-xs text-gray-600">What apps did you use?</span>
             <div className="flex flex-wrap gap-2 mb-4">
               {availableTags === undefined && (
                 <span className="text-sm text-gray-500">Loading tags...</span>

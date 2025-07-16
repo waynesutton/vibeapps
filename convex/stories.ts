@@ -34,6 +34,7 @@ export type StoryWithDetails = Doc<"stories"> & {
   authorName?: string;
   authorUsername?: string;
   authorImageUrl?: string;
+  authorEmail?: string;
   averageRating: number;
   votesCount: number;
 };
@@ -128,6 +129,7 @@ const fetchTagsAndCountsForStories = async (
         authorName: author?.name,
         authorUsername: author?.username,
         authorImageUrl: author?.imageUrl,
+        authorEmail: author?.email,
         averageRating,
         votesCount,
       };
@@ -356,6 +358,7 @@ export const submit = mutation({
     githubUrl: v.optional(v.string()),
     chefShowUrl: v.optional(v.string()),
     chefAppUrl: v.optional(v.string()),
+    email: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await ensureUserNotBanned(ctx); // Check if user is banned
@@ -439,6 +442,7 @@ export const submit = mutation({
       isPinned: false,
       customMessage: undefined,
       isApproved: true,
+      email: args.email,
     });
 
     // Log the submission
@@ -931,6 +935,7 @@ export const _getStoryDetailsBatch = internalQuery({
         authorName: story.authorName,
         authorUsername: story.authorUsername,
         authorImageUrl: story.authorImageUrl,
+        authorEmail: story.authorEmail,
         tags: story.tags,
         screenshotUrl: story.screenshotUrl,
         voteScore: story.voteScore,
