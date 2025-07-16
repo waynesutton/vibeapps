@@ -11,6 +11,7 @@ interface ConvexBoxConfigData {
   isEnabled: boolean;
   displayText: string;
   linkUrl: string;
+  textAboveLogo: boolean;
   logoStorageId?: Id<"_storage">; // Keep original ID for updates
   logoUrl?: string | null; // Resolved URL for client
   _id?: Id<"convexBoxConfig">; // include typical Doc fields if needed by client
@@ -23,6 +24,7 @@ const DEFAULT_CONVEX_BOX_CONFIG: ConvexBoxConfigData = {
   isEnabled: true,
   displayText: "Powered by Convex",
   linkUrl: "https://convex.dev",
+  textAboveLogo: true,
   logoStorageId: undefined,
   logoUrl: undefined,
 };
@@ -55,6 +57,7 @@ export const get = query({
       isEnabled: configDoc.isEnabled,
       displayText: configDoc.displayText,
       linkUrl: configDoc.linkUrl,
+      textAboveLogo: configDoc.textAboveLogo ?? true,
       logoStorageId: configDoc.logoStorageId,
       logoUrl: logoUrl,
     };
@@ -70,6 +73,7 @@ export const update = mutation({
     isEnabled: v.optional(v.boolean()),
     displayText: v.optional(v.string()),
     linkUrl: v.optional(v.string()),
+    textAboveLogo: v.optional(v.boolean()),
     logoStorageId: v.optional(v.union(v.id("_storage"), v.null())), // Input can be null to clear
   },
   handler: async (ctx, args) => {
@@ -85,6 +89,7 @@ export const update = mutation({
     if (args.isEnabled !== undefined) updates.isEnabled = args.isEnabled;
     if (args.displayText !== undefined) updates.displayText = args.displayText;
     if (args.linkUrl !== undefined) updates.linkUrl = args.linkUrl;
+    if (args.textAboveLogo !== undefined) updates.textAboveLogo = args.textAboveLogo;
     if (args.logoStorageId !== undefined) {
       // Check if the arg was passed
       updates.logoStorageId = args.logoStorageId === null ? undefined : args.logoStorageId;
@@ -103,6 +108,8 @@ export const update = mutation({
         displayText:
           args.displayText !== undefined ? args.displayText : DEFAULT_CONVEX_BOX_CONFIG.displayText,
         linkUrl: args.linkUrl !== undefined ? args.linkUrl : DEFAULT_CONVEX_BOX_CONFIG.linkUrl,
+        textAboveLogo:
+          args.textAboveLogo !== undefined ? args.textAboveLogo : DEFAULT_CONVEX_BOX_CONFIG.textAboveLogo,
         logoStorageId:
           args.logoStorageId === null
             ? undefined

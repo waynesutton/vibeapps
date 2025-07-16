@@ -18,6 +18,7 @@ export function ConvexBoxSettingsForm() {
   const [isEnabled, setIsEnabled] = useState<boolean>(true);
   const [displayText, setDisplayText] = useState<string>("");
   const [linkUrl, setLinkUrl] = useState<string>("");
+  const [textAboveLogo, setTextAboveLogo] = useState<boolean>(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null | undefined>(undefined);
@@ -27,6 +28,7 @@ export function ConvexBoxSettingsForm() {
       setIsEnabled(currentSettings.isEnabled);
       setDisplayText(currentSettings.displayText);
       setLinkUrl(currentSettings.linkUrl);
+      setTextAboveLogo(currentSettings.textAboveLogo ?? true);
       setCurrentLogoUrl(currentSettings.logoUrl);
     }
   }, [currentSettings]);
@@ -59,6 +61,7 @@ export function ConvexBoxSettingsForm() {
         isEnabled,
         displayText,
         linkUrl,
+        textAboveLogo,
         logoStorageId: logoStorageId, // Pass the new or existing ID
       });
       toast.success("ConvexBox settings updated!");
@@ -101,7 +104,7 @@ export function ConvexBoxSettingsForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-lg shadow border">
-      <h3 className="text-lg font-medium text-gray-800 mb-4">Convex Box Configuration</h3>
+      <h3 className="text-lg font-medium text-gray-800 mb-4">Popup Box Configuration</h3>
 
       <div className="flex items-center space-x-2">
         <Checkbox
@@ -110,7 +113,18 @@ export function ConvexBoxSettingsForm() {
           onCheckedChange={(checked) => setIsEnabled(Boolean(checked))}
         />
         <Label htmlFor="isEnabled" className="text-sm font-medium text-gray-700">
-          Show Convex Box
+          Show Popup Box
+        </Label>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id="textAboveLogo"
+          checked={textAboveLogo}
+          onCheckedChange={(checked) => setTextAboveLogo(Boolean(checked))}
+        />
+        <Label htmlFor="textAboveLogo" className="text-sm font-medium text-gray-700">
+          Display Text Above Logo
         </Label>
       </div>
 

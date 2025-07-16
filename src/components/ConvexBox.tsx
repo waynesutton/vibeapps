@@ -23,21 +23,41 @@ export function ConvexBox() {
         <X className="w-4 h-4" />
       </button>
 
-      {config.logoUrl && (
-        <img
-          src={config.logoUrl}
-          alt="Logo"
-          className="max-h-[60px] max-w-[150px] object-contain mb-2"
-        />
+      {config.textAboveLogo ? (
+        <>
+          <a
+            href={config.linkUrl || "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-[#525252] hover:text-[#292929] font-medium break-words mb-2">
+            {config.displayText}
+          </a>
+          {config.logoUrl && (
+            <img
+              src={config.logoUrl}
+              alt="Logo"
+              className="max-h-[60px] max-w-[150px] object-contain"
+            />
+          )}
+        </>
+      ) : (
+        <>
+          {config.logoUrl && (
+            <img
+              src={config.logoUrl}
+              alt="Logo"
+              className="max-h-[60px] max-w-[150px] object-contain mb-2"
+            />
+          )}
+          <a
+            href={config.linkUrl || "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-[#525252] hover:text-[#292929] font-medium break-words">
+            {config.displayText}
+          </a>
+        </>
       )}
-
-      <a
-        href={config.linkUrl || "#"}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-sm text-[#525252] hover:text-[#292929] font-medium break-words">
-        {config.displayText}
-      </a>
     </div>
   );
 }

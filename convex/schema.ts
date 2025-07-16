@@ -170,6 +170,7 @@ export default defineSchema({
     isEnabled: v.boolean(),
     displayText: v.string(),
     linkUrl: v.string(),
+    textAboveLogo: v.optional(v.boolean()),
     logoStorageId: v.optional(v.id("_storage")),
   }).index("by_identifier", ["identifier"]),
 
