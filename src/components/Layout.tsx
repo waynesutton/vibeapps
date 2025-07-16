@@ -20,6 +20,7 @@ import { UserSyncer } from "./UserSyncer";
 import { WeeklyLeaderboard } from "./WeeklyLeaderboard";
 import { TopCategoriesOfWeek } from "./TopCategoriesOfWeek";
 import { dark } from "@clerk/themes";
+import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
 
 interface LayoutContextType {
   viewMode: "list" | "grid" | "vibe";
@@ -56,6 +57,9 @@ export function Layout({ children }: { children?: ReactNode }) {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Auth required dialog state
+  const [showAuthDialog, setShowAuthDialog] = React.useState(false);
 
   const headerTags = useQuery(api.tags.listHeader);
 
@@ -290,13 +294,19 @@ export function Layout({ children }: { children?: ReactNode }) {
               <div className="flex flex-col md:flex-row md:items-center md:gap-3 md:order-2">
                 {/* Row 2 content: Submit & View Options */}
                 <div className="flex w-full md:w-auto items-center gap-3">
-                  {/* Submit Button: Allow all users to access submit page */}
-                    <Link
-                      to="/submit"
-                      className="flex items-center gap-2 bg-[#292929] text-white px-3 py-1 rounded-md text-sm hover:bg-[#525252] transition-colors">
-                      <PlusCircle className="w-4 h-4" />
-                      Submit
-                    </Link>
+                  {/* Submit Button: Navigate to /submit if signed in, show auth dialog if not */}
+                  <button
+                    onClick={() => {
+                      if (isSignedIn) {
+                        navigate("/submit");
+                      } else {
+                        setShowAuthDialog(true);
+                      }
+                    }}
+                    className="flex items-center gap-2 bg-[#292929] text-white px-3 py-1 rounded-md text-sm hover:bg-[#525252] transition-colors">
+                    <PlusCircle className="w-4 h-4" />
+                    Submit
+                  </button>
                   {settings?.showListView && (
                     <button
                       onClick={() => {
@@ -499,6 +509,15 @@ export function Layout({ children }: { children?: ReactNode }) {
         <Footer />
         <ConvexBox />
       </div>
+
+      {/* Auth Required Dialog */}
+      <AuthRequiredDialog
+        isOpen={showAuthDialog}
+        onClose={() => setShowAuthDialog(false)}
+        action="submit your app"
+        title="Sign in to submit"
+        description="You need to be signed in to submit apps to the community. Join to share your projects!"
+      />
     </>
   );
 }

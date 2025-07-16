@@ -1,84 +1,185 @@
 # Codebase Files
 
+## Root Directory Structure
+
 - `vibeapps/`: The root directory of the project.
-  - `convex/`: Directory for Convex backend functions, schema, and other Convex-specific files.
-    - `_generated/`: Auto-generated Convex files (API definitions, data model types based on `schema.ts`).
-    - `schema.ts`: Defines the database schema for Convex, including tables like `stories`, `comments`, `users` (with verification status), `tags`, `settings`, `forms`, `formSubmissions`, `votes`, `reports`, `follows`, etc.
-    - `http.ts`: (If present) Defines HTTP actions for Convex, allowing the app to handle HTTP requests.
-    - `crons.ts`: (If present) Defines scheduled cron jobs for Convex.
-    - `auth.config.js`: (If present) Configuration for Convex authentication.
-    - `*.ts`: Other TypeScript files containing Convex queries, mutations, and actions (e.g., `stories.ts`, `comments.ts`, `users.ts` with verification functions, `tags.ts`, `settings.ts`, `forms.ts`, `formSubmissions.ts`, `votes.ts`, `reports.ts`, `follows.ts`, `adminFollowsQueries.ts`).
-  - `public/`: Directory for static assets that are served directly by the web server (e.g., `favicon.ico`, images).
-    - `robots.txt`: Tells search engine crawlers which pages or files the crawler can or can't request from your site.
-    - `sitemap.xml`: Helps search engines understand the structure of your site and find all of your pages.
-  - `src/`: Directory for the React frontend application code.
-    - `components/`: Reusable React components.
-      - `admin/`: Components specifically for the admin dashboard/interface.
-        - `AdminDashboard.tsx`: Main entry point for the admin section.
-        - `ContentModeration.tsx`: Interface for content moderation.
-        - `FormBuilder.tsx`: Component for creating and editing custom forms.
-        - `FormResults.tsx`: Displays submissions from custom forms.
-        - `Forms.tsx`: Management interface for all created forms.
-        - `Settings.tsx`: Panel for site-wide settings.
-        - `TagManagement.tsx`: Interface for managing tags.
-        - `UserModeration.tsx`: Interface for managing users. Displays the 20 most recent users with full search functionality across all users, clickable user names for profile navigation, and user verification management (verify/unverify with blue checkmarks).
-        - `ReportManagement.tsx`: Interface for managing user reports.
-        - `NumbersView.tsx`: Component for displaying key metrics.
-        - `ConvexBoxSettingsForm.tsx`: A form component for configuring the ConvexBox settings, allowing administrators to enable/disable the box, set display text, link URL, and upload a logo. The logo, if present, links to the specified URL.
-      - `ui/`: General-purpose UI components (e.g., buttons, inputs, cards) potentially from a library like shadcn/ui.
-      - `Layout.tsx`: Main application layout component, potentially managing shared state for things like selected tags.
-      - `StoryList.tsx`: Component for displaying a list/grid of stories.
-      - `StoryDetail.tsx`: Component for displaying the details of a single story.
-      - `StoryForm.tsx`: Form for submitting new stories.
-      - `Comment.tsx`: Component for displaying a single comment.
-      - `CommentForm.tsx`: Form for adding new comments.
-      - `SearchResults.tsx`: Component for displaying search results.
-      - `Footer.tsx`: Application footer component.
-      - `ConvexBox.tsx`: A dismissible notification/info box.
-      - `UserSyncer.tsx`: Component for synchronizing Clerk user data with Convex DB.
-      - `TopCategoriesOfWeek.tsx`: Modified to handle category selection like header tags, using buttons and state passed via props. Fixes 404 errors from previous link-based navigation. It now accepts `selectedTagId` and `setSelectedTagId` props to interact with a shared state, typically managed in `Layout.tsx`.
-    - `lib/`: Utility functions, helper modules, and library-specific configurations.
-      - `utils.ts`: General utility functions.
-      - `constants.ts`: Application-wide constants.
-      - (Other library-specific files like `cn.ts` for classname merging)
-    - `pages/`: Top-level page components mapped to routes.
-      - `HomePage.tsx`: Renders the main homepage.
-      - `SubmitPage.tsx`: Renders the story submission page.
-      - `StoryPage.tsx`: Renders the individual story detail page.
-      - `SearchPage.tsx`: Renders the search results page.
-      - `SignInPage.tsx`: Clerk sign-in page.
-      - `SignUpPage.tsx`: Clerk sign-up page.
-      - `UserProfilePage.tsx`: Displays a user's public profile with verified badge display for verified users (blue checkmark next to username).
-      - `AdminPage.tsx`: Renders the admin dashboard.
-      - `SetUsernamePage.tsx`: Allows new users to set their username.
-      - `NavTestPage.tsx`: A test page for navigation components.
-      - `NotFoundPage.tsx`: Displays a 404 error page.
-    - `types/`: TypeScript type definitions.
-      - `index.ts`: Exports all type definitions.
-      - (Other files defining specific types for `Story`, `Comment`, `User`, `Tag`, `Form`, `SiteSettings`, etc.)
-    - `App.tsx`: Main application component (sets up router, providers).
-    - `main.tsx`: Entry point of the React application (renders `App`).
-    - `index.css`: Global CSS styles and Tailwind CSS setup.
-  - `typescript path=convex/`: This is likely a comment or configuration note related to TypeScript path aliases or specific settings for the `convex` directory, not a file itself. It might be part of a `tsconfig.json` or a similar configuration.
-  - `.DS_Store`: macOS specific file, typically ignored by Git.
-  - `.env.local`: Local environment variables (e.g., `VITE_CONVEX_URL`, Clerk keys). Should be in `.gitignore`.
-  - `.gitignore`: Specifies intentionally untracked files for Git.
-  - `bun.lockb`: Bun's lock file for dependency management.
-  - `changelog.MD`: A log of changes and new features added to the project.
-  - `clerk-admin-fix.MD`: Markdown file, likely containing notes or documentation related to a specific Clerk admin fix.
-  - `components.json`: Configuration file, often used by `shadcn/ui` to track installed components.
-  - `eslint.config.js`: Configuration file for ESLint, a code linter.
-  - `files.MD`: This file - an overview of the codebase structure.
-  - `following-plan.MD`: Markdown file, likely for project planning or task tracking.
-  - `index.html`: The main HTML entry point for the Vite frontend application.
-  - `llms.txt`: Text file, purpose unknown without content but could be notes related to LLMs, AI, or similar topics.
-  - `package-lock.json`: NPM's lock file for ensuring consistent installs of project dependencies. (Note: `bun.lockb` is also present, indicating potential use of Bun as the package manager).
-  - `package.json`: Defines project metadata, dependencies, and scripts.
-  - `postcss.config.js`: Configuration file for PostCSS, a tool for transforming CSS with JavaScript plugins.
-  - `README.md`: Main documentation file for the project, providing an overview, setup instructions, etc.
-  - `tailwind.config.js`: Configuration file for Tailwind CSS.
-  - `TASK.MD`: Markdown file, likely for listing tasks or to-do items for the project.
-  - `tsconfig.app.json`: TypeScript configuration specific to the frontend application code.
-  - `tsconfig.json`: Base TypeScript configuration for the project.
-  - `tsconfig.node.json`: TypeScript configuration for Node.js environments (e.g., for scripts or build processes).
-  - `vite.config.ts`: Configuration file for Vite, the frontend build tool and dev server.
+
+## Backend (Convex)
+
+- `convex/`: Directory for Convex backend functions, schema, and configuration.
+  - `_generated/`: Auto-generated Convex files (API definitions, data model types based on `schema.ts`).
+    - `api.d.ts` & `api.js`: Generated API definitions for all functions
+    - `dataModel.d.ts`: Generated TypeScript types for database schema
+    - `server.d.ts` & `server.js`: Generated server-side definitions
+  - `schema.ts`: Defines the database schema including tables for `stories`, `comments`, `users`, `tags`, `settings`, `forms`, `formSubmissions`, `votes`, `reports`, `follows`, `bookmarks`, `storyRatings`, etc.
+  - `auth.config.js` & `auth.ts`: Convex authentication configuration and functions
+  - `adminFollowsQueries.ts`: Admin-specific queries for managing user follows
+  - `adminQueries.ts`: General admin dashboard queries for metrics and content management
+  - `bookmarks.ts`: Functions for user bookmarking system
+  - `clerk.ts`: Clerk authentication integration with Convex
+  - `comments.ts`: Comment system queries and mutations
+  - `convexBoxConfig.ts`: Configuration for the ConvexBox notification system
+  - `follows.ts`: User following system functions
+  - `forms.ts`: Dynamic form builder backend functions
+  - `http.ts`: HTTP actions for handling external requests
+  - `reports.ts`: User reporting system for content moderation
+  - `settings.ts`: Site-wide settings management
+  - `stories.ts`: Core app submission functions (queries, mutations, actions)
+  - `storyFormFields.ts`: Form field definitions for story submissions
+  - `storyRatings.ts`: App rating and review system
+  - `tags.ts`: Tag system for categorizing apps
+  - `users.ts`: User management including verification system
+  - `utils.ts`: Utility functions for backend operations
+  - `validators.ts`: Input validation schemas
+  - `README.md`: Backend documentation and setup instructions
+  - `tsconfig.json`: TypeScript configuration for Convex functions
+
+## Frontend (React)
+
+- `src/`: Directory for the React frontend application code.
+  - `components/`: Reusable React components organized by functionality.
+    - `admin/`: Admin dashboard components for content and user management.
+      - `AdminDashboard.tsx`: Main admin interface with navigation and overview
+      - `ContentModeration.tsx`: Interface for moderating user-submitted content
+      - `ConvexBoxSettingsForm.tsx`: Form for configuring site-wide notification box
+      - `FormBuilder.tsx`: Dynamic form creation interface for admins
+      - `FormFieldManagement.tsx`: Component for managing individual form fields
+      - `FormResults.tsx`: Display and analysis of form submission data
+      - `Forms.tsx`: Management interface for all created forms
+      - `NumbersView.tsx`: Analytics dashboard showing key metrics
+      - `ReportManagement.tsx`: Interface for reviewing and managing user reports
+      - `Settings.tsx`: Site-wide settings configuration panel
+      - `TagManagement.tsx`: Interface for creating and managing app tags
+      - `UserModeration.tsx`: User management with verification controls and search
+    - `ui/`: Base UI components following shadcn/ui patterns.
+      - `AlertDialog.tsx`: Reusable alert dialog component
+      - `AuthRequiredDialog.tsx`: Dialog for prompting user authentication
+      - `button.tsx`: Customizable button component
+      - `checkbox.tsx`: Styled checkbox input
+      - `dialog.tsx`: Base dialog/modal component
+      - `input.tsx`: Styled text input component
+      - `label.tsx`: Form label component
+      - `select.tsx`: Dropdown select component
+      - `textarea.tsx`: Multi-line text input component
+    - `Comment.tsx`: Individual comment display component
+    - `CommentForm.tsx`: Form for adding new comments to apps
+    - `ConvexBox.tsx`: Dismissible notification/announcement box
+    - `Footer.tsx`: Application footer with links and information
+    - `Layout.tsx`: Main application layout managing shared state and navigation
+    - `ProtectedLayout.tsx`: Layout wrapper requiring authentication
+    - `PublicForm.tsx`: Public-facing form component for submissions
+    - `PublicResultsViewer.tsx`: Component for viewing form results publicly
+    - `ResendForm.tsx`: Email form component using Resend service
+    - `SearchResults.tsx`: Component for displaying search results
+    - `StoryDetail.tsx`: Detailed view of individual app submissions
+    - `StoryForm.tsx`: Form for submitting new app stories
+    - `StoryList.tsx`: Grid/list view of app submissions
+    - `TopCategoriesOfWeek.tsx`: Weekly trending categories with interactive selection
+    - `UserSyncer.tsx`: Component for synchronizing Clerk user data with Convex
+    - `WeeklyLeaderboard.tsx`: Display of top-performing apps and creators
+  - `pages/`: Top-level page components mapped to routes.
+    - `NavTestPage.tsx`: Development page for testing navigation components
+    - `NotFoundPage.tsx`: 404 error page with navigation back to home
+    - `SetUsernamePage.tsx`: Onboarding page for new users to set username
+    - `SignInPage.tsx`: Clerk-powered sign-in page
+    - `SignOutPage.tsx`: User sign-out confirmation page
+    - `SignUpPage.tsx`: Clerk-powered user registration page
+    - `UserProfilePage.tsx`: Public user profile with verification badge display
+  - `lib/`: Utility functions and configuration.
+    - `utils.ts`: General utility functions and helpers
+  - `types/`: TypeScript type definitions.
+    - `index.ts`: Centralized type definitions for the application
+  - `App.tsx`: Main application component with routing and providers
+  - `main.tsx`: React application entry point
+  - `index.css`: Global styles and Tailwind CSS configuration
+  - `vite-env.d.ts`: Vite-specific TypeScript environment definitions
+
+## Static Assets
+
+- `public/`: Static assets served directly by the web server.
+  - `_redirects`: Netlify redirect configuration for SPA routing
+  - `robots.txt`: Search engine crawler instructions
+  - `sitemap.xml`: Site structure information for search engines
+  - `favicon.*`: Various favicon formats for different devices
+  - `apple-touch-icon-*`: iOS home screen icons in multiple sizes
+  - `android-chrome-*`: Android app icons
+  - `mstile-*`: Windows tile icons
+  - `vibe-apps-open-graph-image*.png`: Social media preview images
+
+## Configuration Files
+
+- `components.json`: shadcn/ui component library configuration
+- `eslint.config.js`: ESLint code linting configuration
+- `postcss.config.js`: PostCSS configuration for CSS processing
+- `tailwind.config.js`: Tailwind CSS customization and theme configuration
+- `tsconfig.json`: Base TypeScript configuration
+- `tsconfig.app.json`: TypeScript configuration for frontend application
+- `tsconfig.node.json`: TypeScript configuration for Node.js build processes
+- `vite.config.ts`: Vite build tool and development server configuration
+
+## Package Management
+
+- `package.json`: Project metadata, dependencies, and npm scripts
+- `package-lock.json`: NPM dependency lock file
+- `bun.lockb`: Bun package manager lock file (primary package manager)
+
+## Documentation
+
+- `README.md`: Main project documentation with setup instructions
+- `changelog.MD`: Developer-friendly log of new features and changes
+- `clerk-admin-fix.MD`: Documentation for Clerk admin-related fixes
+- `clerksubmit.md`: Clerk submission process documentation
+- `following-plan.MD`: Planning document for user following system
+- `files.MD`: This file - comprehensive codebase structure overview
+- `llms.txt`: LLM-related notes and configurations
+- `TASK.MD`: Current development tasks and to-do items
+- `themss.MD`: Theme and styling documentation
+
+## Build and Deployment
+
+- `index.html`: Main HTML entry point for Vite application
+- `robots.txt`: Additional robots.txt in root directory
+- Various configuration files for build processes and deployment
+
+## Key Features Implemented
+
+### User Management
+
+- Clerk authentication integration
+- User verification system with blue checkmarks
+- Profile management and public profiles
+- Username setting for new users
+
+### Content System
+
+- App story submissions with rich metadata
+- Comment system with threading
+- Tag-based categorization
+- Bookmarking and favorites
+- Rating and review system
+
+### Admin Features
+
+- Comprehensive admin dashboard
+- Content moderation workflows
+- User management and verification
+- Custom form builder
+- Report management system
+- Site-wide settings control
+- Analytics and metrics tracking
+
+### Social Features
+
+- User following system
+- Weekly leaderboards
+- Trending categories
+- Search and discovery
+- Real-time updates
+
+### Technical Features
+
+- Real-time database with Convex
+- Type-safe backend functions
+- Responsive modern UI
+- SEO optimization
+- Progressive Web App capabilities

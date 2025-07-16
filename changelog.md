@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### Navigation Submit Button Authentication 🚀
+
+**Changed**
+
+- **Header Submit Button**: Updated navigation submit button to show popup authentication dialog for logged-out users
+  - Signed-in users: Button navigates directly to `/submit` page
+  - Signed-out users: Button shows AuthRequiredDialog popup with sign-in prompt
+  - Maintains consistent design and user experience across the app
+  - Keeps `/resend` anonymous submission route unaffected
+
+**Technical Details**
+
+- Replaced `Link` component with `button` element with conditional logic
+- Added `AuthRequiredDialog` component to Layout for authentication prompts
+- Updated submit button behavior to check `isSignedIn` status before navigation
+- Non-intrusive popup allows users to continue browsing without forced redirects
+
 ### Enhanced Submission Forms & User Identity 👤
 
 **Form Improvements**
