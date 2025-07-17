@@ -356,10 +356,10 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     <Link
                       to={`/${story.authorUsername}`}
                       className="hover:text-[#525252] hover:underline">
-                      by {story.authorName || story.authorUsername}
+                      by {story.submitterName || story.authorName || story.authorUsername}
                     </Link>
                   ) : (
-                    <span>by {story.authorName || "Anonymous User"}</span>
+                    <span>by {story.submitterName || story.authorName || "Anonymous User"}</span>
                   )}
                   <span>{formatDistanceToNow(story._creationTime)} ago</span>
                   <Link to="#comments" className="flex items-center gap-1 hover:text-[#525252]">
@@ -476,7 +476,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   <div className="flex gap-1.5 flex-wrap pt-2 border-t border-[#E5E5E5] mt-3">
                     {(story.tags || []).map(
                       (tag: Doc<"tags">) =>
-                        !tag.isHidden && (
+                        !tag.isHidden &&
+                        tag.name !== "resendhackathon" && (
                           <Link
                             key={tag._id}
                             to={`/?tag=${tag._id}`}

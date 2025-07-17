@@ -14,6 +14,7 @@ interface ConvexBoxConfigData {
   textAboveLogo: boolean;
   logoStorageId?: Id<"_storage">; // Keep original ID for updates
   logoUrl?: string | null; // Resolved URL for client
+  boxSize?: "standard" | "square"; // Box size option
   _id?: Id<"convexBoxConfig">; // include typical Doc fields if needed by client
   _creationTime?: number;
 }
@@ -27,6 +28,7 @@ const DEFAULT_CONVEX_BOX_CONFIG: ConvexBoxConfigData = {
   textAboveLogo: true,
   logoStorageId: undefined,
   logoUrl: undefined,
+  boxSize: "standard",
 };
 
 /**
@@ -60,6 +62,7 @@ export const get = query({
       textAboveLogo: configDoc.textAboveLogo ?? true,
       logoStorageId: configDoc.logoStorageId,
       logoUrl: logoUrl,
+      boxSize: configDoc.boxSize ?? "standard",
     };
     return result;
   },
@@ -75,6 +78,7 @@ export const update = mutation({
     linkUrl: v.optional(v.string()),
     textAboveLogo: v.optional(v.boolean()),
     logoStorageId: v.optional(v.union(v.id("_storage"), v.null())), // Input can be null to clear
+    boxSize: v.optional(v.union(v.literal("standard"), v.literal("square"))),
   },
   handler: async (ctx, args) => {
     await requireAdminRole(ctx);
@@ -94,6 +98,7 @@ export const update = mutation({
       // Check if the arg was passed
       updates.logoStorageId = args.logoStorageId === null ? undefined : args.logoStorageId;
     }
+    if (args.boxSize !== undefined) updates.boxSize = args.boxSize;
 
     if (existingConfig) {
       if (Object.keys(updates).length > 0) {
@@ -109,11 +114,14 @@ export const update = mutation({
           args.displayText !== undefined ? args.displayText : DEFAULT_CONVEX_BOX_CONFIG.displayText,
         linkUrl: args.linkUrl !== undefined ? args.linkUrl : DEFAULT_CONVEX_BOX_CONFIG.linkUrl,
         textAboveLogo:
-          args.textAboveLogo !== undefined ? args.textAboveLogo : DEFAULT_CONVEX_BOX_CONFIG.textAboveLogo,
+          args.textAboveLogo !== undefined
+            ? args.textAboveLogo
+            : DEFAULT_CONVEX_BOX_CONFIG.textAboveLogo,
         logoStorageId:
           args.logoStorageId === null
             ? undefined
             : args.logoStorageId || DEFAULT_CONVEX_BOX_CONFIG.logoStorageId,
+        boxSize: args.boxSize !== undefined ? args.boxSize : DEFAULT_CONVEX_BOX_CONFIG.boxSize,
       };
       await ctx.db.insert("convexBoxConfig", newConfigData);
     }

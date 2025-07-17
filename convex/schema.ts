@@ -175,6 +175,7 @@ export default defineSchema({
     linkUrl: v.string(),
     textAboveLogo: v.optional(v.boolean()),
     logoStorageId: v.optional(v.id("_storage")),
+    boxSize: v.optional(v.union(v.literal("standard"), v.literal("square"))),
   }).index("by_identifier", ["identifier"]),
 
   reports: defineTable({

@@ -15,7 +15,10 @@ export function ConvexBox() {
   return (
     <div
       className="fixed right-4 bottom-4 bg-[#F8F7F7] border border-[#D8E1EC] rounded-lg p-4 shadow-sm flex flex-col justify-center items-center text-center overflow-hidden"
-      style={{ width: "350px", height: "150px" }}>
+      style={{
+        width: "350px",
+        height: config.boxSize === "square" ? "350px" : "150px",
+      }}>
       <button
         onClick={() => setIsLocallyVisible(false)}
         className="absolute top-2 right-2 text-[#545454] hover:text-[#525252] z-10"
@@ -33,21 +36,37 @@ export function ConvexBox() {
             {config.displayText}
           </a>
           {config.logoUrl && (
-            <img
-              src={config.logoUrl}
-              alt="Logo"
-              className="max-h-[60px] max-w-[150px] object-contain"
-            />
+            <a
+              href={config.linkUrl || "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block">
+              <img
+                src={config.logoUrl}
+                alt="Logo"
+                className={`max-w-[250px] object-contain ${
+                  config.boxSize === "square" ? "max-h-[250px]" : "max-h-[60px]"
+                }`}
+              />
+            </a>
           )}
         </>
       ) : (
         <>
           {config.logoUrl && (
-            <img
-              src={config.logoUrl}
-              alt="Logo"
-              className="max-h-[60px] max-w-[150px] object-contain mb-2"
-            />
+            <a
+              href={config.linkUrl || "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block mb-2">
+              <img
+                src={config.logoUrl}
+                alt="Logo"
+                className={`max-w-[150px] object-contain ${
+                  config.boxSize === "square" ? "max-h-[120px]" : "max-h-[60px]"
+                }`}
+              />
+            </a>
           )}
           <a
             href={config.linkUrl || "#"}

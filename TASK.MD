@@ -30,20 +30,20 @@ Brief description of the feature and its purpose.
 - [x] confirm https://www.cookieyes.com/ is setup
 - [x] test forms
 - [x] setup llms.txt, sitemap.xml and robots.txt
+- [x] link image in setting popup box
+- [x] fix name on story detailed page
+- [x] hide resendhackathon on story detailed page
+- [x] hide extra sign in to commet
 
 ## In Progress Tasks
 
-- [ ] Ask vibe coders for feedback and submissions
-- [ ] setup resend for emails - after dominan setup with https://demo.react.email/preview/reset-password/dropbox-reset-password
+- [ ] setup resend for emails
 
 ## Bugs
 
-- [ ] link image in setting popup box
-
 ## Future Tasks - Roadmap
 
-- [ ] add pinned post to sidebar for storylist.tsx layout.tsx line 283
-- [ ] test and add nav airbnb like viewmode icons
+- [ ] add admin moderation to make app post by approval only
 - [ ] add chat box to admin dashboard and front end
 
 ## Implementation Plan

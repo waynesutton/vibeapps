@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner"; // Assuming you use sonner for toasts
 
 export function ConvexBoxSettingsForm() {
@@ -19,7 +26,9 @@ export function ConvexBoxSettingsForm() {
   const [displayText, setDisplayText] = useState<string>("");
   const [linkUrl, setLinkUrl] = useState<string>("");
   const [textAboveLogo, setTextAboveLogo] = useState<boolean>(true);
+  const [boxSize, setBoxSize] = useState<"standard" | "square">("standard");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFileUrl, setSelectedFileUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null | undefined>(undefined);
 
@@ -29,13 +38,30 @@ export function ConvexBoxSettingsForm() {
       setDisplayText(currentSettings.displayText);
       setLinkUrl(currentSettings.linkUrl);
       setTextAboveLogo(currentSettings.textAboveLogo ?? true);
+      setBoxSize(currentSettings.boxSize ?? "standard");
       setCurrentLogoUrl(currentSettings.logoUrl);
     }
   }, [currentSettings]);
 
+  // Cleanup object URL when component unmounts or file changes
+  useEffect(() => {
+    return () => {
+      if (selectedFileUrl) {
+        URL.revokeObjectURL(selectedFileUrl);
+      }
+    };
+  }, [selectedFileUrl]);
+
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
-      setSelectedFile(event.target.files[0]);
+      const file = event.target.files[0];
+      setSelectedFile(file);
+      // Create a preview URL for the selected file
+      const fileUrl = URL.createObjectURL(file);
+      setSelectedFileUrl(fileUrl);
+    } else {
+      setSelectedFile(null);
+      setSelectedFileUrl(null);
     }
   };
 
@@ -62,10 +88,12 @@ export function ConvexBoxSettingsForm() {
         displayText,
         linkUrl,
         textAboveLogo,
+        boxSize,
         logoStorageId: logoStorageId, // Pass the new or existing ID
       });
       toast.success("ConvexBox settings updated!");
       setSelectedFile(null); // Clear file input after successful upload & save
+      setSelectedFileUrl(null); // Clear preview URL
       // The useQuery for currentSettings will re-fetch and update the logo preview via useEffect
     } catch (error) {
       console.error("Failed to update ConvexBox settings:", error);
@@ -83,6 +111,7 @@ export function ConvexBoxSettingsForm() {
       toast.success("Logo removed successfully!");
       setCurrentLogoUrl(null);
       setSelectedFile(null);
+      setSelectedFileUrl(null);
     } catch (error) {
       console.error("Failed to remove logo:", error);
       toast.error("Failed to remove logo. Check console for details.");
@@ -126,6 +155,21 @@ export function ConvexBoxSettingsForm() {
         <Label htmlFor="textAboveLogo" className="text-sm font-medium text-gray-700">
           Display Text Above Logo
         </Label>
+      </div>
+
+      <div>
+        <Label htmlFor="boxSize" className="block text-sm font-medium text-gray-700 mb-1">
+          Box Size
+        </Label>
+        <Select value={boxSize} onValueChange={(value: "standard" | "square") => setBoxSize(value)}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select box size" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="standard">Standard (350px × 150px)</SelectItem>
+            <SelectItem value="square">Square (350px × 350px)</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div>
@@ -193,8 +237,26 @@ export function ConvexBoxSettingsForm() {
             </Button>
           </div>
         )}
-        {selectedFile && (
-          <p className="text-xs text-gray-600 mt-1">New logo selected: {selectedFile.name}</p>
+        {selectedFile && selectedFileUrl && (
+          <div className="mt-2">
+            <p className="text-xs text-gray-600 mb-1">New logo preview:</p>
+            {linkUrl && linkUrl.trim() !== "" ? (
+              <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="inline-block">
+                <img
+                  src={selectedFileUrl}
+                  alt="New logo preview"
+                  className="max-h-20 border rounded"
+                />
+              </a>
+            ) : (
+              <img
+                src={selectedFileUrl}
+                alt="New logo preview"
+                className="max-h-20 border rounded inline-block"
+              />
+            )}
+            <p className="text-xs text-gray-600 mt-1">File: {selectedFile.name}</p>
+          </div>
         )}
         <p className="text-xs text-gray-500 mt-1">
           Recommended: Small, transparent background PNG.

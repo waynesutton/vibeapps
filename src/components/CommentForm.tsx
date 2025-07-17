@@ -92,15 +92,6 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
           }>
           {parentId ? "Reply" : "Comment"}
         </button>
-        {!canSubmit && isClerkLoaded && (
-          <p className="mt-2 text-sm text-red-600">
-            Please{" "}
-            <Link to="/sign-in" className="underline hover:text-red-800">
-              sign in
-            </Link>{" "}
-            to {parentId ? "reply" : "comment"}.
-          </p>
-        )}
       </form>
 
       {!isClerkLoaded && <p className="mt-2 text-sm text-gray-500">Loading user status...</p>}
