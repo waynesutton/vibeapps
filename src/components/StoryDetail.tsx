@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import {
   ChevronUp,
   MessageSquare,
@@ -12,6 +12,7 @@ import {
   BookmarkCheck,
   Link2,
   Play,
+  Edit3,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useQuery, useMutation } from "convex/react"; // Import Convex hooks
@@ -106,6 +107,26 @@ const BookmarkButton = ({ storyId }: { storyId: Id<"stories"> }) => {
 export function StoryDetail({ story }: StoryDetailProps) {
   const navigate = useNavigate(); // Initialize navigate
   const { isSignedIn, isLoaded: isClerkLoaded } = useAuth(); // Get auth state
+  const { user } = useUser(); // Get current user data
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Edit mode state
+  const isEditMode = searchParams.get("edit") === "true";
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editFormData, setEditFormData] = React.useState({
+    title: story.title,
+    description: story.description,
+    longDescription: story.longDescription || "",
+    submitterName: story.submitterName || "",
+    url: story.url,
+    videoUrl: story.videoUrl || "",
+    email: story.email || "",
+  });
+  const [editDynamicFormData, setEditDynamicFormData] = React.useState<Record<string, string>>({});
+  const [selectedTagIds, setSelectedTagIds] = React.useState<Id<"tags">[]>(story.tagIds || []);
+  const [newTagNames, setNewTagNames] = React.useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [editError, setEditError] = React.useState<string | null>(null);
 
   // Fetch APPROVED comments using Convex query
   const comments = useQuery(api.comments.listApprovedByStory, { storyId: story._id });
@@ -126,6 +147,10 @@ export function StoryDetail({ story }: StoryDetailProps) {
   const rateStory = useMutation(api.stories.rate);
   const addComment = useMutation(api.comments.add);
   const createReportMutation = useMutation(api.reports.createReport);
+  const updateOwnStoryMutation = useMutation(api.stories.updateOwnStory);
+
+  // Additional queries for editing
+  const availableTags = useQuery(api.tags.listHeader);
 
   const [isReportModalOpen, setIsReportModalOpen] = React.useState(false);
   const [reportReason, setReportReason] = React.useState("");
@@ -150,6 +175,43 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
   // Fetch enabled form fields for dynamic link display
   const enabledFormFields = useQuery(api.storyFormFields.listEnabled);
+
+  // Get current user's Convex data to check ownership
+  const currentUser = useQuery(api.users.getMyUserDocument, isSignedIn && user ? {} : "skip");
+
+  // Handle edit mode initialization
+  React.useEffect(() => {
+    const canEdit = isClerkLoaded && isSignedIn && currentUser && story.userId === currentUser._id;
+    if (isEditMode && canEdit) {
+      setIsEditing(true);
+      // Initialize form data with current story values
+      setEditFormData({
+        title: story.title,
+        description: story.description,
+        longDescription: story.longDescription || "",
+        submitterName: story.submitterName || "",
+        url: story.url,
+        videoUrl: story.videoUrl || "",
+        email: story.email || "",
+      });
+
+      // Initialize dynamic form data
+      const dynamicData: Record<string, string> = {};
+      if (story.linkedinUrl) dynamicData.linkedinUrl = story.linkedinUrl;
+      if (story.twitterUrl) dynamicData.twitterUrl = story.twitterUrl;
+      if (story.githubUrl) dynamicData.githubUrl = story.githubUrl;
+      if (story.chefShowUrl) dynamicData.chefShowUrl = story.chefShowUrl;
+      if (story.chefAppUrl) dynamicData.chefAppUrl = story.chefAppUrl;
+      setEditDynamicFormData(dynamicData);
+
+      setSelectedTagIds(story.tagIds || []);
+    } else if (isEditMode && !canEdit) {
+      // Remove edit parameter if user can't edit
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete("edit");
+      setSearchParams(newSearchParams);
+    }
+  }, [isEditMode, isClerkLoaded, isSignedIn, currentUser, story, searchParams, setSearchParams]);
 
   const handleVote = () => {
     if (!isClerkLoaded) return; // Don't do anything if Clerk hasn't loaded
@@ -266,6 +328,72 @@ export function StoryDetail({ story }: StoryDetailProps) {
       setReportModalError(userFriendlyMessage);
     }
     setIsReporting(false);
+  };
+
+  // Edit form handlers
+  const handleEditCancel = () => {
+    setIsEditing(false);
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.delete("edit");
+    setSearchParams(newSearchParams);
+    setEditError(null);
+  };
+
+  const toggleTag = (tagId: Id<"tags">) => {
+    setSelectedTagIds((prev) =>
+      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
+    );
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser || story.userId !== currentUser._id) return;
+
+    const totalTagsSelected = selectedTagIds.length + newTagNames.length;
+    if (totalTagsSelected === 0) {
+      setEditError("Please select at least one tag.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setEditError(null);
+
+    try {
+      const result = await updateOwnStoryMutation({
+        storyId: story._id,
+        title: editFormData.title,
+        description: editFormData.description,
+        longDescription: editFormData.longDescription || undefined,
+        submitterName: editFormData.submitterName || undefined,
+        url: editFormData.url,
+        videoUrl: editFormData.videoUrl || undefined,
+        email: editFormData.email || undefined,
+        tagIds: selectedTagIds,
+        newTagNames: newTagNames,
+        linkedinUrl: editDynamicFormData.linkedinUrl || undefined,
+        twitterUrl: editDynamicFormData.twitterUrl || undefined,
+        githubUrl: editDynamicFormData.githubUrl || undefined,
+        chefShowUrl: editDynamicFormData.chefShowUrl || undefined,
+        chefAppUrl: editDynamicFormData.chefAppUrl || undefined,
+      });
+
+      toast.success("Submission updated successfully!");
+
+      // Navigate to updated story if slug changed
+      if (result.slug && result.slug !== story.slug) {
+        navigate(`/s/${result.slug}`, { replace: true });
+      } else {
+        // Just exit edit mode
+        handleEditCancel();
+        // Force refresh by reloading the page
+        window.location.reload();
+      }
+    } catch (error: any) {
+      console.error("Failed to update story:", error);
+      setEditError(error.data?.message || error.message || "Failed to update submission.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Update document title and meta description
@@ -499,83 +627,283 @@ export function StoryDetail({ story }: StoryDetailProps) {
         )}
       </div>
 
-      {/* Rating Section */}
-      <div className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC]">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4">
-          <h2 className="text-lg font-medium text-[#525252]">
-            {hasRated ? "Your Rating" : "Rate this app"}
-          </h2>
-          <div className="flex items-center gap-1">
-            {[1, 2, 3, 4, 5].map((value) => (
-              <button
-                key={value}
-                onClick={() => handleRating(value)}
-                onMouseEnter={() => !hasRated && setHoveredRating(value)} // Only hover if not rated
-                onMouseLeave={() => setHoveredRating(0)}
-                disabled={!isClerkLoaded || (isSignedIn && hasRated)} // Disable if not loaded, or if signed in AND already rated
-                className={`p-1 transition-colors disabled:cursor-not-allowed ${
-                  !isSignedIn && isClerkLoaded ? "opacity-50 cursor-help" : ""
-                } ${
-                  hasRated
-                    ? value <= (currentUserRating || 0)
-                      ? "text-yellow-500"
-                      : "text-gray-300"
-                    : value <= (hoveredRating || 0)
-                      ? "text-yellow-400"
-                      : "text-gray-300 hover:text-yellow-400"
-                }`}
-                title={
-                  !isSignedIn && isClerkLoaded
-                    ? "Sign in to rate"
-                    : hasRated
-                      ? `You rated ${currentUserRating} star(s)`
-                      : `Rate ${value} stars`
-                }>
-                <Star className="w-5 h-5 fill-current" />
-              </button>
+      {/* Edit Form Section */}
+      {isEditing && currentUser && story.userId === currentUser._id && (
+        <div className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC]">
+          <form onSubmit={handleEditSubmit} className="space-y-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-medium text-[#525252]">Edit Submission</h2>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleEditCancel}
+                  disabled={isSubmitting}
+                  className="text-xs">
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={
+                    isSubmitting ||
+                    !editFormData.title ||
+                    !editFormData.description ||
+                    !editFormData.url
+                  }
+                  className="text-xs bg-[#292929] text-white hover:bg-[#525252]">
+                  {isSubmitting ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="edit-title" className="block text-sm font-medium text-[#525252] mb-1">
+                App Title *
+              </label>
+              <input
+                type="text"
+                id="edit-title"
+                placeholder="Site name"
+                value={editFormData.title}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, title: e.target.value }))}
+                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="edit-description"
+                className="block text-sm font-medium text-[#525252] mb-1">
+                App/Project Tagline *
+              </label>
+              <input
+                type="text"
+                id="edit-description"
+                placeholder="One sentence pitch or description"
+                value={editFormData.description}
+                onChange={(e) =>
+                  setEditFormData((prev) => ({ ...prev, description: e.target.value }))
+                }
+                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="edit-longDescription"
+                className="block text-sm font-medium text-[#525252] mb-1">
+                Description (Optional)
+              </label>
+              <textarea
+                id="edit-longDescription"
+                placeholder="- What it does&#10;- Key Features&#10;- How you built it"
+                value={editFormData.longDescription}
+                onChange={(e) =>
+                  setEditFormData((prev) => ({ ...prev, longDescription: e.target.value }))
+                }
+                rows={4}
+                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="edit-url" className="block text-sm font-medium text-[#525252] mb-1">
+                App Website Link *
+              </label>
+              <input
+                type="url"
+                id="edit-url"
+                placeholder="https://"
+                value={editFormData.url}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, url: e.target.value }))}
+                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="edit-videoUrl"
+                className="block text-sm font-medium text-[#525252] mb-1">
+                Video Demo (Optional)
+              </label>
+              <input
+                type="url"
+                id="edit-videoUrl"
+                placeholder="https://youtube.com/..."
+                value={editFormData.videoUrl}
+                onChange={(e) => setEditFormData((prev) => ({ ...prev, videoUrl: e.target.value }))}
+                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="edit-submitterName"
+                className="block text-sm font-medium text-[#525252] mb-1">
+                Your Name *
+              </label>
+              <input
+                type="text"
+                id="edit-submitterName"
+                placeholder="Your name"
+                value={editFormData.submitterName}
+                onChange={(e) =>
+                  setEditFormData((prev) => ({ ...prev, submitterName: e.target.value }))
+                }
+                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+
+            {/* Dynamic Form Fields */}
+            {enabledFormFields?.map((field) => (
+              <div key={field.key}>
+                <label
+                  htmlFor={`edit-${field.key}`}
+                  className="block text-sm font-medium text-[#525252] mb-1">
+                  {field.label}
+                </label>
+                {field.description && (
+                  <div className="text-sm text-[#545454] mb-2">{field.description}</div>
+                )}
+                <input
+                  type={field.fieldType}
+                  id={`edit-${field.key}`}
+                  placeholder={field.placeholder}
+                  value={editDynamicFormData[field.key] || ""}
+                  onChange={(e) =>
+                    setEditDynamicFormData((prev) => ({ ...prev, [field.key]: e.target.value }))
+                  }
+                  className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                  required={field.isRequired}
+                  disabled={isSubmitting}
+                />
+              </div>
             ))}
-          </div>
-          {story.ratingCount > 0 && (
-            <span className="text-sm text-[#545454]">
-              {averageRating.toFixed(1)} stars ({story.ratingCount}
-              {story.ratingCount === 1 ? " rating" : " ratings"})
-            </span>
-          )}
+
+            {/* Tags Selection */}
+            <div>
+              <label className="block text-sm font-medium text-[#525252] mb-2">Select Tags *</label>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {availableTags === undefined && (
+                  <span className="text-sm text-gray-500">Loading tags...</span>
+                )}
+                {availableTags?.map((tag) => (
+                  <button
+                    key={tag._id}
+                    type="button"
+                    onClick={() => toggleTag(tag._id)}
+                    disabled={isSubmitting}
+                    className={`px-3 py-1 rounded-md text-sm transition-colors border ${
+                      selectedTagIds.includes(tag._id)
+                        ? "bg-[#F4F0ED] text-[#292929] border-[#D5D3D0]"
+                        : "bg-white text-[#545454] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"
+                    }`}>
+                    {tag.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {editError && (
+              <div className="p-3 bg-red-100 text-red-700 rounded-md text-sm">{editError}</div>
+            )}
+          </form>
         </div>
-        <p className="text-sm text-[#545454]">Your rating helps others discover great apps.</p>
-      </div>
+      )}
+
+      {/* Rating Section */}
+      {!isEditing && (
+        <div className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC]">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4">
+            <h2 className="text-lg font-medium text-[#525252]">
+              {hasRated ? "Your Rating" : "Rate this app"}
+            </h2>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((value) => (
+                <button
+                  key={value}
+                  onClick={() => handleRating(value)}
+                  onMouseEnter={() => !hasRated && setHoveredRating(value)} // Only hover if not rated
+                  onMouseLeave={() => setHoveredRating(0)}
+                  disabled={!isClerkLoaded || (isSignedIn && hasRated)} // Disable if not loaded, or if signed in AND already rated
+                  className={`p-1 transition-colors disabled:cursor-not-allowed ${
+                    !isSignedIn && isClerkLoaded ? "opacity-50 cursor-help" : ""
+                  } ${
+                    hasRated
+                      ? value <= (currentUserRating || 0)
+                        ? "text-yellow-500"
+                        : "text-gray-300"
+                      : value <= (hoveredRating || 0)
+                        ? "text-yellow-400"
+                        : "text-gray-300 hover:text-yellow-400"
+                  }`}
+                  title={
+                    !isSignedIn && isClerkLoaded
+                      ? "Sign in to rate"
+                      : hasRated
+                        ? `You rated ${currentUserRating} star(s)`
+                        : `Rate ${value} stars`
+                  }>
+                  <Star className="w-5 h-5 fill-current" />
+                </button>
+              ))}
+            </div>
+            {story.ratingCount > 0 && (
+              <span className="text-sm text-[#545454]">
+                {averageRating.toFixed(1)} stars ({story.ratingCount}
+                {story.ratingCount === 1 ? " rating" : " ratings"})
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-[#545454]">Your rating helps others discover great apps.</p>
+        </div>
+      )}
 
       {/* Comments Section */}
-      <div id="comments" className="mt-8 scroll-mt-20">
-        <h2 className="text-xl font-medium text-[#525252] mb-4">
-          {comments?.length ?? 0} {(comments?.length ?? 0) === 1 ? "Comment" : "Comments"}
-        </h2>
-        <CommentForm onSubmit={handleCommentSubmit} />
-        <div className="mt-8 space-y-6 border-t border-[#F4F0ED] pt-6">
-          {comments === undefined && <div>Loading comments...</div>}
-          {comments?.map((commentData) => {
-            // Rename variable to avoid conflict
-            // Ensure commentData conforms to CommentType, though validation should happen in backend
-            const comment = commentData as CommentType;
-            return (
-              <React.Fragment key={comment._id}>
-                <Comment comment={comment} onReply={(parentId) => setReplyToId(parentId)} />
-                {replyToId === comment._id && (
-                  <div className="pl-8 pt-4">
-                    <CommentForm onSubmit={handleCommentSubmit} parentId={comment._id} />
-                  </div>
-                )}
-              </React.Fragment>
-            );
-          })}
-          {comments && comments.length === 0 && (
-            <div className="text-[#545454]">No comments yet. Be the first!</div>
-          )}
+      {!isEditing && (
+        <div id="comments" className="mt-8 scroll-mt-20">
+          <h2 className="text-xl font-medium text-[#525252] mb-4">
+            {comments?.length ?? 0} {(comments?.length ?? 0) === 1 ? "Comment" : "Comments"}
+          </h2>
+          <CommentForm onSubmit={handleCommentSubmit} />
+          <div className="mt-8 space-y-6 border-t border-[#F4F0ED] pt-6">
+            {comments === undefined && <div>Loading comments...</div>}
+            {comments?.map((commentData) => {
+              // Rename variable to avoid conflict
+              // Ensure commentData conforms to CommentType, though validation should happen in backend
+              const comment = commentData as CommentType;
+              return (
+                <React.Fragment key={comment._id}>
+                  <Comment comment={comment} onReply={(parentId) => setReplyToId(parentId)} />
+                  {replyToId === comment._id && (
+                    <div className="pl-8 pt-4">
+                      <CommentForm onSubmit={handleCommentSubmit} parentId={comment._id} />
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
+            {comments && comments.length === 0 && (
+              <div className="text-[#545454]">No comments yet. Be the first!</div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Related Apps Section */}
-      {relatedStories && relatedStories.length > 0 && (
+      {!isEditing && relatedStories && relatedStories.length > 0 && (
         <div className="mt-8">
           <h2 className="text-xl font-medium text-[#525252] mb-6">Related Apps</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -621,31 +949,58 @@ export function StoryDetail({ story }: StoryDetailProps) {
         </div>
       )}
 
-      {/* Flag/Report Section */}
-      <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between text-sm text-gray-600">
-        <div className="flex items-center gap-3">
-          <Flag className="w-4 h-4 text-gray-500 flex-shrink-0" />
-          <span className="font-medium text-gray-700">Seen something inappropriate?</span>
-        </div>
-        {isClerkLoaded && isSignedIn ? (
-          <Button variant="outline" size="sm" className="text-xs" onClick={handleOpenReportModal}>
-            Report this Submission
-          </Button>
-        ) : isClerkLoaded && !isSignedIn ? (
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs"
-            onClick={() => navigate("/sign-in")}
-            title="Sign in to report content">
-            Sign in to Report
-          </Button>
-        ) : (
-          <Button variant="outline" size="sm" className="text-xs" disabled>
-            Loading...
-          </Button>
+      {/* Edit Submission Section */}
+      {!isEditing &&
+        isClerkLoaded &&
+        isSignedIn &&
+        currentUser &&
+        story.userId === currentUser._id && (
+          <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200 flex items-center justify-between text-sm text-blue-600">
+            <div className="flex items-center gap-3">
+              <Edit3 className="w-4 h-4 text-blue-500 flex-shrink-0" />
+              <span className="font-medium text-blue-700">Want to update your submission?</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs border-blue-200 text-blue-600 hover:bg-blue-100"
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set("edit", "true");
+                window.location.href = url.toString();
+              }}>
+              Edit Submission
+            </Button>
+          </div>
         )}
-      </div>
+
+      {/* Flag/Report Section */}
+      {!isEditing && (
+        <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between text-sm text-gray-600">
+          <div className="flex items-center gap-3">
+            <Flag className="w-4 h-4 text-gray-500 flex-shrink-0" />
+            <span className="font-medium text-gray-700">Seen something inappropriate?</span>
+          </div>
+          {isClerkLoaded && isSignedIn ? (
+            <Button variant="outline" size="sm" className="text-xs" onClick={handleOpenReportModal}>
+              Report this Submission
+            </Button>
+          ) : isClerkLoaded && !isSignedIn ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => navigate("/sign-in")}
+              title="Sign in to report content">
+              Sign in to Report
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" className="text-xs" disabled>
+              Loading...
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Report Modal */}
       <Dialog open={isReportModalOpen} onOpenChange={handleReportModalOpenChange}>

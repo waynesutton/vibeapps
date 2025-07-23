@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
 import { Github, Plus, X } from "lucide-react";
+import { SignUpButton } from "@clerk/clerk-react";
 
 interface Tag extends Doc<"tags"> {
   // Inherits _id, _creationTime, name, showInHeader, isHidden?, backgroundColor?, textColor?
@@ -154,7 +155,15 @@ export function ResendForm() {
           <h2 className="text-2xl font-bold text-[#292929]">
             Convex & Resend Hackathon Submissions
           </h2>{" "}
-          <span className="ml-2 text-sm text-gray-600">What did you build?</span>
+          <span className="ml-2 text-sm text-red-600">
+            <SignUpButton mode="modal">
+              <button type="button" className="underline hover:no-underline">
+                Sign up
+              </button>
+            </SignUpButton>{" "}
+            to edit your submission
+          </span>{" "}
+          <p className="ml-2 text-md font-bold text-gray-600">What did you build?</p>
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-[#525252] mb-1">
               App Title *

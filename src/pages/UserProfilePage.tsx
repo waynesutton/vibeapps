@@ -1092,11 +1092,18 @@ export default function UserProfilePage() {
                   </p>
                 </div>
                 {isOwnProfile && (
-                  <button
-                    onClick={() => handleDeleteStory(story._id)}
-                    className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0">
-                    <Trash2 className="w-4 h-4" /> Delete
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to={`/s/${story.slug}?edit=true`}
+                      className="text-sm text-blue-500 hover:text-blue-700 hover:bg-blue-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0">
+                      <Edit3 className="w-4 h-4" /> Edit
+                    </Link>
+                    <button
+                      onClick={() => handleDeleteStory(story._id)}
+                      className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0">
+                      <Trash2 className="w-4 h-4" /> Delete
+                    </button>
+                  </div>
                 )}
               </li>
             ))}

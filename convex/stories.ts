@@ -940,6 +940,103 @@ export const deleteOwnStory = mutation({
   },
 });
 
+// Mutation to allow a user to update their own story
+export const updateOwnStory = mutation({
+  args: {
+    storyId: v.id("stories"),
+    title: v.optional(v.string()),
+    description: v.optional(v.string()), // tagline
+    longDescription: v.optional(v.string()),
+    submitterName: v.optional(v.string()),
+    url: v.optional(v.string()),
+    videoUrl: v.optional(v.string()),
+    email: v.optional(v.string()),
+    screenshotId: v.optional(v.id("_storage")),
+    tagIds: v.optional(v.array(v.id("tags"))),
+    newTagNames: v.optional(v.array(v.string())),
+    linkedinUrl: v.optional(v.string()),
+    twitterUrl: v.optional(v.string()),
+    githubUrl: v.optional(v.string()),
+    chefShowUrl: v.optional(v.string()),
+    chefAppUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthenticatedUserId(ctx);
+    const story = await ctx.db.get(args.storyId);
+
+    if (!story) {
+      throw new Error("Story not found.");
+    }
+
+    if (story.userId !== userId) {
+      throw new Error("User not authorized to edit this story. Only the owner can edit.");
+    }
+
+    // Handle new tags if provided
+    let finalTagIds = args.tagIds;
+    if (args.newTagNames && args.newTagNames.length > 0) {
+      const newCreatedTagIds = await ctx.runMutation(internal.tags.ensureTags, {
+        tagNames: args.newTagNames,
+      });
+      finalTagIds = finalTagIds
+        ? [...new Set([...finalTagIds, ...newCreatedTagIds])]
+        : [...newCreatedTagIds];
+    }
+
+    // Validate tags if provided
+    if (finalTagIds && finalTagIds.length > 0) {
+      for (const tagId of finalTagIds) {
+        const tag = await ctx.db.get(tagId);
+        if (!tag) {
+          console.warn(`Tag with ID ${tagId} not found during update.`);
+          finalTagIds = finalTagIds.filter((id) => id !== tagId);
+        }
+      }
+
+      if (finalTagIds.length === 0) {
+        throw new Error("At least one valid tag is required.");
+      }
+    }
+
+    // Build update object with only provided fields
+    const updateData: Partial<Doc<"stories">> = {};
+
+    if (args.title !== undefined) updateData.title = args.title;
+    if (args.description !== undefined) updateData.description = args.description;
+    if (args.longDescription !== undefined) updateData.longDescription = args.longDescription;
+    if (args.submitterName !== undefined) updateData.submitterName = args.submitterName;
+    if (args.url !== undefined) updateData.url = args.url;
+    if (args.videoUrl !== undefined) updateData.videoUrl = args.videoUrl;
+    if (args.email !== undefined) updateData.email = args.email;
+    if (args.screenshotId !== undefined) updateData.screenshotId = args.screenshotId;
+    if (finalTagIds !== undefined) updateData.tagIds = finalTagIds;
+    if (args.linkedinUrl !== undefined) updateData.linkedinUrl = args.linkedinUrl;
+    if (args.twitterUrl !== undefined) updateData.twitterUrl = args.twitterUrl;
+    if (args.githubUrl !== undefined) updateData.githubUrl = args.githubUrl;
+    if (args.chefShowUrl !== undefined) updateData.chefShowUrl = args.chefShowUrl;
+    if (args.chefAppUrl !== undefined) updateData.chefAppUrl = args.chefAppUrl;
+
+    // Update slug if title changed
+    if (args.title && args.title !== story.title) {
+      const newSlug = generateSlug(args.title);
+      const existingWithSlug = await ctx.db
+        .query("stories")
+        .withIndex("by_slug", (q) => q.eq("slug", newSlug))
+        .filter((q) => q.neq(q.field("_id"), args.storyId))
+        .first();
+
+      if (existingWithSlug) {
+        throw new Error(`Slug "${newSlug}" already exists for another story.`);
+      }
+
+      updateData.slug = newSlug;
+    }
+
+    await ctx.db.patch(args.storyId, updateData);
+    return { success: true, slug: updateData.slug || story.slug };
+  },
+});
+
 // Updated query to list ALL stories for admin, sorting manually for pinning
 export const listAllStoriesAdmin = query({
   args: {
