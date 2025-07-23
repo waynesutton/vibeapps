@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ChevronUp,
   MessageSquare,
@@ -32,7 +32,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button"; // For modal buttons
 import { toast } from "sonner";
-import { slugify } from "../lib/utils"; // Import slugify
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
 
 // Removed MOCK_COMMENTS
@@ -128,6 +127,14 @@ export function StoryDetail({ story }: StoryDetailProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [editError, setEditError] = React.useState<string | null>(null);
 
+  // Screenshot management state
+  const [currentScreenshot, setCurrentScreenshot] = React.useState<string | null>(
+    story.screenshotUrl || null
+  );
+  const [newScreenshotFile, setNewScreenshotFile] = React.useState<File | null>(null);
+  const [removeScreenshot, setRemoveScreenshot] = React.useState(false);
+  const [screenshotPreview, setScreenshotPreview] = React.useState<string | null>(null);
+
   // Fetch APPROVED comments using Convex query
   const comments = useQuery(api.comments.listApprovedByStory, { storyId: story._id });
   const currentUserRating = useQuery(
@@ -148,6 +155,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
   const addComment = useMutation(api.comments.add);
   const createReportMutation = useMutation(api.reports.createReport);
   const updateOwnStoryMutation = useMutation(api.stories.updateOwnStory);
+  const generateUploadUrl = useMutation(api.stories.generateUploadUrl);
 
   // Additional queries for editing
   const availableTags = useQuery(api.tags.listHeader);
@@ -205,6 +213,12 @@ export function StoryDetail({ story }: StoryDetailProps) {
       setEditDynamicFormData(dynamicData);
 
       setSelectedTagIds(story.tagIds || []);
+
+      // Reset screenshot state
+      setCurrentScreenshot(story.screenshotUrl || null);
+      setNewScreenshotFile(null);
+      setRemoveScreenshot(false);
+      setScreenshotPreview(null);
     } else if (isEditMode && !canEdit) {
       // Remove edit parameter if user can't edit
       const newSearchParams = new URLSearchParams(searchParams);
@@ -337,6 +351,15 @@ export function StoryDetail({ story }: StoryDetailProps) {
     newSearchParams.delete("edit");
     setSearchParams(newSearchParams);
     setEditError(null);
+
+    // Reset screenshot state and cleanup preview URL
+    if (screenshotPreview) {
+      URL.revokeObjectURL(screenshotPreview);
+    }
+    setCurrentScreenshot(story.screenshotUrl || null);
+    setNewScreenshotFile(null);
+    setRemoveScreenshot(false);
+    setScreenshotPreview(null);
   };
 
   const toggleTag = (tagId: Id<"tags">) => {
@@ -344,6 +367,52 @@ export function StoryDetail({ story }: StoryDetailProps) {
       prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
     );
   };
+
+  // Screenshot handling functions
+  const handleScreenshotFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setNewScreenshotFile(file);
+      setRemoveScreenshot(false);
+
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setScreenshotPreview(previewUrl);
+    }
+  };
+
+  const handleRemoveScreenshot = () => {
+    setRemoveScreenshot(true);
+    setNewScreenshotFile(null);
+    setScreenshotPreview(null);
+
+    // Clear file input
+    const fileInput = document.getElementById("edit-screenshot") as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = "";
+    }
+  };
+
+  const handleKeepCurrentScreenshot = () => {
+    setRemoveScreenshot(false);
+    setNewScreenshotFile(null);
+    setScreenshotPreview(null);
+
+    // Clear file input
+    const fileInput = document.getElementById("edit-screenshot") as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = "";
+    }
+  };
+
+  // Cleanup preview URL on component unmount or when preview changes
+  React.useEffect(() => {
+    return () => {
+      if (screenshotPreview) {
+        URL.revokeObjectURL(screenshotPreview);
+      }
+    };
+  }, [screenshotPreview]);
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -359,6 +428,29 @@ export function StoryDetail({ story }: StoryDetailProps) {
     setEditError(null);
 
     try {
+      let screenshotStorageId: Id<"_storage"> | undefined = undefined;
+
+      // Handle screenshot upload if a new file is selected
+      if (newScreenshotFile) {
+        const uploadUrl = await generateUploadUrl();
+        const result = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": newScreenshotFile.type },
+          body: newScreenshotFile,
+        });
+        const { storageId } = await result.json();
+        if (!storageId) {
+          throw new Error("Failed to get storage ID after upload.");
+        }
+        screenshotStorageId = storageId;
+      } else if (removeScreenshot) {
+        // If user wants to remove screenshot, pass undefined
+        screenshotStorageId = undefined;
+      } else {
+        // Keep current screenshot by not passing screenshotId parameter
+        // (the mutation will only update fields that are provided)
+      }
+
       const result = await updateOwnStoryMutation({
         storyId: story._id,
         title: editFormData.title,
@@ -375,6 +467,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
         githubUrl: editDynamicFormData.githubUrl || undefined,
         chefShowUrl: editDynamicFormData.chefShowUrl || undefined,
         chefAppUrl: editDynamicFormData.chefAppUrl || undefined,
+        ...(newScreenshotFile || removeScreenshot ? { screenshotId: screenshotStorageId } : {}),
       });
 
       toast.success("Submission updated successfully!");
@@ -409,17 +502,22 @@ export function StoryDetail({ story }: StoryDetailProps) {
       newMeta.content = story.description;
       document.head.appendChild(newMeta);
     }
-  }, [story.title, story.description]);
+
+    // Update og:image meta tag
+    const ogImage = document.querySelector('meta[property="og:image"]');
+    const imageUrl = story.screenshotUrl || "/vibe-apps-open-graphi-image.png";
+    if (ogImage) {
+      ogImage.setAttribute("content", imageUrl);
+    } else {
+      // Create og:image meta tag if it doesn't exist
+      const newOgImage = document.createElement("meta");
+      newOgImage.setAttribute("property", "og:image");
+      newOgImage.setAttribute("content", imageUrl);
+      document.head.appendChild(newOgImage);
+    }
+  }, [story.title, story.description, story.screenshotUrl]);
 
   const averageRating = story.ratingCount > 0 ? story.ratingSum / story.ratingCount : 0;
-  // Display user's own rating if they have rated, otherwise the average or hover state
-  const displayRatingForStars = hasRated ? currentUserRating : hoveredRating;
-
-  // Generate slug from title (simple example)
-  const storySlug = story.title
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^\w-]+/g, "");
   // The direct GitHub link is removed as per new requirement for modal
   // const reportUrl = `https://github.com/waynesutton/vibeapps/issues/new?q=is%3Aissue+state%3Aopen+Flagged&labels=flagged&title=Flagged+Content%3A+${encodeURIComponent(story.title)}&body=Reporting+issue+for+story%3A+%0A-+Title%3A+${encodeURIComponent(story.title)}%0A-+Slug%3A+${storySlug}%0A-+URL%3A+${encodeURIComponent(story.url)}%0A-+Reason%3A+`;
 
@@ -744,6 +842,89 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
                 disabled={isSubmitting}
               />
+            </div>
+
+            {/* Screenshot Upload Section */}
+            <div>
+              <label className="block text-sm font-medium text-[#525252] mb-2">
+                Screenshot (Optional)
+              </label>
+
+              {/* Current Screenshot Display */}
+              {currentScreenshot && !removeScreenshot && !screenshotPreview && (
+                <div className="mb-3">
+                  <div className="text-sm text-[#545454] mb-2">Current screenshot:</div>
+                  <div className="relative inline-block">
+                    <img
+                      src={currentScreenshot}
+                      alt="Current screenshot"
+                      className="max-w-xs max-h-32 rounded-md border border-[#D8E1EC] object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveScreenshot}
+                      disabled={isSubmitting}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 disabled:opacity-50"
+                      title="Remove screenshot">
+                      ×
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* New Screenshot Preview */}
+              {screenshotPreview && (
+                <div className="mb-3">
+                  <div className="text-sm text-[#545454] mb-2">New screenshot:</div>
+                  <div className="relative inline-block">
+                    <img
+                      src={screenshotPreview}
+                      alt="New screenshot preview"
+                      className="max-w-xs max-h-32 rounded-md border border-[#D8E1EC] object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleKeepCurrentScreenshot}
+                      disabled={isSubmitting}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 disabled:opacity-50"
+                      title="Cancel new screenshot">
+                      ×
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Removed Screenshot Message */}
+              {removeScreenshot && (
+                <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-md">
+                  <div className="text-sm text-red-700">
+                    Screenshot will be removed when you save.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleKeepCurrentScreenshot}
+                    disabled={isSubmitting}
+                    className="text-sm text-red-600 hover:text-red-800 underline mt-1">
+                    Keep current screenshot
+                  </button>
+                </div>
+              )}
+
+              {/* File Upload Input */}
+              <input
+                type="file"
+                id="edit-screenshot"
+                accept="image/*"
+                onChange={handleScreenshotFileChange}
+                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#F4F0ED] file:text-[#525252] hover:file:bg-[#e5e1de]"
+                disabled={isSubmitting}
+              />
+
+              {newScreenshotFile && (
+                <div className="text-sm text-[#545454] mt-1">
+                  Selected: {newScreenshotFile.name}
+                </div>
+              )}
             </div>
 
             <div>

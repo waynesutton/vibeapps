@@ -161,7 +161,7 @@ export function ResendForm() {
                 Sign up
               </button>
             </SignUpButton>{" "}
-            to edit your submission
+            to edit your submission after it's been submitted.
           </span>{" "}
           <p className="ml-2 text-md font-bold text-gray-600">What did you build?</p>
           <div>
