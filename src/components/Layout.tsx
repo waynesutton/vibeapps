@@ -443,34 +443,20 @@ export function Layout({ children }: { children?: ReactNode }) {
                       All
                     </button>
 
-                    {/* Tag buttons */}
+                    {/* Tag links */}
                     {headerTags
                       .filter((tag) => !tag.isHidden && tag.showInHeader) // Ensure only relevant tags are mapped
                       .map((tag) => (
-                        <button
+                        <Link
                           key={tag._id}
-                          onClick={() => {
-                            setSelectedTagId(selectedTagId === tag._id ? undefined : tag._id);
-                            if (location.pathname !== "/") navigate("/");
-                          }}
-                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors  focus:outline-none
-                                  ${selectedTagId === tag._id ? "ring-1 ring-offset-1 ring-gray-400" : ""}`}
+                          to={`/tag/${tag.slug}`}
+                          className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-colors hover:opacity-80 focus:outline-none"
                           style={{
-                            backgroundColor:
-                              tag.backgroundColor ||
-                              (selectedTagId === tag._id ? "#D1FAE5" : "#F9FAFB"), // Tailwind green-100 or gray-50
-                            color:
-                              tag.textColor || (selectedTagId === tag._id ? "#065F46" : "#374151"), // Tailwind green-800 or gray-700
-                            borderColor:
-                              selectedTagId === tag._id
-                                ? tag.backgroundColor
-                                  ? tag.textColor || "#047857"
-                                  : "#6EE7B7" // More contrast for selected border with custom BG
-                                : tag.backgroundColor
-                                  ? "transparent"
-                                  : "#D1D5DB", // Tailwind gray-300
+                            backgroundColor: tag.backgroundColor || "#F9FAFB", // Default to gray-50
+                            color: tag.textColor || "#374151", // Default to gray-700
+                            border: `1px solid ${tag.backgroundColor ? "transparent" : "#D1D5DB"}`, // Tailwind gray-300
                           }}
-                          title={tag.name}>
+                          title={`View all apps tagged with ${tag.name}`}>
                           {/* Show emoji or icon if present */}
                           {tag.emoji ? (
                             <span className="mr-1 align-middle text-base">{tag.emoji}</span>
@@ -483,7 +469,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                             />
                           ) : null}
                           {tag.name}
-                        </button>
+                        </Link>
                       ))}
                   </div>
                 </div>

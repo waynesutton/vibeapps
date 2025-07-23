@@ -706,13 +706,22 @@ export function StoryDetail({ story }: StoryDetailProps) {
                         tag.name !== "resendhackathon" && (
                           <Link
                             key={tag._id}
-                            to={`/?tag=${tag._id}`}
-                            className="px-2 py-0.5 rounded text-xs font-medium transition-opacity hover:opacity-80"
+                            to={`/tag/${tag.slug}`}
+                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition-opacity hover:opacity-80"
                             style={{
                               backgroundColor: tag.backgroundColor || "#F4F0ED",
                               color: tag.textColor || "#525252",
                               border: tag.backgroundColor ? "none" : `1px solid #D5D3D0`,
-                            }}>
+                            }}
+                            title={`View all apps tagged with ${tag.name}`}>
+                            {tag.emoji && <span className="mr-1">{tag.emoji}</span>}
+                            {tag.iconUrl && !tag.emoji && (
+                              <img
+                                src={tag.iconUrl}
+                                alt=""
+                                className="w-3 h-3 mr-1 rounded-sm object-cover"
+                              />
+                            )}
                             {tag.name}
                           </Link>
                         )

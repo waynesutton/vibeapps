@@ -52,6 +52,36 @@ export const listHeader = query({
   },
 });
 
+// Query to get a single tag by slug - Publicly accessible
+export const getBySlug = query({
+  args: { slug: v.string() },
+  returns: v.union(
+    v.object({
+      _id: v.id("tags"),
+      _creationTime: v.number(),
+      name: v.string(),
+      slug: v.optional(v.string()),
+      showInHeader: v.boolean(),
+      isHidden: v.optional(v.boolean()),
+      backgroundColor: v.optional(v.string()),
+      textColor: v.optional(v.string()),
+      emoji: v.optional(v.string()),
+      iconUrl: v.optional(v.string()),
+      order: v.optional(v.number()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args): Promise<Doc<"tags"> | null> => {
+    const tag = await ctx.db
+      .query("tags")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .filter((q) => q.neq(q.field("isHidden"), true)) // Exclude hidden tags
+      .first();
+
+    return tag || null;
+  },
+});
+
 // Query to list ALL tags including hidden ones (for admin purposes) - Requires Auth
 export const listAllAdmin = query({
   args: {},

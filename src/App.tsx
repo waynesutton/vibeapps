@@ -24,6 +24,7 @@ import UserProfilePage from "./pages/UserProfilePage";
 import SetUsernamePage from "./pages/SetUsernamePage";
 import NavTestPage from "./pages/NavTestPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { TagPage } from "./pages/TagPage";
 
 function HomePage() {
   const { viewMode, selectedTagId, sortPeriod } = useLayoutContext();
@@ -125,6 +126,7 @@ function App() {
           <Route path="/admin/forms/:formId" element={<FormBuilder />} />
           <Route path="/admin/forms/:formId/results" element={<FormResults />} />
           <Route path="/s/:storySlug" element={<StoryPage />} />
+          <Route path="/tag/:tagSlug" element={<TagPage />} />
           <Route path="/f/:formSlug" element={<PublicFormPage />} />
           <Route path="/results/:slug" element={<PublicResultsViewer />} />
           <Route path="/search" element={<SearchPage />} />

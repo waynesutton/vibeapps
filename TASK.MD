@@ -34,6 +34,7 @@ Brief description of the feature and its purpose.
 - [x] fix name on story detailed page
 - [x] hide resendhackathon on story detailed page
 - [x] hide extra sign in to commet
+- [x] add new tags url slugs for pages
 
 ## In Progress Tasks
 

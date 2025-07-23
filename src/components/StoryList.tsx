@@ -223,6 +223,34 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                     </p>
                   )}
 
+                  {/* Tags */}
+                  {story.tags && story.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {story.tags.map((tag) => (
+                        <Link
+                          key={tag._id}
+                          to={`/tag/${tag.slug}`}
+                          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition-colors hover:opacity-80"
+                          style={{
+                            backgroundColor: tag.backgroundColor || "#F4F0ED",
+                            color: tag.textColor || "#525252",
+                            border: `1px solid ${tag.backgroundColor ? "transparent" : "#D5D3D0"}`,
+                          }}
+                          title={`View all apps tagged with ${tag.name}`}>
+                          {tag.emoji && <span className="mr-1">{tag.emoji}</span>}
+                          {tag.iconUrl && !tag.emoji && (
+                            <img
+                              src={tag.iconUrl}
+                              alt=""
+                              className="w-3 h-3 mr-1 rounded-sm object-cover"
+                            />
+                          )}
+                          {tag.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2 text-sm text-[#545454] flex-wrap">
                     {story.authorUsername ? (
                       <Link
