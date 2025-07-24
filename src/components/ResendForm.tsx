@@ -337,15 +337,17 @@ export function ResendForm() {
               {availableTags === undefined && (
                 <span className="text-sm text-gray-500">Loading tags...</span>
               )}
-              {availableTags?.map((tag: Tag) => (
-                <button
-                  key={tag._id}
-                  type="button"
-                  onClick={() => toggleTag(tag._id)}
-                  className={`px-3 py-1 rounded-md text-sm transition-colors border ${selectedTagIds.includes(tag._id) ? "bg-[#F4F0ED] text-[#292929] border-[#D5D3D0]" : "bg-white text-[#545454] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"}`}>
-                  {tag.name}
-                </button>
-              ))}
+              {availableTags
+                ?.filter((tag: Tag) => tag.name !== "resendhackathon")
+                .map((tag: Tag) => (
+                  <button
+                    key={tag._id}
+                    type="button"
+                    onClick={() => toggleTag(tag._id)}
+                    className={`px-3 py-1 rounded-md text-sm transition-colors border ${selectedTagIds.includes(tag._id) ? "bg-[#F4F0ED] text-[#292929] border-[#D5D3D0]" : "bg-white text-[#545454] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"}`}>
+                    {tag.name}
+                  </button>
+                ))}
             </div>
             <label className="block text-sm font-medium text-[#525252] mb-2">
               Add New Tags (optional)

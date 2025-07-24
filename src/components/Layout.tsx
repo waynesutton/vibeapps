@@ -359,7 +359,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                       className="appearance-none cursor-pointer pl-3 pr-8 py-2 bg-white border border-[#D8E1EC] rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] hover:border-[#A8A29E]">
                       <option value="">All Categories</option>
                       {headerTags
-                        ?.filter((tag) => !tag.isHidden) // Still filter hidden tags
+                        ?.filter((tag) => !tag.isHidden && tag.name !== "resendhackathon") // Filter hidden tags and resendhackathon
                         .map((tag) => (
                           <option key={tag._id} value={tag._id}>
                             {tag.name}
@@ -445,7 +445,9 @@ export function Layout({ children }: { children?: ReactNode }) {
 
                     {/* Tag links */}
                     {headerTags
-                      .filter((tag) => !tag.isHidden && tag.showInHeader) // Ensure only relevant tags are mapped
+                      .filter(
+                        (tag) => !tag.isHidden && tag.showInHeader && tag.name !== "resendhackathon"
+                      ) // Ensure only relevant tags are mapped
                       .map((tag) => (
                         <Link
                           key={tag._id}
