@@ -238,7 +238,7 @@ export function ResendForm() {
           </div>
           <div>
             <label htmlFor="videoUrl" className="block text-sm font-medium text-[#525252] mb-1">
-              Video Demo (Optional)
+              Video Demo - 3-5 minutes recommended (Optional)
             </label>
             <div className="text-sm text-[#545454] mb-2">
               Share a video demo of your app (YouTube, Vimeo, etc.)
@@ -290,7 +290,7 @@ export function ResendForm() {
           </div>
           <div>
             <label htmlFor="image" className="block text-sm font-medium text-[#525252] mb-1">
-              Upload Screenshot (Optional)
+              Upload Screenshot (Recommended but Optional)
             </label>
             <input
               type="file"
