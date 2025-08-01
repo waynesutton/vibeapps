@@ -43,8 +43,13 @@ interface StoryDetailProps {
 // Copied and adapted BookmarkButton from StoryList.tsx
 const BookmarkButton = ({ storyId }: { storyId: Id<"stories"> }) => {
   const { isSignedIn, isLoaded: isClerkLoaded } = useAuth(); // Ensure useAuth is available
-  const isBookmarked = useQuery(api.bookmarks.isStoryBookmarked, isSignedIn ? { storyId } : "skip");
-  const addOrRemoveBookmarkMutation = useMutation(api.bookmarks.addOrRemoveBookmark);
+  const isBookmarked = useQuery(
+    api.bookmarks.isStoryBookmarked,
+    isSignedIn ? { storyId } : "skip",
+  );
+  const addOrRemoveBookmarkMutation = useMutation(
+    api.bookmarks.addOrRemoveBookmark,
+  );
 
   const handleBookmarkClick = async () => {
     if (!isClerkLoaded) return;
@@ -70,7 +75,8 @@ const BookmarkButton = ({ storyId }: { storyId: Id<"stories"> }) => {
       <button
         className="flex items-center gap-1 text-[#787672] opacity-50 cursor-not-allowed"
         disabled
-        title="Loading...">
+        title="Loading..."
+      >
         <Bookmark className="w-4 h-4" />
       </button>
     );
@@ -83,7 +89,8 @@ const BookmarkButton = ({ storyId }: { storyId: Id<"stories"> }) => {
         onClick={() => {
           toast.info("Please sign in to bookmark stories.");
         }}
-        title="Sign in to bookmark">
+        title="Sign in to bookmark"
+      >
         <Bookmark className="w-4 h-4" />
       </button>
     );
@@ -93,7 +100,8 @@ const BookmarkButton = ({ storyId }: { storyId: Id<"stories"> }) => {
     <button
       onClick={handleBookmarkClick}
       className="flex items-center gap-1 text-[#787672] hover:text-[#525252]"
-      title={isBookmarked ? "Remove bookmark" : "Bookmark story"}>
+      title={isBookmarked ? "Remove bookmark" : "Bookmark story"}
+    >
       {isBookmarked ? (
         <BookmarkCheck className="w-4 h-4 text-black" />
       ) : (
@@ -121,25 +129,35 @@ export function StoryDetail({ story }: StoryDetailProps) {
     videoUrl: story.videoUrl || "",
     email: story.email || "",
   });
-  const [editDynamicFormData, setEditDynamicFormData] = React.useState<Record<string, string>>({});
-  const [selectedTagIds, setSelectedTagIds] = React.useState<Id<"tags">[]>(story.tagIds || []);
+  const [editDynamicFormData, setEditDynamicFormData] = React.useState<
+    Record<string, string>
+  >({});
+  const [selectedTagIds, setSelectedTagIds] = React.useState<Id<"tags">[]>(
+    story.tagIds || [],
+  );
   const [newTagNames, setNewTagNames] = React.useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [editError, setEditError] = React.useState<string | null>(null);
 
   // Screenshot management state
-  const [currentScreenshot, setCurrentScreenshot] = React.useState<string | null>(
-    story.screenshotUrl || null
+  const [currentScreenshot, setCurrentScreenshot] = React.useState<
+    string | null
+  >(story.screenshotUrl || null);
+  const [newScreenshotFile, setNewScreenshotFile] = React.useState<File | null>(
+    null,
   );
-  const [newScreenshotFile, setNewScreenshotFile] = React.useState<File | null>(null);
   const [removeScreenshot, setRemoveScreenshot] = React.useState(false);
-  const [screenshotPreview, setScreenshotPreview] = React.useState<string | null>(null);
+  const [screenshotPreview, setScreenshotPreview] = React.useState<
+    string | null
+  >(null);
 
   // Fetch APPROVED comments using Convex query
-  const comments = useQuery(api.comments.listApprovedByStory, { storyId: story._id });
+  const comments = useQuery(api.comments.listApprovedByStory, {
+    storyId: story._id,
+  });
   const currentUserRating = useQuery(
     api.stories.getUserRatingForStory,
-    isSignedIn ? { storyId: story._id } : "skip" // Only run if signed in
+    isSignedIn ? { storyId: story._id } : "skip", // Only run if signed in
   );
 
   const [replyToId, setReplyToId] = React.useState<Id<"comments"> | null>(null);
@@ -147,7 +165,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
   // Rating state - keep local state for UI feedback, but rely on Convex for source of truth
   const [hoveredRating, setHoveredRating] = React.useState<number>(0);
 
-  const hasRated = currentUserRating !== null && currentUserRating !== undefined;
+  const hasRated =
+    currentUserRating !== null && currentUserRating !== undefined;
 
   // Convex mutations
   const voteStory = useMutation(api.stories.voteStory);
@@ -163,7 +182,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
   const [isReportModalOpen, setIsReportModalOpen] = React.useState(false);
   const [reportReason, setReportReason] = React.useState("");
   const [isReporting, setIsReporting] = React.useState(false);
-  const [reportModalError, setReportModalError] = React.useState<string | null>(null);
+  const [reportModalError, setReportModalError] = React.useState<string | null>(
+    null,
+  );
 
   // Auth required dialog state
   const [showAuthDialog, setShowAuthDialog] = React.useState(false);
@@ -178,18 +199,25 @@ export function StoryDetail({ story }: StoryDetailProps) {
           tagIds: story.tags.map((tag: Doc<"tags">) => tag._id),
           limit: 3, // Already limits to 3 max from backend
         }
-      : "skip"
+      : "skip",
   );
 
   // Fetch enabled form fields for dynamic link display
   const enabledFormFields = useQuery(api.storyFormFields.listEnabled);
 
   // Get current user's Convex data to check ownership
-  const currentUser = useQuery(api.users.getMyUserDocument, isSignedIn && user ? {} : "skip");
+  const currentUser = useQuery(
+    api.users.getMyUserDocument,
+    isSignedIn && user ? {} : "skip",
+  );
 
   // Handle edit mode initialization
   React.useEffect(() => {
-    const canEdit = isClerkLoaded && isSignedIn && currentUser && story.userId === currentUser._id;
+    const canEdit =
+      isClerkLoaded &&
+      isSignedIn &&
+      currentUser &&
+      story.userId === currentUser._id;
     if (isEditMode && canEdit) {
       setIsEditing(true);
       // Initialize form data with current story values
@@ -225,7 +253,15 @@ export function StoryDetail({ story }: StoryDetailProps) {
       newSearchParams.delete("edit");
       setSearchParams(newSearchParams);
     }
-  }, [isEditMode, isClerkLoaded, isSignedIn, currentUser, story, searchParams, setSearchParams]);
+  }, [
+    isEditMode,
+    isClerkLoaded,
+    isSignedIn,
+    currentUser,
+    story,
+    searchParams,
+    setSearchParams,
+  ]);
 
   const handleVote = () => {
     if (!isClerkLoaded) return; // Don't do anything if Clerk hasn't loaded
@@ -320,11 +356,15 @@ export function StoryDetail({ story }: StoryDetailProps) {
       console.error("Error reporting story:", error); // Keep full log for debugging
 
       // Attempt to extract the most user-friendly message from the Convex error
-      let userFriendlyMessage = "You have already reported this story, and it is pending review."; // Default fallback
+      let userFriendlyMessage =
+        "You have already reported this story, and it is pending review."; // Default fallback
       if (error.data) {
         if (typeof error.data === "string") {
           userFriendlyMessage = error.data; // If error.data is the string itself
-        } else if (error.data.message && typeof error.data.message === "string") {
+        } else if (
+          error.data.message &&
+          typeof error.data.message === "string"
+        ) {
           userFriendlyMessage = error.data.message; // Standard Convex error message path
         } else if (
           error.message &&
@@ -364,12 +404,16 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
   const toggleTag = (tagId: Id<"tags">) => {
     setSelectedTagIds((prev) =>
-      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
+      prev.includes(tagId)
+        ? prev.filter((id) => id !== tagId)
+        : [...prev, tagId],
     );
   };
 
   // Screenshot handling functions
-  const handleScreenshotFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleScreenshotFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
       setNewScreenshotFile(file);
@@ -387,7 +431,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
     setScreenshotPreview(null);
 
     // Clear file input
-    const fileInput = document.getElementById("edit-screenshot") as HTMLInputElement;
+    const fileInput = document.getElementById(
+      "edit-screenshot",
+    ) as HTMLInputElement;
     if (fileInput) {
       fileInput.value = "";
     }
@@ -399,7 +445,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
     setScreenshotPreview(null);
 
     // Clear file input
-    const fileInput = document.getElementById("edit-screenshot") as HTMLInputElement;
+    const fileInput = document.getElementById(
+      "edit-screenshot",
+    ) as HTMLInputElement;
     if (fileInput) {
       fileInput.value = "";
     }
@@ -467,7 +515,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
         githubUrl: editDynamicFormData.githubUrl || undefined,
         chefShowUrl: editDynamicFormData.chefShowUrl || undefined,
         chefAppUrl: editDynamicFormData.chefAppUrl || undefined,
-        ...(newScreenshotFile || removeScreenshot ? { screenshotId: screenshotStorageId } : {}),
+        ...(newScreenshotFile || removeScreenshot
+          ? { screenshotId: screenshotStorageId }
+          : {}),
       });
 
       toast.success("Submission updated successfully!");
@@ -483,7 +533,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
       }
     } catch (error: any) {
       console.error("Failed to update story:", error);
-      setEditError(error.data?.message || error.message || "Failed to update submission.");
+      setEditError(
+        error.data?.message || error.message || "Failed to update submission.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -517,13 +569,17 @@ export function StoryDetail({ story }: StoryDetailProps) {
     }
   }, [story.title, story.description, story.screenshotUrl]);
 
-  const averageRating = story.ratingCount > 0 ? story.ratingSum / story.ratingCount : 0;
+  const averageRating =
+    story.ratingCount > 0 ? story.ratingSum / story.ratingCount : 0;
   // The direct GitHub link is removed as per new requirement for modal
   // const reportUrl = `https://github.com/waynesutton/vibeapps/issues/new?q=is%3Aissue+state%3Aopen+Flagged&labels=flagged&title=Flagged+Content%3A+${encodeURIComponent(story.title)}&body=Reporting+issue+for+story%3A+%0A-+Title%3A+${encodeURIComponent(story.title)}%0A-+Slug%3A+${storySlug}%0A-+URL%3A+${encodeURIComponent(story.url)}%0A-+Reason%3A+`;
 
   return (
     <div className="max-w-7xl mx-auto pb-10">
-      <Link to="/" className="text-[#545454] hover:text-[#525252] inline-block mb-6 text-sm">
+      <Link
+        to="/"
+        className="text-[#545454] hover:text-[#525252] inline-block mb-6 text-sm"
+      >
         ← Back to Apps
       </Link>
 
@@ -539,10 +595,17 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   className={`text-[#292929] hover:bg-[#F4F0ED] p-1 rounded ${
                     !isSignedIn && isClerkLoaded ? "opacity-50 cursor-help" : ""
                   }`}
-                  title={!isSignedIn && isClerkLoaded ? "Sign in to vote" : "Vote for this app"}>
+                  title={
+                    !isSignedIn && isClerkLoaded
+                      ? "Sign in to vote"
+                      : "Vote for this app"
+                  }
+                >
                   <ChevronUp className="w-5 h-5" />
                 </button>
-                <span className="text-[#525252] font-medium text-sm">{story.votes}</span>
+                <span className="text-[#525252] font-medium text-sm">
+                  {story.votes}
+                </span>
               </div>
               <div className="flex-1 min-w-0">
                 <h1 className="text-xl lg:text-2xl font-bold  text-transform: capitalize text-[#000000] mb-2">
@@ -550,7 +613,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     href={story.url}
                     className="hover:text-[#555555] break-words"
                     target="_blank"
-                    rel="noopener noreferrer">
+                    rel="noopener noreferrer"
+                  >
                     {story.title}
                   </a>
                 </h1>
@@ -581,14 +645,26 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   {story.authorUsername ? (
                     <Link
                       to={`/${story.authorUsername}`}
-                      className="hover:text-[#525252] hover:underline">
-                      by {story.submitterName || story.authorName || story.authorUsername}
+                      className="hover:text-[#525252] hover:underline"
+                    >
+                      by{" "}
+                      {story.submitterName ||
+                        story.authorName ||
+                        story.authorUsername}
                     </Link>
                   ) : (
-                    <span>by {story.submitterName || story.authorName || "Anonymous User"}</span>
+                    <span>
+                      by{" "}
+                      {story.submitterName ||
+                        story.authorName ||
+                        "Anonymous User"}
+                    </span>
                   )}
                   <span>{formatDistanceToNow(story._creationTime)} ago</span>
-                  <Link to="#comments" className="flex items-center gap-1 hover:text-[#525252]">
+                  <Link
+                    to="#comments"
+                    className="flex items-center gap-1 hover:text-[#525252]"
+                  >
                     <MessageSquare className="w-4 h-4" />
                     {comments?.length ?? 0} Comments
                   </Link>
@@ -602,11 +678,15 @@ export function StoryDetail({ story }: StoryDetailProps) {
         {/* Project Links & Tags Sidebar */}
         {(story.url ||
           story.videoUrl ||
-          enabledFormFields?.some((field) => (story as any)[field.storyPropertyName]) ||
+          enabledFormFields?.some(
+            (field) => (story as any)[field.storyPropertyName],
+          ) ||
           story.tags?.length > 0) && (
           <div className="w-80 flex-shrink-0 hidden lg:block">
             <div className="bg-[#F9F9F9] rounded-lg p-4 border border-[#E5E5E5] sticky top-4">
-              <h2 className="text-base font-medium text-[#525252] mb-3">Project Links & Tags</h2>
+              <h2 className="text-base font-medium text-[#525252] mb-3">
+                Project Links & Tags
+              </h2>
               <div className="space-y-2">
                 {story.url && (
                   <div className="flex items-center gap-2">
@@ -616,7 +696,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
-                      title={story.url}>
+                      title={story.url}
+                    >
                       {story.url}
                     </a>
                   </div>
@@ -630,7 +711,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
-                      title={story.videoUrl}>
+                      title={story.videoUrl}
+                    >
                       Video Demo
                     </a>
                   </div>
@@ -644,29 +726,51 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   // Get appropriate icon based on field key or type
                   const getIcon = () => {
                     if (field.key.toLowerCase().includes("github")) {
-                      return <Github className="w-4 h-4 text-[#545454] flex-shrink-0" />;
+                      return (
+                        <Github className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                      );
                     } else if (field.key.toLowerCase().includes("linkedin")) {
-                      return <Linkedin className="w-4 h-4 text-[#545454] flex-shrink-0" />;
+                      return (
+                        <Linkedin className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                      );
                     } else if (
                       field.key.toLowerCase().includes("twitter") ||
                       field.key.toLowerCase().includes("x")
                     ) {
-                      return <Twitter className="w-4 h-4 text-[#545454] flex-shrink-0" />;
+                      return (
+                        <Twitter className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                      );
                     } else if (field.key.toLowerCase().includes("chef")) {
-                      return <span className="w-4 h-4 text-[#545454] flex-shrink-0">🍲</span>;
+                      return (
+                        <span className="w-4 h-4 text-[#545454] flex-shrink-0">
+                          🍲
+                        </span>
+                      );
                     } else if (field.fieldType === "url") {
-                      return <Link2 className="w-4 h-4 text-[#545454] flex-shrink-0" />;
+                      return (
+                        <Link2 className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                      );
                     } else if (field.fieldType === "email") {
-                      return <span className="w-4 h-4 text-[#545454] flex-shrink-0">✉️</span>;
+                      return (
+                        <span className="w-4 h-4 text-[#545454] flex-shrink-0">
+                          ✉️
+                        </span>
+                      );
                     } else {
-                      return <span className="w-4 h-4 text-[#545454] flex-shrink-0">🔗</span>;
+                      return (
+                        <span className="w-4 h-4 text-[#545454] flex-shrink-0">
+                          🔗
+                        </span>
+                      );
                     }
                   };
 
                   // Get display label
                   const getDisplayLabel = () => {
                     // Remove "(Optional)" and other common suffixes for cleaner display
-                    return field.label.replace(/\s*\(Optional\).*$/i, "").trim();
+                    return field.label
+                      .replace(/\s*\(Optional\).*$/i, "")
+                      .trim();
                   };
 
                   return (
@@ -678,18 +782,23 @@ export function StoryDetail({ story }: StoryDetailProps) {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
-                          title={fieldValue}>
+                          title={fieldValue}
+                        >
                           {getDisplayLabel()}
                         </a>
                       ) : field.fieldType === "email" ? (
                         <a
                           href={`mailto:${fieldValue}`}
                           className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
-                          title={fieldValue}>
+                          title={fieldValue}
+                        >
                           {getDisplayLabel()}
                         </a>
                       ) : (
-                        <span className="text-sm text-[#525252] truncate" title={fieldValue}>
+                        <span
+                          className="text-sm text-[#525252] truncate"
+                          title={fieldValue}
+                        >
                           {getDisplayLabel()}: {fieldValue}
                         </span>
                       )}
@@ -711,10 +820,15 @@ export function StoryDetail({ story }: StoryDetailProps) {
                             style={{
                               backgroundColor: tag.backgroundColor || "#F4F0ED",
                               color: tag.textColor || "#525252",
-                              border: tag.backgroundColor ? "none" : `1px solid #D5D3D0`,
+                              border: tag.backgroundColor
+                                ? "none"
+                                : `1px solid #D5D3D0`,
                             }}
-                            title={`View all apps tagged with ${tag.name}`}>
-                            {tag.emoji && <span className="mr-1">{tag.emoji}</span>}
+                            title={`View all apps tagged with ${tag.name}`}
+                          >
+                            {tag.emoji && (
+                              <span className="mr-1">{tag.emoji}</span>
+                            )}
                             {tag.iconUrl && !tag.emoji && (
                               <img
                                 src={tag.iconUrl}
@@ -724,7 +838,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                             )}
                             {tag.name}
                           </Link>
-                        )
+                        ),
                     )}
                   </div>
                 )}
@@ -739,7 +853,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
         <div className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC]">
           <form onSubmit={handleEditSubmit} className="space-y-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-medium text-[#525252]">Edit Submission</h2>
+              <h2 className="text-xl font-medium text-[#525252]">
+                Edit Submission
+              </h2>
               <div className="flex gap-2">
                 <Button
                   type="button"
@@ -747,7 +863,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   size="sm"
                   onClick={handleEditCancel}
                   disabled={isSubmitting}
-                  className="text-xs">
+                  className="text-xs"
+                >
                   Cancel
                 </Button>
                 <Button
@@ -759,14 +876,18 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     !editFormData.description ||
                     !editFormData.url
                   }
-                  className="text-xs bg-[#292929] text-white hover:bg-[#525252]">
+                  className="text-xs bg-[#292929] text-white hover:bg-[#525252]"
+                >
                   {isSubmitting ? "Saving..." : "Save Changes"}
                 </Button>
               </div>
             </div>
 
             <div>
-              <label htmlFor="edit-title" className="block text-sm font-medium text-[#525252] mb-1">
+              <label
+                htmlFor="edit-title"
+                className="block text-sm font-medium text-[#525252] mb-1"
+              >
                 App Title *
               </label>
               <input
@@ -774,7 +895,12 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 id="edit-title"
                 placeholder="Site name"
                 value={editFormData.title}
-                onChange={(e) => setEditFormData((prev) => ({ ...prev, title: e.target.value }))}
+                onChange={(e) =>
+                  setEditFormData((prev) => ({
+                    ...prev,
+                    title: e.target.value,
+                  }))
+                }
                 className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
                 required
                 disabled={isSubmitting}
@@ -784,7 +910,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
             <div>
               <label
                 htmlFor="edit-description"
-                className="block text-sm font-medium text-[#525252] mb-1">
+                className="block text-sm font-medium text-[#525252] mb-1"
+              >
                 App/Project Tagline *
               </label>
               <input
@@ -793,7 +920,10 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 placeholder="One sentence pitch or description"
                 value={editFormData.description}
                 onChange={(e) =>
-                  setEditFormData((prev) => ({ ...prev, description: e.target.value }))
+                  setEditFormData((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
                 }
                 className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
                 required
@@ -804,7 +934,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
             <div>
               <label
                 htmlFor="edit-longDescription"
-                className="block text-sm font-medium text-[#525252] mb-1">
+                className="block text-sm font-medium text-[#525252] mb-1"
+              >
                 Description (Optional)
               </label>
               <textarea
@@ -812,7 +943,10 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 placeholder="- What it does&#10;- Key Features&#10;- How you built it"
                 value={editFormData.longDescription}
                 onChange={(e) =>
-                  setEditFormData((prev) => ({ ...prev, longDescription: e.target.value }))
+                  setEditFormData((prev) => ({
+                    ...prev,
+                    longDescription: e.target.value,
+                  }))
                 }
                 rows={4}
                 className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
@@ -821,7 +955,10 @@ export function StoryDetail({ story }: StoryDetailProps) {
             </div>
 
             <div>
-              <label htmlFor="edit-url" className="block text-sm font-medium text-[#525252] mb-1">
+              <label
+                htmlFor="edit-url"
+                className="block text-sm font-medium text-[#525252] mb-1"
+              >
                 App Website Link *
               </label>
               <input
@@ -829,7 +966,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 id="edit-url"
                 placeholder="https://"
                 value={editFormData.url}
-                onChange={(e) => setEditFormData((prev) => ({ ...prev, url: e.target.value }))}
+                onChange={(e) =>
+                  setEditFormData((prev) => ({ ...prev, url: e.target.value }))
+                }
                 className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
                 required
                 disabled={isSubmitting}
@@ -839,7 +978,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
             <div>
               <label
                 htmlFor="edit-videoUrl"
-                className="block text-sm font-medium text-[#525252] mb-1">
+                className="block text-sm font-medium text-[#525252] mb-1"
+              >
                 Video Demo (Optional)
               </label>
               <input
@@ -847,7 +987,12 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 id="edit-videoUrl"
                 placeholder="https://youtube.com/..."
                 value={editFormData.videoUrl}
-                onChange={(e) => setEditFormData((prev) => ({ ...prev, videoUrl: e.target.value }))}
+                onChange={(e) =>
+                  setEditFormData((prev) => ({
+                    ...prev,
+                    videoUrl: e.target.value,
+                  }))
+                }
                 className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
                 disabled={isSubmitting}
               />
@@ -862,7 +1007,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
               {/* Current Screenshot Display */}
               {currentScreenshot && !removeScreenshot && !screenshotPreview && (
                 <div className="mb-3">
-                  <div className="text-sm text-[#545454] mb-2">Current screenshot:</div>
+                  <div className="text-sm text-[#545454] mb-2">
+                    Current screenshot:
+                  </div>
                   <div className="relative inline-block">
                     <img
                       src={currentScreenshot}
@@ -874,7 +1021,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
                       onClick={handleRemoveScreenshot}
                       disabled={isSubmitting}
                       className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 disabled:opacity-50"
-                      title="Remove screenshot">
+                      title="Remove screenshot"
+                    >
                       ×
                     </button>
                   </div>
@@ -884,7 +1032,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
               {/* New Screenshot Preview */}
               {screenshotPreview && (
                 <div className="mb-3">
-                  <div className="text-sm text-[#545454] mb-2">New screenshot:</div>
+                  <div className="text-sm text-[#545454] mb-2">
+                    New screenshot:
+                  </div>
                   <div className="relative inline-block">
                     <img
                       src={screenshotPreview}
@@ -896,7 +1046,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
                       onClick={handleKeepCurrentScreenshot}
                       disabled={isSubmitting}
                       className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 disabled:opacity-50"
-                      title="Cancel new screenshot">
+                      title="Cancel new screenshot"
+                    >
                       ×
                     </button>
                   </div>
@@ -913,7 +1064,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     type="button"
                     onClick={handleKeepCurrentScreenshot}
                     disabled={isSubmitting}
-                    className="text-sm text-red-600 hover:text-red-800 underline mt-1">
+                    className="text-sm text-red-600 hover:text-red-800 underline mt-1"
+                  >
                     Keep current screenshot
                   </button>
                 </div>
@@ -939,7 +1091,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
             <div>
               <label
                 htmlFor="edit-submitterName"
-                className="block text-sm font-medium text-[#525252] mb-1">
+                className="block text-sm font-medium text-[#525252] mb-1"
+              >
                 Your Name *
               </label>
               <input
@@ -948,7 +1101,10 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 placeholder="Your name"
                 value={editFormData.submitterName}
                 onChange={(e) =>
-                  setEditFormData((prev) => ({ ...prev, submitterName: e.target.value }))
+                  setEditFormData((prev) => ({
+                    ...prev,
+                    submitterName: e.target.value,
+                  }))
                 }
                 className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
                 required
@@ -961,11 +1117,14 @@ export function StoryDetail({ story }: StoryDetailProps) {
               <div key={field.key}>
                 <label
                   htmlFor={`edit-${field.key}`}
-                  className="block text-sm font-medium text-[#525252] mb-1">
+                  className="block text-sm font-medium text-[#525252] mb-1"
+                >
                   {field.label}
                 </label>
                 {field.description && (
-                  <div className="text-sm text-[#545454] mb-2">{field.description}</div>
+                  <div className="text-sm text-[#545454] mb-2">
+                    {field.description}
+                  </div>
                 )}
                 <input
                   type={field.fieldType}
@@ -973,7 +1132,10 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   placeholder={field.placeholder}
                   value={editDynamicFormData[field.key] || ""}
                   onChange={(e) =>
-                    setEditDynamicFormData((prev) => ({ ...prev, [field.key]: e.target.value }))
+                    setEditDynamicFormData((prev) => ({
+                      ...prev,
+                      [field.key]: e.target.value,
+                    }))
                   }
                   className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
                   required={field.isRequired}
@@ -984,7 +1146,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
             {/* Tags Selection */}
             <div>
-              <label className="block text-sm font-medium text-[#525252] mb-2">Select Tags *</label>
+              <label className="block text-sm font-medium text-[#525252] mb-2">
+                Select Tags *
+              </label>
               <div className="flex flex-wrap gap-2 mb-4">
                 {availableTags === undefined && (
                   <span className="text-sm text-gray-500">Loading tags...</span>
@@ -999,7 +1163,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
                       selectedTagIds.includes(tag._id)
                         ? "bg-[#F4F0ED] text-[#292929] border-[#D5D3D0]"
                         : "bg-white text-[#545454] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"
-                    }`}>
+                    }`}
+                  >
                     {tag.name}
                   </button>
                 ))}
@@ -1007,11 +1172,105 @@ export function StoryDetail({ story }: StoryDetailProps) {
             </div>
 
             {editError && (
-              <div className="p-3 bg-red-100 text-red-700 rounded-md text-sm">{editError}</div>
+              <div className="p-3 bg-red-100 text-red-700 rounded-md text-sm">
+                {editError}
+              </div>
             )}
           </form>
         </div>
       )}
+      {/* Video demo start */}
+      {story.videoUrl && story.videoUrl.trim() && (
+        <div className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC]">
+          <div className="flex items-center gap-2 mb-4">
+            <Play className="w-4 h-4 text-[#545454] flex-shrink-0" />
+            <h3 className="text-lg font-medium text-[#525252]">Video Demo</h3>
+            <a
+              href={story.videoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-[#525252] hover:text-[#292929] hover:underline ml-auto"
+              title="Open in new tab"
+            >
+              ↗
+            </a>
+          </div>
+          <div className="w-full">
+            {(() => {
+              const url = story.videoUrl.trim();
+
+              // YouTube URL patterns
+              const youtubeMatch = url.match(
+                /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/,
+              );
+              if (youtubeMatch) {
+                const videoId = youtubeMatch[1];
+                return (
+                  <iframe
+                    src={`https://www.youtube.com/embed/${videoId}`}
+                    className="w-full aspect-video rounded-md"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    loading="lazy"
+                    title="Video Demo"
+                  />
+                );
+              }
+
+              // Vimeo URL patterns
+              const vimeoMatch = url.match(/(?:vimeo\.com\/)(?:.*\/)?(\d+)/);
+              if (vimeoMatch) {
+                const videoId = vimeoMatch[1];
+                return (
+                  <iframe
+                    src={`https://player.vimeo.com/video/${videoId}`}
+                    className="w-full aspect-video rounded-md"
+                    allow="autoplay; fullscreen; picture-in-picture"
+                    allowFullScreen
+                    loading="lazy"
+                    title="Video Demo"
+                  />
+                );
+              }
+
+              // Check if it's a direct video file
+              const videoExtensions = /\.(mp4|webm|ogg|mov|avi|mkv)(\?.*)?$/i;
+              if (videoExtensions.test(url)) {
+                return (
+                  <video
+                    src={url}
+                    className="w-full aspect-video rounded-md bg-black"
+                    controls
+                    preload="metadata"
+                    title="Video Demo"
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                );
+              }
+
+              // Fallback for other URLs - show as link in a styled box
+              return (
+                <div className="w-full aspect-video rounded-md border-2 border-dashed border-[#D8E1EC] flex items-center justify-center bg-[#F9F9F9]">
+                  <div className="text-center">
+                    <Play className="w-12 h-12 text-[#545454] mx-auto mb-2" />
+                    <p className="text-[#525252] mb-2">Video not embeddable</p>
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#292929] hover:text-[#525252] underline"
+                    >
+                      Watch Video ↗
+                    </a>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+      {/* Video demo end */}
 
       {/* Rating Section */}
       {!isEditing && (
@@ -1045,7 +1304,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
                       : hasRated
                         ? `You rated ${currentUserRating} star(s)`
                         : `Rate ${value} stars`
-                  }>
+                  }
+                >
                   <Star className="w-5 h-5 fill-current" />
                 </button>
               ))}
@@ -1057,7 +1317,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
               </span>
             )}
           </div>
-          <p className="text-sm text-[#545454]">Your rating helps others discover great apps.</p>
+          <p className="text-sm text-[#545454]">
+            Your rating helps others discover great apps.
+          </p>
         </div>
       )}
 
@@ -1065,7 +1327,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
       {!isEditing && (
         <div id="comments" className="mt-8 scroll-mt-20">
           <h2 className="text-xl font-medium text-[#525252] mb-4">
-            {comments?.length ?? 0} {(comments?.length ?? 0) === 1 ? "Comment" : "Comments"}
+            {comments?.length ?? 0}{" "}
+            {(comments?.length ?? 0) === 1 ? "Comment" : "Comments"}
           </h2>
           <CommentForm onSubmit={handleCommentSubmit} />
           <div className="mt-8 space-y-6 border-t border-[#F4F0ED] pt-6">
@@ -1076,17 +1339,25 @@ export function StoryDetail({ story }: StoryDetailProps) {
               const comment = commentData as CommentType;
               return (
                 <React.Fragment key={comment._id}>
-                  <Comment comment={comment} onReply={(parentId) => setReplyToId(parentId)} />
+                  <Comment
+                    comment={comment}
+                    onReply={(parentId) => setReplyToId(parentId)}
+                  />
                   {replyToId === comment._id && (
                     <div className="pl-8 pt-4">
-                      <CommentForm onSubmit={handleCommentSubmit} parentId={comment._id} />
+                      <CommentForm
+                        onSubmit={handleCommentSubmit}
+                        parentId={comment._id}
+                      />
                     </div>
                   )}
                 </React.Fragment>
               );
             })}
             {comments && comments.length === 0 && (
-              <div className="text-[#545454]">No comments yet. Be the first!</div>
+              <div className="text-[#545454]">
+                No comments yet. Be the first!
+              </div>
             )}
           </div>
         </div>
@@ -1095,16 +1366,20 @@ export function StoryDetail({ story }: StoryDetailProps) {
       {/* Related Apps Section */}
       {!isEditing && relatedStories && relatedStories.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-xl font-medium text-[#525252] mb-6">Related Apps</h2>
+          <h2 className="text-xl font-medium text-[#525252] mb-6">
+            Related Apps
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {relatedStories.map((relatedStory: Story) => (
               <div
                 key={relatedStory._id}
-                className="bg-white rounded-lg p-4 border border-[#D8E1EC] flex flex-col group">
+                className="bg-white rounded-lg p-4 border border-[#D8E1EC] flex flex-col group"
+              >
                 {relatedStory.screenshotUrl && (
                   <Link
                     to={`/s/${relatedStory.slug}`}
-                    className="mb-3 block overflow-hidden rounded-md aspect-video">
+                    className="mb-3 block overflow-hidden rounded-md aspect-video"
+                  >
                     <img
                       src={relatedStory.screenshotUrl}
                       alt={`${relatedStory.title} screenshot`}
@@ -1116,7 +1391,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 <h3 className="text-lg font-semibold text-[#292929] mb-1 truncate">
                   <Link
                     to={`/s/${relatedStory.slug}`}
-                    className="hover:text-[#555555] hover:underline">
+                    className="hover:text-[#555555] hover:underline"
+                  >
                     {relatedStory.title}
                   </Link>
                 </h3>
@@ -1126,8 +1402,12 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   </p>
                 )}
                 <p
-                  className={`text-xs text-[#545454] mb-2 ${relatedStory.description ? "" : "flex-grow"}`}>
-                  By {relatedStory.authorName || relatedStory.authorUsername || "Anonymous"}
+                  className={`text-xs text-[#545454] mb-2 ${relatedStory.description ? "" : "flex-grow"}`}
+                >
+                  By{" "}
+                  {relatedStory.authorName ||
+                    relatedStory.authorUsername ||
+                    "Anonymous"}
                 </p>
                 <div className="flex items-center text-xs text-[#545454] gap-3 mt-auto pt-2 border-t border-[#F4F0ED]">
                   <span>{relatedStory.votes} vibes</span>
@@ -1148,7 +1428,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
           <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200 flex items-center justify-between text-sm text-blue-600">
             <div className="flex items-center gap-3">
               <Edit3 className="w-4 h-4 text-blue-500 flex-shrink-0" />
-              <span className="font-medium text-blue-700">Want to update your submission?</span>
+              <span className="font-medium text-blue-700">
+                Want to update your submission?
+              </span>
             </div>
             <Button
               variant="outline"
@@ -1158,7 +1440,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 const url = new URL(window.location.href);
                 url.searchParams.set("edit", "true");
                 window.location.href = url.toString();
-              }}>
+              }}
+            >
               Edit Submission
             </Button>
           </div>
@@ -1169,10 +1452,17 @@ export function StoryDetail({ story }: StoryDetailProps) {
         <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between text-sm text-gray-600">
           <div className="flex items-center gap-3">
             <Flag className="w-4 h-4 text-gray-500 flex-shrink-0" />
-            <span className="font-medium text-gray-700">Seen something inappropriate?</span>
+            <span className="font-medium text-gray-700">
+              Seen something inappropriate?
+            </span>
           </div>
           {isClerkLoaded && isSignedIn ? (
-            <Button variant="outline" size="sm" className="text-xs" onClick={handleOpenReportModal}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={handleOpenReportModal}
+            >
               Report this Submission
             </Button>
           ) : isClerkLoaded && !isSignedIn ? (
@@ -1181,7 +1471,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
               size="sm"
               className="text-xs"
               onClick={() => navigate("/sign-in")}
-              title="Sign in to report content">
+              title="Sign in to report content"
+            >
               Sign in to Report
             </Button>
           ) : (
@@ -1193,15 +1484,18 @@ export function StoryDetail({ story }: StoryDetailProps) {
       )}
 
       {/* Report Modal */}
-      <Dialog open={isReportModalOpen} onOpenChange={handleReportModalOpenChange}>
+      <Dialog
+        open={isReportModalOpen}
+        onOpenChange={handleReportModalOpenChange}
+      >
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Report: {story.title}</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-2">
             <p className="text-sm text-gray-500">
-              Please provide a reason for reporting this submission. Your report will be reviewed by
-              an administrator.
+              Please provide a reason for reporting this submission. Your report
+              will be reviewed by an administrator.
             </p>
             <Textarea
               placeholder="Reason for reporting..."
@@ -1229,7 +1523,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 setIsReportModalOpen(false);
                 setReportModalError(null);
               }}
-              disabled={isReporting}>
+              disabled={isReporting}
+            >
               Cancel
             </Button>
             <Button
@@ -1237,7 +1532,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
               onClick={handleReportSubmit}
               disabled={isReporting || !reportReason.trim()}
               className="bg-[#292929] text-white hover:bg-[#525252] disabled:opacity-50 sm:ml-[10px]"
-              style={{ fontWeight: "normal" }}>
+              style={{ fontWeight: "normal" }}
+            >
               {isReporting ? "Submitting..." : "Submit Report"}
             </Button>
           </DialogFooter>
