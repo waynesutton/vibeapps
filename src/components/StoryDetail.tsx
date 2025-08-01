@@ -541,32 +541,53 @@ export function StoryDetail({ story }: StoryDetailProps) {
     }
   };
 
-  // Update document title and meta description
+  // Update document title and all meta tags for social sharing
   useEffect(() => {
-    document.title = `${story.title} | Vibe Coding`;
-    const metaDescription = document.querySelector('meta[name="description"]');
-    if (metaDescription) {
-      metaDescription.setAttribute("content", story.description);
-    } else {
-      // Create meta tag if it doesn't exist
-      const newMeta = document.createElement("meta");
-      newMeta.name = "description";
-      newMeta.content = story.description;
-      document.head.appendChild(newMeta);
-    }
-
-    // Update og:image meta tag
-    const ogImage = document.querySelector('meta[property="og:image"]');
+    const currentUrl = window.location.href;
     const imageUrl = story.screenshotUrl || "/vibe-apps-open-graphi-image.png";
-    if (ogImage) {
-      ogImage.setAttribute("content", imageUrl);
-    } else {
-      // Create og:image meta tag if it doesn't exist
-      const newOgImage = document.createElement("meta");
-      newOgImage.setAttribute("property", "og:image");
-      newOgImage.setAttribute("content", imageUrl);
-      document.head.appendChild(newOgImage);
-    }
+
+    // Update document title
+    document.title = `${story.title} | Vibe Coding`;
+
+    // Helper function to update or create meta tags
+    const updateOrCreateMeta = (
+      selector: string,
+      content: string,
+      attributeName: string = "content",
+    ) => {
+      let metaTag = document.querySelector(selector);
+      if (metaTag) {
+        metaTag.setAttribute(attributeName, content);
+      } else {
+        metaTag = document.createElement("meta");
+        if (selector.includes("property=")) {
+          const property = selector.match(/property="([^"]+)"/)?.[1];
+          if (property) metaTag.setAttribute("property", property);
+        } else if (selector.includes("name=")) {
+          const name = selector.match(/name="([^"]+)"/)?.[1];
+          if (name) metaTag.setAttribute("name", name);
+        }
+        metaTag.setAttribute(attributeName, content);
+        document.head.appendChild(metaTag);
+      }
+    };
+
+    // Update basic meta tags
+    updateOrCreateMeta('meta[name="description"]', story.description);
+
+    // Update Open Graph meta tags
+    updateOrCreateMeta('meta[property="og:title"]', story.title);
+    updateOrCreateMeta('meta[property="og:description"]', story.description);
+    updateOrCreateMeta('meta[property="og:image"]', imageUrl);
+    updateOrCreateMeta('meta[property="og:url"]', currentUrl);
+    updateOrCreateMeta('meta[property="og:type"]', "website");
+    updateOrCreateMeta('meta[property="og:site_name"]', "Vibe Coding");
+
+    // Update Twitter Card meta tags
+    updateOrCreateMeta('meta[name="twitter:card"]', "summary_large_image");
+    updateOrCreateMeta('meta[name="twitter:title"]', story.title);
+    updateOrCreateMeta('meta[name="twitter:description"]', story.description);
+    updateOrCreateMeta('meta[name="twitter:image"]', imageUrl);
   }, [story.title, story.description, story.screenshotUrl]);
 
   const averageRating =
