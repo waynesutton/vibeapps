@@ -117,6 +117,54 @@ export function StoryDetail({ story }: StoryDetailProps) {
   const { user } = useUser(); // Get current user data
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // Immediately update meta tags on component load (before useEffect)
+  React.useMemo(() => {
+    const currentUrl = window.location.href;
+    const imageUrl = story.screenshotUrl || "/vibe-apps-open-graphi-image.png";
+
+    // Aggressively update meta tags immediately
+    const updateMetaImmediately = (
+      property: string,
+      content: string,
+      isProperty: boolean = true,
+    ) => {
+      const attribute = isProperty ? "property" : "name";
+      const selector = `meta[${attribute}="${property}"]`;
+
+      // Find and update existing tag
+      const existingTag = document.querySelector(selector);
+      if (existingTag) {
+        existingTag.setAttribute("content", content);
+      }
+
+      // Also create a new tag and prepend it to ensure priority
+      const newTag = document.createElement("meta");
+      newTag.setAttribute(attribute, property);
+      newTag.setAttribute("content", content);
+
+      // Insert at the very beginning of head
+      const firstChild = document.head.firstElementChild;
+      if (firstChild) {
+        document.head.insertBefore(newTag, firstChild);
+      } else {
+        document.head.appendChild(newTag);
+      }
+    };
+
+    // Update immediately
+    document.title = `${story.title} | Vibe Coding`;
+    updateMetaImmediately("description", story.description, false);
+    updateMetaImmediately("og:title", story.title);
+    updateMetaImmediately("og:description", story.description);
+    updateMetaImmediately("og:image", imageUrl);
+    updateMetaImmediately("og:url", currentUrl);
+    updateMetaImmediately("twitter:title", story.title, false);
+    updateMetaImmediately("twitter:description", story.description, false);
+    updateMetaImmediately("twitter:image", imageUrl, false);
+
+    return null;
+  }, [story.title, story.description, story.screenshotUrl]);
+
   // Edit mode state
   const isEditMode = searchParams.get("edit") === "true";
   const [isEditing, setIsEditing] = React.useState(false);
@@ -541,16 +589,16 @@ export function StoryDetail({ story }: StoryDetailProps) {
     }
   };
 
-  // Update document title and all meta tags for social sharing
+  // Additional meta tag updates in useEffect as backup
   useEffect(() => {
     const currentUrl = window.location.href;
     const imageUrl = story.screenshotUrl || "/vibe-apps-open-graphi-image.png";
 
-    // Update document title
+    // Ensure title is updated
     document.title = `${story.title} | Vibe Coding`;
 
-    // More aggressive meta tag update function
-    const forceUpdateMeta = (
+    // Additional cleanup and updates for any remaining default tags
+    const cleanupAndUpdate = (
       property: string,
       content: string,
       isProperty: boolean = true,
@@ -558,52 +606,24 @@ export function StoryDetail({ story }: StoryDetailProps) {
       const attribute = isProperty ? "property" : "name";
       const selector = `meta[${attribute}="${property}"]`;
 
-      // Remove existing tag if it exists
-      const existingTag = document.querySelector(selector);
-      if (existingTag) {
-        existingTag.remove();
-      }
-
-      // Create new tag
-      const metaTag = document.createElement("meta");
-      metaTag.setAttribute(attribute, property);
-      metaTag.setAttribute("content", content);
-
-      // Insert at the beginning of head to ensure priority
-      document.head.insertBefore(metaTag, document.head.firstChild);
+      // Remove any duplicate tags
+      const existingTags = document.querySelectorAll(selector);
+      existingTags.forEach((tag, index) => {
+        if (index > 0)
+          tag.remove(); // Keep only the first one
+        else tag.setAttribute("content", content); // Update the first one
+      });
     };
 
-    // Update basic meta tags
-    forceUpdateMeta("description", story.description, false);
-
-    // Update Open Graph meta tags (force recreate for priority)
-    forceUpdateMeta("og:title", story.title);
-    forceUpdateMeta("og:description", story.description);
-    forceUpdateMeta("og:image", imageUrl);
-    forceUpdateMeta("og:url", currentUrl);
-    forceUpdateMeta("og:type", "website");
-    forceUpdateMeta("og:site_name", "Vibe Coding");
-    forceUpdateMeta("og:locale", "en");
-
-    // Update Twitter Card meta tags
-    forceUpdateMeta("twitter:card", "summary_large_image", false);
-    forceUpdateMeta("twitter:title", story.title, false);
-    forceUpdateMeta("twitter:description", story.description, false);
-    forceUpdateMeta("twitter:image", imageUrl, false);
-
-    // Also try to update any existing meta tags with different selectors
-    const updateExistingMeta = (selector: string, content: string) => {
-      const tag = document.querySelector(selector);
-      if (tag) {
-        tag.setAttribute("content", content);
-      }
-    };
-
-    // Backup updates for any existing tags
-    updateExistingMeta('meta[property="og:title"]', story.title);
-    updateExistingMeta('meta[property="og:description"]', story.description);
-    updateExistingMeta('meta[property="og:image"]', imageUrl);
-    updateExistingMeta('meta[property="og:url"]', currentUrl);
+    // Clean up and update
+    cleanupAndUpdate("description", story.description, false);
+    cleanupAndUpdate("og:title", story.title);
+    cleanupAndUpdate("og:description", story.description);
+    cleanupAndUpdate("og:image", imageUrl);
+    cleanupAndUpdate("og:url", currentUrl);
+    cleanupAndUpdate("twitter:title", story.title, false);
+    cleanupAndUpdate("twitter:description", story.description, false);
+    cleanupAndUpdate("twitter:image", imageUrl, false);
   }, [story.title, story.description, story.screenshotUrl]);
 
   const averageRating =
