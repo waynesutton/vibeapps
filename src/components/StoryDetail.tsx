@@ -549,45 +549,61 @@ export function StoryDetail({ story }: StoryDetailProps) {
     // Update document title
     document.title = `${story.title} | Vibe Coding`;
 
-    // Helper function to update or create meta tags
-    const updateOrCreateMeta = (
-      selector: string,
+    // More aggressive meta tag update function
+    const forceUpdateMeta = (
+      property: string,
       content: string,
-      attributeName: string = "content",
+      isProperty: boolean = true,
     ) => {
-      let metaTag = document.querySelector(selector);
-      if (metaTag) {
-        metaTag.setAttribute(attributeName, content);
-      } else {
-        metaTag = document.createElement("meta");
-        if (selector.includes("property=")) {
-          const property = selector.match(/property="([^"]+)"/)?.[1];
-          if (property) metaTag.setAttribute("property", property);
-        } else if (selector.includes("name=")) {
-          const name = selector.match(/name="([^"]+)"/)?.[1];
-          if (name) metaTag.setAttribute("name", name);
-        }
-        metaTag.setAttribute(attributeName, content);
-        document.head.appendChild(metaTag);
+      const attribute = isProperty ? "property" : "name";
+      const selector = `meta[${attribute}="${property}"]`;
+
+      // Remove existing tag if it exists
+      const existingTag = document.querySelector(selector);
+      if (existingTag) {
+        existingTag.remove();
       }
+
+      // Create new tag
+      const metaTag = document.createElement("meta");
+      metaTag.setAttribute(attribute, property);
+      metaTag.setAttribute("content", content);
+
+      // Insert at the beginning of head to ensure priority
+      document.head.insertBefore(metaTag, document.head.firstChild);
     };
 
     // Update basic meta tags
-    updateOrCreateMeta('meta[name="description"]', story.description);
+    forceUpdateMeta("description", story.description, false);
 
-    // Update Open Graph meta tags
-    updateOrCreateMeta('meta[property="og:title"]', story.title);
-    updateOrCreateMeta('meta[property="og:description"]', story.description);
-    updateOrCreateMeta('meta[property="og:image"]', imageUrl);
-    updateOrCreateMeta('meta[property="og:url"]', currentUrl);
-    updateOrCreateMeta('meta[property="og:type"]', "website");
-    updateOrCreateMeta('meta[property="og:site_name"]', "Vibe Coding");
+    // Update Open Graph meta tags (force recreate for priority)
+    forceUpdateMeta("og:title", story.title);
+    forceUpdateMeta("og:description", story.description);
+    forceUpdateMeta("og:image", imageUrl);
+    forceUpdateMeta("og:url", currentUrl);
+    forceUpdateMeta("og:type", "website");
+    forceUpdateMeta("og:site_name", "Vibe Coding");
+    forceUpdateMeta("og:locale", "en");
 
     // Update Twitter Card meta tags
-    updateOrCreateMeta('meta[name="twitter:card"]', "summary_large_image");
-    updateOrCreateMeta('meta[name="twitter:title"]', story.title);
-    updateOrCreateMeta('meta[name="twitter:description"]', story.description);
-    updateOrCreateMeta('meta[name="twitter:image"]', imageUrl);
+    forceUpdateMeta("twitter:card", "summary_large_image", false);
+    forceUpdateMeta("twitter:title", story.title, false);
+    forceUpdateMeta("twitter:description", story.description, false);
+    forceUpdateMeta("twitter:image", imageUrl, false);
+
+    // Also try to update any existing meta tags with different selectors
+    const updateExistingMeta = (selector: string, content: string) => {
+      const tag = document.querySelector(selector);
+      if (tag) {
+        tag.setAttribute("content", content);
+      }
+    };
+
+    // Backup updates for any existing tags
+    updateExistingMeta('meta[property="og:title"]', story.title);
+    updateExistingMeta('meta[property="og:description"]', story.description);
+    updateExistingMeta('meta[property="og:image"]', imageUrl);
+    updateExistingMeta('meta[property="og:url"]', currentUrl);
   }, [story.title, story.description, story.screenshotUrl]);
 
   const averageRating =
