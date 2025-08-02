@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### Admin Tag Management for Content Moderation 🏷️
+
+**Added**
+
+- **Tag Management in Content Moderation**: Admins can now add existing tags to submissions directly from the Content Moderation interface
+  - Added "Add Tag" button for each submission in the moderation view
+  - Interactive tag selector showing available tags with emoji/icon support
+  - Prevents duplicate tags by filtering out already assigned tags
+  - Real-time UI updates after adding tags
+  - Follows existing admin authentication patterns
+
+**Technical Details**
+
+- Added `addTagsToStory` mutation in `convex/stories.ts` with admin role validation
+- Updated `ContentModeration.tsx` to include tag management UI and functionality
+- Uses existing `api.tags.listAllAdmin` query for fetching available tags
+- Maintains existing design patterns and responsive layout
+
 ### Navigation Submit Button Authentication 🚀
 
 **Changed**
@@ -83,7 +101,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Changed**
 
 - **Submit Page Access**: Removed login requirement to access `/submit` page
-
   - All users can now view the submit form and see what's required
   - Authentication check happens at form submission instead of route protection
   - Shows popup dialog if user attempts to submit without signing in

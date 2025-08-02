@@ -1,11 +1,24 @@
-import { query, mutation, internalQuery, QueryCtx, MutationCtx } from "./_generated/server";
+import {
+  query,
+  mutation,
+  internalQuery,
+  QueryCtx,
+  MutationCtx,
+} from "./_generated/server";
 import { v, type Infer } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { Doc, Id, DataModel } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api";
 import { GenericDatabaseReader, StorageReader } from "convex/server";
-import { getAuthenticatedUserId, requireAdminRole, ensureUserNotBanned } from "./users"; // Import the centralized helper and requireAdminRole
-import { storyWithDetailsValidator, StoryWithDetailsPublic } from "./validators"; // Import StoryWithDetailsPublic
+import {
+  getAuthenticatedUserId,
+  requireAdminRole,
+  ensureUserNotBanned,
+} from "./users"; // Import the centralized helper and requireAdminRole
+import {
+  storyWithDetailsValidator,
+  StoryWithDetailsPublic,
+} from "./validators"; // Import StoryWithDetailsPublic
 
 // Validator for Doc<"tags">
 // REMOVED - Moved to convex/validators.ts
@@ -42,17 +55,27 @@ export type StoryWithDetails = Doc<"stories"> & {
 // Helper to fetch tags and related counts for stories
 const fetchTagsAndCountsForStories = async (
   ctx: { db: GenericDatabaseReader<DataModel>; storage: StorageReader },
-  stories: Doc<"stories">[]
+  stories: Doc<"stories">[],
 ): Promise<StoryWithDetails[]> => {
   const allTagIds = stories.flatMap((story) => story.tagIds || []);
   const uniqueTagIds = [...new Set(allTagIds)];
 
-  const tagsMapResults = await Promise.all(uniqueTagIds.map((tagId) => ctx.db.get(tagId)));
-  const tagsMap = new Map(tagsMapResults.filter(Boolean).map((tag) => [tag!._id, tag!]));
+  const tagsMapResults = await Promise.all(
+    uniqueTagIds.map((tagId) => ctx.db.get(tagId)),
+  );
+  const tagsMap = new Map(
+    tagsMapResults.filter(Boolean).map((tag) => [tag!._id, tag!]),
+  );
 
-  const uniqueUserIds = [...new Set(stories.map((story) => story.userId).filter(Boolean))];
-  const users = await Promise.all(uniqueUserIds.map((userId) => ctx.db.get(userId as Id<"users">)));
-  const usersMap = new Map(users.filter(Boolean).map((user) => [user!._id, user!]));
+  const uniqueUserIds = [
+    ...new Set(stories.map((story) => story.userId).filter(Boolean)),
+  ];
+  const users = await Promise.all(
+    uniqueUserIds.map((userId) => ctx.db.get(userId as Id<"users">)),
+  );
+  const usersMap = new Map(
+    users.filter(Boolean).map((user) => [user!._id, user!]),
+  );
 
   return Promise.all(
     stories.map(async (story) => {
@@ -60,7 +83,9 @@ const fetchTagsAndCountsForStories = async (
         ? await ctx.storage.getUrl(story.screenshotId)
         : null;
 
-      const storyTagsIntermediate = (story.tagIds || []).map((id) => tagsMap.get(id));
+      const storyTagsIntermediate = (story.tagIds || []).map((id) =>
+        tagsMap.get(id),
+      );
 
       // Replace .filter().map() with a loop for explicit construction
       const processedStoryTags: Array<{
@@ -92,7 +117,9 @@ const fetchTagsAndCountsForStories = async (
       // Fetch comments for count
       const comments = await ctx.db
         .query("comments")
-        .withIndex("by_storyId_status", (q) => q.eq("storyId", story._id).eq("status", "approved"))
+        .withIndex("by_storyId_status", (q) =>
+          q.eq("storyId", story._id).eq("status", "approved"),
+        )
         .filter((q) => q.neq(q.field("isHidden"), true))
         .collect();
       const calculatedCommentsCount = comments.length;
@@ -112,7 +139,10 @@ const fetchTagsAndCountsForStories = async (
       const averageRating =
         storyRatings.length > 0
           ? parseFloat(
-              (storyRatings.reduce((sum, r) => sum + r.value, 0) / storyRatings.length).toFixed(1)
+              (
+                storyRatings.reduce((sum, r) => sum + r.value, 0) /
+                storyRatings.length
+              ).toFixed(1),
             )
           : 0;
 
@@ -133,7 +163,7 @@ const fetchTagsAndCountsForStories = async (
         averageRating,
         votesCount,
       };
-    })
+    }),
   );
 };
 
@@ -164,15 +194,19 @@ export const listApproved = query({
         v.literal("votes_today"),
         v.literal("votes_week"),
         v.literal("votes_month"),
-        v.literal("votes_year")
-      )
+        v.literal("votes_year"),
+      ),
     ),
     searchTerm: v.optional(v.string()),
   },
   handler: async (
     ctx,
-    args
-  ): Promise<{ page: StoryWithDetails[]; isDone: boolean; continueCursor: string }> => {
+    args,
+  ): Promise<{
+    page: StoryWithDetails[];
+    isDone: boolean;
+    continueCursor: string;
+  }> => {
     const now = Date.now();
     let startTime = 0;
 
@@ -201,7 +235,10 @@ export const listApproved = query({
         return builder;
       });
       const stories = await query.collect();
-      const storiesWithDetails = await fetchTagsAndCountsForStories(ctx, stories);
+      const storiesWithDetails = await fetchTagsAndCountsForStories(
+        ctx,
+        stories,
+      );
       return {
         page: storiesWithDetails,
         isDone: true,
@@ -222,20 +259,23 @@ export const listApproved = query({
           q.and(
             q.eq(q.field("status"), "approved"),
             q.neq(q.field("isHidden"), true),
-            q.gte(q.field("_creationTime"), startTime) // Apply time filter *after* index selection
-          )
+            q.gte(q.field("_creationTime"), startTime), // Apply time filter *after* index selection
+          ),
         )
         .paginate(args.paginationOpts);
 
       initialFilteredStories = paginatedResult.page;
-      const storiesWithDetails = await fetchTagsAndCountsForStories(ctx, initialFilteredStories);
+      const storiesWithDetails = await fetchTagsAndCountsForStories(
+        ctx,
+        initialFilteredStories,
+      );
 
       // Filter by tagId *after* pagination if needed (less efficient but necessary)
       let finalPage = storiesWithDetails;
       if (args.tagId) {
         console.warn("Filtering by tagId after pagination isn't efficient...");
         finalPage = storiesWithDetails.filter((story) =>
-          (story.tagIds || []).includes(args.tagId!)
+          (story.tagIds || []).includes(args.tagId!),
         );
       }
 
@@ -252,8 +292,8 @@ export const listApproved = query({
           q.and(
             q.eq(q.field("status"), "approved"),
             q.neq(q.field("isHidden"), true),
-            q.gte(q.field("_creationTime"), startTime)
-          )
+            q.gte(q.field("_creationTime"), startTime),
+          ),
         );
       initialFilteredStories = await baseQuery.collect();
 
@@ -268,18 +308,23 @@ export const listApproved = query({
       });
 
       // Apply pagination manually after sorting
-      const startIndex = args.paginationOpts.cursor ? parseInt(args.paginationOpts.cursor, 10) : 0;
+      const startIndex = args.paginationOpts.cursor
+        ? parseInt(args.paginationOpts.cursor, 10)
+        : 0;
       const endIndex = startIndex + args.paginationOpts.numItems;
       const pageStories = initialFilteredStories.slice(startIndex, endIndex);
       const isDone = endIndex >= initialFilteredStories.length;
       const continueCursor = isDone ? null : endIndex.toString();
 
-      let storiesWithDetails = await fetchTagsAndCountsForStories(ctx, pageStories);
+      let storiesWithDetails = await fetchTagsAndCountsForStories(
+        ctx,
+        pageStories,
+      );
 
       // Post-filter by tagId if provided
       if (args.tagId) {
         storiesWithDetails = storiesWithDetails.filter((story) =>
-          (story.tagIds || []).includes(args.tagId!)
+          (story.tagIds || []).includes(args.tagId!),
         );
       }
 
@@ -297,15 +342,22 @@ export const listPending = query({
   args: { paginationOpts: paginationOptsValidator },
   handler: async (
     ctx,
-    args
-  ): Promise<{ page: StoryWithDetails[]; isDone: boolean; continueCursor: string }> => {
+    args,
+  ): Promise<{
+    page: StoryWithDetails[];
+    isDone: boolean;
+    continueCursor: string;
+  }> => {
     const query = ctx.db
       .query("stories")
       .withIndex("by_status", (q) => q.eq("status", "pending"))
       .order("asc");
 
     const paginatedStories = await query.paginate(args.paginationOpts);
-    const storiesWithDetails = await fetchTagsAndCountsForStories(ctx, paginatedStories.page);
+    const storiesWithDetails = await fetchTagsAndCountsForStories(
+      ctx,
+      paginatedStories.page,
+    );
 
     return {
       ...paginatedStories,
@@ -322,7 +374,12 @@ export const getBySlug = query({
     const story = await ctx.db
       .query("stories")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
-      .filter((q) => q.and(q.eq(q.field("status"), "approved"), q.neq(q.field("isHidden"), true)))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("status"), "approved"),
+          q.neq(q.field("isHidden"), true),
+        ),
+      )
       .unique();
 
     if (!story) {
@@ -423,13 +480,15 @@ export const submit = mutation({
       .withIndex(
         "by_user_time",
         (
-          q // IMPORTANT: This index needs to be added to submissionLogs in schema.ts
-        ) => q.eq("userId", userId).gt("submissionTime", twentyFourHoursAgo)
+          q, // IMPORTANT: This index needs to be added to submissionLogs in schema.ts
+        ) => q.eq("userId", userId).gt("submissionTime", twentyFourHoursAgo),
       )
       .collect();
 
     if (recentSubmissions.length >= 20) {
-      throw new Error("Submission limit reached. You can submit up to 10 projects per day.");
+      throw new Error(
+        "Submission limit reached. You can submit up to 10 projects per day.",
+      );
     }
 
     const slug = generateSlug(args.title);
@@ -439,7 +498,9 @@ export const submit = mutation({
       .withIndex("by_slug", (q) => q.eq("slug", slug))
       .first();
     if (existing) {
-      throw new Error(`Slug "${slug}" already exists for story: ${existing.title}`);
+      throw new Error(
+        `Slug "${slug}" already exists for story: ${existing.title}`,
+      );
     }
 
     let allTagIds: Id<"tags">[] = [...args.tagIds];
@@ -529,13 +590,15 @@ export const submitAnonymous = mutation({
     const recentSubmissions = await ctx.db
       .query("submissionLogs")
       .withIndex("by_user_time", (q) =>
-        q.eq("userId", undefined).gt("submissionTime", twentyFourHoursAgo)
+        q.eq("userId", undefined).gt("submissionTime", twentyFourHoursAgo),
       )
       .filter((q) => q.eq(q.field("submitterEmail"), args.email))
       .collect();
 
     if (recentSubmissions.length >= 10) {
-      throw new Error("Submission limit reached. You can submit up to 10 projects per day.");
+      throw new Error(
+        "Submission limit reached. You can submit up to 10 projects per day.",
+      );
     }
 
     const slug = generateSlug(args.title);
@@ -545,7 +608,9 @@ export const submitAnonymous = mutation({
       .withIndex("by_slug", (q) => q.eq("slug", slug))
       .first();
     if (existing) {
-      throw new Error(`Slug "${slug}" already exists for story: ${existing.title}`);
+      throw new Error(
+        `Slug "${slug}" already exists for story: ${existing.title}`,
+      );
     }
 
     let allTagIds: Id<"tags">[] = [...args.tagIds];
@@ -628,7 +693,9 @@ export const voteStory = mutation({
     // Check if the user has already voted for this story
     const existingVote = await ctx.db
       .query("votes")
-      .withIndex("by_user_story", (q) => q.eq("userId", userId).eq("storyId", args.storyId))
+      .withIndex("by_user_story", (q) =>
+        q.eq("userId", userId).eq("storyId", args.storyId),
+      )
       .first();
 
     if (existingVote) {
@@ -636,7 +703,11 @@ export const voteStory = mutation({
       // For now, let's remove the vote (unvote action)
       await ctx.db.delete(existingVote._id);
       await ctx.db.patch(args.storyId, { votes: story.votes - 1 });
-      return { success: true, action: "unvoted", newVoteCount: story.votes - 1 };
+      return {
+        success: true,
+        action: "unvoted",
+        newVoteCount: story.votes - 1,
+      };
       // throw new Error("User has already voted for this story.");
     }
 
@@ -674,7 +745,9 @@ export const rate = mutation({
     // Check if the user has already rated this story
     const existingRating = await ctx.db
       .query("storyRatings")
-      .withIndex("by_user_story", (q) => q.eq("userId", userId).eq("storyId", args.storyId))
+      .withIndex("by_user_story", (q) =>
+        q.eq("userId", userId).eq("storyId", args.storyId),
+      )
       .first();
 
     if (existingRating) {
@@ -729,7 +802,9 @@ export const getUserRatingForStory = query({
 
     const existingRating = await ctx.db
       .query("storyRatings")
-      .withIndex("by_user_story", (q) => q.eq("userId", user._id).eq("storyId", args.storyId))
+      .withIndex("by_user_story", (q) =>
+        q.eq("userId", user._id).eq("storyId", args.storyId),
+      )
       .first();
 
     return existingRating ? existingRating.value : null;
@@ -740,7 +815,11 @@ export const getUserRatingForStory = query({
 export const updateStatus = mutation({
   args: {
     storyId: v.id("stories"),
-    status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected"),
+    ),
     rejectionReason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -752,7 +831,8 @@ export const updateStatus = mutation({
 
     const updatePayload: Partial<Doc<"stories">> = { status: args.status };
     if (args.status === "rejected") {
-      updatePayload.rejectionReason = args.rejectionReason || "No reason provided.";
+      updatePayload.rejectionReason =
+        args.rejectionReason || "No reason provided.";
     } else {
       // Clear rejection reason if moving to a non-rejected state
       updatePayload.rejectionReason = undefined;
@@ -832,7 +912,7 @@ export const deleteStory = mutation({
         await ctx.storage.delete(story.screenshotId);
       } catch (error) {
         console.warn(
-          `Failed to delete screenshot ${story.screenshotId} for story ${args.storyId}: ${error}`
+          `Failed to delete screenshot ${story.screenshotId} for story ${args.storyId}: ${error}`,
         );
         // Continue even if screenshot deletion fails
       }
@@ -875,6 +955,36 @@ export const toggleStoryPinStatus = mutation({
   },
 });
 
+// Admin mutation to add tags to a story
+export const addTagsToStory = mutation({
+  args: {
+    storyId: v.id("stories"),
+    tagIdsToAdd: v.array(v.id("tags")),
+  },
+  handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
+    const story = await ctx.db.get(args.storyId);
+    if (!story) {
+      throw new Error("Story not found");
+    }
+
+    // Validate that all tags exist
+    for (const tagId of args.tagIdsToAdd) {
+      const tag = await ctx.db.get(tagId);
+      if (!tag) {
+        throw new Error(`Tag with ID ${tagId} not found`);
+      }
+    }
+
+    // Get current tags and merge with new ones (avoiding duplicates)
+    const currentTagIds = story.tagIds || [];
+    const newTagIds = [...new Set([...currentTagIds, ...args.tagIdsToAdd])];
+
+    await ctx.db.patch(args.storyId, { tagIds: newTagIds });
+    return { success: true, addedTags: args.tagIdsToAdd.length };
+  },
+});
+
 // Mutation to allow a user to delete their own story
 export const deleteOwnStory = mutation({
   args: { storyId: v.id("stories") },
@@ -895,7 +1005,9 @@ export const deleteOwnStory = mutation({
       //   throw new Error("User not authorized to delete this story.");
       // }
       // For now, strict ownership for this mutation:
-      throw new Error("User not authorized to delete this story. Only the owner can delete.");
+      throw new Error(
+        "User not authorized to delete this story. Only the owner can delete.",
+      );
     }
 
     // If story has a screenshot, delete it from storage
@@ -905,7 +1017,7 @@ export const deleteOwnStory = mutation({
       } catch (error) {
         console.error(
           `Failed to delete screenshot ${story.screenshotId} for story ${args.storyId}:`,
-          error
+          error,
         );
         // Decide if this error should prevent story deletion or just be logged
       }
@@ -969,7 +1081,9 @@ export const updateOwnStory = mutation({
     }
 
     if (story.userId !== userId) {
-      throw new Error("User not authorized to edit this story. Only the owner can edit.");
+      throw new Error(
+        "User not authorized to edit this story. Only the owner can edit.",
+      );
     }
 
     // Handle new tags if provided
@@ -1002,18 +1116,24 @@ export const updateOwnStory = mutation({
     const updateData: Partial<Doc<"stories">> = {};
 
     if (args.title !== undefined) updateData.title = args.title;
-    if (args.description !== undefined) updateData.description = args.description;
-    if (args.longDescription !== undefined) updateData.longDescription = args.longDescription;
-    if (args.submitterName !== undefined) updateData.submitterName = args.submitterName;
+    if (args.description !== undefined)
+      updateData.description = args.description;
+    if (args.longDescription !== undefined)
+      updateData.longDescription = args.longDescription;
+    if (args.submitterName !== undefined)
+      updateData.submitterName = args.submitterName;
     if (args.url !== undefined) updateData.url = args.url;
     if (args.videoUrl !== undefined) updateData.videoUrl = args.videoUrl;
     if (args.email !== undefined) updateData.email = args.email;
-    if (args.screenshotId !== undefined) updateData.screenshotId = args.screenshotId;
+    if (args.screenshotId !== undefined)
+      updateData.screenshotId = args.screenshotId;
     if (finalTagIds !== undefined) updateData.tagIds = finalTagIds;
-    if (args.linkedinUrl !== undefined) updateData.linkedinUrl = args.linkedinUrl;
+    if (args.linkedinUrl !== undefined)
+      updateData.linkedinUrl = args.linkedinUrl;
     if (args.twitterUrl !== undefined) updateData.twitterUrl = args.twitterUrl;
     if (args.githubUrl !== undefined) updateData.githubUrl = args.githubUrl;
-    if (args.chefShowUrl !== undefined) updateData.chefShowUrl = args.chefShowUrl;
+    if (args.chefShowUrl !== undefined)
+      updateData.chefShowUrl = args.chefShowUrl;
     if (args.chefAppUrl !== undefined) updateData.chefAppUrl = args.chefAppUrl;
 
     // Update slug if title changed
@@ -1043,7 +1163,11 @@ export const listAllStoriesAdmin = query({
     paginationOpts: paginationOptsValidator,
     filters: v.object({
       status: v.optional(
-        v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected"))
+        v.union(
+          v.literal("pending"),
+          v.literal("approved"),
+          v.literal("rejected"),
+        ),
       ),
       isHidden: v.optional(v.boolean()),
     }),
@@ -1051,8 +1175,12 @@ export const listAllStoriesAdmin = query({
   },
   handler: async (
     ctx,
-    args
-  ): Promise<{ page: StoryWithDetails[]; isDone: boolean; continueCursor: string }> => {
+    args,
+  ): Promise<{
+    page: StoryWithDetails[];
+    isDone: boolean;
+    continueCursor: string;
+  }> => {
     await requireAdminRole(ctx);
     let initialStories: Doc<"stories">[];
 
@@ -1070,14 +1198,21 @@ export const listAllStoriesAdmin = query({
       });
       initialStories = await query.collect();
       // Post-filter if necessary
-      if (args.filters.status && !initialStories.every((s) => s.status === args.filters.status)) {
-        initialStories = initialStories.filter((s) => s.status === args.filters.status);
+      if (
+        args.filters.status &&
+        !initialStories.every((s) => s.status === args.filters.status)
+      ) {
+        initialStories = initialStories.filter(
+          (s) => s.status === args.filters.status,
+        );
       }
       if (
         args.filters.isHidden !== undefined &&
         !initialStories.every((s) => s.isHidden === args.filters.isHidden)
       ) {
-        initialStories = initialStories.filter((s) => s.isHidden === args.filters.isHidden);
+        initialStories = initialStories.filter(
+          (s) => s.isHidden === args.filters.isHidden,
+        );
       }
     } else {
       let query = ctx.db.query("stories");
@@ -1107,7 +1242,9 @@ export const listAllStoriesAdmin = query({
     });
 
     // Apply pagination manually after sorting
-    const startIndex = args.paginationOpts.cursor ? parseInt(args.paginationOpts.cursor, 10) : 0;
+    const startIndex = args.paginationOpts.cursor
+      ? parseInt(args.paginationOpts.cursor, 10)
+      : 0;
     if (isNaN(startIndex) || startIndex < 0) {
       throw new Error("Invalid pagination cursor");
     }
@@ -1118,7 +1255,10 @@ export const listAllStoriesAdmin = query({
     const continueCursor = isDone ? null : endIndex.toString();
 
     // Fetch additional details for the paginated subset
-    const storiesWithDetails = await fetchTagsAndCountsForStories(ctx, pageStories);
+    const storiesWithDetails = await fetchTagsAndCountsForStories(
+      ctx,
+      pageStories,
+    );
 
     return {
       page: storiesWithDetails,
@@ -1140,7 +1280,9 @@ export const _getStoryDetailsBatch = internalQuery({
     }
 
     // Fetch base story docs
-    const stories = await Promise.all(args.storyIds.map((id) => ctx.db.get(id)));
+    const stories = await Promise.all(
+      args.storyIds.map((id) => ctx.db.get(id)),
+    );
     const validStories = stories.filter(Boolean) as Doc<"stories">[];
     if (validStories.length === 0) {
       return [];
@@ -1149,7 +1291,10 @@ export const _getStoryDetailsBatch = internalQuery({
     // Enrich stories with tags, counts, author details using the helper
     // fetchTagsAndCountsForStories returns Promise<StoryWithDetails[]> (local type)
     // We need to ensure the object constructed matches StoryWithDetailsPublic
-    const enrichedStories = await fetchTagsAndCountsForStories(ctx, validStories);
+    const enrichedStories = await fetchTagsAndCountsForStories(
+      ctx,
+      validStories,
+    );
 
     for (const story of enrichedStories) {
       // story is now of type StoryWithDetails (local, enriched type)
@@ -1208,7 +1353,12 @@ export const listApprovedStoriesWithDetails = query({
   handler: async (ctx, args): Promise<StoryWithDetailsPublic[]> => {
     const approvedStories = await ctx.db
       .query("stories")
-      .filter((q) => q.and(q.eq(q.field("status"), "approved"), q.eq(q.field("isHidden"), false)))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("status"), "approved"),
+          q.eq(q.field("isHidden"), false),
+        ),
+      )
       .order("desc")
       .collect();
 
@@ -1220,7 +1370,7 @@ export const listApprovedStoriesWithDetails = query({
 
     const detailedStories: StoryWithDetailsPublic[] = await ctx.runQuery(
       internal.stories._getStoryDetailsBatch,
-      { storyIds }
+      { storyIds },
     );
 
     return detailedStories;
@@ -1251,7 +1401,7 @@ export const getWeeklyLeaderboardStories = query({
       .query("stories")
       .withIndex(
         "by_status_isHidden_votes",
-        (q) => q.eq("status", "approved").eq("isHidden", false) // Assuming false means visible
+        (q) => q.eq("status", "approved").eq("isHidden", false), // Assuming false means visible
       )
       .order("desc") // Orders by 'votes' descending
       .collect();
@@ -1309,7 +1459,7 @@ export const getRelatedStoriesByTags = query({
       .filter(
         (story) =>
           story._id !== args.currentStoryId &&
-          story.tagIds?.some((tagId) => args.tagIds.includes(tagId))
+          story.tagIds?.some((tagId) => args.tagIds.includes(tagId)),
       )
       .sort((a, b) => {
         const voteDiff = (b.votes ?? 0) - (a.votes ?? 0);
@@ -1335,7 +1485,9 @@ export const getRelatedStoriesByTags = query({
         }
 
         const resolvedTags = story.tagIds
-          ? await Promise.all(story.tagIds.map((tagId) => ctx.db.get(tagId as Id<"tags">)))
+          ? await Promise.all(
+              story.tagIds.map((tagId) => ctx.db.get(tagId as Id<"tags">)),
+            )
           : [];
 
         return {
@@ -1344,7 +1496,7 @@ export const getRelatedStoriesByTags = query({
           authorName,
           tags: resolvedTags.filter((tag) => tag !== null) as Doc<"tags">[],
         };
-      })
+      }),
     );
 
     return enrichedStories;

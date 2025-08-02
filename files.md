@@ -24,7 +24,7 @@
   - `http.ts`: HTTP actions for handling external requests
   - `reports.ts`: User reporting system for content moderation
   - `settings.ts`: Site-wide settings management
-  - `stories.ts`: Core app submission functions (queries, mutations, actions)
+  - `stories.ts`: Core app submission functions (queries, mutations, actions), including admin tag management
   - `storyFormFields.ts`: Form field definitions for story submissions
   - `storyRatings.ts`: App rating and review system
   - `tags.ts`: Tag system for categorizing apps
@@ -39,8 +39,7 @@
 - `src/`: Directory for the React frontend application code.
   - `components/`: Reusable React components organized by functionality.
     - `admin/`: Admin dashboard components for content and user management.
-      - `AdminDashboard.tsx`: Main admin interface with navigation and overview
-      - `ContentModeration.tsx`: Interface for moderating user-submitted content
+      - `AdminDashboard.tsx`: Main admin interface with navigation and overview - `ContentModeration.tsx`: Interface for moderating user-submitted content with tag management capabilities
       - `ConvexBoxSettingsForm.tsx`: Form for configuring site-wide notification box
       - `FormBuilder.tsx`: Dynamic form creation interface for admins
       - `FormFieldManagement.tsx`: Component for managing individual form fields
