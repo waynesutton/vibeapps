@@ -26,7 +26,9 @@ export function ResendForm() {
     image: null as File | null,
   });
 
-  const [dynamicFormData, setDynamicFormData] = React.useState<Record<string, string>>({});
+  const [dynamicFormData, setDynamicFormData] = React.useState<
+    Record<string, string>
+  >({});
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [showSuccessMessage, setShowSuccessMessage] = React.useState(false);
@@ -44,7 +46,9 @@ export function ResendForm() {
     if (
       tagName &&
       !newTagNames.some((t) => t.toLowerCase() === tagName.toLowerCase()) &&
-      !availableTags?.some((t) => t.name.toLowerCase() === tagName.toLowerCase())
+      !availableTags?.some(
+        (t) => t.name.toLowerCase() === tagName.toLowerCase(),
+      )
     ) {
       setNewTagNames((prev) => [...prev, tagName]);
       setNewTagInputValue("");
@@ -115,7 +119,9 @@ export function ResendForm() {
     } catch (error) {
       console.error("Failed to submit story:", error);
       setSubmitError(
-        error instanceof Error ? error.message : "An unknown error occurred during submission."
+        error instanceof Error
+          ? error.message
+          : "An unknown error occurred during submission.",
       );
     } finally {
       setIsSubmitting(false);
@@ -124,7 +130,9 @@ export function ResendForm() {
 
   const toggleTag = (tagId: Id<"tags">) => {
     setSelectedTagIds((prev) =>
-      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]
+      prev.includes(tagId)
+        ? prev.filter((id) => id !== tagId)
+        : [...prev, tagId],
     );
   };
 
@@ -146,7 +154,10 @@ export function ResendForm() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <Link to="/" className="text-[#545454] hover:text-[#525252] inline-block mb-6">
+      <Link
+        to="/"
+        className="text-[#545454] hover:text-[#525252] inline-block mb-6"
+      >
         ← Back to Apps
       </Link>
 
@@ -155,7 +166,7 @@ export function ResendForm() {
           <h2 className="text-2xl font-bold text-[#292929]">
             Convex & Resend Hackathon Submissions
           </h2>{" "}
-          <span className="ml-2 text-sm text-red-600">
+          <span className="ml-2 text-sm font-bold text-red-600">
             <SignUpButton mode="modal">
               <button type="button" className="underline hover:no-underline">
                 Sign up
@@ -163,9 +174,14 @@ export function ResendForm() {
             </SignUpButton>{" "}
             to edit your submission after it's been submitted.
           </span>{" "}
-          <p className="ml-2 text-md font-bold text-gray-600">What did you build?</p>
+          <p className="ml-2 text-md font-bold text-gray-600">
+            What did you build?
+          </p>
           <div>
-            <label htmlFor="title" className="block text-sm font-medium text-[#525252] mb-1">
+            <label
+              htmlFor="title"
+              className="block text-sm font-medium text-[#525252] mb-1"
+            >
               App Title *
             </label>
             <input
@@ -173,14 +189,19 @@ export function ResendForm() {
               id="title"
               placeholder="Site name"
               value={formData.title}
-              onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, title: e.target.value }))
+              }
               className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
               required
               disabled={isSubmitting}
             />
           </div>
           <div>
-            <label htmlFor="tagline" className="block text-sm font-medium text-[#525252] mb-1">
+            <label
+              htmlFor="tagline"
+              className="block text-sm font-medium text-[#525252] mb-1"
+            >
               App/Project Tagline*
             </label>
             <input
@@ -205,7 +226,8 @@ export function ResendForm() {
           <div>
             <label
               htmlFor="longDescription"
-              className="block text-sm font-medium text-[#525252] mb-1">
+              className="block text-sm font-medium text-[#525252] mb-1"
+            >
               Description (Optional)
             </label>
             <textarea
@@ -213,7 +235,10 @@ export function ResendForm() {
               placeholder="- What it does&#10;- Key Features&#10;- How you built it&#10;- How are you using Resend"
               value={formData.longDescription}
               onChange={(e) =>
-                setFormData((prev) => ({ ...prev, longDescription: e.target.value }))
+                setFormData((prev) => ({
+                  ...prev,
+                  longDescription: e.target.value,
+                }))
               }
               rows={4}
               className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
@@ -221,23 +246,33 @@ export function ResendForm() {
             />
           </div>
           <div>
-            <label htmlFor="url" className="block text-sm font-medium text-[#525252] mb-1">
+            <label
+              htmlFor="url"
+              className="block text-sm font-medium text-[#525252] mb-1"
+            >
               App Website Link *
             </label>
-            <div className="text-sm text-[#545454] mb-2">Enter your app url (ex: https://)</div>
+            <div className="text-sm text-[#545454] mb-2">
+              Enter your app url (ex: https://)
+            </div>
             <input
               type="url"
               id="url"
               placeholder="https://"
               value={formData.url}
-              onChange={(e) => setFormData((prev) => ({ ...prev, url: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, url: e.target.value }))
+              }
               className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
               required
               disabled={isSubmitting}
             />
           </div>
           <div>
-            <label htmlFor="videoUrl" className="block text-sm font-medium text-[#525252] mb-1">
+            <label
+              htmlFor="videoUrl"
+              className="block text-sm font-medium text-[#525252] mb-1"
+            >
               Video Demo - 3-5 minutes recommended (Optional)
             </label>
             <div className="text-sm text-[#545454] mb-2">
@@ -248,7 +283,9 @@ export function ResendForm() {
               id="videoUrl"
               placeholder="https://youtube.com/.."
               value={formData.videoUrl}
-              onChange={(e) => setFormData((prev) => ({ ...prev, videoUrl: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, videoUrl: e.target.value }))
+              }
               className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
               disabled={isSubmitting}
             />
@@ -256,7 +293,8 @@ export function ResendForm() {
           <div>
             <label
               htmlFor="submitterName"
-              className="block text-sm font-medium text-[#525252] mb-1">
+              className="block text-sm font-medium text-[#525252] mb-1"
+            >
               Your Name *
             </label>
             <input
@@ -264,14 +302,22 @@ export function ResendForm() {
               id="submitterName"
               placeholder="Your name"
               value={formData.submitterName}
-              onChange={(e) => setFormData((prev) => ({ ...prev, submitterName: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  submitterName: e.target.value,
+                }))
+              }
               className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
               required
               disabled={isSubmitting}
             />
           </div>
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-[#525252] mb-1">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-[#525252] mb-1"
+            >
               Email *
             </label>
             <div className="text-sm text-[#545454] mb-2">
@@ -282,14 +328,19 @@ export function ResendForm() {
               id="email"
               placeholder="your@email.com"
               value={formData.email}
-              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, email: e.target.value }))
+              }
               className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
               required
               disabled={isSubmitting}
             />
           </div>
           <div>
-            <label htmlFor="image" className="block text-sm font-medium text-[#525252] mb-1">
+            <label
+              htmlFor="image"
+              className="block text-sm font-medium text-[#525252] mb-1"
+            >
               Upload Screenshot (Recommended but Optional)
             </label>
             <input
@@ -301,17 +352,24 @@ export function ResendForm() {
               disabled={isSubmitting}
             />
             {formData.image && (
-              <div className="text-sm text-[#545454] mt-1">Selected: {formData.image.name}</div>
+              <div className="text-sm text-[#545454] mt-1">
+                Selected: {formData.image.name}
+              </div>
             )}
           </div>
           {/* Dynamic Form Fields */}
           {formFields?.map((field) => (
             <div key={field.key}>
-              <label htmlFor={field.key} className="block text-sm font-medium text-[#525252] mb-1">
+              <label
+                htmlFor={field.key}
+                className="block text-sm font-medium text-[#525252] mb-1"
+              >
                 {field.label}
               </label>
               {field.description && (
-                <div className="text-sm text-[#545454] mb-2">{field.description}</div>
+                <div className="text-sm text-[#545454] mb-2">
+                  {field.description}
+                </div>
               )}
               <input
                 type={field.fieldType}
@@ -319,7 +377,10 @@ export function ResendForm() {
                 placeholder={field.placeholder}
                 value={dynamicFormData[field.key] || ""}
                 onChange={(e) =>
-                  setDynamicFormData((prev) => ({ ...prev, [field.key]: e.target.value }))
+                  setDynamicFormData((prev) => ({
+                    ...prev,
+                    [field.key]: e.target.value,
+                  }))
                 }
                 className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
                 required={field.isRequired}
@@ -331,8 +392,12 @@ export function ResendForm() {
             <div className="text-sm text-gray-500">Loading form fields...</div>
           )}
           <div>
-            <label className="block text-sm font-medium text-[#525252] mb-2">Select Tags *</label>{" "}
-            <span className="ml-2 text-xs text-gray-600">What apps did you use?</span>
+            <label className="block text-sm font-medium text-[#525252] mb-2">
+              Select Tags *
+            </label>{" "}
+            <span className="ml-2 text-xs text-gray-600">
+              What apps did you use?
+            </span>
             <div className="flex flex-wrap gap-2 mb-4">
               {availableTags === undefined && (
                 <span className="text-sm text-gray-500">Loading tags...</span>
@@ -344,7 +409,8 @@ export function ResendForm() {
                     key={tag._id}
                     type="button"
                     onClick={() => toggleTag(tag._id)}
-                    className={`px-3 py-1 rounded-md text-sm transition-colors border ${selectedTagIds.includes(tag._id) ? "bg-[#F4F0ED] text-[#292929] border-[#D5D3D0]" : "bg-white text-[#545454] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"}`}>
+                    className={`px-3 py-1 rounded-md text-sm transition-colors border ${selectedTagIds.includes(tag._id) ? "bg-[#F4F0ED] text-[#292929] border-[#D5D3D0]" : "bg-white text-[#545454] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"}`}
+                  >
                     {tag.name}
                   </button>
                 ))}
@@ -371,7 +437,8 @@ export function ResendForm() {
                 type="button"
                 onClick={handleAddNewTag}
                 disabled={!newTagInputValue.trim() || isSubmitting}
-                className="px-3 py-1 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+                className="px-3 py-1 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
                 <Plus className="w-4 h-4" /> Add
               </button>
             </div>
@@ -379,22 +446,40 @@ export function ResendForm() {
               {newTagNames.map((tagName) => (
                 <span
                   key={tagName}
-                  className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-sm border border-blue-200">
+                  className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-sm border border-blue-200"
+                >
                   {tagName}
                   <button
                     type="button"
                     onClick={() => handleRemoveNewTag(tagName)}
                     disabled={isSubmitting}
-                    className="text-blue-500 hover:text-blue-700">
+                    className="text-blue-500 hover:text-blue-700"
+                  >
                     <X className="w-3 h-3" />
                   </button>
                 </span>
               ))}
             </div>
             {selectedTagIds.length === 0 && newTagNames.length === 0 && (
-              <p className="text-xs text-red-500 mt-1">Please select or add at least one tag.</p>
+              <p className="text-xs text-red-500 mt-1">
+                Please select or add at least one tag.
+              </p>
             )}
           </div>
+          <hr
+            className="my-4 border-t border-gray-200 w-full"
+            style={{ paddingBottom: "1rem" }}
+          />
+          <span className="ml-2 text-sm font-bold text-red-600">
+            Please read: If you need to edit your submission after it's been
+            submitted,{" "}
+            <SignUpButton mode="modal">
+              <button type="button" className="underline hover:no-underline">
+                Create an account
+              </button>
+            </SignUpButton>{" "}
+            first.
+          </span>{" "}
           <div className="flex gap-4 items-center pt-4 border-t border-[#F4F0ED]">
             <button
               type="submit"
@@ -408,18 +493,24 @@ export function ResendForm() {
                 !formData.submitterName ||
                 !formData.email
               }
-              className="px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              className="px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               {isSubmitting ? "Submitting..." : "Submit App"}
             </button>
             <Link
               to="/"
-              className="px-4 py-2 text-[#545454] hover:text-[#525252] rounded-md text-sm">
+              className="px-4 py-2 text-[#545454] hover:text-[#525252] rounded-md text-sm"
+            >
               Cancel
             </Link>
           </div>
-          <div className="text-sm text-[#545454]">You can submit up to 10 projects per day.</div>
+          <div className="text-sm text-[#545454]">
+            You can submit up to 10 projects per day.
+          </div>
           {submitError && (
-            <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">{submitError}</div>
+            <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
+              {submitError}
+            </div>
           )}
           {showSuccessMessage && (
             <div className="mt-4 p-4 bg-green-100 text-green-700 rounded-md text-sm">
