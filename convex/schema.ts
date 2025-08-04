@@ -312,4 +312,32 @@ export default defineSchema({
     .index("by_judge_story_criteria", ["judgeId", "storyId", "criteriaId"]) // Unique constraint
     .index("by_groupId_storyId", ["groupId", "storyId"])
     .index("by_storyId", ["storyId"]),
+
+  submissionStatuses: defineTable({
+    groupId: v.id("judgingGroups"), // Associated judging group
+    storyId: v.id("stories"), // Submission being tracked
+    status: v.union(
+      v.literal("pending"),
+      v.literal("completed"),
+      v.literal("skip"),
+    ), // Current judging status
+    assignedJudgeId: v.optional(v.id("judges")), // Judge assigned to this submission (if any)
+    lastUpdatedBy: v.optional(v.id("judges")), // Judge who last updated the status
+    lastUpdatedAt: v.number(), // When status was last updated
+  })
+    .index("by_groupId", ["groupId"])
+    .index("by_groupId_storyId", ["groupId", "storyId"]) // Unique constraint
+    .index("by_status", ["status"])
+    .index("by_assignedJudgeId", ["assignedJudgeId"]),
+
+  submissionNotes: defineTable({
+    groupId: v.id("judgingGroups"), // Associated judging group
+    storyId: v.id("stories"), // Submission the note is about
+    judgeId: v.id("judges"), // Judge who wrote the note
+    content: v.string(), // Note content
+    replyToId: v.optional(v.id("submissionNotes")), // For threaded replies
+  })
+    .index("by_groupId_storyId", ["groupId", "storyId"])
+    .index("by_replyToId", ["replyToId"])
+    .index("by_judgeId", ["judgeId"]),
 });

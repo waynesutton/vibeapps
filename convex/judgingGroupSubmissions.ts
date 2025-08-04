@@ -75,6 +75,14 @@ export const addSubmissions = mutation({
           addedAt: Date.now(),
         });
 
+        // Create default submission status (Pending)
+        await ctx.db.insert("submissionStatuses", {
+          groupId: args.groupId,
+          storyId,
+          status: "pending",
+          lastUpdatedAt: Date.now(),
+        });
+
         added++;
       } catch (error) {
         errors.push(
@@ -121,6 +129,30 @@ export const removeSubmission = mutation({
 
     for (const score of scores) {
       await ctx.db.delete(score._id);
+    }
+
+    // Delete submission status
+    const submissionStatus = await ctx.db
+      .query("submissionStatuses")
+      .withIndex("by_groupId_storyId", (q) =>
+        q.eq("groupId", args.groupId).eq("storyId", args.storyId),
+      )
+      .unique();
+
+    if (submissionStatus) {
+      await ctx.db.delete(submissionStatus._id);
+    }
+
+    // Delete all associated notes
+    const notes = await ctx.db
+      .query("submissionNotes")
+      .withIndex("by_groupId_storyId", (q) =>
+        q.eq("groupId", args.groupId).eq("storyId", args.storyId),
+      )
+      .collect();
+
+    for (const note of notes) {
+      await ctx.db.delete(note._id);
     }
 
     // Delete the submission
@@ -447,5 +479,384 @@ export const getGroupSubmissions = query({
     );
 
     return stories;
+  },
+});
+
+// --- Submission Status Management ---
+
+/**
+ * Update submission status (for judges)
+ */
+export const updateSubmissionStatus = mutation({
+  args: {
+    groupId: v.id("judgingGroups"),
+    storyId: v.id("stories"),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("completed"),
+      v.literal("skip"),
+    ),
+    judgeId: v.id("judges"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Verify the judge exists and belongs to the group
+    const judge = await ctx.db.get(args.judgeId);
+    if (!judge || judge.groupId !== args.groupId) {
+      throw new Error("Judge not found or not in this group");
+    }
+
+    // Find existing status
+    const existingStatus = await ctx.db
+      .query("submissionStatuses")
+      .withIndex("by_groupId_storyId", (q) =>
+        q.eq("groupId", args.groupId).eq("storyId", args.storyId),
+      )
+      .unique();
+
+    if (!existingStatus) {
+      throw new Error("Submission status not found");
+    }
+
+    // Update the status
+    await ctx.db.patch(existingStatus._id, {
+      status: args.status,
+      assignedJudgeId: args.status === "completed" ? args.judgeId : undefined,
+      lastUpdatedBy: args.judgeId,
+      lastUpdatedAt: Date.now(),
+    });
+
+    return null;
+  },
+});
+
+/**
+ * Get submission statuses for a judging group (with judge information)
+ */
+export const getSubmissionStatuses = query({
+  args: {
+    groupId: v.id("judgingGroups"),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("submissionStatuses"),
+      storyId: v.id("stories"),
+      storyTitle: v.string(),
+      storySlug: v.string(),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("completed"),
+        v.literal("skip"),
+      ),
+      assignedJudgeName: v.optional(v.string()),
+      lastUpdatedByName: v.optional(v.string()),
+      lastUpdatedAt: v.number(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    // Get all submission statuses for the group
+    const statuses = await ctx.db
+      .query("submissionStatuses")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+
+    // Enrich with story and judge information
+    const enrichedStatuses = await Promise.all(
+      statuses.map(async (status) => {
+        const story = await ctx.db.get(status.storyId);
+        if (!story) {
+          throw new Error(`Story ${status.storyId} not found`);
+        }
+
+        let assignedJudgeName: string | undefined;
+        if (status.assignedJudgeId) {
+          const assignedJudge = await ctx.db.get(status.assignedJudgeId);
+          assignedJudgeName = assignedJudge?.name;
+        }
+
+        let lastUpdatedByName: string | undefined;
+        if (status.lastUpdatedBy) {
+          const lastUpdatedJudge = await ctx.db.get(status.lastUpdatedBy);
+          lastUpdatedByName = lastUpdatedJudge?.name;
+        }
+
+        return {
+          _id: status._id,
+          storyId: status.storyId,
+          storyTitle: story.title,
+          storySlug: story.slug,
+          status: status.status,
+          assignedJudgeName,
+          lastUpdatedByName,
+          lastUpdatedAt: status.lastUpdatedAt,
+        };
+      }),
+    );
+
+    return enrichedStatuses;
+  },
+});
+
+/**
+ * Get submission status for a specific submission and judge
+ */
+export const getSubmissionStatusForJudge = query({
+  args: {
+    groupId: v.id("judgingGroups"),
+    storyId: v.id("stories"),
+    judgeId: v.id("judges"),
+  },
+  returns: v.union(
+    v.null(),
+    v.object({
+      status: v.union(
+        v.literal("pending"),
+        v.literal("completed"),
+        v.literal("skip"),
+      ),
+      canJudge: v.boolean(),
+      assignedJudgeName: v.optional(v.string()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    // Verify the judge exists and belongs to the group
+    const judge = await ctx.db.get(args.judgeId);
+    if (!judge || judge.groupId !== args.groupId) {
+      return null;
+    }
+
+    // Get submission status
+    const status = await ctx.db
+      .query("submissionStatuses")
+      .withIndex("by_groupId_storyId", (q) =>
+        q.eq("groupId", args.groupId).eq("storyId", args.storyId),
+      )
+      .unique();
+
+    if (!status) {
+      return null;
+    }
+
+    // Determine if this judge can judge this submission
+    // Rules: Can judge if status is "pending" or "skip", but not if "completed"
+    const canJudge = status.status === "pending" || status.status === "skip";
+
+    let assignedJudgeName: string | undefined;
+    if (status.assignedJudgeId) {
+      const assignedJudge = await ctx.db.get(status.assignedJudgeId);
+      assignedJudgeName = assignedJudge?.name;
+    }
+
+    return {
+      status: status.status,
+      canJudge,
+      assignedJudgeName,
+    };
+  },
+});
+
+// --- Submission Notes Management ---
+
+/**
+ * Add a note to a submission
+ */
+export const addSubmissionNote = mutation({
+  args: {
+    groupId: v.id("judgingGroups"),
+    storyId: v.id("stories"),
+    judgeId: v.id("judges"),
+    content: v.string(),
+    replyToId: v.optional(v.id("submissionNotes")),
+  },
+  returns: v.id("submissionNotes"),
+  handler: async (ctx, args) => {
+    // Verify the judge exists and belongs to the group
+    const judge = await ctx.db.get(args.judgeId);
+    if (!judge || judge.groupId !== args.groupId) {
+      throw new Error("Judge not found or not in this group");
+    }
+
+    // If replying to a note, verify it exists
+    if (args.replyToId) {
+      const parentNote = await ctx.db.get(args.replyToId);
+      if (
+        !parentNote ||
+        parentNote.groupId !== args.groupId ||
+        parentNote.storyId !== args.storyId
+      ) {
+        throw new Error("Parent note not found or invalid");
+      }
+    }
+
+    // Create the note
+    const noteId = await ctx.db.insert("submissionNotes", {
+      groupId: args.groupId,
+      storyId: args.storyId,
+      judgeId: args.judgeId,
+      content: args.content.trim(),
+      replyToId: args.replyToId,
+    });
+
+    return noteId;
+  },
+});
+
+/**
+ * Get threaded notes for a submission
+ */
+export const getSubmissionNotes = query({
+  args: {
+    groupId: v.id("judgingGroups"),
+    storyId: v.id("stories"),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("submissionNotes"),
+      _creationTime: v.number(),
+      content: v.string(),
+      judgeName: v.string(),
+      replyToId: v.optional(v.id("submissionNotes")),
+      replies: v.array(
+        v.object({
+          _id: v.id("submissionNotes"),
+          _creationTime: v.number(),
+          content: v.string(),
+          judgeName: v.string(),
+        }),
+      ),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    // Get all notes for this submission
+    const allNotes = await ctx.db
+      .query("submissionNotes")
+      .withIndex("by_groupId_storyId", (q) =>
+        q.eq("groupId", args.groupId).eq("storyId", args.storyId),
+      )
+      .order("asc")
+      .collect();
+
+    // Enrich with judge names
+    const enrichedNotes = await Promise.all(
+      allNotes.map(async (note) => {
+        const judge = await ctx.db.get(note.judgeId);
+        return {
+          ...note,
+          judgeName: judge?.name || "Unknown Judge",
+        };
+      }),
+    );
+
+    // Organize into threaded structure
+    const topLevelNotes = enrichedNotes.filter((note) => !note.replyToId);
+    const replyMap = new Map<string, typeof enrichedNotes>();
+
+    // Group replies by parent note ID
+    enrichedNotes
+      .filter((note) => note.replyToId)
+      .forEach((reply) => {
+        const parentId = reply.replyToId!;
+        if (!replyMap.has(parentId)) {
+          replyMap.set(parentId, []);
+        }
+        replyMap.get(parentId)!.push(reply);
+      });
+
+    // Structure the response with replies nested under parent notes
+    const threadedNotes = topLevelNotes.map((note) => ({
+      _id: note._id,
+      _creationTime: note._creationTime,
+      content: note.content,
+      judgeName: note.judgeName,
+      replyToId: note.replyToId,
+      replies: (replyMap.get(note._id) || []).map((reply) => ({
+        _id: reply._id,
+        _creationTime: reply._creationTime,
+        content: reply.content,
+        judgeName: reply.judgeName,
+      })),
+    }));
+
+    return threadedNotes;
+  },
+});
+
+/**
+ * Get submission statuses for a specific story across all judging groups it belongs to
+ */
+export const getStorySubmissionStatuses = query({
+  args: {
+    storyId: v.id("stories"),
+  },
+  returns: v.array(
+    v.object({
+      groupId: v.id("judgingGroups"),
+      groupName: v.string(),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("completed"),
+        v.literal("skip"),
+      ),
+      assignedJudgeName: v.optional(v.string()),
+      lastUpdatedByName: v.optional(v.string()),
+      lastUpdatedAt: v.number(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    // First, find all judging groups this story belongs to
+    const storySubmissions = await ctx.db
+      .query("judgingGroupSubmissions")
+      .withIndex("by_storyId", (q) => q.eq("storyId", args.storyId))
+      .collect();
+
+    if (storySubmissions.length === 0) {
+      return [];
+    }
+
+    // Get statuses for each group
+    const statusPromises = storySubmissions.map(async (submission) => {
+      // Get the group details
+      const group = await ctx.db.get(submission.groupId);
+      if (!group) {
+        return null;
+      }
+
+      // Get the submission status
+      const status = await ctx.db
+        .query("submissionStatuses")
+        .withIndex("by_groupId_storyId", (q) =>
+          q.eq("groupId", submission.groupId).eq("storyId", args.storyId),
+        )
+        .unique();
+
+      if (!status) {
+        return null;
+      }
+
+      // Get judge names if available
+      let assignedJudgeName: string | undefined;
+      if (status.assignedJudgeId) {
+        const assignedJudge = await ctx.db.get(status.assignedJudgeId);
+        assignedJudgeName = assignedJudge?.name;
+      }
+
+      let lastUpdatedByName: string | undefined;
+      if (status.lastUpdatedBy) {
+        const lastUpdatedJudge = await ctx.db.get(status.lastUpdatedBy);
+        lastUpdatedByName = lastUpdatedJudge?.name;
+      }
+
+      return {
+        groupId: submission.groupId,
+        groupName: group.name,
+        status: status.status,
+        assignedJudgeName,
+        lastUpdatedByName,
+        lastUpdatedAt: status.lastUpdatedAt,
+      };
+    });
+
+    const results = await Promise.all(statusPromises);
+    return results.filter((result) => result !== null);
   },
 });

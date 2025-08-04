@@ -14,6 +14,10 @@ import {
   Plus,
   Scale,
   Lock,
+  CheckCircle,
+  PlayCircle,
+  FileX,
+  User,
 } from "lucide-react";
 import * as Tabs from "@radix-ui/react-tabs";
 import {
@@ -811,9 +815,60 @@ function StoryJudgingGroups({
     authIsLoading || !isAuthenticated ? "skip" : { storyId },
   );
 
+  // Get submission statuses for this story across all its judging groups
+  const storyStatuses = useQuery(
+    api.judgingGroupSubmissions.getStorySubmissionStatuses,
+    authIsLoading || !isAuthenticated ? "skip" : { storyId },
+  );
+
   if (!storyGroups || storyGroups.length === 0) {
     return null;
   }
+
+  const getStatusForGroup = (groupId: Id<"judgingGroups">) => {
+    if (!storyStatuses) return null;
+    return storyStatuses.find((status) => status.groupId === groupId);
+  };
+
+  const renderStatusIcon = (
+    status: "pending" | "completed" | "skip" | null,
+    assignedJudgeName?: string,
+  ) => {
+    if (!status) return null;
+
+    switch (status) {
+      case "pending":
+        return (
+          <div
+            className="flex items-center gap-1"
+            title="Pending - Ready to be judged"
+          >
+            <PlayCircle className="w-3 h-3 text-yellow-600" />
+          </div>
+        );
+      case "completed":
+        return (
+          <div
+            className="flex items-center gap-1"
+            title={`Completed${assignedJudgeName ? ` by ${assignedJudgeName}` : ""}`}
+          >
+            <CheckCircle className="w-3 h-3 text-green-600" />
+            {assignedJudgeName && <User className="w-3 h-3 text-gray-500" />}
+          </div>
+        );
+      case "skip":
+        return (
+          <div
+            className="flex items-center gap-1"
+            title="Skip - Not being judged"
+          >
+            <FileX className="w-3 h-3 text-gray-600" />
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
@@ -824,26 +879,56 @@ function StoryJudgingGroups({
         </span>
       </div>
       <div className="flex flex-wrap gap-2">
-        {storyGroups.map((group) => (
-          <div
-            key={group._id}
-            className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-blue-200 rounded text-xs"
-          >
-            <span className="font-medium text-blue-900">{group.name}</span>
-            <span className="text-blue-600">/{group.slug}</span>
-            {!group.isActive && (
-              <span className="text-orange-600 font-medium">(Inactive)</span>
-            )}
-            {!group.isPublic && <Lock className="w-3 h-3 text-gray-500" />}
-            <button
-              onClick={() => onRemove(storyId, group._id, group.name)}
-              className="ml-1 text-red-500 hover:text-red-700 hover:bg-red-100 rounded p-0.5 transition-colors"
-              title={`Remove from ${group.name}`}
+        {storyGroups.map((group) => {
+          const statusInfo = getStatusForGroup(group._id);
+
+          return (
+            <div
+              key={group._id}
+              className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-blue-200 rounded text-xs"
             >
-              <X className="w-3 h-3" />
-            </button>
+              <span className="font-medium text-blue-900">{group.name}</span>
+              <span className="text-blue-600">/{group.slug}</span>
+
+              {/* Status Icon */}
+              {statusInfo &&
+                renderStatusIcon(
+                  statusInfo.status,
+                  statusInfo.assignedJudgeName,
+                )}
+
+              {!group.isActive && (
+                <span className="text-orange-600 font-medium">(Inactive)</span>
+              )}
+              {!group.isPublic && <Lock className="w-3 h-3 text-gray-500" />}
+              <button
+                onClick={() => onRemove(storyId, group._id, group.name)}
+                className="ml-1 text-red-500 hover:text-red-700 hover:bg-red-100 rounded p-0.5 transition-colors"
+                title={`Remove from ${group.name}`}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Status Legend */}
+      <div className="mt-2 pt-2 border-t border-blue-200">
+        <div className="flex items-center gap-4 text-xs text-blue-700">
+          <div className="flex items-center gap-1">
+            <PlayCircle className="w-3 h-3 text-yellow-600" />
+            <span>Pending</span>
           </div>
-        ))}
+          <div className="flex items-center gap-1">
+            <CheckCircle className="w-3 h-3 text-green-600" />
+            <span>Completed</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <FileX className="w-3 h-3 text-gray-600" />
+            <span>Skip</span>
+          </div>
+        </div>
       </div>
     </div>
   );
