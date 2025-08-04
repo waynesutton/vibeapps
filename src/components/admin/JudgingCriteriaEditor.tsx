@@ -25,7 +25,6 @@ interface CriteriaItem {
   _id?: Id<"judgingCriteria">;
   question: string;
   description?: string;
-  weight?: number;
   order: number;
 }
 
@@ -85,7 +84,6 @@ export function JudgingCriteriaEditor({
           _id: c._id,
           question: c.question,
           description: c.description,
-          weight: c.weight,
           order: c.order,
         })),
       );
@@ -120,7 +118,6 @@ export function JudgingCriteriaEditor({
       {
         question: "",
         description: "",
-        weight: 1,
         order: newOrder,
       },
     ]);
@@ -241,7 +238,6 @@ export function JudgingCriteriaEditor({
         _id: item._id,
         question: item.question.trim(),
         description: item.description?.trim() || undefined,
-        weight: item.weight || 1,
         order: index + 1,
       }));
 
@@ -482,30 +478,9 @@ export function JudgingCriteriaEditor({
                         />
                       </div>
 
-                      <div className="flex items-center gap-4">
-                        <div className="flex-1">
-                          <Label htmlFor={`weight-${index}`}>
-                            Weight (Optional)
-                          </Label>
-                          <Input
-                            id={`weight-${index}`}
-                            type="number"
-                            min="0.1"
-                            max="10"
-                            step="0.1"
-                            value={criterion.weight || 1}
-                            onChange={(e) =>
-                              updateCriterion(
-                                index,
-                                "weight",
-                                parseFloat(e.target.value) || 1,
-                              )
-                            }
-                            className="w-20"
-                          />
-                        </div>
-                        <div className="flex-2">
-                          <p className="text-sm text-gray-600 mt-6">
+                      <div className="flex items-center justify-center">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-gray-600">
                             Preview: {renderStarPreview()}
                           </p>
                         </div>
@@ -536,7 +511,6 @@ export function JudgingCriteriaEditor({
                             _id: c._id,
                             question: c.question,
                             description: c.description,
-                            weight: c.weight,
                             order: c.order,
                           })),
                         );

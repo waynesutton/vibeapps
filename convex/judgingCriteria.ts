@@ -79,7 +79,7 @@ export const saveCriteria = mutation({
           await ctx.db.patch(criterion._id, {
             question: criterion.question,
             description: criterion.description,
-            weight: criterion.weight,
+            weight: criterion.weight || 1, // Default to 1 if not provided
             order: criterion.order,
           });
           criteriaToKeep.add(criterion._id);
@@ -90,7 +90,7 @@ export const saveCriteria = mutation({
           groupId: args.groupId,
           question: criterion.question,
           description: criterion.description,
-          weight: criterion.weight,
+          weight: criterion.weight || 1, // Default to 1 if not provided
           order: criterion.order,
         });
         criteriaToKeep.add(newId);

@@ -420,32 +420,82 @@ export function JudgingResultsDashboard({
 
                     {judge.scores.length > 0 && (
                       <div className="space-y-3">
-                        {judge.scores.map((score) => (
+                        {/* Group scores by submission */}
+                        {Object.entries(
+                          judge.scores.reduce(
+                            (acc, score) => {
+                              if (!acc[score.storyId]) {
+                                acc[score.storyId] = {
+                                  storyTitle: score.storyTitle,
+                                  scores: [],
+                                  totalScore: 0,
+                                };
+                              }
+                              acc[score.storyId].scores.push(score);
+                              acc[score.storyId].totalScore += score.score;
+                              return acc;
+                            },
+                            {} as Record<
+                              string,
+                              {
+                                storyTitle: string;
+                                scores: any[];
+                                totalScore: number;
+                              }
+                            >,
+                          ),
+                        ).map(([storyId, submissionData], submissionIndex) => (
                           <div
-                            key={`${score.storyId}-${score.criteriaId}`}
-                            className="bg-gray-50 rounded-lg p-3"
+                            key={storyId}
+                            className={`rounded-lg p-4 border border-gray-200 ${
+                              submissionIndex % 2 === 0
+                                ? "bg-white"
+                                : "bg-gray-50"
+                            }`}
                           >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex-1">
-                                <p className="font-medium text-sm text-gray-900">
-                                  {score.storyTitle}
-                                </p>
-                                <p className="text-xs text-gray-600">
-                                  {score.criteriaQuestion}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                                <span className="font-medium text-sm">
-                                  {score.score}/5
-                                </span>
+                            {/* Submission Header */}
+                            <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200">
+                              <h5 className="font-semibold text-gray-900">
+                                {submissionData.storyTitle}
+                              </h5>
+                              <div className="text-right">
+                                <div className="text-lg font-bold text-gray-900">
+                                  {submissionData.totalScore}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  Total Score
+                                </div>
                               </div>
                             </div>
-                            {score.comments && (
-                              <p className="text-sm text-gray-700 bg-white rounded p-2 border border-gray-200">
-                                "{score.comments}"
-                              </p>
-                            )}
+
+                            {/* Individual Criteria Scores */}
+                            <div className="space-y-2">
+                              {submissionData.scores.map((score) => (
+                                <div
+                                  key={`${score.storyId}-${score.criteriaId}`}
+                                  className="bg-white bg-opacity-50 rounded p-3 border border-gray-100"
+                                >
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-gray-700">
+                                        {score.criteriaQuestion}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                                      <span className="font-medium text-sm">
+                                        {score.score}/5
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {score.comments && (
+                                    <p className="text-sm text-gray-600 italic bg-white rounded p-2 border border-gray-200 mt-2">
+                                      "{score.comments}"
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         ))}
                       </div>

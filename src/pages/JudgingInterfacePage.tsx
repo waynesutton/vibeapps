@@ -12,6 +12,10 @@ import {
   Clock,
   Home,
   BarChart2,
+  Github,
+  Linkedin,
+  Twitter,
+  Link as LinkIcon,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
@@ -312,6 +316,76 @@ export default function JudgingInterfacePage() {
                     <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">
                       {currentSubmission.longDescription}
                     </p>
+                  </div>
+                )}
+
+                {/* Project Links Section */}
+                {((currentSubmission as any).linkedinUrl ||
+                  (currentSubmission as any).twitterUrl ||
+                  (currentSubmission as any).githubUrl ||
+                  (currentSubmission as any).chefShowUrl ||
+                  (currentSubmission as any).chefAppUrl) && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-3">
+                      Project Links
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {(currentSubmission as any).linkedinUrl && (
+                        <a
+                          href={(currentSubmission as any).linkedinUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                        >
+                          <Linkedin className="w-4 h-4 mr-2" />
+                          LinkedIn
+                        </a>
+                      )}
+                      {(currentSubmission as any).twitterUrl && (
+                        <a
+                          href={(currentSubmission as any).twitterUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-3 py-2 bg-sky-500 text-white rounded-md hover:bg-sky-600 transition-colors text-sm"
+                        >
+                          <Twitter className="w-4 h-4 mr-2" />
+                          Twitter
+                        </a>
+                      )}
+                      {(currentSubmission as any).githubUrl && (
+                        <a
+                          href={(currentSubmission as any).githubUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-3 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900 transition-colors text-sm"
+                        >
+                          <Github className="w-4 h-4 mr-2" />
+                          GitHub
+                        </a>
+                      )}
+                      {(currentSubmission as any).chefShowUrl && (
+                        <a
+                          href={(currentSubmission as any).chefShowUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm"
+                        >
+                          <LinkIcon className="w-4 h-4 mr-2" />
+                          Chef Show
+                        </a>
+                      )}
+                      {(currentSubmission as any).chefAppUrl && (
+                        <a
+                          href={(currentSubmission as any).chefAppUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
+                        >
+                          <LinkIcon className="w-4 h-4 mr-2" />
+                          Chef App
+                        </a>
+                      )}
+                    </div>
                   </div>
                 )}
 
