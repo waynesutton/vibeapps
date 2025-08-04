@@ -50,7 +50,10 @@ export const ensureUser = mutation({
     }
 
     let candidateUsername: string | null = null;
-    if (typeof identity.username === "string" && identity.username.trim() !== "") {
+    if (
+      typeof identity.username === "string" &&
+      identity.username.trim() !== ""
+    ) {
       candidateUsername = identity.username.trim();
     }
 
@@ -102,7 +105,7 @@ export const ensureUser = mutation({
           changed = true;
         } else {
           console.warn(
-            `Clerk username '${candidateUsername}' is already taken. User ${existingUser._id} will need to set username manually.`
+            `Clerk username '${candidateUsername}' is already taken. User ${existingUser._id} will need to set username manually.`,
           );
         }
       } else if (
@@ -111,7 +114,7 @@ export const ensureUser = mutation({
         existingUser.username !== null
       ) {
         console.warn(
-          `User ${existingUser._id} username ('${existingUser.username}') differs from Clerk username ('${candidateUsername}'). Not updating automatically.`
+          `User ${existingUser._id} username ('${existingUser.username}') differs from Clerk username ('${candidateUsername}'). Not updating automatically.`,
         );
       }
       // No change to username if existingUser.username is not null and candidateUsername is null
@@ -143,7 +146,7 @@ export const ensureUser = mutation({
         usernameForDbInsert = candidateUsername;
       } else {
         console.warn(
-          `Clerk username '${candidateUsername}' is already taken for new user. New user will need to set username manually.`
+          `Clerk username '${candidateUsername}' is already taken for new user. New user will need to set username manually.`,
         );
       }
     }
@@ -165,7 +168,9 @@ export const ensureUser = mutation({
  * Throws an error if the user is not authenticated or not found in the database.
  * (Assumes ensureUser has been called previously to sync the user).
  */
-export async function getAuthenticatedUserId(ctx: QueryCtx | MutationCtx): Promise<Id<"users">> {
+export async function getAuthenticatedUserId(
+  ctx: QueryCtx | MutationCtx,
+): Promise<Id<"users">> {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
     throw new Error("User not authenticated.");
@@ -176,7 +181,9 @@ export async function getAuthenticatedUserId(ctx: QueryCtx | MutationCtx): Promi
     .unique();
   if (!user) {
     // This should ideally not happen if ensureUser is called on login
-    throw new Error("Authenticated user not found in Convex database. User sync issue?");
+    throw new Error(
+      "Authenticated user not found in Convex database. User sync issue?",
+    );
   }
   return user._id;
 }
@@ -186,7 +193,7 @@ export async function getAuthenticatedUserId(ctx: QueryCtx | MutationCtx): Promi
  * Returns null if the user is not authenticated or not found.
  */
 export async function getAuthenticatedUserDoc(
-  ctx: QueryCtx | MutationCtx
+  ctx: QueryCtx | MutationCtx,
 ): Promise<Doc<"users"> | null> {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
@@ -249,7 +256,7 @@ export const getMyUserDocument = query({
       linkedin: v.optional(v.string()),
       isVerified: v.optional(v.boolean()),
       // add other fields from your users table if any
-    })
+    }),
   ),
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -276,30 +283,62 @@ export const getMyUserDocument = query({
 // });
 
 /**
+ * Helper function to check if the current user is an admin.
+ * Returns true if user is admin, false otherwise.
+ * Does not throw errors - use for conditional access checks.
+ */
+export async function isUserAdmin(
+  ctx: QueryCtx | MutationCtx,
+): Promise<boolean> {
+  try {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return false;
+    }
+
+    // Access role directly from the identity object
+    const clerkTokenRole = (identity as any).role;
+    return clerkTokenRole === "admin";
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
  * Ensures the currently authenticated user has the 'admin' role.
  * Throws an error if not authenticated, user not found, or not an admin.
  * This should be called at the beginning of admin-only mutations/actions.
  */
-export async function requireAdminRole(ctx: QueryCtx | MutationCtx): Promise<void> {
+export async function requireAdminRole(
+  ctx: QueryCtx | MutationCtx,
+): Promise<void> {
   console.log("[requireAdminRole] Function called.");
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
-    console.error("[requireAdminRole] No identity found. User not authenticated.");
+    console.error(
+      "[requireAdminRole] No identity found. User not authenticated.",
+    );
     throw new Error("Authentication required for admin action.");
   }
 
-  console.log("[requireAdminRole] Identity subject (Clerk User ID):", identity.subject);
+  console.log(
+    "[requireAdminRole] Identity subject (Clerk User ID):",
+    identity.subject,
+  );
   // Log the entire identity object to see all available fields including the top-level role
   console.log(
     "[requireAdminRole] Full identity object (includes top-level claims):",
-    JSON.stringify(identity, null, 2)
+    JSON.stringify(identity, null, 2),
   );
 
   // Access role directly from the identity object
   // The JWT template "role": "{{user.public_metadata.role}}" maps it to the top level
   const clerkTokenRole = (identity as any).role;
 
-  console.log("[requireAdminRole] Role directly from identity object:", clerkTokenRole);
+  console.log(
+    "[requireAdminRole] Role directly from identity object:",
+    clerkTokenRole,
+  );
 
   // The old way of checking publicMetadata is no longer applicable with this JWT template
   // const rawPublicMetadata = identity.publicMetadata;
@@ -312,21 +351,23 @@ export async function requireAdminRole(ctx: QueryCtx | MutationCtx): Promise<voi
 
   console.log(
     "[requireAdminRole] Final determined clerkTokenRole before check:",
-    JSON.stringify(clerkTokenRole)
+    JSON.stringify(clerkTokenRole),
   );
 
   if (clerkTokenRole === "admin") {
     console.log(
-      "[requireAdminRole] 'admin' role FOUND in Clerk token (top-level). Access GRANTED."
+      "[requireAdminRole] 'admin' role FOUND in Clerk token (top-level). Access GRANTED.",
     );
     return;
   }
 
   console.error(
     "[requireAdminRole] 'admin' role NOT FOUND in Clerk token (top-level). Access DENIED. Current role value in token:",
-    clerkTokenRole
+    clerkTokenRole,
   );
-  throw new Error("Admin privileges required. Role 'admin' not found in Clerk token.");
+  throw new Error(
+    "Admin privileges required. Role 'admin' not found in Clerk token.",
+  );
 }
 
 // --- Queries for User Profile Page ---
@@ -358,7 +399,7 @@ export const listUserStories = query({
       internal.stories._getStoryDetailsBatch,
       {
         storyIds,
-      }
+      },
     );
 
     return detailedStories;
@@ -379,7 +420,7 @@ export const listUserVotes = query({
       storyId: v.id("stories"),
       storyTitle: v.optional(v.string()),
       storySlug: v.optional(v.string()),
-    })
+    }),
   ),
   handler: async (ctx, args) => {
     const votes = await ctx.db
@@ -397,7 +438,7 @@ export const listUserVotes = query({
           storyTitle: story?.title,
           storySlug: story?.slug,
         };
-      })
+      }),
     );
     return votesWithStoryDetails;
   },
@@ -468,14 +509,16 @@ export const listUserComments = query({
           authorUsername: author?.username, // Username of the comment's author
           isHidden: comment.isHidden === undefined ? false : comment.isHidden, // Ensure isHidden is a boolean
         } as CommentDetailsForProfile; // Assert to the specific type
-      })
+      }),
     );
     return commentsWithDetails;
   },
 });
 
 // Basic getUserByCtx for follows.ts, similar to getAuthenticatedUserDoc
-export async function getUserByCtx(ctx: QueryCtx | MutationCtx): Promise<Doc<"users"> | null> {
+export async function getUserByCtx(
+  ctx: QueryCtx | MutationCtx,
+): Promise<Doc<"users"> | null> {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
     return null;
@@ -499,7 +542,7 @@ export const getUserProfileByUsername = query({
       followersCount: v.number(),
       followingCount: v.number(),
       isFollowedByCurrentUser: v.boolean(),
-    })
+    }),
   ),
   handler: async (ctx, args): Promise<UserProfileDataResolved | null> => {
     const userDoc: Doc<"users"> | null = await ctx.db
@@ -530,91 +573,101 @@ export const getUserProfileByUsername = query({
 
     const storiesFromDb = await ctx.db
       .query("stories")
-      .withIndex("by_userId_isApproved", (q) => q.eq("userId", userDoc._id).eq("isApproved", true))
+      .withIndex("by_userId_isApproved", (q) =>
+        q.eq("userId", userDoc._id).eq("isApproved", true),
+      )
       .order("desc")
       .take(100);
 
-    const storyDetailsPromises = storiesFromDb.map(async (storyDoc: Doc<"stories">) => {
-      const author: Doc<"users"> | null = storyDoc.userId ? await ctx.db.get(storyDoc.userId) : null;
-      const votesData = await ctx.db
-        .query("votes")
-        .withIndex("by_story", (q) => q.eq("storyId", storyDoc._id))
-        .collect();
-      const commentsData = await ctx.db
-        .query("comments")
-        .withIndex("by_storyId", (q) => q.eq("storyId", storyDoc._id))
-        .filter((q) => q.eq(q.field("isHidden"), false))
-        .collect();
-      const ratingsData = await ctx.db
-        .query("storyRatings")
-        .withIndex("by_storyId", (q) => q.eq("storyId", storyDoc._id))
-        .collect();
+    const storyDetailsPromises = storiesFromDb.map(
+      async (storyDoc: Doc<"stories">) => {
+        const author: Doc<"users"> | null = storyDoc.userId
+          ? await ctx.db.get(storyDoc.userId)
+          : null;
+        const votesData = await ctx.db
+          .query("votes")
+          .withIndex("by_story", (q) => q.eq("storyId", storyDoc._id))
+          .collect();
+        const commentsData = await ctx.db
+          .query("comments")
+          .withIndex("by_storyId", (q) => q.eq("storyId", storyDoc._id))
+          .filter((q) => q.eq(q.field("isHidden"), false))
+          .collect();
+        const ratingsData = await ctx.db
+          .query("storyRatings")
+          .withIndex("by_storyId", (q) => q.eq("storyId", storyDoc._id))
+          .collect();
 
-      const averageRating =
-        ratingsData.length > 0
-          ? parseFloat(
-              (ratingsData.reduce((sum, r) => sum + r.value, 0) / ratingsData.length).toFixed(1)
-            )
-          : 0;
-      const commentsCount = commentsData.length;
-      const votesCount = votesData.length;
+        const averageRating =
+          ratingsData.length > 0
+            ? parseFloat(
+                (
+                  ratingsData.reduce((sum, r) => sum + r.value, 0) /
+                  ratingsData.length
+                ).toFixed(1),
+              )
+            : 0;
+        const commentsCount = commentsData.length;
+        const votesCount = votesData.length;
 
-      const screenshotUrl = storyDoc.screenshotId
-        ? await ctx.storage.getUrl(storyDoc.screenshotId)
-        : null;
+        const screenshotUrl = storyDoc.screenshotId
+          ? await ctx.storage.getUrl(storyDoc.screenshotId)
+          : null;
 
-      const tagsDocsIntermediate = storyDoc.tagIds
-        ? await Promise.all(storyDoc.tagIds.map((id) => ctx.db.get(id)))
-        : [];
+        const tagsDocsIntermediate = storyDoc.tagIds
+          ? await Promise.all(storyDoc.tagIds.map((id) => ctx.db.get(id)))
+          : [];
 
-      const validTags = tagsDocsIntermediate.reduce(
-        (acc, tag) => {
-          if (tag && typeof tag.slug === "string") {
-            // Explicitly construct the tag object to match tagDocValidator's expectation
-            acc.push({
-              _id: tag._id,
-              _creationTime: tag._creationTime,
-              name: tag.name,
-              slug: tag.slug, // Now definitely a string
-              showInHeader: tag.showInHeader,
-              isHidden: tag.isHidden,
-              backgroundColor: tag.backgroundColor,
-              textColor: tag.textColor,
-              // Add any other fields expected by tagDocValidator, ensuring types match
-            });
-          }
-          return acc;
-        },
-        [] as {
-          _id: Id<"tags">;
-          _creationTime: number;
-          name: string;
-          slug: string;
-          showInHeader: boolean;
-          isHidden?: boolean;
-          backgroundColor?: string;
-          textColor?: string;
-        }[]
-      );
+        const validTags = tagsDocsIntermediate.reduce(
+          (acc, tag) => {
+            if (tag && typeof tag.slug === "string") {
+              // Explicitly construct the tag object to match tagDocValidator's expectation
+              acc.push({
+                _id: tag._id,
+                _creationTime: tag._creationTime,
+                name: tag.name,
+                slug: tag.slug, // Now definitely a string
+                showInHeader: tag.showInHeader,
+                isHidden: tag.isHidden,
+                backgroundColor: tag.backgroundColor,
+                textColor: tag.textColor,
+                // Add any other fields expected by tagDocValidator, ensuring types match
+              });
+            }
+            return acc;
+          },
+          [] as {
+            _id: Id<"tags">;
+            _creationTime: number;
+            name: string;
+            slug: string;
+            showInHeader: boolean;
+            isHidden?: boolean;
+            backgroundColor?: string;
+            textColor?: string;
+          }[],
+        );
 
-      // Constructing the object for StoryWithDetailsPublic
-      return {
-        ...storyDoc, // Base story fields
-        authorName: author?.name,
-        authorUsername: author?.username,
-        authorImageUrl: author?.imageUrl,
-        authorIsVerified: author?.isVerified ?? false, // Add verified status for author
-        tags: validTags, // Use the explicitly constructed validTags
-        screenshotUrl: screenshotUrl,
-        voteScore: storyDoc.votes, // Assuming storyDoc.votes is the voteScore
-        averageRating: averageRating,
-        commentsCount: commentsCount,
-        votesCount: votesCount,
-        // _score is optional, so can be omitted if not applicable here
-      };
-    });
+        // Constructing the object for StoryWithDetailsPublic
+        return {
+          ...storyDoc, // Base story fields
+          authorName: author?.name,
+          authorUsername: author?.username,
+          authorImageUrl: author?.imageUrl,
+          authorIsVerified: author?.isVerified ?? false, // Add verified status for author
+          tags: validTags, // Use the explicitly constructed validTags
+          screenshotUrl: screenshotUrl,
+          voteScore: storyDoc.votes, // Assuming storyDoc.votes is the voteScore
+          averageRating: averageRating,
+          commentsCount: commentsCount,
+          votesCount: votesCount,
+          // _score is optional, so can be omitted if not applicable here
+        };
+      },
+    );
 
-    const storiesWithDetails: StoryWithDetailsPublic[] = await Promise.all(storyDetailsPromises);
+    const storiesWithDetails: StoryWithDetailsPublic[] =
+      await Promise.all(storyDetailsPromises);
 
     const userVotes = await ctx.db
       .query("votes")
@@ -630,7 +683,7 @@ export const getUserProfileByUsername = query({
           storyTitle: story?.title,
           storySlug: story?.slug,
         };
-      })
+      }),
     );
 
     const userComments = await ctx.db
@@ -652,7 +705,7 @@ export const getUserProfileByUsername = query({
       };
     });
     const commentsWithDetails: CommentDetailsForProfile[] = await Promise.all(
-      commentsWithDetailsPromises
+      commentsWithDetailsPromises,
     );
 
     const userRatings = await ctx.db
@@ -669,16 +722,17 @@ export const getUserProfileByUsername = query({
           storyTitle: story?.title,
           storySlug: story?.slug,
         };
-      })
+      }),
     );
 
-    const followStats: { followersCount: number; followingCount: number } = await ctx.runQuery(
-      api.follows.getFollowStats,
-      { userId: userDoc._id }
+    const followStats: { followersCount: number; followingCount: number } =
+      await ctx.runQuery(api.follows.getFollowStats, { userId: userDoc._id });
+    const isFollowedByCurrentUser: boolean = await ctx.runQuery(
+      api.follows.isFollowing,
+      {
+        profileUserId: userDoc._id,
+      },
     );
-    const isFollowedByCurrentUser: boolean = await ctx.runQuery(api.follows.isFollowing, {
-      profileUserId: userDoc._id,
-    });
 
     return {
       user: userForProfile, // Use the shaped user object
@@ -705,7 +759,7 @@ export const listUserStoryRatings = query({
       value: v.number(),
       storyTitle: v.optional(v.string()),
       storySlug: v.optional(v.string()),
-    })
+    }),
   ),
   handler: async (ctx, args) => {
     const ratings = await ctx.db
@@ -722,7 +776,7 @@ export const listUserStoryRatings = query({
           storyTitle: story?.title,
           storySlug: story?.slug,
         };
-      })
+      }),
     );
     return ratingsWithDetails;
   },
@@ -735,7 +789,9 @@ export const setUsername = mutation({
     const existingUserDoc = await getAuthenticatedUserDoc(ctx);
 
     if (!existingUserDoc) {
-      throw new Error("Authenticated user not found in DB. Cannot set username.");
+      throw new Error(
+        "Authenticated user not found in DB. Cannot set username.",
+      );
     }
 
     // Basic validation for username (e.g., length, allowed characters)
@@ -744,7 +800,9 @@ export const setUsername = mutation({
       throw new Error("Username must be between 3 and 20 characters.");
     }
     if (!/^[a-zA-Z0-9_]+$/.test(trimmedUsername)) {
-      throw new Error("Username can only contain letters, numbers, and underscores.");
+      throw new Error(
+        "Username can only contain letters, numbers, and underscores.",
+      );
     }
 
     // Check for uniqueness
@@ -755,7 +813,9 @@ export const setUsername = mutation({
       .first();
 
     if (conflictingUser) {
-      throw new Error(`Username "${trimmedUsername}" is already taken. Please choose another.`);
+      throw new Error(
+        `Username "${trimmedUsername}" is already taken. Please choose another.`,
+      );
     }
 
     // Update the user's username
@@ -806,8 +866,12 @@ export const syncUserFromClerkWebhook = internalMutation({
         changed = true;
       }
       // Handle imageUrl: if it's null from webhook, store as undefined
-      const webhookImageUrl = args.imageUrl === null ? undefined : args.imageUrl;
-      if (webhookImageUrl !== undefined && webhookImageUrl !== existingUser.imageUrl) {
+      const webhookImageUrl =
+        args.imageUrl === null ? undefined : args.imageUrl;
+      if (
+        webhookImageUrl !== undefined &&
+        webhookImageUrl !== existingUser.imageUrl
+      ) {
         updates.imageUrl = webhookImageUrl;
         changed = true;
       }
@@ -876,7 +940,7 @@ export const setUserProfileImage = mutation({
       // This could happen if the storageId is invalid or the file doesn\'t exist.
       console.error(`Failed to get URL for storageId: ${args.storageId}`);
       throw new Error(
-        "Could not retrieve image URL from storage. The file might not have been uploaded correctly."
+        "Could not retrieve image URL from storage. The file might not have been uploaded correctly.",
       );
     }
 
@@ -901,7 +965,9 @@ export const updateUsername = mutation({
       throw new Error("Username must be between 3 and 20 characters.");
     }
     if (!/^[a-zA-Z0-9_]+$/.test(trimmedUsername)) {
-      throw new Error("Username can only contain letters, numbers, and underscores.");
+      throw new Error(
+        "Username can only contain letters, numbers, and underscores.",
+      );
     }
 
     const currentUser = await ctx.db
@@ -915,7 +981,11 @@ export const updateUsername = mutation({
 
     // If username is the same as current, no need to update or check uniqueness
     if (currentUser.username === trimmedUsername) {
-      return { success: true, username: trimmedUsername, message: "Username is unchanged." };
+      return {
+        success: true,
+        username: trimmedUsername,
+        message: "Username is unchanged.",
+      };
     }
 
     // Check if the new username is already taken by another user
@@ -928,7 +998,9 @@ export const updateUsername = mutation({
       existingUserWithNewUsername &&
       existingUserWithNewUsername._id.toString() !== currentUser._id.toString()
     ) {
-      throw new Error("This username is already taken. Please choose another one.");
+      throw new Error(
+        "This username is already taken. Please choose another one.",
+      );
     }
 
     await ctx.db.patch(currentUser._id, { username: trimmedUsername });
@@ -942,7 +1014,11 @@ export const updateUsername = mutation({
     // This is complex and depends on your Clerk setup.
     // For now, we focus on updating the Convex user document.
 
-    return { success: true, username: trimmedUsername, message: "Username updated successfully." };
+    return {
+      success: true,
+      username: trimmedUsername,
+      message: "Username updated successfully.",
+    };
   },
 });
 
@@ -957,7 +1033,8 @@ export const updateProfileDetails = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("User not authenticated to update profile details.");
+    if (!identity)
+      throw new Error("User not authenticated to update profile details.");
     const user = await ctx.db
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
@@ -1013,7 +1090,7 @@ export const listAllUsersAdmin = query({
         isBanned: v.boolean(),
         isPaused: v.boolean(),
         isVerified: v.boolean(),
-      })
+      }),
     ),
     isDone: v.boolean(),
     continueCursor: v.string(),
@@ -1045,13 +1122,13 @@ export const listAllUsersAdmin = query({
 
       if (args.filterBanned !== undefined) {
         finalFilteredUsers = finalFilteredUsers.filter(
-          (user) => (user.isBanned ?? false) === args.filterBanned
+          (user) => (user.isBanned ?? false) === args.filterBanned,
         );
       }
 
       if (args.filterPaused !== undefined) {
         finalFilteredUsers = finalFilteredUsers.filter(
-          (user) => (user.isPaused ?? false) === args.filterPaused
+          (user) => (user.isPaused ?? false) === args.filterPaused,
         );
       }
 

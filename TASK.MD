@@ -39,6 +39,7 @@ Brief description of the feature and its purpose.
 ## In Progress Tasks
 
 - [ ] setup resend for emails
+- [ ] 
 
 ## Bugs
 

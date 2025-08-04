@@ -1,7 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { requireAdminRole } from "./users";
+import { requireAdminRole, isUserAdmin } from "./users";
 
 // Helper to generate slugs (consistent with existing forms.ts)
 function generateSlug(name: string): string {
@@ -265,6 +265,9 @@ export const getGroupWithDetails = query({
       slug: v.string(),
       description: v.optional(v.string()),
       isPublic: v.boolean(),
+      password: v.optional(v.string()),
+      resultsIsPublic: v.optional(v.boolean()),
+      resultsPassword: v.optional(v.string()),
       isActive: v.boolean(),
       startDate: v.optional(v.number()),
       endDate: v.optional(v.number()),
@@ -273,6 +276,8 @@ export const getGroupWithDetails = query({
       criteria: v.array(
         v.object({
           _id: v.id("judgingCriteria"),
+          _creationTime: v.number(),
+          groupId: v.id("judgingGroups"),
           question: v.string(),
           description: v.optional(v.string()),
           weight: v.optional(v.number()),
@@ -348,6 +353,14 @@ export const getPublicGroup = query({
 
     if (!group) {
       return null;
+    }
+
+    // If group is inactive, only allow access for admins
+    if (!group.isActive) {
+      const userIsAdmin = await isUserAdmin(ctx);
+      if (!userIsAdmin) {
+        return null; // Return null to show 404 for non-admin users
+      }
     }
 
     // Return basic info without sensitive data
