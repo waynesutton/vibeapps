@@ -244,7 +244,7 @@ export const getJudgeSession = query({
 });
 
 /**
- * Update judge's last active timestamp
+ * Update judge's last active timestamp (throttled to reduce write conflicts)
  */
 export const updateActivity = mutation({
   args: { sessionId: v.string() },
@@ -259,9 +259,17 @@ export const updateActivity = mutation({
       throw new Error("Judge session not found");
     }
 
-    await ctx.db.patch(judge._id, {
-      lastActiveAt: Date.now(),
-    });
+    const now = Date.now();
+    const timeSinceLastUpdate = now - judge.lastActiveAt;
+    const updateThreshold = 30 * 1000; // 30 seconds
+
+    // Only update if more than 30 seconds have passed since last update
+    // This prevents excessive write conflicts while maintaining activity tracking
+    if (timeSinceLastUpdate >= updateThreshold) {
+      await ctx.db.patch(judge._id, {
+        lastActiveAt: now,
+      });
+    }
 
     return null;
   },

@@ -96,10 +96,15 @@ export const submitScore = mutation({
       });
     }
 
-    // Update judge's last active time
-    await ctx.db.patch(judge._id, {
-      lastActiveAt: now,
-    });
+    // Update judge's last active time (throttled to reduce write conflicts)
+    const timeSinceLastUpdate = now - judge.lastActiveAt;
+    const updateThreshold = 30 * 1000; // 30 seconds
+
+    if (timeSinceLastUpdate >= updateThreshold) {
+      await ctx.db.patch(judge._id, {
+        lastActiveAt: now,
+      });
+    }
 
     return null;
   },
