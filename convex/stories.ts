@@ -1502,3 +1502,68 @@ export const getRelatedStoriesByTags = query({
     return enrichedStories;
   },
 });
+
+// Query to get count of approved stories for a specific tag
+export const getApprovedCountByTag = query({
+  args: {
+    tagId: v.optional(v.id("tags")),
+    sortPeriod: v.optional(
+      v.union(
+        v.literal("today"),
+        v.literal("week"),
+        v.literal("month"),
+        v.literal("year"),
+        v.literal("all"),
+        v.literal("votes_today"),
+        v.literal("votes_week"),
+        v.literal("votes_month"),
+        v.literal("votes_year"),
+      ),
+    ),
+  },
+  returns: v.number(),
+  handler: async (ctx, args): Promise<number> => {
+    const now = Date.now();
+    let startTime = 0;
+
+    switch (args.sortPeriod) {
+      case "today":
+        startTime = now - 24 * 60 * 60 * 1000;
+        break;
+      case "week":
+        startTime = now - 7 * 24 * 60 * 60 * 1000;
+        break;
+      case "month":
+        startTime = now - 30 * 24 * 60 * 60 * 1000;
+        break;
+      case "year":
+        startTime = now - 365 * 24 * 60 * 60 * 1000;
+        break;
+      default:
+        startTime = 0;
+    }
+
+    // Filter stories with the same criteria as listApproved
+    const baseQuery = ctx.db
+      .query("stories")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("status"), "approved"),
+          q.neq(q.field("isHidden"), true),
+          q.gte(q.field("_creationTime"), startTime),
+        ),
+      );
+
+    const stories = await baseQuery.collect();
+
+    // Filter by tagId if provided
+    if (args.tagId) {
+      const filteredStories = stories.filter((story) =>
+        (story.tagIds || []).includes(args.tagId!),
+      );
+      return filteredStories.length;
+    }
+
+    return stories.length;
+  },
+});
