@@ -25,6 +25,7 @@ import {
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
 import { Label } from "../components/ui/label";
+import { Input } from "../components/ui/input";
 
 export default function JudgingInterfacePage() {
   const { slug } = useParams<{ slug: string }>();
@@ -41,6 +42,7 @@ export default function JudgingInterfacePage() {
   );
   const [replyContent, setReplyContent] = useState("");
   const [isMarkingCompleted, setIsMarkingCompleted] = useState(false);
+  const [jumpToSubmission, setJumpToSubmission] = useState("");
 
   // Get session ID from localStorage on mount
   useEffect(() => {
@@ -327,6 +329,19 @@ export default function JudgingInterfacePage() {
     setCurrentSubmissionIndex((prev) => (prev > 0 ? prev - 1 : prev));
   };
 
+  const handleJumpToSubmission = (e: React.FormEvent) => {
+    e.preventDefault();
+    const submissionNumber = parseInt(jumpToSubmission);
+    if (
+      !isNaN(submissionNumber) &&
+      submissionNumber >= 1 &&
+      submissionNumber <= submissions.length
+    ) {
+      setCurrentSubmissionIndex(submissionNumber - 1); // Convert to 0-based index
+      setJumpToSubmission("");
+    }
+  };
+
   const renderStarRating = (
     criteriaId: Id<"judgingCriteria">,
     currentScore?: number,
@@ -431,6 +446,31 @@ export default function JudgingInterfacePage() {
                   {submissions.length}
                 </h2>
                 <div className="flex items-center gap-2">
+                  <form
+                    onSubmit={handleJumpToSubmission}
+                    className="flex items-center gap-1"
+                  >
+                    <Input
+                      type="number"
+                      value={jumpToSubmission}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setJumpToSubmission(e.target.value)
+                      }
+                      placeholder="#"
+                      min="1"
+                      max={submissions.length}
+                      className="w-16 h-8 text-sm text-center"
+                    />
+                    <Button
+                      type="submit"
+                      variant="outline"
+                      size="sm"
+                      disabled={!jumpToSubmission.trim()}
+                      className="px-2"
+                    >
+                      Go
+                    </Button>
+                  </form>
                   <Button
                     variant="outline"
                     size="sm"
