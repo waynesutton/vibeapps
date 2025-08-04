@@ -151,6 +151,9 @@ export default defineSchema({
         v.literal("none"),
       ),
     ),
+    // Submission limit settings
+    showSubmissionLimit: v.optional(v.boolean()),
+    submissionLimitCount: v.optional(v.number()),
   }),
 
   forms: defineTable({

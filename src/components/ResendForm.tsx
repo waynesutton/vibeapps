@@ -37,6 +37,7 @@ export function ResendForm() {
 
   const availableTags = useQuery(api.tags.listHeader);
   const formFields = useQuery(api.storyFormFields.listEnabled);
+  const settings = useQuery(api.settings.get);
 
   const generateUploadUrl = useMutation(api.stories.generateUploadUrl);
   const submitStoryAnonymous = useMutation(api.stories.submitAnonymous);
@@ -504,9 +505,12 @@ export function ResendForm() {
               Cancel
             </Link>
           </div>
-          <div className="text-sm text-[#545454]">
-            You can submit up to 10 projects per day.
-          </div>
+          {settings?.showSubmissionLimit && (
+            <div className="text-sm text-[#545454]">
+              You can submit up to {settings.submissionLimitCount || 10}{" "}
+              projects per day.
+            </div>
+          )}
           {submitError && (
             <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
               {submitError}

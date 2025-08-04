@@ -20,6 +20,9 @@ const DEFAULT_SETTINGS = {
   siteDefaultViewMode: "vibe" as ViewModeConvex | "none", // 'none' means user choice, no pre-selection
   profilePageDefaultViewMode: "list" as ViewModeConvex | "none", // Default for profile pages, allow none
   adminDashboardDefaultViewMode: "list" as ViewModeConvex | "none", // Default for admin dashboard, allow none
+  // Submission limit settings
+  showSubmissionLimit: true,
+  submissionLimitCount: 10,
 };
 
 // Type for settings data returned by the 'get' query.
@@ -34,7 +37,7 @@ export const get = query({
     const settingsDoc = await ctx.db.query("settings").first();
     if (!settingsDoc) {
       console.warn(
-        "Settings not found in DB, returning defaults. Run initialize mutation to persist."
+        "Settings not found in DB, returning defaults. Run initialize mutation to persist.",
       );
       return DEFAULT_SETTINGS;
     }
@@ -47,11 +50,19 @@ export const get = query({
       showListView: settingsDoc.showListView ?? DEFAULT_SETTINGS.showListView,
       showGridView: settingsDoc.showGridView ?? DEFAULT_SETTINGS.showGridView,
       showVibeView: settingsDoc.showVibeView ?? DEFAULT_SETTINGS.showVibeView,
-      siteDefaultViewMode: settingsDoc.siteDefaultViewMode ?? DEFAULT_SETTINGS.siteDefaultViewMode,
+      siteDefaultViewMode:
+        settingsDoc.siteDefaultViewMode ?? DEFAULT_SETTINGS.siteDefaultViewMode,
       profilePageDefaultViewMode:
-        settingsDoc.profilePageDefaultViewMode ?? DEFAULT_SETTINGS.profilePageDefaultViewMode,
+        settingsDoc.profilePageDefaultViewMode ??
+        DEFAULT_SETTINGS.profilePageDefaultViewMode,
       adminDashboardDefaultViewMode:
-        settingsDoc.adminDashboardDefaultViewMode ?? DEFAULT_SETTINGS.adminDashboardDefaultViewMode,
+        settingsDoc.adminDashboardDefaultViewMode ??
+        DEFAULT_SETTINGS.adminDashboardDefaultViewMode,
+      showSubmissionLimit:
+        settingsDoc.showSubmissionLimit ?? DEFAULT_SETTINGS.showSubmissionLimit,
+      submissionLimitCount:
+        settingsDoc.submissionLimitCount ??
+        DEFAULT_SETTINGS.submissionLimitCount,
     } as SettingsData; // Assert to ensure type compatibility
   },
 });
@@ -66,18 +77,32 @@ export const initialize = mutation({
       console.log("Settings already initialized.");
       // Patch existing with any new default fields if they are missing
       const updates: Partial<typeof DEFAULT_SETTINGS> = {};
-      if (existing.showListView === undefined) updates.showListView = DEFAULT_SETTINGS.showListView;
-      if (existing.showGridView === undefined) updates.showGridView = DEFAULT_SETTINGS.showGridView;
-      if (existing.showVibeView === undefined) updates.showVibeView = DEFAULT_SETTINGS.showVibeView;
+      if (existing.showListView === undefined)
+        updates.showListView = DEFAULT_SETTINGS.showListView;
+      if (existing.showGridView === undefined)
+        updates.showGridView = DEFAULT_SETTINGS.showGridView;
+      if (existing.showVibeView === undefined)
+        updates.showVibeView = DEFAULT_SETTINGS.showVibeView;
       if (existing.siteDefaultViewMode === undefined)
         updates.siteDefaultViewMode = DEFAULT_SETTINGS.siteDefaultViewMode;
       if (existing.profilePageDefaultViewMode === undefined)
-        updates.profilePageDefaultViewMode = DEFAULT_SETTINGS.profilePageDefaultViewMode;
+        updates.profilePageDefaultViewMode =
+          DEFAULT_SETTINGS.profilePageDefaultViewMode;
       if (existing.adminDashboardDefaultViewMode === undefined)
-        updates.adminDashboardDefaultViewMode = DEFAULT_SETTINGS.adminDashboardDefaultViewMode;
+        updates.adminDashboardDefaultViewMode =
+          DEFAULT_SETTINGS.adminDashboardDefaultViewMode;
+      if (existing.showSubmissionLimit === undefined)
+        updates.showSubmissionLimit = DEFAULT_SETTINGS.showSubmissionLimit;
+      if (existing.submissionLimitCount === undefined)
+        updates.submissionLimitCount = DEFAULT_SETTINGS.submissionLimitCount;
       // also ensure old defaultViewMode is updated if new one not present
-      if (existing.defaultViewMode && existing.siteDefaultViewMode === undefined) {
-        updates.siteDefaultViewMode = existing.defaultViewMode as ViewModeConvex | "none";
+      if (
+        existing.defaultViewMode &&
+        existing.siteDefaultViewMode === undefined
+      ) {
+        updates.siteDefaultViewMode = existing.defaultViewMode as
+          | ViewModeConvex
+          | "none";
       }
 
       if (Object.keys(updates).length > 0) {
@@ -109,22 +134,40 @@ export const update = mutation({
         v.literal("votes_today"),
         v.literal("votes_week"),
         v.literal("votes_month"),
-        v.literal("votes_year")
-      )
+        v.literal("votes_year"),
+      ),
     ),
     // Add other updatable settings here
     showListView: v.optional(v.boolean()),
     showGridView: v.optional(v.boolean()),
     showVibeView: v.optional(v.boolean()),
     siteDefaultViewMode: v.optional(
-      v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"), v.literal("none"))
+      v.union(
+        v.literal("list"),
+        v.literal("grid"),
+        v.literal("vibe"),
+        v.literal("none"),
+      ),
     ),
     profilePageDefaultViewMode: v.optional(
-      v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"), v.literal("none"))
+      v.union(
+        v.literal("list"),
+        v.literal("grid"),
+        v.literal("vibe"),
+        v.literal("none"),
+      ),
     ),
     adminDashboardDefaultViewMode: v.optional(
-      v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"), v.literal("none"))
+      v.union(
+        v.literal("list"),
+        v.literal("grid"),
+        v.literal("vibe"),
+        v.literal("none"),
+      ),
     ),
+    // Submission limit settings
+    showSubmissionLimit: v.optional(v.boolean()),
+    submissionLimitCount: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {

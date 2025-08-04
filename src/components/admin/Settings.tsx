@@ -31,6 +31,8 @@ const DEFAULT_SETTINGS_FRONTEND = {
   siteDefaultViewMode: "vibe" as ViewMode | "none",
   profilePageDefaultViewMode: "list" as ViewMode | "none",
   adminDashboardDefaultViewMode: "list" as ViewMode | "none",
+  showSubmissionLimit: true,
+  submissionLimitCount: 10,
 };
 
 export function Settings() {
@@ -58,14 +60,20 @@ export function Settings() {
         showGridView: DEFAULT_SETTINGS_FRONTEND.showGridView,
         showVibeView: DEFAULT_SETTINGS_FRONTEND.showVibeView,
         siteDefaultViewMode: DEFAULT_SETTINGS_FRONTEND.siteDefaultViewMode,
-        profilePageDefaultViewMode: DEFAULT_SETTINGS_FRONTEND.profilePageDefaultViewMode,
-        adminDashboardDefaultViewMode: DEFAULT_SETTINGS_FRONTEND.adminDashboardDefaultViewMode,
+        profilePageDefaultViewMode:
+          DEFAULT_SETTINGS_FRONTEND.profilePageDefaultViewMode,
+        adminDashboardDefaultViewMode:
+          DEFAULT_SETTINGS_FRONTEND.adminDashboardDefaultViewMode,
+        showSubmissionLimit: DEFAULT_SETTINGS_FRONTEND.showSubmissionLimit,
+        submissionLimitCount: DEFAULT_SETTINGS_FRONTEND.submissionLimitCount,
         ...editableSettings,
       });
     }
   }, [currentSettings]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const { name, value, type } = e.target;
     let processedValue: string | number | boolean = value;
 
@@ -77,7 +85,10 @@ export function Settings() {
       processedValue = value as SortPeriod; // Ensure it's treated as SortPeriod type
     } else if (name === "siteDefaultViewMode") {
       processedValue = value as ViewMode | "none";
-    } else if (name === "profilePageDefaultViewMode" || name === "adminDashboardDefaultViewMode") {
+    } else if (
+      name === "profilePageDefaultViewMode" ||
+      name === "adminDashboardDefaultViewMode"
+    ) {
       processedValue = value as ViewMode | "none";
     }
 
@@ -99,7 +110,8 @@ export function Settings() {
       const updates: Partial<SiteSettings> = {};
       if (localSettings.itemsPerPage !== undefined)
         updates.itemsPerPage = localSettings.itemsPerPage;
-      if (localSettings.siteTitle !== undefined) updates.siteTitle = localSettings.siteTitle;
+      if (localSettings.siteTitle !== undefined)
+        updates.siteTitle = localSettings.siteTitle;
       if (localSettings.defaultSortPeriod !== undefined) {
         updates.defaultSortPeriod = localSettings.defaultSortPeriod;
       }
@@ -114,18 +126,27 @@ export function Settings() {
         updates.siteDefaultViewMode = localSettings.siteDefaultViewMode;
       }
       if (localSettings.profilePageDefaultViewMode !== undefined) {
-        updates.profilePageDefaultViewMode = localSettings.profilePageDefaultViewMode;
+        updates.profilePageDefaultViewMode =
+          localSettings.profilePageDefaultViewMode;
       }
       if (localSettings.adminDashboardDefaultViewMode !== undefined) {
-        updates.adminDashboardDefaultViewMode = localSettings.adminDashboardDefaultViewMode;
+        updates.adminDashboardDefaultViewMode =
+          localSettings.adminDashboardDefaultViewMode;
       }
+      // Add new submission limit settings to updates
+      if (localSettings.showSubmissionLimit !== undefined)
+        updates.showSubmissionLimit = localSettings.showSubmissionLimit;
+      if (localSettings.submissionLimitCount !== undefined)
+        updates.submissionLimitCount = localSettings.submissionLimitCount;
 
       await updateSettings(updates);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000); // Hide after 3 seconds
     } catch (err) {
       console.error("Failed to save settings:", err);
-      setError(err instanceof Error ? err.message : "An unknown error occurred.");
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred.",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -145,16 +166,21 @@ export function Settings() {
   const hasChanges =
     JSON.stringify(localSettings) !==
     JSON.stringify(
-      currentSettings ? (({ _id, _creationTime, ...rest }) => rest)(currentSettings) : {}
+      currentSettings
+        ? (({ _id, _creationTime, ...rest }) => rest)(currentSettings)
+        : {},
     );
 
   // Check if settings need initialization (i.e., _id is missing)
-  const needsInitialization = currentSettings !== undefined && !("_id" in currentSettings);
+  const needsInitialization =
+    currentSettings !== undefined && !("_id" in currentSettings);
 
   // Handle auth loading state globally for the component if desired,
   // though individual query loading is handled below.
   if (authIsLoading) {
-    return <div className="space-y-8 text-center">Loading authentication...</div>;
+    return (
+      <div className="space-y-8 text-center">Loading authentication...</div>
+    );
   }
 
   // If settings data itself is loading (and auth is done)
@@ -173,7 +199,8 @@ export function Settings() {
         <p>Initial site settings need to be created in the database.</p>
         <button
           onClick={handleInitialize}
-          className="px-3 py-1 bg-yellow-200 text-yellow-900 rounded hover:bg-yellow-300 transition-colors text-xs font-medium">
+          className="px-3 py-1 bg-yellow-200 text-yellow-900 rounded hover:bg-yellow-300 transition-colors text-xs font-medium"
+        >
           Initialize Default Settings
         </button>
         {error && <p className="text-red-600 mt-2">{error}</p>}
@@ -192,11 +219,14 @@ export function Settings() {
           <h2 className="text-xl font-medium text-[#525252]">Site Settings</h2>
           {(hasChanges || showSuccess) && (
             <div className="flex items-center gap-4">
-              {showSuccess && <span className="text-sm text-green-600">Saved!</span>}
+              {showSuccess && (
+                <span className="text-sm text-green-600">Saved!</span>
+              )}
               <button
                 onClick={handleSave}
                 disabled={isSaving || !hasChanges}
-                className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 disabled:opacity-50 text-sm">
+                className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 disabled:opacity-50 text-sm"
+              >
                 <Save className="w-4 h-4" />
                 {isSaving ? "Saving..." : "Save Changes"}
               </button>
@@ -205,13 +235,18 @@ export function Settings() {
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">{error}</div>
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
+            {error}
+          </div>
         )}
 
         <div className="space-y-4 max-w-md">
           {/* Site Title Setting */}
           <div>
-            <label htmlFor="siteTitle" className="block text-sm font-medium text-[#525252] mb-1">
+            <label
+              htmlFor="siteTitle"
+              className="block text-sm font-medium text-[#525252] mb-1"
+            >
               Site Title
             </label>
             <input
@@ -227,7 +262,10 @@ export function Settings() {
 
           {/* Items Per Page Setting */}
           <div>
-            <label htmlFor="itemsPerPage" className="block text-sm font-medium text-[#525252] mb-1">
+            <label
+              htmlFor="itemsPerPage"
+              className="block text-sm font-medium text-[#525252] mb-1"
+            >
               Submissions Per Page (Load More quantity)
             </label>
             <input
@@ -236,7 +274,10 @@ export function Settings() {
               type="number"
               min="5" // Example min value
               max="100" // Example max value
-              value={localSettings.itemsPerPage ?? DEFAULT_SETTINGS_FRONTEND.itemsPerPage}
+              value={
+                localSettings.itemsPerPage ??
+                DEFAULT_SETTINGS_FRONTEND.itemsPerPage
+              }
               onChange={handleChange}
               className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
               disabled={isSaving}
@@ -247,7 +288,8 @@ export function Settings() {
           <div>
             <label
               htmlFor="defaultSortPeriod"
-              className="block text-sm font-medium text-[#525252] mb-1">
+              className="block text-sm font-medium text-[#525252] mb-1"
+            >
               Default Homepage Sort
             </label>
             <select
@@ -256,7 +298,8 @@ export function Settings() {
               value={localSettings.defaultSortPeriod || "all"} // Default to 'all' if not set
               onChange={handleChange}
               className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
-              disabled={isSaving}>
+              disabled={isSaving}
+            >
               <option value="today">Today</option>
               <option value="week">This Week</option>
               <option value="month">This Month</option>
@@ -271,11 +314,15 @@ export function Settings() {
 
           {/* --- New View Mode Settings --- */}
           <div className="pt-6 mt-6 border-t border-gray-200">
-            <h3 className="text-lg font-medium text-[#525252] mb-4">View Mode Configuration</h3>
+            <h3 className="text-lg font-medium text-[#525252] mb-4">
+              View Mode Configuration
+            </h3>
 
             {/* View Mode Visibility */}
             <div className="space-y-3 mb-6">
-              <p className="text-sm font-medium text-[#525252]">Show View Mode Icons:</p>
+              <p className="text-sm font-medium text-[#525252]">
+                Show View Mode Icons:
+              </p>
               {["showListView", "showGridView", "showVibeView"].map((key) => {
                 const typedKey = key as keyof Pick<
                   SiteSettings,
@@ -303,7 +350,8 @@ export function Settings() {
             <div>
               <label
                 htmlFor="siteDefaultViewMode"
-                className="block text-sm font-medium text-[#525252] mb-1">
+                className="block text-sm font-medium text-[#525252] mb-1"
+              >
                 Site Default View Mode (Homepage, etc.)
               </label>
               <select
@@ -312,15 +360,24 @@ export function Settings() {
                 value={localSettings.siteDefaultViewMode || "none"}
                 onChange={handleChange}
                 className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
-                disabled={isSaving}>
-                <option value="none">None (User selection or first available)</option>
-                {localSettings.showListView && <option value="list">List View</option>}
-                {localSettings.showGridView && <option value="grid">Grid View</option>}
-                {localSettings.showVibeView && <option value="vibe">Vibe View</option>}
+                disabled={isSaving}
+              >
+                <option value="none">
+                  None (User selection or first available)
+                </option>
+                {localSettings.showListView && (
+                  <option value="list">List View</option>
+                )}
+                {localSettings.showGridView && (
+                  <option value="grid">Grid View</option>
+                )}
+                {localSettings.showVibeView && (
+                  <option value="vibe">Vibe View</option>
+                )}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                If a view mode is hidden, it cannot be set as default. 'None' means no view mode is
-                pre-selected.
+                If a view mode is hidden, it cannot be set as default. 'None'
+                means no view mode is pre-selected.
               </p>
             </div>
 
@@ -328,7 +385,8 @@ export function Settings() {
             <div className="mt-4">
               <label
                 htmlFor="profilePageDefaultViewMode"
-                className="block text-sm font-medium text-[#525252] mb-1">
+                className="block text-sm font-medium text-[#525252] mb-1"
+              >
                 Profile Page Default View Mode
               </label>
               <select
@@ -337,9 +395,12 @@ export function Settings() {
                 value={localSettings.profilePageDefaultViewMode || "list"}
                 onChange={handleChange}
                 className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
-                disabled={isSaving}>
+                disabled={isSaving}
+              >
                 {/* Profile page can always choose, not tied to show...View settings for header icons */}
-                <option value="none">None (User selection or first available)</option>
+                <option value="none">
+                  None (User selection or first available)
+                </option>
                 <option value="list">List View</option>
                 <option value="grid">Grid View</option>
                 <option value="vibe">Vibe View</option>
@@ -350,7 +411,8 @@ export function Settings() {
             <div className="mt-4">
               <label
                 htmlFor="adminDashboardDefaultViewMode"
-                className="block text-sm font-medium text-[#525252] mb-1">
+                className="block text-sm font-medium text-[#525252] mb-1"
+              >
                 Admin Dashboard Default View Mode
               </label>
               <select
@@ -359,14 +421,71 @@ export function Settings() {
                 value={localSettings.adminDashboardDefaultViewMode || "list"}
                 onChange={handleChange}
                 className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
-                disabled={isSaving}>
+                disabled={isSaving}
+              >
                 {/* Admin page can always choose */}
-                <option value="none">None (User selection or first available)</option>
+                <option value="none">
+                  None (User selection or first available)
+                </option>
                 <option value="list">List View</option>
                 <option value="grid">Grid View</option>
                 <option value="vibe">Vibe View</option>
               </select>
             </div>
+          </div>
+
+          {/* --- Submission Limit Settings --- */}
+          <div className="pt-6 mt-6 border-t border-gray-200">
+            <h3 className="text-lg font-medium text-[#525252] mb-4">
+              Submission Limit Settings
+            </h3>
+
+            {/* Show Submission Limit */}
+            <div className="mb-4">
+              <label className="flex items-center gap-2">
+                <input
+                  name="showSubmissionLimit"
+                  type="checkbox"
+                  checked={localSettings.showSubmissionLimit ?? true}
+                  onChange={handleChange}
+                  className="rounded border-[#D5D3D0] text-[#292929] focus:ring-[#292929]"
+                  disabled={isSaving}
+                />
+                <span className="text-sm font-medium text-[#525252]">
+                  Show submission limit message on forms
+                </span>
+              </label>
+              <p className="text-xs text-gray-500 mt-1 ml-6">
+                When enabled, displays the daily submission limit message on
+                story submission forms
+              </p>
+            </div>
+
+            {/* Submission Limit Count */}
+            {localSettings.showSubmissionLimit && (
+              <div>
+                <label
+                  htmlFor="submissionLimitCount"
+                  className="block text-sm font-medium text-[#525252] mb-1"
+                >
+                  Daily Submission Limit
+                </label>
+                <input
+                  id="submissionLimitCount"
+                  name="submissionLimitCount"
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={localSettings.submissionLimitCount ?? 10}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] max-w-[200px]"
+                  disabled={isSaving}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Maximum number of projects users can submit per day
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
