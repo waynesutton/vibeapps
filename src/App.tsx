@@ -1,6 +1,17 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, useParams, useSearchParams } from "react-router-dom";
-import { usePaginatedQuery, useQuery, useConvex, ConvexProvider } from "convex/react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
+import {
+  usePaginatedQuery,
+  useQuery,
+  useConvex,
+  ConvexProvider,
+} from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Layout } from "./components/Layout";
 import { StoryList } from "./components/StoryList";
@@ -25,6 +36,9 @@ import SetUsernamePage from "./pages/SetUsernamePage";
 import NavTestPage from "./pages/NavTestPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { TagPage } from "./pages/TagPage";
+import JudgingGroupPage from "./pages/JudgingGroupPage";
+import JudgingInterfacePage from "./pages/JudgingInterfacePage";
+import PublicJudgingResultsPage from "./pages/PublicJudgingResultsPage";
 
 function HomePage() {
   const { viewMode, selectedTagId, sortPeriod } = useLayoutContext();
@@ -37,7 +51,7 @@ function HomePage() {
   } = usePaginatedQuery(
     api.stories.listApproved,
     { tagId: selectedTagId, sortPeriod: sortPeriod },
-    { initialNumItems: settings?.itemsPerPage || 20 }
+    { initialNumItems: settings?.itemsPerPage || 20 },
   );
 
   if (status === "LoadingFirstPage" || settings === undefined) {
@@ -47,7 +61,8 @@ function HomePage() {
   if (!stories || stories.length === 0) {
     return (
       <div>
-        No apps found in this category. <a href="/submit">Why not submit one?</a>
+        No apps found in this category.{" "}
+        <a href="/submit">Why not submit one?</a>
       </div>
     );
   }
@@ -66,7 +81,10 @@ function HomePage() {
 function StoryPage() {
   const { storySlug } = useParams<{ storySlug: string }>();
 
-  const story = useQuery(api.stories.getBySlug, storySlug ? { slug: storySlug } : "skip");
+  const story = useQuery(
+    api.stories.getBySlug,
+    storySlug ? { slug: storySlug } : "skip",
+  );
 
   if (story === undefined) {
     return <div>Loading story...</div>;
@@ -86,19 +104,28 @@ function SearchPage() {
   const { results: stories, status } = usePaginatedQuery(
     api.stories.listApproved,
     { searchTerm: query },
-    { initialNumItems: 100 }
+    { initialNumItems: 100 },
   );
 
   if (status === "LoadingFirstPage") {
     return <div>Searching...</div>;
   }
 
-  return <SearchResults query={query} stories={stories as Story[]} viewMode={viewMode} />;
+  return (
+    <SearchResults
+      query={query}
+      stories={stories as Story[]}
+      viewMode={viewMode}
+    />
+  );
 }
 
 function PublicFormPage() {
   const { formSlug } = useParams<{ formSlug: string }>();
-  const formWithFields = useQuery(api.forms.getFormBySlug, formSlug ? { slug: formSlug } : "skip");
+  const formWithFields = useQuery(
+    api.forms.getFormBySlug,
+    formSlug ? { slug: formSlug } : "skip",
+  );
 
   if (formWithFields === undefined) {
     return <div>Loading form...</div>;
@@ -124,12 +151,24 @@ function App() {
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/forms/new" element={<FormBuilder />} />
           <Route path="/admin/forms/:formId" element={<FormBuilder />} />
-          <Route path="/admin/forms/:formId/results" element={<FormResults />} />
+          <Route
+            path="/admin/forms/:formId/results"
+            element={<FormResults />}
+          />
           <Route path="/s/:storySlug" element={<StoryPage />} />
           <Route path="/tag/:tagSlug" element={<TagPage />} />
           <Route path="/f/:formSlug" element={<PublicFormPage />} />
           <Route path="/results/:slug" element={<PublicResultsViewer />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/judging/:slug" element={<JudgingGroupPage />} />
+          <Route
+            path="/judging/:slug/judge"
+            element={<JudgingInterfacePage />}
+          />
+          <Route
+            path="/judging/:slug/results"
+            element={<PublicJudgingResultsPage />}
+          />
           <Route path="/:username" element={<UserProfilePage />} />
           <Route path="/navtest" element={<NavTestPage />} />
           <Route path="/user-settings/*" element={<UserProfilePage />} />

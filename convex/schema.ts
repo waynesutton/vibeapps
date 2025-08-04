@@ -41,7 +41,11 @@ export default defineSchema({
     githubUrl: v.optional(v.string()),
     chefShowUrl: v.optional(v.string()),
     chefAppUrl: v.optional(v.string()),
-    status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected"),
+    ),
     isHidden: v.boolean(),
     isPinned: v.boolean(),
     customMessage: v.optional(v.string()),
@@ -56,7 +60,10 @@ export default defineSchema({
     .index("by_votes", ["votes"])
     .index("by_status_isHidden_votes", ["status", "isHidden", "votes"])
     .index("by_status_isHidden", ["status", "isHidden"])
-    .searchIndex("search_all", { searchField: "title", filterFields: ["status", "isHidden"] }),
+    .searchIndex("search_all", {
+      searchField: "title",
+      filterFields: ["status", "isHidden"],
+    }),
 
   comments: defineTable({
     content: v.string(),
@@ -101,7 +108,9 @@ export default defineSchema({
   settings: defineTable({
     itemsPerPage: v.number(),
     siteTitle: v.string(),
-    defaultViewMode: v.optional(v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"))),
+    defaultViewMode: v.optional(
+      v.union(v.literal("list"), v.literal("grid"), v.literal("vibe")),
+    ),
     defaultSortPeriod: v.optional(
       v.union(
         v.literal("today"),
@@ -112,20 +121,35 @@ export default defineSchema({
         v.literal("votes_today"),
         v.literal("votes_week"),
         v.literal("votes_month"),
-        v.literal("votes_year")
-      )
+        v.literal("votes_year"),
+      ),
     ),
     showListView: v.optional(v.boolean()),
     showGridView: v.optional(v.boolean()),
     showVibeView: v.optional(v.boolean()),
     siteDefaultViewMode: v.optional(
-      v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"), v.literal("none"))
+      v.union(
+        v.literal("list"),
+        v.literal("grid"),
+        v.literal("vibe"),
+        v.literal("none"),
+      ),
     ),
     profilePageDefaultViewMode: v.optional(
-      v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"), v.literal("none"))
+      v.union(
+        v.literal("list"),
+        v.literal("grid"),
+        v.literal("vibe"),
+        v.literal("none"),
+      ),
     ),
     adminDashboardDefaultViewMode: v.optional(
-      v.union(v.literal("list"), v.literal("grid"), v.literal("vibe"), v.literal("none"))
+      v.union(
+        v.literal("list"),
+        v.literal("grid"),
+        v.literal("vibe"),
+        v.literal("none"),
+      ),
     ),
   }),
 
@@ -186,7 +210,7 @@ export default defineSchema({
       v.literal("pending"),
       v.literal("resolved_hidden"),
       v.literal("resolved_deleted"),
-      v.literal("dismissed")
+      v.literal("dismissed"),
     ),
     // Optional: store story details at time of report if stories can be fully deleted
     // storyTitleSnapshot: v.optional(v.string()),
@@ -227,4 +251,62 @@ export default defineSchema({
     .index("by_key", ["key"])
     .index("by_order", ["order"])
     .index("by_enabled", ["isEnabled"]),
+
+  // Judging system tables
+  judgingGroups: defineTable({
+    name: v.string(), // Display name for the judging group
+    slug: v.string(), // URL-friendly identifier
+    description: v.optional(v.string()), // Optional description of the group
+    isPublic: v.boolean(), // Public (shareable link) or private access
+    password: v.optional(v.string()), // Password for private groups (hashed)
+    resultsIsPublic: v.optional(v.boolean()), // Whether results page is public (defaults to private)
+    resultsPassword: v.optional(v.string()), // Password for private results pages
+    isActive: v.boolean(), // Whether judging is currently active
+    startDate: v.optional(v.number()), // Optional judging start time
+    endDate: v.optional(v.number()), // Optional judging end time
+    createdBy: v.id("users"), // Admin who created the group
+  })
+    .index("by_slug", ["slug"])
+    .index("by_isPublic", ["isPublic"])
+    .index("by_isActive", ["isActive"]),
+
+  judgingCriteria: defineTable({
+    groupId: v.id("judgingGroups"), // Associated judging group
+    question: v.string(), // The judging question/criteria
+    description: v.optional(v.string()), // Optional clarification/description
+    weight: v.optional(v.number()), // Optional weighting factor (default 1.0)
+    order: v.number(), // Display order
+  }).index("by_groupId_order", ["groupId", "order"]),
+
+  judgingGroupSubmissions: defineTable({
+    groupId: v.id("judgingGroups"), // Associated judging group
+    storyId: v.id("stories"), // Submission being judged
+    addedBy: v.id("users"), // Admin who added the submission
+    addedAt: v.number(), // When it was added to the group
+  })
+    .index("by_groupId", ["groupId"])
+    .index("by_storyId", ["storyId"])
+    .index("by_groupId_storyId", ["groupId", "storyId"]), // Unique constraint
+
+  judges: defineTable({
+    name: v.string(), // Judge's name
+    email: v.optional(v.string()), // Optional email for communication
+    groupId: v.id("judgingGroups"), // Associated judging group
+    sessionId: v.string(), // Unique session identifier
+    lastActiveAt: v.number(), // Last activity timestamp
+  })
+    .index("by_groupId", ["groupId"])
+    .index("by_sessionId", ["sessionId"]),
+
+  judgeScores: defineTable({
+    judgeId: v.id("judges"), // Judge who gave the score
+    groupId: v.id("judgingGroups"), // Associated judging group
+    storyId: v.id("stories"), // Submission being scored
+    criteriaId: v.id("judgingCriteria"), // Specific criteria being scored
+    score: v.number(), // Score (1-5)
+    comments: v.optional(v.string()), // Optional comments from judge
+  })
+    .index("by_judge_story_criteria", ["judgeId", "storyId", "criteriaId"]) // Unique constraint
+    .index("by_groupId_storyId", ["groupId", "storyId"])
+    .index("by_storyId", ["storyId"]),
 });

@@ -11,7 +11,7 @@
     - `api.d.ts` & `api.js`: Generated API definitions for all functions
     - `dataModel.d.ts`: Generated TypeScript types for database schema
     - `server.d.ts` & `server.js`: Generated server-side definitions
-  - `schema.ts`: Defines the database schema including tables for `stories`, `comments`, `users`, `tags`, `settings`, `forms`, `formSubmissions`, `votes`, `reports`, `follows`, `bookmarks`, `storyRatings`, etc.
+  - `schema.ts`: Defines the database schema including tables for `stories`, `comments`, `users`, `tags`, `settings`, `forms`, `formSubmissions`, `votes`, `reports`, `follows`, `bookmarks`, `storyRatings`, and judging system tables (`judgingGroups`, `judgingCriteria`, `judgingGroupSubmissions`, `judges`, `judgeScores`).
   - `auth.config.js` & `auth.ts`: Convex authentication configuration and functions
   - `adminFollowsQueries.ts`: Admin-specific queries for managing user follows
   - `adminQueries.ts`: General admin dashboard queries for metrics and content management
@@ -22,6 +22,11 @@
   - `follows.ts`: User following system functions
   - `forms.ts`: Dynamic form builder backend functions
   - `http.ts`: HTTP actions for handling external requests
+  - `judgingGroups.ts`: Judging group management with public/private access and password protection
+  - `judgingCriteria.ts`: Judging criteria and scoring questions management
+  - `judgingGroupSubmissions.ts`: Submission assignment and management within judging groups
+  - `judges.ts`: Judge registration, session management, and progress tracking
+  - `judgeScores.ts`: Score submission, calculation, and results generation with CSV export
   - `reports.ts`: User reporting system for content moderation
   - `settings.ts`: Site-wide settings management
   - `stories.ts`: Core app submission functions (queries, mutations, actions), including admin tag management
@@ -39,12 +44,16 @@
 - `src/`: Directory for the React frontend application code.
   - `components/`: Reusable React components organized by functionality.
     - `admin/`: Admin dashboard components for content and user management.
-      - `AdminDashboard.tsx`: Main admin interface with navigation and overview - `ContentModeration.tsx`: Interface for moderating user-submitted content with tag management capabilities
+      - `AdminDashboard.tsx`: Main admin interface with navigation and overview - `ContentModeration.tsx`: Interface for moderating user-submitted content with tag management capabilities and judging group assignment
       - `ConvexBoxSettingsForm.tsx`: Form for configuring site-wide notification box
+      - `CreateJudgingGroupModal.tsx`: Modal for creating new judging groups with public/private settings
       - `FormBuilder.tsx`: Dynamic form creation interface for admins
       - `FormFieldManagement.tsx`: Component for managing individual form fields
       - `FormResults.tsx`: Display and analysis of form submission data
       - `Forms.tsx`: Management interface for all created forms
+      - `Judging.tsx`: Main judging system management interface with group creation and results access
+      - `JudgingCriteriaEditor.tsx`: Interface for defining scoring criteria and questions for judging groups
+      - `JudgingResultsDashboard.tsx`: Comprehensive results dashboard with rankings, analytics, and CSV export
       - `NumbersView.tsx`: Analytics dashboard showing key metrics
       - `ReportManagement.tsx`: Interface for reviewing and managing user reports
       - `Settings.tsx`: Site-wide settings configuration panel
@@ -77,12 +86,16 @@
     - `UserSyncer.tsx`: Component for synchronizing Clerk user data with Convex
     - `WeeklyLeaderboard.tsx`: Display of top-performing apps and creators
   - `pages/`: Top-level page components mapped to routes.
+    - `JudgingGroupPage.tsx`: Public judging group page with judge registration and password entry
+    - `JudgingInterfacePage.tsx`: Judge scoring interface with progress tracking and submission evaluation
     - `NavTestPage.tsx`: Development page for testing navigation components
     - `NotFoundPage.tsx`: 404 error page with navigation back to home
+    - `PublicJudgingResultsPage.tsx`: Public results viewing with password protection for private groups
     - `SetUsernamePage.tsx`: Onboarding page for new users to set username
     - `SignInPage.tsx`: Clerk-powered sign-in page
     - `SignOutPage.tsx`: User sign-out confirmation page
     - `SignUpPage.tsx`: Clerk-powered user registration page
+    - `TagPage.tsx`: Tag-specific content browsing page
     - `UserProfilePage.tsx`: Public user profile with verification badge display
   - `lib/`: Utility functions and configuration.
     - `utils.ts`: General utility functions and helpers
@@ -130,6 +143,7 @@
 - `clerksubmit.md`: Clerk submission process documentation
 - `following-plan.MD`: Planning document for user following system
 - `files.MD`: This file - comprehensive codebase structure overview
+- `judgingsetup.md`: Product Requirements Document (PRD) for the judging system implementation
 - `llms.txt`: LLM-related notes and configurations
 - `TASK.MD`: Current development tasks and to-do items
 - `themss.MD`: Theme and styling documentation
@@ -163,9 +177,21 @@
 - Content moderation workflows
 - User management and verification
 - Custom form builder
+- Judging system management
 - Report management system
 - Site-wide settings control
 - Analytics and metrics tracking
+
+### Judging System
+
+- Public and private judging groups with password protection
+- Custom scoring criteria with 1-5 rating scales
+- Judge registration and session management
+- Real-time progress tracking for judges
+- Comprehensive results dashboard with rankings
+- CSV export functionality for results
+- Public results pages with optional password protection
+- Admin workflow for submission assignment to judging groups
 
 ### Social Features
 

@@ -1,6 +1,19 @@
 import React, { useState, createContext, useContext, ReactNode } from "react";
-import { Link, Outlet, useOutletContext, useNavigate, useLocation } from "react-router-dom";
-import { LayoutGrid, List, PlusCircle, Search, ThumbsUp, ChevronDown } from "lucide-react";
+import {
+  Link,
+  Outlet,
+  useOutletContext,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
+import {
+  LayoutGrid,
+  List,
+  PlusCircle,
+  Search,
+  ThumbsUp,
+  ChevronDown,
+} from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -48,11 +61,18 @@ export function Layout({ children }: { children?: ReactNode }) {
   const location = useLocation();
 
   const settings = useQuery(api.settings.get);
-  const [viewMode, setViewMode] = React.useState<"grid" | "list" | "vibe" | undefined>(undefined);
+  const [viewMode, setViewMode] = React.useState<
+    "grid" | "list" | "vibe" | undefined
+  >(undefined);
   const [userChangedViewMode, setUserChangedViewMode] = React.useState(false);
-  const [userChangedSortPeriod, setUserChangedSortPeriod] = React.useState(false);
-  const [sortPeriod, setSortPeriod] = React.useState<SortPeriod | undefined>(undefined);
-  const [selectedTagId, setSelectedTagId] = React.useState<Id<"tags"> | undefined>(undefined);
+  const [userChangedSortPeriod, setUserChangedSortPeriod] =
+    React.useState(false);
+  const [sortPeriod, setSortPeriod] = React.useState<SortPeriod | undefined>(
+    undefined,
+  );
+  const [selectedTagId, setSelectedTagId] = React.useState<
+    Id<"tags"> | undefined
+  >(undefined);
 
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);
@@ -65,7 +85,7 @@ export function Layout({ children }: { children?: ReactNode }) {
 
   const convexUserDoc = useQuery(
     api.users.getMyUserDocument,
-    isClerkLoaded && isSignedIn ? {} : "skip"
+    isClerkLoaded && isSignedIn ? {} : "skip",
   );
 
   React.useEffect(() => {
@@ -74,7 +94,9 @@ export function Layout({ children }: { children?: ReactNode }) {
         const { pathname } = location;
         const isAdminPage = pathname.startsWith("/admin");
         const isSetUsernamePage = pathname === "/set-username";
-        const isUserSettingsPage = pathname.toLowerCase().startsWith("/user-settings");
+        const isUserSettingsPage = pathname
+          .toLowerCase()
+          .startsWith("/user-settings");
         let isProfilePage = false;
         if (isSignedIn && convexUserDoc?.username) {
           isProfilePage = pathname === `/${convexUserDoc.username}`;
@@ -100,11 +122,20 @@ export function Layout({ children }: { children?: ReactNode }) {
           // General site pages - this is where siteDefaultViewMode is used
           if (settings.siteDefaultViewMode === "none") {
             newViewMode = undefined;
-          } else if (settings.siteDefaultViewMode === "list" && settings.showListView) {
+          } else if (
+            settings.siteDefaultViewMode === "list" &&
+            settings.showListView
+          ) {
             newViewMode = "list";
-          } else if (settings.siteDefaultViewMode === "grid" && settings.showGridView) {
+          } else if (
+            settings.siteDefaultViewMode === "grid" &&
+            settings.showGridView
+          ) {
             newViewMode = "grid";
-          } else if (settings.siteDefaultViewMode === "vibe" && settings.showVibeView) {
+          } else if (
+            settings.siteDefaultViewMode === "vibe" &&
+            settings.showVibeView
+          ) {
             newViewMode = "vibe";
           } else {
             // Fallback if default is hidden: pick first available shown view
@@ -167,7 +198,10 @@ export function Layout({ children }: { children?: ReactNode }) {
 
     // If navigating to these pages and the user HAD manually changed view mode,
     // we might want to reset that so the page-specific default takes over cleanly.
-    if ((isAdminPage || isSetUsernamePage || isProfilePage) && userChangedViewMode) {
+    if (
+      (isAdminPage || isSetUsernamePage || isProfilePage) &&
+      userChangedViewMode
+    ) {
       // The main useEffect will set the appropriate default for admin/profile.
       // Resetting userChangedViewMode allows the main effect to apply the page-specific default.
       setUserChangedViewMode(false);
@@ -226,11 +260,13 @@ export function Layout({ children }: { children?: ReactNode }) {
 
   // Determine if the sidebar should be shown based on view mode and settings
   // Ensure settings is loaded before trying to access its properties for showSidebar
-  // Never show sidebar on story detail pages
+  // Never show sidebar on story detail pages or judging pages
   const isStoryDetailPage = location.pathname.startsWith("/s/");
+  const isJudgingPage = location.pathname.startsWith("/judging/");
   const showSidebar =
     settings &&
     !isStoryDetailPage &&
+    !isJudgingPage &&
     (viewMode === "vibe" || viewMode === "list") &&
     (settings.showListView || settings.showVibeView);
 
@@ -248,7 +284,8 @@ export function Layout({ children }: { children?: ReactNode }) {
                 {/* Left: Site Title */}
                 <Link
                   to="/"
-                  className="inline-block text-[#292929] hover:text-[#525252] md:order-1">
+                  className="inline-block text-[#292929] hover:text-[#525252] md:order-1"
+                >
                   <h1 className="title-font text-2xl">{siteTitle}</h1>
                 </Link>
                 {/* Right: User/Sign-in */}
@@ -257,14 +294,16 @@ export function Layout({ children }: { children?: ReactNode }) {
                     <SignUpButton mode="modal">
                       <button
                         className="px-4 py-2 bg-[#292929] border border-[#D8E1EC] text-[#ffffff] rounded-md text-xs font-normal hover:bg-[#F2F0ED] hover:text-[#292929] transition-colors"
-                        type="button">
+                        type="button"
+                      >
                         Sign up
                       </button>
                     </SignUpButton>
                     <SignInButton mode="modal">
                       <button
                         className="px-4 py-2 bg-[#292929] border border-[#D8E1EC] text-[#ffffff] rounded-md text-xs font-normal hover:bg-[#F2F0ED] hover:text-[#292929] transition-colors"
-                        type="button">
+                        type="button"
+                      >
                         Sign in
                       </button>
                     </SignInButton>
@@ -276,13 +315,19 @@ export function Layout({ children }: { children?: ReactNode }) {
                       <a
                         href={profileUrl}
                         className="block px-4 py-2 text-sm text-[#292929] hover:bg-[#F3F4F6]"
-                        onClick={() => setShowProfileMenu(false)}>
+                        onClick={() => setShowProfileMenu(false)}
+                      >
                         <button
                           onClick={() => setShowProfileMenu((v) => !v)}
                           className="rounded-full border border-[#D8E1EC] w-9 h-9 overflow-hidden focus:outline-none"
                           aria-label="Open profile menu"
-                          type="button">
-                          <img src={avatarUrl} alt="User avatar" className="w-9 h-9 object-cover" />
+                          type="button"
+                        >
+                          <img
+                            src={avatarUrl}
+                            alt="User avatar"
+                            className="w-9 h-9 object-cover"
+                          />
                         </button>
                       </a>
                     </div>
@@ -303,7 +348,8 @@ export function Layout({ children }: { children?: ReactNode }) {
                         setShowAuthDialog(true);
                       }
                     }}
-                    className="flex items-center gap-2 bg-[#292929] text-white px-3 py-1 rounded-md text-sm hover:bg-[#525252] transition-colors">
+                    className="flex items-center gap-2 bg-[#292929] text-white px-3 py-1 rounded-md text-sm hover:bg-[#525252] transition-colors"
+                  >
                     <PlusCircle className="w-4 h-4" />
                     Submit
                   </button>
@@ -315,7 +361,8 @@ export function Layout({ children }: { children?: ReactNode }) {
                         navigate("/"); // Navigate to homepage
                       }}
                       className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "list" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
-                      aria-label="List View">
+                      aria-label="List View"
+                    >
                       <List className="w-5 h-5 text-[#545454]" />
                     </button>
                   )}
@@ -327,7 +374,8 @@ export function Layout({ children }: { children?: ReactNode }) {
                         navigate("/"); // Navigate to homepage
                       }}
                       className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "grid" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
-                      aria-label="Grid View">
+                      aria-label="Grid View"
+                    >
                       <LayoutGrid className="w-5 h-5 text-[#545454]" />
                     </button>
                   )}
@@ -339,7 +387,8 @@ export function Layout({ children }: { children?: ReactNode }) {
                         navigate("/"); // Navigate to homepage
                       }}
                       className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "vibe" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
-                      aria-label="Vibe View">
+                      aria-label="Vibe View"
+                    >
                       <ThumbsUp className="w-5 h-5 text-[#545454]" />
                     </button>
                   )}
@@ -353,13 +402,19 @@ export function Layout({ children }: { children?: ReactNode }) {
                       value={selectedTagId || ""}
                       onChange={(e) =>
                         setSelectedTagId(
-                          e.target.value ? (e.target.value as Id<"tags">) : undefined
+                          e.target.value
+                            ? (e.target.value as Id<"tags">)
+                            : undefined,
                         )
                       }
-                      className="appearance-none cursor-pointer pl-3 pr-8 py-2 bg-white border border-[#D8E1EC] rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] hover:border-[#A8A29E]">
+                      className="appearance-none cursor-pointer pl-3 pr-8 py-2 bg-white border border-[#D8E1EC] rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] hover:border-[#A8A29E]"
+                    >
                       <option value="">All Categories</option>
                       {headerTags
-                        ?.filter((tag) => !tag.isHidden && tag.name !== "resendhackathon") // Filter hidden tags and resendhackathon
+                        ?.filter(
+                          (tag) =>
+                            !tag.isHidden && tag.name !== "resendhackathon",
+                        ) // Filter hidden tags and resendhackathon
                         .map((tag) => (
                           <option key={tag._id} value={tag._id}>
                             {tag.name}
@@ -379,7 +434,8 @@ export function Layout({ children }: { children?: ReactNode }) {
                         setSortPeriod(e.target.value as SortPeriod);
                         setUserChangedSortPeriod(true); // User has made a selection
                       }}
-                      className="appearance-none cursor-pointer pl-3 pr-8 py-2 bg-white border border-[#D8E1EC] rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] hover:border-[#A8A29E]">
+                      className="appearance-none cursor-pointer pl-3 pr-8 py-2 bg-white border border-[#D8E1EC] rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] hover:border-[#A8A29E]"
+                    >
                       <option value="today">Today</option>
                       <option value="week">This Week</option>
                       <option value="month">This Month</option>
@@ -400,7 +456,8 @@ export function Layout({ children }: { children?: ReactNode }) {
                     type="button"
                     onClick={handleSearchIconClick}
                     className="p-2 text-[#525252] hover:text-[#292929]"
-                    aria-label="Search">
+                    aria-label="Search"
+                  >
                     <Search className="w-5 h-5" />
                   </button>
                   <form onSubmit={handleSearch} className="flex items-center">
@@ -411,7 +468,11 @@ export function Layout({ children }: { children?: ReactNode }) {
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search..."
                       className={`transition-all duration-300 ease-in-out h-9 text-sm focus:outline-none bg-white text-[#525252] rounded-md border ${isSearchExpanded ? "w-48 opacity-100 px-3 border-[#D5D3D0]" : "w-0 opacity-0 p-0 border-none"}`}
-                      style={{ borderColor: isSearchExpanded ? "#D5D3D0" : "transparent" }}
+                      style={{
+                        borderColor: isSearchExpanded
+                          ? "#D5D3D0"
+                          : "transparent",
+                      }}
                       tabIndex={isSearchExpanded ? 0 : -1}
                     />
                   </form>
@@ -422,7 +483,8 @@ export function Layout({ children }: { children?: ReactNode }) {
             {/* Tags Navigation Row */}
             {/* Conditionally render if there are tags to show and settings allow (future) */}
             {headerTags &&
-              headerTags.filter((tag) => !tag.isHidden && tag.showInHeader).length > 0 && (
+              headerTags.filter((tag) => !tag.isHidden && tag.showInHeader)
+                .length > 0 && (
                 <div className="py-3 mt-1 border-t border-[#D8E1EC]">
                   {" "}
                   {/* Tailwind gray-200 */}
@@ -439,14 +501,18 @@ export function Layout({ children }: { children?: ReactNode }) {
                                     ? "text-slate-700 ring-1 ring-gray-400 ring-offset-1"
                                     : "bg-[#F3F4F6] text-gray-700 border-[#D8E1EC] hover:bg-[white]"
                                 }`}
-                      title="Show All Categories">
+                      title="Show All Categories"
+                    >
                       All
                     </button>
 
                     {/* Tag links */}
                     {headerTags
                       .filter(
-                        (tag) => !tag.isHidden && tag.showInHeader && tag.name !== "resendhackathon"
+                        (tag) =>
+                          !tag.isHidden &&
+                          tag.showInHeader &&
+                          tag.name !== "resendhackathon",
                       ) // Ensure only relevant tags are mapped
                       .map((tag) => (
                         <Link
@@ -458,10 +524,13 @@ export function Layout({ children }: { children?: ReactNode }) {
                             color: tag.textColor || "#374151", // Default to gray-700
                             border: `1px solid ${tag.backgroundColor ? "transparent" : "#D1D5DB"}`, // Tailwind gray-300
                           }}
-                          title={`View all apps tagged with ${tag.name}`}>
+                          title={`View all apps tagged with ${tag.name}`}
+                        >
                           {/* Show emoji or icon if present */}
                           {tag.emoji ? (
-                            <span className="mr-1 align-middle text-base">{tag.emoji}</span>
+                            <span className="mr-1 align-middle text-base">
+                              {tag.emoji}
+                            </span>
                           ) : tag.iconUrl ? (
                             <img
                               src={tag.iconUrl}
@@ -481,7 +550,9 @@ export function Layout({ children }: { children?: ReactNode }) {
         <main className="flex-grow container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row gap-8">
             <div className={showSidebar ? "md:w-3/4" : "w-full"}>
-              {children || <Outlet context={{ viewMode, selectedTagId, sortPeriod }} />}
+              {children || (
+                <Outlet context={{ viewMode, selectedTagId, sortPeriod }} />
+              )}
             </div>
             {showSidebar && (
               <aside className="md:w-1/4 space-y-6">

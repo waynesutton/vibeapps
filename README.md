@@ -22,6 +22,7 @@ A modern social network platform for app creators to showcase their projects, bu
 - **Rating System**: Users can rate and review submitted apps
 - **Weekly Leaderboards**: Discover trending apps and top creators
 - **ConvexBox**: Dismissible notification system for announcements
+- **Judging System**: Comprehensive judging CRM for competitions and contests with public/private results
 
 ## Tech Stack
 
@@ -115,11 +116,20 @@ After initial setup, the first registered user will need to be granted admin pri
 - Search and discover content
 - User verification system
 
+### For Judges
+
+- Access public or private judging groups
+- Score submissions based on custom criteria
+- Provide detailed feedback and comments
+- Track judging progress across submissions
+- View public results and rankings
+
 ### For Admins
 
 - Content moderation dashboard
 - User management and verification
 - Custom form builder
+- Judging system management
 - Report management
 - Site-wide settings
 - Analytics and metrics

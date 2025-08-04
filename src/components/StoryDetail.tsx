@@ -1290,6 +1290,22 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 );
               }
 
+              // Loom URL patterns
+              const loomMatch = url.match(/(?:loom\.com\/share\/)([a-f0-9-]+)/);
+              if (loomMatch) {
+                const videoId = loomMatch[1];
+                return (
+                  <iframe
+                    src={`https://www.loom.com/embed/${videoId}`}
+                    className="w-full aspect-video rounded-md"
+                    allow="autoplay; fullscreen; picture-in-picture"
+                    allowFullScreen
+                    loading="lazy"
+                    title="Video Demo"
+                  />
+                );
+              }
+
               // Check if it's a direct video file
               const videoExtensions = /\.(mp4|webm|ogg|mov|avi|mkv)(\?.*)?$/i;
               if (videoExtensions.test(url)) {

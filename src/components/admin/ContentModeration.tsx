@@ -12,6 +12,8 @@ import {
   Send,
   Tag,
   Plus,
+  Scale,
+  Lock,
 } from "lucide-react";
 import * as Tabs from "@radix-ui/react-tabs";
 import {
@@ -64,6 +66,11 @@ export function ContentModeration() {
     null,
   );
   const [selectedTagId, setSelectedTagId] = useState<Id<"tags"> | null>(null);
+  // State for judging group management
+  const [showJudgingGroupSelector, setShowJudgingGroupSelector] =
+    useState<Id<"stories"> | null>(null);
+  const [selectedJudgingGroupId, setSelectedJudgingGroupId] =
+    useState<Id<"judgingGroups"> | null>(null);
 
   const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
 
@@ -132,6 +139,18 @@ export function ContentModeration() {
   const updateCustomMessage = useMutation(api.stories.updateStoryCustomMessage);
   const togglePin = useMutation(api.stories.toggleStoryPinStatus);
   const addTagsToStory = useMutation(api.stories.addTagsToStory);
+
+  // Judging group queries and mutations
+  const judgingGroups = useQuery(
+    api.judgingGroups.listGroups,
+    authIsLoading || !isAuthenticated ? "skip" : {},
+  );
+  const addSubmissionsToJudgingGroup = useMutation(
+    api.judgingGroupSubmissions.addSubmissions,
+  );
+  const removeSubmissionFromJudgingGroup = useMutation(
+    api.judgingGroupSubmissions.removeSubmission,
+  );
 
   // Query to fetch all available tags
   const allTags = useQuery(
@@ -233,6 +252,66 @@ export function ContentModeration() {
       handleCancelTagSelector();
     } catch (error) {
       console.error("Failed to add tag:", error);
+    }
+  };
+
+  // Handlers for judging group management
+  const handleShowJudgingGroupSelector = (storyId: Id<"stories">) => {
+    setShowJudgingGroupSelector(storyId);
+    setSelectedJudgingGroupId(null);
+  };
+
+  const handleCancelJudgingGroupSelector = () => {
+    setShowJudgingGroupSelector(null);
+    setSelectedJudgingGroupId(null);
+  };
+
+  const handleAddToJudgingGroup = async (storyId: Id<"stories">) => {
+    if (!selectedJudgingGroupId) return;
+
+    try {
+      const result = await addSubmissionsToJudgingGroup({
+        groupId: selectedJudgingGroupId,
+        storyIds: [storyId],
+      });
+
+      if (result.added > 0) {
+        console.log(`Successfully added submission to judging group`);
+      } else if (result.skipped > 0) {
+        console.log(`Submission already in judging group`);
+      }
+
+      if (result.errors.length > 0) {
+        console.error("Errors adding to judging group:", result.errors);
+      }
+
+      handleCancelJudgingGroupSelector();
+    } catch (error) {
+      console.error("Failed to add to judging group:", error);
+    }
+  };
+
+  const handleRemoveFromJudgingGroup = async (
+    storyId: Id<"stories">,
+    groupId: Id<"judgingGroups">,
+    groupName: string,
+  ) => {
+    if (
+      !window.confirm(
+        `Remove this submission from "${groupName}"? This will also delete all associated judge scores.`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await removeSubmissionFromJudgingGroup({
+        groupId,
+        storyId,
+      });
+      console.log(`Successfully removed submission from ${groupName}`);
+    } catch (error) {
+      console.error("Failed to remove from judging group:", error);
     }
   };
 
@@ -375,6 +454,65 @@ export function ContentModeration() {
                   </Button>
                 </div>
               </div>
+            )}
+            {/* Judging Group Selector - Show for current story if active */}
+            {item.type === "story" && showJudgingGroupSelector === item._id && (
+              <div className="mt-3 space-y-2 p-3 bg-gray-50 border border-gray-200 rounded-md">
+                <p className="text-sm font-medium text-gray-700">
+                  Add to Judging Group:
+                </p>
+                <div className="flex gap-2 items-center">
+                  <Select
+                    value={selectedJudgingGroupId || ""}
+                    onValueChange={(value) =>
+                      setSelectedJudgingGroupId(value as Id<"judgingGroups">)
+                    }
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Select a judging group..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {judgingGroups
+                        ?.filter((group) => group.isActive) // Only show active groups
+                        .map((group) => (
+                          <SelectItem key={group._id} value={group._id}>
+                            <div className="flex items-center gap-2">
+                              <Scale className="w-4 h-4" />
+                              <span>{group.name}</span>
+                              <span className="text-xs text-gray-500">
+                                ({group.submissionCount} submissions)
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() =>
+                      handleAddToJudgingGroup(item._id as Id<"stories">)
+                    }
+                    disabled={!selectedJudgingGroupId}
+                  >
+                    <Plus className="w-4 h-4 mr-1" /> Add
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCancelJudgingGroupSelector}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+            {/* Show existing judging groups for stories */}
+            {item.type === "story" && (
+              <StoryJudgingGroups
+                storyId={item._id as Id<"stories">}
+                onRemove={handleRemoveFromJudgingGroup}
+              />
             )}
             <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-[#545454]">
               <span>
@@ -520,6 +658,16 @@ export function ContentModeration() {
                 >
                   <Tag className="w-4 h-4 mr-1" /> Add Tag
                 </Button>
+                {/* Add to Judging Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    handleShowJudgingGroupSelector(item._id as Id<"stories">)
+                  }
+                >
+                  <Scale className="w-4 h-4 mr-1" /> Add to Judging
+                </Button>
               </>
             )}
 
@@ -639,6 +787,63 @@ export function ContentModeration() {
             </Button>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Helper component to show judging groups for a story
+function StoryJudgingGroups({
+  storyId,
+  onRemove,
+}: {
+  storyId: Id<"stories">;
+  onRemove: (
+    storyId: Id<"stories">,
+    groupId: Id<"judgingGroups">,
+    groupName: string,
+  ) => void;
+}) {
+  const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
+
+  const storyGroups = useQuery(
+    api.judgingGroupSubmissions.getStoryJudgingGroups,
+    authIsLoading || !isAuthenticated ? "skip" : { storyId },
+  );
+
+  if (!storyGroups || storyGroups.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+      <div className="flex items-center gap-2 mb-2">
+        <Scale className="w-4 h-4 text-blue-600" />
+        <span className="text-sm font-medium text-blue-800">
+          In Judging Groups ({storyGroups.length})
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {storyGroups.map((group) => (
+          <div
+            key={group._id}
+            className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-blue-200 rounded text-xs"
+          >
+            <span className="font-medium text-blue-900">{group.name}</span>
+            <span className="text-blue-600">/{group.slug}</span>
+            {!group.isActive && (
+              <span className="text-orange-600 font-medium">(Inactive)</span>
+            )}
+            {!group.isPublic && <Lock className="w-3 h-3 text-gray-500" />}
+            <button
+              onClick={() => onRemove(storyId, group._id, group.name)}
+              className="ml-1 text-red-500 hover:text-red-700 hover:bg-red-100 rounded p-0.5 transition-colors"
+              title={`Remove from ${group.name}`}
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        ))}
       </div>
     </div>
   );
