@@ -837,6 +837,30 @@ export const getPublicGroupJudgeDetails = query({
         const totalScore = scores.reduce((sum, score) => sum + score.score, 0);
         const averageScore = scores.length > 0 ? totalScore / scores.length : 0;
 
+        // Count completed submissions (submissions where judge scored all criteria)
+        const criteriaCount = await ctx.db
+          .query("judgingCriteria")
+          .withIndex("by_groupId_order", (q) => q.eq("groupId", args.groupId))
+          .collect()
+          .then((criteria) => criteria.length);
+
+        // Group scores by submission (storyId)
+        const scoresBySubmission = scores.reduce(
+          (acc, score) => {
+            if (!acc[score.storyId]) {
+              acc[score.storyId] = [];
+            }
+            acc[score.storyId].push(score);
+            return acc;
+          },
+          {} as Record<string, any[]>,
+        );
+
+        // Count submissions where judge scored all criteria
+        const completedSubmissions = Object.values(scoresBySubmission).filter(
+          (submissionScores) => submissionScores.length === criteriaCount,
+        ).length;
+
         return {
           judgeName: judge.name,
           judgeEmail: judge.email,
@@ -844,7 +868,7 @@ export const getPublicGroupJudgeDetails = query({
           scores: enrichedScores,
           totalScore,
           averageScore,
-          scoreCount: scores.length,
+          scoreCount: completedSubmissions,
         };
       }),
     );

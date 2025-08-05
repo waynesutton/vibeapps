@@ -257,7 +257,8 @@ export function PublicJudgingResultsDashboard({
                       {judge.judgeName}
                     </h4>
                     <p className="text-sm text-gray-500">
-                      {judge.scoreCount} scores submitted
+                      {judge.scoreCount} submission
+                      {judge.scoreCount !== 1 ? "s" : ""} completed
                       {judge.lastActive && (
                         <span>
                           {" "}
