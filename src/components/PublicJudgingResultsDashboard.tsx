@@ -71,9 +71,11 @@ export function PublicJudgingResultsDashboard({
           <div className="flex items-center">
             <Trophy className="w-5 h-5 text-yellow-500 mr-2" />
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Scores</p>
+              <p className="text-sm font-medium text-gray-600">
+                Submissions Judged
+              </p>
               <p className="text-2xl font-bold text-gray-900">
-                {groupScores.totalScores}
+                {groupScores.submissionsJudged}
               </p>
             </div>
           </div>

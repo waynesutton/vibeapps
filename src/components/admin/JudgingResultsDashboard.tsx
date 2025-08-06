@@ -14,7 +14,6 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { Button } from "../ui/button";
-import { formatDistanceToNow } from "date-fns";
 
 interface JudgingResultsDashboardProps {
   groupId: Id<"judgingGroups">;
@@ -124,11 +123,9 @@ export function JudgingResultsDashboard({
   }
 
   const {
-    totalScores,
+    submissionsJudged,
     averageScore,
     judgeCount,
-    submissionCount,
-    criteriaCount,
     completionPercentage,
     submissionRankings,
     criteriaBreakdown,
@@ -157,7 +154,7 @@ export function JudgingResultsDashboard({
         </div>
         <Button
           onClick={handleExport}
-          disabled={exportLoading || totalScores === 0}
+          disabled={exportLoading || submissionsJudged === 0}
           className="flex items-center gap-2"
         >
           <Download className="w-4 h-4" />
@@ -170,9 +167,9 @@ export function JudgingResultsDashboard({
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Scores</p>
+              <p className="text-sm text-gray-600">Submissions Judged</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {totalScores}
+                {submissionsJudged}
               </p>
             </div>
             <BarChart3 className="w-8 h-8 text-blue-500" />
@@ -216,7 +213,7 @@ export function JudgingResultsDashboard({
         </div>
       </div>
 
-      {totalScores === 0 ? (
+      {submissionsJudged === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
           <Award className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">

@@ -191,6 +191,7 @@ export const getGroupScores = query({
   args: { groupId: v.id("judgingGroups") },
   returns: v.object({
     totalScores: v.number(),
+    submissionsJudged: v.number(),
     averageScore: v.optional(v.number()),
     judgeCount: v.number(),
     submissionCount: v.number(),
@@ -247,6 +248,10 @@ export const getGroupScores = query({
       totalScores > 0
         ? scores.reduce((sum, score) => sum + score.score, 0) / totalScores
         : undefined;
+
+    // Calculate submissions judged (submissions that have at least one score)
+    const submissionsJudged = new Set(scores.map((score) => score.storyId))
+      .size;
 
     const judgeCount = judges.length;
     const submissionCount = submissions.length;
@@ -317,6 +322,7 @@ export const getGroupScores = query({
 
     return {
       totalScores,
+      submissionsJudged,
       averageScore,
       judgeCount,
       submissionCount,
@@ -629,6 +635,7 @@ export const getPublicGroupScores = query({
     v.null(),
     v.object({
       totalScores: v.number(),
+      submissionsJudged: v.number(),
       averageScore: v.optional(v.number()),
       judgeCount: v.number(),
       submissionCount: v.number(),
@@ -688,6 +695,10 @@ export const getPublicGroupScores = query({
       totalScores > 0
         ? scores.reduce((sum, score) => sum + score.score, 0) / totalScores
         : undefined;
+
+    // Calculate submissions judged (submissions that have at least one score)
+    const submissionsJudged = new Set(scores.map((score) => score.storyId))
+      .size;
 
     const judgeCount = judges.length;
     const submissionCount = submissions.length;
@@ -754,6 +765,7 @@ export const getPublicGroupScores = query({
 
     return {
       totalScores,
+      submissionsJudged,
       averageScore,
       judgeCount,
       submissionCount,
