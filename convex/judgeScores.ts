@@ -256,9 +256,29 @@ export const getGroupScores = query({
     const judgeCount = judges.length;
     const submissionCount = submissions.length;
     const criteriaCount = criteria.length;
-    const expectedScores = judgeCount * submissionCount * criteriaCount;
+
+    // Calculate completion based on submissions completed by judges
+    // A submission is "completed" by a judge when they've scored all criteria for that submission
+    let completedSubmissions = 0;
+    const expectedSubmissions = judgeCount * submissionCount;
+
+    if (criteriaCount > 0) {
+      for (const judge of judges) {
+        for (const submission of submissions) {
+          const judgeSubmissionScores = scores.filter(
+            (s) => s.judgeId === judge._id && s.storyId === submission.storyId,
+          );
+          if (judgeSubmissionScores.length === criteriaCount) {
+            completedSubmissions++;
+          }
+        }
+      }
+    }
+
     const completionPercentage =
-      expectedScores > 0 ? (totalScores / expectedScores) * 100 : 0;
+      expectedSubmissions > 0
+        ? (completedSubmissions / expectedSubmissions) * 100
+        : 0;
 
     // Calculate submission rankings
     const submissionRankings = await Promise.all(
@@ -703,9 +723,29 @@ export const getPublicGroupScores = query({
     const judgeCount = judges.length;
     const submissionCount = submissions.length;
     const criteriaCount = criteria.length;
-    const expectedScores = judgeCount * submissionCount * criteriaCount;
+
+    // Calculate completion based on submissions completed by judges
+    // A submission is "completed" by a judge when they've scored all criteria for that submission
+    let completedSubmissions = 0;
+    const expectedSubmissions = judgeCount * submissionCount;
+
+    if (criteriaCount > 0) {
+      for (const judge of judges) {
+        for (const submission of submissions) {
+          const judgeSubmissionScores = scores.filter(
+            (s) => s.judgeId === judge._id && s.storyId === submission.storyId,
+          );
+          if (judgeSubmissionScores.length === criteriaCount) {
+            completedSubmissions++;
+          }
+        }
+      }
+    }
+
     const completionPercentage =
-      expectedScores > 0 ? (totalScores / expectedScores) * 100 : 0;
+      expectedSubmissions > 0
+        ? (completedSubmissions / expectedSubmissions) * 100
+        : 0;
 
     // Calculate story rankings
     const storyScoreMap = new Map<

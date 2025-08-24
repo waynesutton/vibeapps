@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### YC AI Hackathon Form 🚀
+
+**Added**
+
+- **New YC AI Hackathon Submission Form**: Created dedicated form at `/ychack` route for YC AI Hackathon submissions
+  - Based on ResendForm component with updated branding and messaging
+  - Removed "closed form" message and enabled active submissions
+  - Updated all text references from "Resend" to "YC AI Hackathon"
+  - Changed placeholder text to focus on AI usage instead of Resend integration
+  - Auto-adds "ychackathon" tracking tag to submissions
+  - Maintains all existing functionality (file uploads, dynamic fields, tag selection)
+  - **Hidden Sidebar**: Removed WeeklyLeaderboard and TopCategoriesOfWeek sidebar components from YC Hackathon form page for focused submission experience
+
+**Technical Details**
+
+- Created `src/components/YCHackForm.tsx` component
+- Added `/ychack` route to `src/App.tsx` routing configuration
+- Updated form submission to use "ychackathon" tracking tag
+- Fixed TypeScript linter errors and maintained type safety
+- Preserved all existing form validation and submission logic
+
 ### Admin Tag Management for Content Moderation 🏷️
 
 **Added**

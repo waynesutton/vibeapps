@@ -17,6 +17,7 @@ import { Layout } from "./components/Layout";
 import { StoryList } from "./components/StoryList";
 import { StoryForm } from "./components/StoryForm";
 import { ResendForm } from "./components/ResendForm";
+import { YCHackForm } from "./components/YCHackForm";
 import { StoryDetail } from "./components/StoryDetail";
 import { SearchResults } from "./components/SearchResults";
 import { AdminDashboard } from "./components/admin/AdminDashboard";
@@ -145,6 +146,7 @@ function App() {
           <Route index element={<HomePage />} />
           <Route path="/submit" element={<StoryForm />} />
           <Route path="/resend" element={<ResendForm />} />
+          <Route path="/ychack" element={<YCHackForm />} />
           <Route element={<ProtectedLayout />}>
             <Route path="/set-username" element={<SetUsernamePage />} />
           </Route>
