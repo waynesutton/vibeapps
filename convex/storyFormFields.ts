@@ -196,6 +196,26 @@ export const reorder = mutation({
   },
 });
 
+// Internal mutation to ensure GitHub field is optional
+export const ensureGitHubFieldOptional = internalMutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    // Find the GitHub field
+    const githubField = await ctx.db
+      .query("storyFormFields")
+      .filter((q) => q.eq(q.field("key"), "githubUrl"))
+      .first();
+    
+    if (githubField && githubField.isRequired) {
+      await ctx.db.patch(githubField._id, { isRequired: false });
+      console.log("Updated GitHub field to be optional");
+    }
+    
+    return null;
+  },
+});
+
 // Internal mutation to initialize default form fields
 export const initializeDefaultFields = internalMutation({
   args: {},

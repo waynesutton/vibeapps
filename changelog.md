@@ -28,6 +28,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed TypeScript linter errors and maintained type safety
 - Preserved all existing form validation and submission logic
 
+### GitHub Repository Field Made Optional 🔧
+
+**Changed**
+
+- **GitHub Repository Field**: Removed mandatory requirement for GitHub repository URL in both YCHackForm and StoryForm
+  - Updated backend `storyFormFields` to ensure GitHub field is set to `isRequired: false`
+  - Added `ensureGitHubFieldOptional` mutation to prevent future issues
+  - All dynamic form fields (LinkedIn, Twitter, GitHub, Chef links) are now properly optional
+  - Forms now respect the backend `isRequired` setting for all dynamic fields
+
+**Technical Details**
+
+- Added `ensureGitHubFieldOptional` internal mutation in `convex/storyFormFields.ts`
+- Verified all form components use `required={field.isRequired}` from backend configuration
+- Confirmed GitHub field and all other dynamic fields are set to optional in database
+
 ### Admin Tag Management for Content Moderation 🏷️
 
 **Added**
