@@ -43,6 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `ensureGitHubFieldOptional` internal mutation in `convex/storyFormFields.ts`
 - Verified all form components use `required={field.isRequired}` from backend configuration
 - Confirmed GitHub field and all other dynamic fields are set to optional in database
+- **Frontend Override**: Added explicit `required={field.key === "githubUrl" ? false : field.isRequired}` in both YCHackForm and StoryForm to ensure GitHub field is never required regardless of backend configuration
+- Removed unused `Github` import from YCHackForm component
 
 ### Admin Tag Management for Content Moderation 🏷️
 

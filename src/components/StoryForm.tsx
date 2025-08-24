@@ -385,7 +385,7 @@ export function StoryForm() {
                   }))
                 }
                 className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
-                required={field.isRequired}
+                required={field.key === "githubUrl" ? false : field.isRequired}
                 disabled={isSubmitting}
               />
             </div>

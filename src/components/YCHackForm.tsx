@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
-import { Github, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { SignUpButton } from "@clerk/clerk-react";
 
 // NOTE: DO NOT import or use WeeklyLeaderboard or TopCategoriesOfWeek components in this form
@@ -390,7 +390,7 @@ export function YCHackForm() {
                   }))
                 }
                 className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
-                required={field.isRequired}
+                required={field.key === "githubUrl" ? false : field.isRequired}
                 disabled={isSubmitting}
               />
             </div>
