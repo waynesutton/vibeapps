@@ -68,6 +68,7 @@ export const getBySlug = query({
       emoji: v.optional(v.string()),
       iconUrl: v.optional(v.string()),
       order: v.optional(v.number()),
+      createdByAdmin: v.optional(v.boolean()),
     }),
     v.null(),
   ),
