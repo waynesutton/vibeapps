@@ -418,6 +418,10 @@ export const getBySlug = query({
       customMessage: storyWithDetails.customMessage,
       isApproved: storyWithDetails.isApproved,
       email: storyWithDetails.email,
+      // Hackathon team info
+      teamName: storyWithDetails.teamName,
+      teamMemberCount: storyWithDetails.teamMemberCount,
+      teamMembers: storyWithDetails.teamMembers,
       // Mapped fields
       authorName: storyWithDetails.authorName,
       authorUsername: storyWithDetails.authorUsername,
@@ -443,6 +447,28 @@ function generateSlug(title: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+// Helper function to generate a unique slug by checking for duplicates
+async function generateUniqueSlug(ctx: any, title: string): Promise<string> {
+  const baseSlug = generateSlug(title);
+  let slug = baseSlug;
+  let counter = 1;
+
+  while (true) {
+    const existing = await ctx.db
+      .query("stories")
+      .withIndex("by_slug", (q: any) => q.eq("slug", slug))
+      .first();
+
+    if (!existing) {
+      return slug;
+    }
+
+    // If slug exists, try with incremental number
+    slug = `${baseSlug}-${counter}`;
+    counter++;
+  }
+}
+
 export const submit = mutation({
   args: {
     title: v.string(),
@@ -460,6 +486,17 @@ export const submit = mutation({
     chefShowUrl: v.optional(v.string()),
     chefAppUrl: v.optional(v.string()),
     email: v.optional(v.string()),
+    // Hackathon team info
+    teamName: v.optional(v.string()),
+    teamMemberCount: v.optional(v.number()),
+    teamMembers: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          email: v.string(),
+        }),
+      ),
+    ),
   },
   handler: async (ctx, args) => {
     await ensureUserNotBanned(ctx); // Check if user is banned
@@ -491,17 +528,7 @@ export const submit = mutation({
       );
     }
 
-    const slug = generateSlug(args.title);
-
-    const existing = await ctx.db
-      .query("stories")
-      .withIndex("by_slug", (q) => q.eq("slug", slug))
-      .first();
-    if (existing) {
-      throw new Error(
-        `Slug "${slug}" already exists for story: ${existing.title}`,
-      );
-    }
+    const slug = await generateUniqueSlug(ctx, args.title);
 
     let allTagIds: Id<"tags">[] = [...args.tagIds];
 
@@ -550,6 +577,10 @@ export const submit = mutation({
       customMessage: undefined,
       isApproved: true,
       email: args.email,
+      // Hackathon team info
+      teamName: args.teamName,
+      teamMemberCount: args.teamMemberCount,
+      teamMembers: args.teamMembers,
     });
 
     // Log the submission
@@ -1071,6 +1102,17 @@ export const updateOwnStory = mutation({
     githubUrl: v.optional(v.string()),
     chefShowUrl: v.optional(v.string()),
     chefAppUrl: v.optional(v.string()),
+    // Hackathon team info
+    teamName: v.optional(v.string()),
+    teamMemberCount: v.optional(v.number()),
+    teamMembers: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          email: v.string(),
+        }),
+      ),
+    ),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthenticatedUserId(ctx);
@@ -1135,6 +1177,129 @@ export const updateOwnStory = mutation({
     if (args.chefShowUrl !== undefined)
       updateData.chefShowUrl = args.chefShowUrl;
     if (args.chefAppUrl !== undefined) updateData.chefAppUrl = args.chefAppUrl;
+
+    // Handle team info
+    if (args.teamName !== undefined) updateData.teamName = args.teamName;
+    if (args.teamMemberCount !== undefined)
+      updateData.teamMemberCount = args.teamMemberCount;
+    if (args.teamMembers !== undefined)
+      updateData.teamMembers = args.teamMembers;
+
+    // Update slug if title changed
+    if (args.title && args.title !== story.title) {
+      const newSlug = await generateUniqueSlug(ctx, args.title);
+      updateData.slug = newSlug;
+    }
+
+    await ctx.db.patch(args.storyId, updateData);
+    return { success: true, slug: updateData.slug || story.slug };
+  },
+});
+
+// Mutation to allow an admin to update any story
+export const updateStoryAdmin = mutation({
+  args: {
+    storyId: v.id("stories"),
+    title: v.optional(v.string()),
+    description: v.optional(v.string()), // tagline
+    longDescription: v.optional(v.string()),
+    submitterName: v.optional(v.string()),
+    url: v.optional(v.string()),
+    videoUrl: v.optional(v.string()),
+    email: v.optional(v.string()),
+    screenshotId: v.optional(v.id("_storage")),
+    removeScreenshot: v.optional(v.boolean()), // Add this line
+    tagIds: v.optional(v.array(v.id("tags"))),
+    newTagNames: v.optional(v.array(v.string())),
+    linkedinUrl: v.optional(v.string()),
+    twitterUrl: v.optional(v.string()),
+    githubUrl: v.optional(v.string()),
+    chefShowUrl: v.optional(v.string()),
+    chefAppUrl: v.optional(v.string()),
+    // Hackathon team info
+    teamName: v.optional(v.string()),
+    teamMemberCount: v.optional(v.number()),
+    teamMembers: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          email: v.string(),
+        }),
+      ),
+    ),
+  },
+  handler: async (ctx, args) => {
+    // Require admin role
+    await requireAdminRole(ctx);
+
+    const story = await ctx.db.get(args.storyId);
+
+    if (!story) {
+      throw new Error("Story not found.");
+    }
+
+    // Handle new tags if provided
+    let finalTagIds = args.tagIds;
+    if (args.newTagNames && args.newTagNames.length > 0) {
+      const newCreatedTagIds = await ctx.runMutation(internal.tags.ensureTags, {
+        tagNames: args.newTagNames,
+      });
+      finalTagIds = finalTagIds
+        ? [...new Set([...finalTagIds, ...newCreatedTagIds])]
+        : [...newCreatedTagIds];
+    }
+
+    // Validate tags if provided
+    if (finalTagIds && finalTagIds.length > 0) {
+      for (const tagId of finalTagIds) {
+        const tag = await ctx.db.get(tagId);
+        if (!tag) {
+          console.warn(`Tag with ID ${tagId} not found during update.`);
+          finalTagIds = finalTagIds.filter((id) => id !== tagId);
+        }
+      }
+
+      if (finalTagIds.length === 0) {
+        throw new Error("At least one valid tag is required.");
+      }
+    }
+
+    // Build update object with only provided fields
+    const updateData: Partial<Doc<"stories">> = {};
+
+    if (args.title !== undefined) updateData.title = args.title;
+    if (args.description !== undefined)
+      updateData.description = args.description;
+    if (args.longDescription !== undefined)
+      updateData.longDescription = args.longDescription;
+    if (args.submitterName !== undefined)
+      updateData.submitterName = args.submitterName;
+    if (args.url !== undefined) updateData.url = args.url;
+    if (args.videoUrl !== undefined) updateData.videoUrl = args.videoUrl;
+    if (args.email !== undefined) updateData.email = args.email;
+
+    // Handle screenshot removal or update
+    if (args.removeScreenshot) {
+      updateData.screenshotId = undefined;
+    } else if (args.screenshotId !== undefined) {
+      updateData.screenshotId = args.screenshotId;
+    }
+
+    if (finalTagIds !== undefined) updateData.tagIds = finalTagIds;
+    if (args.linkedinUrl !== undefined)
+      updateData.linkedinUrl = args.linkedinUrl;
+    if (args.twitterUrl !== undefined) updateData.twitterUrl = args.twitterUrl;
+    if (args.githubUrl !== undefined) updateData.githubUrl = args.githubUrl;
+    if (args.chefShowUrl !== undefined)
+      updateData.chefShowUrl = args.chefShowUrl;
+    if (args.chefAppUrl !== undefined) updateData.chefAppUrl = args.chefAppUrl;
+
+    // Handle team info
+    if (args.teamName !== undefined) updateData.teamName = args.teamName;
+    if (args.teamMemberCount !== undefined)
+      updateData.teamMemberCount = args.teamMemberCount;
+    if (args.teamMembers !== undefined)
+      updateData.teamMembers = args.teamMembers;
 
     // Update slug if title changed
     if (args.title && args.title !== story.title) {
@@ -1343,6 +1508,120 @@ export const _getStoryDetailsBatch = internalQuery({
       });
     }
     return results;
+  },
+});
+
+/**
+ * Submit story via dynamic form (supports custom field mapping)
+ */
+export const submitDynamic = mutation({
+  args: {
+    formData: v.record(v.string(), v.string()),
+    customHiddenTag: v.string(),
+    screenshotId: v.optional(v.id("_storage")),
+  },
+  returns: v.id("stories"),
+  handler: async (ctx, args) => {
+    const { formData, customHiddenTag, screenshotId } = args;
+
+    // Check if user is authenticated
+    const userId = await getAuthenticatedUserId(ctx);
+    const userRecord = userId ? await ctx.db.get(userId) : null;
+
+    // Extract required fields from formData
+    const title = formData.title;
+    const description = formData.tagline || formData.description;
+    const url = formData.url;
+    const email = formData.email;
+    const submitterName = formData.submitterName;
+
+    if (!title || !description || !url) {
+      throw new Error("Title, description, and URL are required fields.");
+    }
+
+    // For anonymous submissions, require email and submitter name
+    if (!userId && (!email || !submitterName)) {
+      throw new Error(
+        "Email and submitter name are required for anonymous submissions.",
+      );
+    }
+
+    // Check submission limit if anonymous
+    if (!userId && email) {
+      const dayStart = new Date();
+      dayStart.setHours(0, 0, 0, 0);
+      const existingSubmissions = await ctx.db
+        .query("stories")
+        .filter((q) => q.eq(q.field("email"), email))
+        .filter((q) => q.gte(q.field("_creationTime"), dayStart.getTime()))
+        .collect();
+
+      if (existingSubmissions.length >= 10) {
+        throw new Error(
+          "Submission limit reached. You can submit up to 10 projects per day.",
+        );
+      }
+    }
+
+    // Validate URL format
+    try {
+      new URL(url);
+    } catch {
+      throw new Error(
+        "Invalid URL format. Please enter a valid URL (e.g., https://example.com)",
+      );
+    }
+
+    const slug = generateSlug(title);
+
+    // Find the tag ID for the custom hidden tag
+    const tag = await ctx.db
+      .query("tags")
+      .filter((q) => q.eq(q.field("name"), customHiddenTag))
+      .first();
+
+    const tagIds = tag ? [tag._id] : [];
+
+    // Build story object with available form data
+    const storyData: any = {
+      title,
+      description,
+      url,
+      slug,
+      tagIds,
+      votes: 0,
+      commentCount: 0,
+      ratingSum: 0,
+      ratingCount: 0,
+      status: "pending" as const,
+      isHidden: false,
+      isPinned: false,
+    };
+
+    // Add optional fields if they exist in formData
+    if (formData.longDescription)
+      storyData.longDescription = formData.longDescription;
+    if (formData.videoUrl) storyData.videoUrl = formData.videoUrl;
+    if (formData.linkedinUrl) storyData.linkedinUrl = formData.linkedinUrl;
+    if (formData.twitterUrl) storyData.twitterUrl = formData.twitterUrl;
+    if (formData.githubUrl) storyData.githubUrl = formData.githubUrl;
+    if (formData.chefShowUrl) storyData.chefShowUrl = formData.chefShowUrl;
+    if (formData.chefAppUrl) storyData.chefAppUrl = formData.chefAppUrl;
+    if (screenshotId) storyData.screenshotId = screenshotId;
+
+    // Set submitter info
+    if (userId && userRecord) {
+      storyData.userId = userId;
+      storyData.submitterName =
+        submitterName || userRecord.username || "Anonymous";
+      storyData.email = userRecord.email || "unknown@example.com";
+    } else {
+      storyData.submitterName = submitterName;
+      storyData.email = email;
+    }
+
+    const storyId = await ctx.db.insert("stories", storyData);
+    return storyId;
   },
 });
 

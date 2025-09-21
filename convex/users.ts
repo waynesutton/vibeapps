@@ -305,6 +305,17 @@ export async function isUserAdmin(
 }
 
 /**
+ * Query to check if the current user is an admin (for frontend use).
+ */
+export const checkIsUserAdmin = query({
+  args: {},
+  returns: v.boolean(),
+  handler: async (ctx) => {
+    return await isUserAdmin(ctx);
+  },
+});
+
+/**
  * Ensures the currently authenticated user has the 'admin' role.
  * Throws an error if not authenticated, user not found, or not an admin.
  * This should be called at the beginning of admin-only mutations/actions.

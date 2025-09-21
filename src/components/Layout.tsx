@@ -260,15 +260,17 @@ export function Layout({ children }: { children?: ReactNode }) {
 
   // Determine if the sidebar should be shown based on view mode and settings
   // Ensure settings is loaded before trying to access its properties for showSidebar
-  // Never show sidebar on story detail pages, judging pages, or hackathon forms
+  // Never show sidebar on story detail pages, judging pages, hackathon forms, or dynamic submit forms
   const isStoryDetailPage = location.pathname.startsWith("/s/");
   const isJudgingPage = location.pathname.startsWith("/judging/");
   const isYCHackFormPage = location.pathname === "/ychack";
+  const isDynamicSubmitFormPage = location.pathname.startsWith("/submit/");
   const showSidebar =
     settings &&
     !isStoryDetailPage &&
     !isJudgingPage &&
     !isYCHackFormPage &&
+    !isDynamicSubmitFormPage &&
     (viewMode === "vibe" || viewMode === "list") &&
     (settings.showListView || settings.showVibeView);
 

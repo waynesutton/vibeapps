@@ -230,17 +230,16 @@ export function PublicJudgingResultsDashboard({
                   <div className="text-lg font-semibold text-gray-900">
                     {criteria.averageScore.toFixed(1)}
                   </div>
-                  <div className="flex">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        className={`w-4 h-4 ${
-                          star <= criteria.averageScore
-                            ? "text-yellow-400 fill-current"
-                            : "text-gray-300"
-                        }`}
-                      />
-                    ))}
+                  <div className="flex items-center gap-2">
+                    <div className="w-20 bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-yellow-400 h-2 rounded-full"
+                        style={{
+                          width: `${(criteria.averageScore / 10) * 100}%`,
+                        }}
+                      ></div>
+                    </div>
+                    <span className="text-xs text-gray-500">/10</span>
                   </div>
                 </div>
               </div>
@@ -379,19 +378,17 @@ export function PublicJudgingResultsDashboard({
                                     {score.criteriaName}
                                   </span>
                                   <div className="flex items-center gap-1">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                      <Star
-                                        key={star}
-                                        className={`w-3 h-3 ${
-                                          star <= score.score
-                                            ? "text-yellow-400 fill-current"
-                                            : "text-gray-300"
-                                        }`}
-                                      />
-                                    ))}
-                                    <span className="text-sm font-medium text-gray-900 ml-1">
-                                      {score.score}
+                                    <span className="text-sm font-medium text-gray-900">
+                                      {score.score}/10
                                     </span>
+                                    <div className="w-16 bg-gray-200 rounded-full h-2">
+                                      <div
+                                        className="bg-yellow-400 h-2 rounded-full"
+                                        style={{
+                                          width: `${(score.score / 10) * 100}%`,
+                                        }}
+                                      ></div>
+                                    </div>
                                   </div>
                                 </div>
                                 {score.comments && (

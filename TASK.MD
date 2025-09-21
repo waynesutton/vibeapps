@@ -33,20 +33,28 @@ Brief description of the feature and its purpose.
 - [x] link image in setting popup box
 - [x] fix name on story detailed page
 - [x] hide resendhackathon on story detailed page
-- [x] hide extra sign in to commet
+- [x] hide extra sign in to commit
 - [x] add new tags url slugs for pages
+- [x] put reports under user moderation in admin dashboard
+- [x] judging scale from 1-10 vs 1-5
+- [x] search for tags in admin
+- [x] allow to number sort tags
+- [x] search for submission name next to number in the judging form
+- [x] add view judging results to the judging form
+- [x] Add options to add team
 
 ## In Progress Tasks
 
-- [ ] setup resend for emails
-- [ ] 
+- [ ] add option for multiple image upload
+- [ ] fix open graph image
+- [ ] setup resend for emails for notifications on post
+- [ ] add option to turn off email notifications
 
 ## Bugs
 
 ## Future Tasks - Roadmap
 
 - [ ] add admin moderation to make app post by approval only
-- [ ] add chat box to admin dashboard and front end
 
 ## Implementation Plan
 

@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
-import { Github, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
 
@@ -17,6 +17,10 @@ export function StoryForm() {
   const [selectedTagIds, setSelectedTagIds] = React.useState<Id<"tags">[]>([]);
   const [newTagInputValue, setNewTagInputValue] = React.useState("");
   const [newTagNames, setNewTagNames] = React.useState<string[]>([]);
+
+  // Dropdown search state
+  const [dropdownSearchValue, setDropdownSearchValue] = React.useState("");
+  const [showDropdown, setShowDropdown] = React.useState(false);
   const [formData, setFormData] = React.useState({
     title: "",
     tagline: "",
@@ -38,9 +42,18 @@ export function StoryForm() {
   // Auth required dialog state
   const [showAuthDialog, setShowAuthDialog] = React.useState(false);
 
+  // Hackathon team info state
+  const [showTeamInfo, setShowTeamInfo] = React.useState(false);
+  const [teamData, setTeamData] = React.useState({
+    teamName: "",
+    teamMemberCount: 1,
+    teamMembers: [{ name: "", email: "" }],
+  });
+
   const MAX_TAGLINE_LENGTH = 140;
 
   const availableTags = useQuery(api.tags.listHeader);
+  const allTags = useQuery(api.tags.listAllForDropdown); // Fetch all tags including hidden ones
   const formFields = useQuery(api.storyFormFields.listEnabled);
   const settings = useQuery(api.settings.get);
 
@@ -49,12 +62,20 @@ export function StoryForm() {
 
   const handleAddNewTag = () => {
     const tagName = newTagInputValue.trim();
+    const totalTags = selectedTagIds.length + newTagNames.length;
+
+    if (totalTags >= 10) {
+      setSubmitError("You can select a maximum of 10 tags.");
+      return;
+    }
+
     if (
       tagName &&
       !newTagNames.some((t) => t.toLowerCase() === tagName.toLowerCase()) &&
       !availableTags?.some(
         (t) => t.name.toLowerCase() === tagName.toLowerCase(),
-      )
+      ) &&
+      !allTags?.some((t) => t.name.toLowerCase() === tagName.toLowerCase())
     ) {
       setNewTagNames((prev) => [...prev, tagName]);
       setNewTagInputValue("");
@@ -66,6 +87,22 @@ export function StoryForm() {
 
   const handleRemoveNewTag = (tagName: string) => {
     setNewTagNames((prev) => prev.filter((t) => t !== tagName));
+  };
+
+  const handleSelectFromDropdown = (tagId: Id<"tags">) => {
+    const totalTags = selectedTagIds.length + newTagNames.length;
+
+    if (totalTags >= 10) {
+      setSubmitError("You can select a maximum of 10 tags.");
+      return;
+    }
+
+    if (!selectedTagIds.includes(tagId)) {
+      setSelectedTagIds((prev) => [...prev, tagId]);
+    }
+    setDropdownSearchValue("");
+    setShowDropdown(false);
+    setSubmitError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -123,6 +160,19 @@ export function StoryForm() {
         githubUrl: dynamicFormData.githubUrl || undefined,
         chefShowUrl: dynamicFormData.chefShowUrl || undefined,
         chefAppUrl: dynamicFormData.chefAppUrl || undefined,
+        // Team info (only include if team info is shown and has data)
+        teamName:
+          showTeamInfo && teamData.teamName ? teamData.teamName : undefined,
+        teamMemberCount:
+          showTeamInfo && teamData.teamName
+            ? teamData.teamMemberCount
+            : undefined,
+        teamMembers:
+          showTeamInfo && teamData.teamName
+            ? teamData.teamMembers.filter(
+                (member) => member.name.trim() || member.email.trim(),
+              )
+            : undefined,
       });
 
       setShowSuccessMessage(true);
@@ -142,11 +192,19 @@ export function StoryForm() {
   };
 
   const toggleTag = (tagId: Id<"tags">) => {
-    setSelectedTagIds((prev) =>
-      prev.includes(tagId)
-        ? prev.filter((id) => id !== tagId)
-        : [...prev, tagId],
-    );
+    setSelectedTagIds((prev) => {
+      if (prev.includes(tagId)) {
+        return prev.filter((id) => id !== tagId);
+      } else {
+        const totalTags = prev.length + newTagNames.length;
+        if (totalTags >= 10) {
+          setSubmitError("You can select a maximum of 10 tags.");
+          return prev;
+        }
+        setSubmitError(null);
+        return [...prev, tagId];
+      }
+    });
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,6 +221,59 @@ export function StoryForm() {
     } else {
       setFormData((prev) => ({ ...prev, image: null }));
     }
+  };
+
+  // Close dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest(".tag-dropdown-container")) {
+        setShowDropdown(false);
+      }
+    };
+
+    if (showDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showDropdown]);
+
+  // Team info helper functions
+  const handleTeamMemberCountChange = (count: number) => {
+    const newCount = Math.max(1, Math.min(10, count)); // Limit between 1-10 members
+    setTeamData((prev) => {
+      const newMembers = [...prev.teamMembers];
+
+      // Add new empty members if count increased
+      while (newMembers.length < newCount) {
+        newMembers.push({ name: "", email: "" });
+      }
+
+      // Remove members if count decreased
+      if (newMembers.length > newCount) {
+        newMembers.splice(newCount);
+      }
+
+      return {
+        ...prev,
+        teamMemberCount: newCount,
+        teamMembers: newMembers,
+      };
+    });
+  };
+
+  const handleTeamMemberChange = (
+    index: number,
+    field: "name" | "email",
+    value: string,
+  ) => {
+    setTeamData((prev) => ({
+      ...prev,
+      teamMembers: prev.teamMembers.map((member, i) =>
+        i === index ? { ...member, [field]: value } : member,
+      ),
+    }));
   };
 
   return (
@@ -231,11 +342,11 @@ export function StoryForm() {
               htmlFor="longDescription"
               className="block text-sm font-medium text-[#525252] mb-1"
             >
-              Description (Optional)
+              Description
             </label>
             <textarea
               id="longDescription"
-              placeholder="- What it does&#10;- Key Features&#10;- How you built it&#10;- How are you using Resend"
+              placeholder="- Problem you're solving&#10;- How the app works&#10;- Notable features&#10;- Why did you build this&#10;- Modern Stack cohost(s) included&#10;- Tech stack list&#10;- Prize category OpenAI or InKeep (select the correct tag)"
               value={formData.longDescription}
               onChange={(e) =>
                 setFormData((prev) => ({
@@ -243,7 +354,7 @@ export function StoryForm() {
                   longDescription: e.target.value,
                 }))
               }
-              rows={4}
+              rows={8}
               className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
               disabled={isSubmitting}
             />
@@ -276,7 +387,7 @@ export function StoryForm() {
               htmlFor="videoUrl"
               className="block text-sm font-medium text-[#525252] mb-1"
             >
-              Video Demo (Optional)
+              Video Demo (Recommended)
             </label>
             <div className="text-sm text-[#545454] mb-2">
               Share a video demo of your app (YouTube, Vimeo, etc.)
@@ -343,7 +454,7 @@ export function StoryForm() {
               htmlFor="image"
               className="block text-sm font-medium text-[#525252] mb-1"
             >
-              Upload Screenshot (Optional)
+              Upload Screenshot (Recommended)
             </label>
             <input
               type="file"
@@ -393,12 +504,153 @@ export function StoryForm() {
           {formFields === undefined && (
             <div className="text-sm text-gray-500">Loading form fields...</div>
           )}
+          {/* Hackathon Team Info Section */}
+          {settings?.showHackathonTeamInfo && (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <button
+                  type="button"
+                  onClick={() => setShowTeamInfo(!showTeamInfo)}
+                  className="flex items-center gap-2 text-sm font-medium text-[#525252] hover:text-[#292929] transition-colors"
+                >
+                  <span
+                    className={`transform transition-transform ${showTeamInfo ? "rotate-90" : ""}`}
+                  >
+                    ▶
+                  </span>
+                  Team Info (Optional)
+                </button>
+              </div>
+              <p className="text-xs text-gray-600 mb-4">
+                Add your hackathon team information if you're participating as a
+                team
+              </p>
+
+              {showTeamInfo && (
+                <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+                  {/* Team Name */}
+                  <div>
+                    <label
+                      htmlFor="teamName"
+                      className="block text-sm font-medium text-[#525252] mb-1"
+                    >
+                      Team Name
+                    </label>
+                    <input
+                      type="text"
+                      id="teamName"
+                      placeholder="Enter your team name"
+                      value={teamData.teamName}
+                      onChange={(e) =>
+                        setTeamData((prev) => ({
+                          ...prev,
+                          teamName: e.target.value,
+                        }))
+                      }
+                      className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+
+                  {/* Number of Team Members */}
+                  <div>
+                    <label
+                      htmlFor="teamMemberCount"
+                      className="block text-sm font-medium text-[#525252] mb-1"
+                    >
+                      Number of Team Members
+                    </label>
+                    <input
+                      type="number"
+                      id="teamMemberCount"
+                      min="1"
+                      max="10"
+                      value={teamData.teamMemberCount}
+                      onChange={(e) =>
+                        handleTeamMemberCountChange(
+                          parseInt(e.target.value) || 1,
+                        )
+                      }
+                      className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] max-w-[120px]"
+                      disabled={isSubmitting}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Maximum 10 team members
+                    </p>
+                  </div>
+
+                  {/* Team Members */}
+                  <div>
+                    <h4 className="text-sm font-medium text-[#525252] mb-3">
+                      Team Members
+                    </h4>
+                    <div className="space-y-3">
+                      {teamData.teamMembers.map((member, index) => (
+                        <div
+                          key={index}
+                          className="grid grid-cols-1 md:grid-cols-2 gap-3"
+                        >
+                          <div>
+                            <label
+                              htmlFor={`member-name-${index}`}
+                              className="block text-xs font-medium text-[#525252] mb-1"
+                            >
+                              Member {index + 1} Name
+                            </label>
+                            <input
+                              type="text"
+                              id={`member-name-${index}`}
+                              placeholder="Full name"
+                              value={member.name}
+                              onChange={(e) =>
+                                handleTeamMemberChange(
+                                  index,
+                                  "name",
+                                  e.target.value,
+                                )
+                              }
+                              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
+                              disabled={isSubmitting}
+                            />
+                          </div>
+                          <div>
+                            <label
+                              htmlFor={`member-email-${index}`}
+                              className="block text-xs font-medium text-[#525252] mb-1"
+                            >
+                              Member {index + 1} Email
+                            </label>
+                            <input
+                              type="email"
+                              id={`member-email-${index}`}
+                              placeholder="email@example.com"
+                              value={member.email}
+                              onChange={(e) =>
+                                handleTeamMemberChange(
+                                  index,
+                                  "email",
+                                  e.target.value,
+                                )
+                              }
+                              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
+                              disabled={isSubmitting}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-[#525252] mb-2">
               Select Tags *
             </label>{" "}
             <span className="ml-2 text-xs text-gray-600">
-              What apps did you use?
+              Select tags that best describe your app or hackathon
+              participation?
             </span>
             <div className="flex flex-wrap gap-2 mb-4">
               {availableTags === undefined && (
@@ -411,12 +663,197 @@ export function StoryForm() {
                     key={tag._id}
                     type="button"
                     onClick={() => toggleTag(tag._id)}
-                    className={`px-3 py-1 rounded-md text-sm transition-colors border ${selectedTagIds.includes(tag._id) ? "bg-[#F4F0ED] text-[#292929] border-[#D5D3D0]" : "bg-white text-[#545454] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"}`}
+                    className={`px-3 py-1 rounded-md text-sm transition-colors border flex items-center gap-1 ${selectedTagIds.includes(tag._id) ? "bg-[#F4F0ED] text-[#292929] border-[#D5D3D0]" : "bg-white text-[#545454] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"}`}
+                    style={{
+                      backgroundColor: selectedTagIds.includes(tag._id)
+                        ? tag.backgroundColor || "#F4F0ED"
+                        : "white",
+                      color: selectedTagIds.includes(tag._id)
+                        ? tag.textColor || "#292929"
+                        : "#545454",
+                      borderColor: selectedTagIds.includes(tag._id)
+                        ? tag.backgroundColor
+                          ? "transparent"
+                          : "#D5D3D0"
+                        : "#D5D3D0",
+                    }}
                   >
+                    {tag.emoji && <span className="text-sm">{tag.emoji}</span>}
+                    {tag.iconUrl && !tag.emoji && (
+                      <img
+                        src={tag.iconUrl}
+                        alt=""
+                        className="w-4 h-4 rounded-sm object-cover"
+                      />
+                    )}
                     {tag.name}
                   </button>
                 ))}
             </div>
+            {/* Dropdown Search for All Tags */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[#525252] mb-2">
+                Search All Available Tags
+              </label>
+              <span className="ml-2 text-xs text-gray-600 mb-2 block">
+                Find and select from all tags, including those not shown above
+              </span>
+              <div className="relative tag-dropdown-container">
+                <input
+                  type="text"
+                  value={dropdownSearchValue}
+                  onChange={(e) => {
+                    setDropdownSearchValue(e.target.value);
+                    setShowDropdown(e.target.value.length > 0);
+                  }}
+                  onFocus={() =>
+                    setShowDropdown(dropdownSearchValue.length > 0)
+                  }
+                  placeholder="Type to search for tags..."
+                  className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
+                  disabled={isSubmitting}
+                />
+
+                {/* Dropdown Results */}
+                {showDropdown && allTags && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-[#D8E1EC] rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    {(() => {
+                      const searchTerm = dropdownSearchValue.toLowerCase();
+                      const filteredTags = allTags
+                        .filter(
+                          (tag) =>
+                            tag.name.toLowerCase().includes(searchTerm) &&
+                            !selectedTagIds.includes(tag._id) &&
+                            !newTagNames.some(
+                              (newTag) =>
+                                newTag.toLowerCase() === tag.name.toLowerCase(),
+                            ),
+                        )
+                        .slice(0, 10); // Limit to 10 results for performance
+
+                      if (filteredTags.length === 0) {
+                        return (
+                          <div className="px-3 py-2 text-sm text-gray-500">
+                            No matching tags found
+                          </div>
+                        );
+                      }
+
+                      return filteredTags.map((tag) => (
+                        <button
+                          key={tag._id}
+                          type="button"
+                          onClick={() => handleSelectFromDropdown(tag._id)}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-[#F4F0ED] focus:bg-[#F4F0ED] focus:outline-none flex items-center gap-2"
+                          disabled={isSubmitting}
+                        >
+                          {tag.emoji && (
+                            <span className="text-sm">{tag.emoji}</span>
+                          )}
+                          {tag.iconUrl && !tag.emoji && (
+                            <img
+                              src={tag.iconUrl}
+                              alt=""
+                              className="w-4 h-4 rounded-sm object-cover"
+                            />
+                          )}
+                          <span
+                            className="inline-block px-2 py-0.5 rounded text-xs font-medium"
+                            style={{
+                              backgroundColor: tag.backgroundColor || "#F4F0ED",
+                              color: tag.textColor || "#525252",
+                              border: `1px solid ${tag.backgroundColor ? "transparent" : "#D5D3D0"}`,
+                            }}
+                          >
+                            {tag.name}
+                          </span>
+                          {tag.isHidden && (
+                            <span className="text-xs text-gray-400">
+                              (Hidden)
+                            </span>
+                          )}
+                        </button>
+                      ));
+                    })()}
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Selected Tags Display */}
+            {(selectedTagIds.length > 0 || newTagNames.length > 0) && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-[#525252] mb-2">
+                  Selected Tags ({selectedTagIds.length + newTagNames.length}
+                  /10)
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {/* Show selected existing tags */}
+                  {allTags &&
+                    selectedTagIds.map((tagId) => {
+                      const tag = allTags.find((t) => t._id === tagId);
+                      if (!tag) return null;
+
+                      return (
+                        <span
+                          key={tag._id}
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm border transition-colors"
+                          style={{
+                            backgroundColor: tag.backgroundColor || "#F4F0ED",
+                            color: tag.textColor || "#292929",
+                            borderColor: tag.backgroundColor
+                              ? "transparent"
+                              : "#D5D3D0",
+                          }}
+                        >
+                          {tag.emoji && (
+                            <span className="text-sm">{tag.emoji}</span>
+                          )}
+                          {tag.iconUrl && !tag.emoji && (
+                            <img
+                              src={tag.iconUrl}
+                              alt=""
+                              className="w-4 h-4 rounded-sm object-cover"
+                            />
+                          )}
+                          {tag.name}
+                          {tag.isHidden && (
+                            <span className="text-xs opacity-70">(Hidden)</span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => toggleTag(tag._id)}
+                            disabled={isSubmitting}
+                            className="ml-1 text-current hover:opacity-70 transition-opacity"
+                            title="Remove tag"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      );
+                    })}
+
+                  {/* Show new tags being created */}
+                  {newTagNames.map((tagName) => (
+                    <span
+                      key={tagName}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-sm border border-blue-200"
+                    >
+                      {tagName}
+                      <span className="text-xs opacity-70">(New)</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveNewTag(tagName)}
+                        disabled={isSubmitting}
+                        className="ml-1 text-blue-500 hover:text-blue-700 transition-colors"
+                        title="Remove tag"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             <label className="block text-sm font-medium text-[#525252] mb-2">
               Add New Tags (optional)
             </label>
@@ -425,9 +862,16 @@ export function StoryForm() {
                 type="text"
                 value={newTagInputValue}
                 onChange={(e) => setNewTagInputValue(e.target.value)}
-                placeholder="Enter new tag name..."
+                placeholder={
+                  selectedTagIds.length + newTagNames.length >= 10
+                    ? "Maximum 10 tags reached"
+                    : "Enter new tag name..."
+                }
                 className="flex-1 px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
-                disabled={isSubmitting}
+                disabled={
+                  isSubmitting ||
+                  selectedTagIds.length + newTagNames.length >= 10
+                }
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -438,7 +882,11 @@ export function StoryForm() {
               <button
                 type="button"
                 onClick={handleAddNewTag}
-                disabled={!newTagInputValue.trim() || isSubmitting}
+                disabled={
+                  !newTagInputValue.trim() ||
+                  isSubmitting ||
+                  selectedTagIds.length + newTagNames.length >= 10
+                }
                 className="px-3 py-1 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 <Plus className="w-4 h-4" /> Add
@@ -465,6 +913,11 @@ export function StoryForm() {
             {selectedTagIds.length === 0 && newTagNames.length === 0 && (
               <p className="text-xs text-red-500 mt-1">
                 Please select or add at least one tag.
+              </p>
+            )}
+            {selectedTagIds.length + newTagNames.length >= 10 && (
+              <p className="text-xs text-amber-600 mt-1">
+                Maximum of 10 tags reached. Remove a tag to add another.
               </p>
             )}
           </div>

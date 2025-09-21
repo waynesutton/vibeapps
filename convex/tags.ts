@@ -69,7 +69,7 @@ export const getBySlug = query({
       iconUrl: v.optional(v.string()),
       order: v.optional(v.number()),
     }),
-    v.null()
+    v.null(),
   ),
   handler: async (ctx, args): Promise<Doc<"tags"> | null> => {
     const tag = await ctx.db
@@ -88,7 +88,35 @@ export const listAllAdmin = query({
   handler: async (ctx): Promise<Doc<"tags">[]> => {
     await requireAdminRole(ctx); // Ensure only admins can see hidden tags
     const tags = await ctx.db.query("tags").collect();
-    // Sort by order (ascending, undefined/null last), then by name for admin view consistency
+    // Sort by: 1) Admin tags first, 2) Order (ascending, undefined/null last), 3) Name for consistency
+    tags.sort((a, b) => {
+      // First sort by createdByAdmin (admin tags first)
+      const aIsAdmin = a.createdByAdmin ?? true; // Default to admin for existing tags
+      const bIsAdmin = b.createdByAdmin ?? true;
+      if (aIsAdmin !== bIsAdmin) {
+        return bIsAdmin ? 1 : -1; // Admin tags (true) come first
+      }
+
+      // Then sort by order (ascending, undefined/null last)
+      const orderA = a.order ?? Infinity;
+      const orderB = b.order ?? Infinity;
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+
+      // Finally sort by name for consistency
+      return (a.name ?? "").localeCompare(b.name ?? "");
+    });
+    return tags;
+  },
+});
+
+// Query to list ALL tags including hidden ones (for form dropdown) - Publicly accessible
+export const listAllForDropdown = query({
+  args: {},
+  handler: async (ctx): Promise<Doc<"tags">[]> => {
+    const tags = await ctx.db.query("tags").collect();
+    // Sort by order (ascending, undefined/null last), then by name for consistency
     tags.sort((a, b) => {
       const orderA = a.order ?? Infinity;
       const orderB = b.order ?? Infinity;
@@ -114,6 +142,7 @@ export const create = mutation({
     iconUrl: v.optional(v.union(v.string(), v.null())), // Accept iconUrl (for legacy, but not used)
     iconStorageId: v.optional(v.id("_storage")), // Accept storageId for uploaded icon
     order: v.optional(v.number()), // Added order
+    createdByAdmin: v.optional(v.boolean()), // Track if created by admin
   },
   handler: async (ctx, args): Promise<Id<"tags">> => {
     await requireAdminRole(ctx);
@@ -140,7 +169,7 @@ export const create = mutation({
       .first();
     if (existingSlug) {
       throw new Error(
-        `Tag slug "${slug}" (derived from "${name}") already exists. Please choose a different name.`
+        `Tag slug "${slug}" (derived from "${name}") already exists. Please choose a different name.`,
       );
     }
     let iconUrl: string | undefined = args.iconUrl ?? undefined;
@@ -158,6 +187,7 @@ export const create = mutation({
       emoji: args.emoji ?? undefined,
       iconUrl: iconUrl,
       order: args.order,
+      createdByAdmin: args.createdByAdmin ?? true, // Default to admin-created for admin-created tags
     });
   },
 });
@@ -177,6 +207,7 @@ export const update = mutation({
     iconStorageId: v.optional(v.id("_storage")), // Accept storageId for uploaded icon
     clearIcon: v.optional(v.boolean()), // Allow clearing icon
     order: v.optional(v.union(v.number(), v.null())), // Added order, allow null to unset
+    createdByAdmin: v.optional(v.boolean()), // Allow updating admin/user status
   },
   handler: async (ctx, args) => {
     await requireAdminRole(ctx);
@@ -189,7 +220,9 @@ export const update = mutation({
       }
       const newSlug = rest.slug ? rest.slug.trim() : generateSlug(newName);
       if (!newSlug) {
-        throw new Error("Could not generate a valid slug from the new tag name.");
+        throw new Error(
+          "Could not generate a valid slug from the new tag name.",
+        );
       }
       // Check if new name conflicts with an existing name (excluding current tag)
       const existingName = await ctx.db
@@ -208,19 +241,23 @@ export const update = mutation({
         .first();
       if (existingSlug) {
         throw new Error(
-          `Tag slug "${newSlug}" (derived from "${newName}") is already in use. Please choose a different name.`
+          `Tag slug "${newSlug}" (derived from "${newName}") is already in use. Please choose a different name.`,
         );
       }
       updateData.name = newName;
       updateData.slug = newSlug;
     }
-    if (rest.showInHeader !== undefined) updateData.showInHeader = rest.showInHeader;
+    if (rest.showInHeader !== undefined)
+      updateData.showInHeader = rest.showInHeader;
     if (rest.isHidden !== undefined) updateData.isHidden = rest.isHidden;
     if (rest.backgroundColor !== undefined)
-      updateData.backgroundColor = rest.backgroundColor === null ? undefined : rest.backgroundColor;
+      updateData.backgroundColor =
+        rest.backgroundColor === null ? undefined : rest.backgroundColor;
     if (rest.textColor !== undefined)
-      updateData.textColor = rest.textColor === null ? undefined : rest.textColor;
-    if (rest.emoji !== undefined) updateData.emoji = rest.emoji === null ? undefined : rest.emoji;
+      updateData.textColor =
+        rest.textColor === null ? undefined : rest.textColor;
+    if (rest.emoji !== undefined)
+      updateData.emoji = rest.emoji === null ? undefined : rest.emoji;
     if (rest.iconUrl !== undefined)
       updateData.iconUrl = rest.iconUrl === null ? undefined : rest.iconUrl;
 
@@ -235,6 +272,11 @@ export const update = mutation({
     // Handle order: if null is passed, unset it (undefined). Otherwise, use the value.
     if (rest.order !== undefined) {
       updateData.order = rest.order === null ? undefined : rest.order;
+    }
+
+    // Handle createdByAdmin field
+    if (rest.createdByAdmin !== undefined) {
+      updateData.createdByAdmin = rest.createdByAdmin;
     }
 
     if (Object.keys(updateData).length > 0) {
@@ -320,7 +362,9 @@ export const ensureTags = internalMutation({
         if (slugCheck) {
           // Handle slug collision. For now, we'll log and skip, or throw.
           // A more robust solution might append a short unique hash or number.
-          console.warn(`Slug collision for new tag "${nameToCreate}" (slug: "${slug}"). Skipping.`);
+          console.warn(
+            `Slug collision for new tag "${nameToCreate}" (slug: "${slug}"). Skipping.`,
+          );
           // Or: throw new Error(`Slug collision for tag: ${nameToCreate}`);
           continue;
         }
@@ -331,6 +375,7 @@ export const ensureTags = internalMutation({
           slug: slug, // Add slug here
           showInHeader: false, // Set to false by default
           isHidden: false,
+          createdByAdmin: false, // User-created tags
           // Default colors or leave undefined? Let's leave undefined.
         });
         tagIds.push(newTagId);
@@ -363,7 +408,7 @@ export const getWeeklyTopCategories = query({
       .query("stories")
       .withIndex(
         "by_status_isHidden",
-        (q) => q.eq("status", "approved").eq("isHidden", false) // false means visible
+        (q) => q.eq("status", "approved").eq("isHidden", false), // false means visible
       )
       // Order by creation time descending to get the most recent first for the week
       .order("desc")
@@ -371,11 +416,13 @@ export const getWeeklyTopCategories = query({
 
     // Filter for stories within the last seven days *after* collection
     const storiesLastSevenDays = recentStories.filter(
-      (story) => story._creationTime > sevenDaysAgo
+      (story) => story._creationTime > sevenDaysAgo,
     );
 
     const tagCounts: Map<Id<"tags">, number> = new Map();
-    const allTagIdsFromStories = storiesLastSevenDays.flatMap((story) => story.tagIds || []);
+    const allTagIdsFromStories = storiesLastSevenDays.flatMap(
+      (story) => story.tagIds || [],
+    );
 
     for (const tagId of allTagIdsFromStories) {
       tagCounts.set(tagId, (tagCounts.get(tagId) || 0) + 1);
@@ -386,9 +433,9 @@ export const getWeeklyTopCategories = query({
       return [];
     }
 
-    const tagDocs = (await Promise.all(uniqueTagIds.map((id) => ctx.db.get(id)))).filter(
-      Boolean
-    ) as Doc<"tags">[];
+    const tagDocs = (
+      await Promise.all(uniqueTagIds.map((id) => ctx.db.get(id)))
+    ).filter(Boolean) as Doc<"tags">[];
 
     const visibleHeaderTagsWithCounts = tagDocs
       .filter((tag) => tag.showInHeader === true && tag.isHidden !== true)

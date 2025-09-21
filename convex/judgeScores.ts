@@ -19,8 +19,8 @@ export const submitScore = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     // Validate score range
-    if (args.score < 1 || args.score > 5 || !Number.isInteger(args.score)) {
-      throw new Error("Score must be an integer between 1 and 5");
+    if (args.score < 1 || args.score > 10 || !Number.isInteger(args.score)) {
+      throw new Error("Score must be an integer between 1 and 10");
     }
 
     // Get judge by session
@@ -257,28 +257,19 @@ export const getGroupScores = query({
     const submissionCount = submissions.length;
     const criteriaCount = criteria.length;
 
-    // Calculate completion based on submissions completed by judges
-    // A submission is "completed" by a judge when they've scored all criteria for that submission
-    let completedSubmissions = 0;
-    const expectedSubmissions = judgeCount * submissionCount;
+    // Calculate completion based on submissions marked as "completed" in submissionStatuses
+    // Progress is based on how many submissions have been marked complete, not judge-submission combinations
+    const submissionStatuses = await ctx.db
+      .query("submissionStatuses")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
 
-    if (criteriaCount > 0) {
-      for (const judge of judges) {
-        for (const submission of submissions) {
-          const judgeSubmissionScores = scores.filter(
-            (s) => s.judgeId === judge._id && s.storyId === submission.storyId,
-          );
-          if (judgeSubmissionScores.length === criteriaCount) {
-            completedSubmissions++;
-          }
-        }
-      }
-    }
+    const completedSubmissions = submissionStatuses.filter(
+      (status) => status.status === "completed",
+    ).length;
 
     const completionPercentage =
-      expectedSubmissions > 0
-        ? (completedSubmissions / expectedSubmissions) * 100
-        : 0;
+      submissionCount > 0 ? (completedSubmissions / submissionCount) * 100 : 0;
 
     // Calculate submission rankings
     const submissionRankings = await Promise.all(
@@ -299,11 +290,14 @@ export const getGroupScores = query({
           submissionScores.length > 0
             ? totalScore / submissionScores.length
             : 0;
-        const maxPossibleScore = judgeCount * criteriaCount * 5; // 5 is max score
+        const maxPossibleScore = judgeCount * criteriaCount * 10; // 10 is max score
+
+        // Check if this submission is marked as completed
+        const submissionStatus = submissionStatuses.find(
+          (status) => status.storyId === submission.storyId,
+        );
         const submissionCompletionPercentage =
-          judgeCount * criteriaCount > 0
-            ? (submissionScores.length / (judgeCount * criteriaCount)) * 100
-            : 0;
+          submissionStatus?.status === "completed" ? 100 : 0;
 
         return {
           storyId: submission.storyId,
@@ -544,7 +538,7 @@ export const getSubmissionScores = query({
 
     const totalScore = scores.reduce((sum, score) => sum + score.score, 0);
     const averageScore = scores.length > 0 ? totalScore / scores.length : 0;
-    const maxPossibleScore = judges.length * criteria.length * 5;
+    const maxPossibleScore = judges.length * criteria.length * 10;
 
     // Group scores by judge
     const scoresByJudge = await Promise.all(
@@ -724,28 +718,19 @@ export const getPublicGroupScores = query({
     const submissionCount = submissions.length;
     const criteriaCount = criteria.length;
 
-    // Calculate completion based on submissions completed by judges
-    // A submission is "completed" by a judge when they've scored all criteria for that submission
-    let completedSubmissions = 0;
-    const expectedSubmissions = judgeCount * submissionCount;
+    // Calculate completion based on submissions marked as "completed" in submissionStatuses
+    // Progress is based on how many submissions have been marked complete, not judge-submission combinations
+    const submissionStatuses = await ctx.db
+      .query("submissionStatuses")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
 
-    if (criteriaCount > 0) {
-      for (const judge of judges) {
-        for (const submission of submissions) {
-          const judgeSubmissionScores = scores.filter(
-            (s) => s.judgeId === judge._id && s.storyId === submission.storyId,
-          );
-          if (judgeSubmissionScores.length === criteriaCount) {
-            completedSubmissions++;
-          }
-        }
-      }
-    }
+    const completedSubmissions = submissionStatuses.filter(
+      (status) => status.status === "completed",
+    ).length;
 
     const completionPercentage =
-      expectedSubmissions > 0
-        ? (completedSubmissions / expectedSubmissions) * 100
-        : 0;
+      submissionCount > 0 ? (completedSubmissions / submissionCount) * 100 : 0;
 
     // Calculate story rankings
     const storyScoreMap = new Map<

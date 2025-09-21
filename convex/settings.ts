@@ -23,6 +23,8 @@ const DEFAULT_SETTINGS = {
   // Submission limit settings
   showSubmissionLimit: true,
   submissionLimitCount: 10,
+  // Hackathon team info settings
+  showHackathonTeamInfo: false,
 };
 
 // Type for settings data returned by the 'get' query.
@@ -63,6 +65,9 @@ export const get = query({
       submissionLimitCount:
         settingsDoc.submissionLimitCount ??
         DEFAULT_SETTINGS.submissionLimitCount,
+      showHackathonTeamInfo:
+        settingsDoc.showHackathonTeamInfo ??
+        DEFAULT_SETTINGS.showHackathonTeamInfo,
     } as SettingsData; // Assert to ensure type compatibility
   },
 });
@@ -168,6 +173,8 @@ export const update = mutation({
     // Submission limit settings
     showSubmissionLimit: v.optional(v.boolean()),
     submissionLimitCount: v.optional(v.number()),
+    // Hackathon team info settings
+    showHackathonTeamInfo: v.optional(v.boolean()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {

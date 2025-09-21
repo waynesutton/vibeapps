@@ -23,12 +23,12 @@ Judges will evaluate submissions using these specific criteria questions:
 
 ### Rating System
 
-- **Scale**: Each criterion uses a 1-5 star rating scale
-- **1 Star**: Poor/Not implemented
-- **2 Stars**: Below average/Basic implementation
-- **3 Stars**: Average/Good implementation
-- **4 Stars**: Above average/Very good implementation
-- **5 Stars**: Excellent/Outstanding implementation
+- **Scale**: Each criterion uses a 1-10 point rating scale
+- **1-2 Points**: Poor/Not implemented
+- **3-4 Points**: Below average/Basic implementation
+- **5-6 Points**: Average/Good implementation
+- **7-8 Points**: Above average/Very good implementation
+- **9-10 Points**: Excellent/Outstanding implementation
 
 ### Judging Process
 

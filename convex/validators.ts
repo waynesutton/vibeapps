@@ -36,12 +36,27 @@ export const baseStoryValidator = {
   githubUrl: v.optional(v.string()),
   chefShowUrl: v.optional(v.string()),
   chefAppUrl: v.optional(v.string()),
-  status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
+  status: v.union(
+    v.literal("pending"),
+    v.literal("approved"),
+    v.literal("rejected"),
+  ),
   isHidden: v.boolean(),
   isPinned: v.boolean(),
   customMessage: v.optional(v.string()),
   isApproved: v.optional(v.boolean()),
   email: v.optional(v.string()),
+  // Hackathon team info
+  teamName: v.optional(v.string()),
+  teamMemberCount: v.optional(v.number()),
+  teamMembers: v.optional(
+    v.array(
+      v.object({
+        name: v.string(),
+        email: v.string(),
+      }),
+    ),
+  ),
 };
 
 // Validator for StoryWithDetails - includes author and tag details
@@ -147,6 +162,13 @@ export type StoryWithDetailsPublic = {
   customMessage?: string;
   isApproved?: boolean;
   email?: string;
+  // Hackathon team info
+  teamName?: string;
+  teamMemberCount?: number;
+  teamMembers?: Array<{
+    name: string;
+    email: string;
+  }>;
   // Joined data
   authorName?: string;
   authorUsername?: string;

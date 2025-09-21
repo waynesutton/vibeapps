@@ -10,7 +10,6 @@ import {
   EyeOff,
   ArrowUp,
   ArrowDown,
-  Settings,
 } from "lucide-react";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -28,16 +27,19 @@ export function FormFieldManagement() {
 
   const storyFormFields = useQuery(
     api.storyFormFields.listAdmin,
-    authIsLoading || !isAuthenticated ? "skip" : {}
+    authIsLoading || !isAuthenticated ? "skip" : {},
   );
+  const settings = useQuery(api.settings.get);
 
   const createField = useMutation(api.storyFormFields.create);
   const updateField = useMutation(api.storyFormFields.update);
   const deleteField = useMutation(api.storyFormFields.deleteField);
   const reorderFields = useMutation(api.storyFormFields.reorder);
+  const updateSettings = useMutation(api.settings.update);
 
   const [editableFields, setEditableFields] = useState<EditableFormField[]>([]);
-  const [editingFieldId, setEditingFieldId] = useState<Id<"storyFormFields"> | null>(null);
+  const [editingFieldId, setEditingFieldId] =
+    useState<Id<"storyFormFields"> | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -62,7 +64,7 @@ export function FormFieldManagement() {
             isNew: false,
             isModified: false,
             isDeleted: false,
-          }))
+          })),
         );
       }
     }
@@ -71,7 +73,7 @@ export function FormFieldManagement() {
   const handleFieldChange = (
     fieldId: Id<"storyFormFields">,
     field: keyof EditableFormField,
-    value: any
+    value: any,
   ) => {
     setEditableFields((prevFields) =>
       prevFields.map((f) => {
@@ -79,12 +81,15 @@ export function FormFieldManagement() {
           return { ...f, [field]: value, isModified: true };
         }
         return f;
-      })
+      }),
     );
     setError(null);
   };
 
-  const handleMoveField = (fieldId: Id<"storyFormFields">, direction: "up" | "down") => {
+  const handleMoveField = (
+    fieldId: Id<"storyFormFields">,
+    direction: "up" | "down",
+  ) => {
     setEditableFields((prevFields) => {
       const newFields = [...prevFields];
       const index = newFields.findIndex((f) => f._id === fieldId);
@@ -94,10 +99,17 @@ export function FormFieldManagement() {
       if (newIndex < 0 || newIndex >= newFields.length) return prevFields;
 
       // Swap elements
-      [newFields[index], newFields[newIndex]] = [newFields[newIndex], newFields[index]];
+      [newFields[index], newFields[newIndex]] = [
+        newFields[newIndex],
+        newFields[index],
+      ];
 
       // Mark all fields as modified for reordering
-      return newFields.map((f, idx) => ({ ...f, order: idx, isModified: true }));
+      return newFields.map((f, idx) => ({
+        ...f,
+        order: idx,
+        isModified: true,
+      }));
     });
   };
 
@@ -110,13 +122,17 @@ export function FormFieldManagement() {
 
   const handleDeleteField = (fieldId: Id<"storyFormFields">) => {
     setEditableFields((prevFields) =>
-      prevFields.map((f) => (f._id === fieldId ? { ...f, isDeleted: true, isModified: true } : f))
+      prevFields.map((f) =>
+        f._id === fieldId ? { ...f, isDeleted: true, isModified: true } : f,
+      ),
     );
   };
 
   const handleUndeleteField = (fieldId: Id<"storyFormFields">) => {
     setEditableFields((prevFields) =>
-      prevFields.map((f) => (f._id === fieldId ? { ...f, isDeleted: false, isModified: true } : f))
+      prevFields.map((f) =>
+        f._id === fieldId ? { ...f, isDeleted: false, isModified: true } : f,
+      ),
     );
   };
 
@@ -150,7 +166,9 @@ export function FormFieldManagement() {
       setShowAddForm(false);
     } catch (error) {
       console.error("Failed to create field:", error);
-      setError(error instanceof Error ? error.message : "Failed to create field");
+      setError(
+        error instanceof Error ? error.message : "Failed to create field",
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -193,7 +211,9 @@ export function FormFieldManagement() {
       setEditingFieldId(null);
     } catch (error) {
       console.error("Failed to save changes:", error);
-      setError(error instanceof Error ? error.message : "Failed to save changes");
+      setError(
+        error instanceof Error ? error.message : "Failed to save changes",
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -213,34 +233,74 @@ export function FormFieldManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+      <div className="bg-[#F2F4F7] rounded-lg p-6 shadow-sm border border-gray-200">
         {/* Header and Save Button */}
         <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
-          <h2 className="text-xl font-medium text-[#525252]">Manage Form Fields</h2>
+          <h2 className="text-xl font-medium text-[#525252]">
+            Manage Form Fields
+          </h2>
           <div className="flex gap-2">
             {hasPendingChanges && (
               <button
                 onClick={handleSave}
                 disabled={isProcessing}
-                className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 disabled:opacity-50 text-sm">
+                className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 disabled:opacity-50 text-sm"
+              >
                 <Save className="w-4 h-4" />
                 {isProcessing ? "Saving..." : "Save Changes"}
               </button>
             )}
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors flex items-center gap-2 text-sm">
+              className="px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors flex items-center gap-2 text-sm"
+            >
               <Plus className="w-4 h-4" />
               Add Field
             </button>
           </div>
         </div>
 
+        {/* Hackathon Team Info Settings */}
+        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <h3 className="text-sm font-medium text-blue-800 mb-3">
+            Hackathon Team Info Settings
+          </h3>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={settings?.showHackathonTeamInfo ?? false}
+              onChange={async (e) => {
+                try {
+                  await updateSettings({
+                    showHackathonTeamInfo: e.target.checked,
+                  });
+                } catch (error) {
+                  console.error("Failed to update team info setting:", error);
+                  setError("Failed to update hackathon team info setting");
+                }
+              }}
+              className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+              disabled={isProcessing}
+            />
+            <span className="text-sm text-blue-700">
+              Show hackathon team info section on submission forms
+            </span>
+          </label>
+          <p className="text-xs text-blue-600 mt-1 ml-6">
+            When enabled, displays a team information section on story
+            submission forms allowing users to enter team name and member
+            details
+          </p>
+        </div>
+
         {/* Error Display */}
         {error && (
           <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
             {error}
-            <button onClick={() => setError(null)} className="ml-4 text-red-900 font-bold">
+            <button
+              onClick={() => setError(null)}
+              className="ml-4 text-red-900 font-bold"
+            >
               Dismiss
             </button>
           </div>
@@ -249,7 +309,9 @@ export function FormFieldManagement() {
         {/* Add Field Form */}
         {showAddForm && (
           <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <h3 className="text-lg font-medium text-[#525252] mb-4">Add New Form Field</h3>
+            <h3 className="text-lg font-medium text-[#525252] mb-4">
+              Add New Form Field
+            </h3>
             <form onSubmit={handleAddField} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -259,7 +321,12 @@ export function FormFieldManagement() {
                   <input
                     type="text"
                     value={newFieldData.key}
-                    onChange={(e) => setNewFieldData((prev) => ({ ...prev, key: e.target.value }))}
+                    onChange={(e) =>
+                      setNewFieldData((prev) => ({
+                        ...prev,
+                        key: e.target.value,
+                      }))
+                    }
                     placeholder="e.g., customUrl"
                     className="w-full px-3 py-2 border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] text-sm"
                     required
@@ -273,7 +340,10 @@ export function FormFieldManagement() {
                     type="text"
                     value={newFieldData.storyPropertyName}
                     onChange={(e) =>
-                      setNewFieldData((prev) => ({ ...prev, storyPropertyName: e.target.value }))
+                      setNewFieldData((prev) => ({
+                        ...prev,
+                        storyPropertyName: e.target.value,
+                      }))
                     }
                     placeholder="e.g., customUrl"
                     className="w-full px-3 py-2 border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] text-sm"
@@ -282,11 +352,18 @@ export function FormFieldManagement() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#525252] mb-1">Label *</label>
+                <label className="block text-sm font-medium text-[#525252] mb-1">
+                  Label *
+                </label>
                 <input
                   type="text"
                   value={newFieldData.label}
-                  onChange={(e) => setNewFieldData((prev) => ({ ...prev, label: e.target.value }))}
+                  onChange={(e) =>
+                    setNewFieldData((prev) => ({
+                      ...prev,
+                      label: e.target.value,
+                    }))
+                  }
                   placeholder="e.g., Custom URL (Optional)"
                   className="w-full px-3 py-2 border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] text-sm"
                   required
@@ -300,7 +377,10 @@ export function FormFieldManagement() {
                   type="text"
                   value={newFieldData.placeholder}
                   onChange={(e) =>
-                    setNewFieldData((prev) => ({ ...prev, placeholder: e.target.value }))
+                    setNewFieldData((prev) => ({
+                      ...prev,
+                      placeholder: e.target.value,
+                    }))
                   }
                   placeholder="e.g., https://example.com/..."
                   className="w-full px-3 py-2 border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] text-sm"
@@ -315,9 +395,13 @@ export function FormFieldManagement() {
                   <select
                     value={newFieldData.fieldType}
                     onChange={(e) =>
-                      setNewFieldData((prev) => ({ ...prev, fieldType: e.target.value as any }))
+                      setNewFieldData((prev) => ({
+                        ...prev,
+                        fieldType: e.target.value as any,
+                      }))
                     }
-                    className="w-full px-3 py-2 border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] text-sm">
+                    className="w-full px-3 py-2 border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] text-sm"
+                  >
                     <option value="url">URL</option>
                     <option value="text">Text</option>
                     <option value="email">Email</option>
@@ -329,7 +413,10 @@ export function FormFieldManagement() {
                       type="checkbox"
                       checked={newFieldData.isEnabled}
                       onChange={(e) =>
-                        setNewFieldData((prev) => ({ ...prev, isEnabled: e.target.checked }))
+                        setNewFieldData((prev) => ({
+                          ...prev,
+                          isEnabled: e.target.checked,
+                        }))
                       }
                       className="rounded"
                     />
@@ -340,7 +427,10 @@ export function FormFieldManagement() {
                       type="checkbox"
                       checked={newFieldData.isRequired}
                       onChange={(e) =>
-                        setNewFieldData((prev) => ({ ...prev, isRequired: e.target.checked }))
+                        setNewFieldData((prev) => ({
+                          ...prev,
+                          isRequired: e.target.checked,
+                        }))
                       }
                       className="rounded"
                     />
@@ -356,7 +446,10 @@ export function FormFieldManagement() {
                   type="text"
                   value={newFieldData.description}
                   onChange={(e) =>
-                    setNewFieldData((prev) => ({ ...prev, description: e.target.value }))
+                    setNewFieldData((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
                   }
                   placeholder="Brief description of the field"
                   className="w-full px-3 py-2 border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] text-sm"
@@ -366,13 +459,15 @@ export function FormFieldManagement() {
                 <button
                   type="submit"
                   disabled={isProcessing}
-                  className="px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors disabled:opacity-50 text-sm">
+                  className="px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors disabled:opacity-50 text-sm"
+                >
                   {isProcessing ? "Adding..." : "Add Field"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAddForm(false)}
-                  className="px-4 py-2 text-[#545454] hover:text-[#525252] rounded-md text-sm">
+                  className="px-4 py-2 text-[#545454] hover:text-[#525252] rounded-md text-sm"
+                >
                   Cancel
                 </button>
               </div>
@@ -396,9 +491,11 @@ export function FormFieldManagement() {
                     : field.isModified
                       ? "border-blue-300 bg-blue-50"
                       : "border-gray-200 bg-white"
-              }`}>
+              }`}
+            >
               <div
-                className={`flex items-center justify-between p-3 ${field.isDeleted ? "opacity-60" : ""}`}>
+                className={`flex items-center justify-between p-3 ${field.isDeleted ? "opacity-60" : ""}`}
+              >
                 {/* Move Buttons */}
                 {!field.isDeleted && (
                   <div className="flex flex-col mr-2">
@@ -406,17 +503,20 @@ export function FormFieldManagement() {
                       onClick={() => handleMoveField(field._id, "up")}
                       disabled={index === 0 || isProcessing}
                       className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                      title="Move Up">
+                      title="Move Up"
+                    >
                       <ArrowUp className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleMoveField(field._id, "down")}
                       disabled={
-                        index === editableFields.filter((f) => !f.isDeleted).length - 1 ||
-                        isProcessing
+                        index ===
+                          editableFields.filter((f) => !f.isDeleted).length -
+                            1 || isProcessing
                       }
                       className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                      title="Move Down">
+                      title="Move Down"
+                    >
                       <ArrowDown className="w-4 h-4" />
                     </button>
                   </div>
@@ -435,7 +535,13 @@ export function FormFieldManagement() {
                           <input
                             type="text"
                             value={field.label}
-                            onChange={(e) => handleFieldChange(field._id, "label", e.target.value)}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                field._id,
+                                "label",
+                                e.target.value,
+                              )
+                            }
                             className="w-full px-2 py-1 border border-[#D8E1EC] rounded text-xs"
                             placeholder="Field label"
                           />
@@ -447,7 +553,13 @@ export function FormFieldManagement() {
                           <input
                             type="text"
                             value={field.key}
-                            onChange={(e) => handleFieldChange(field._id, "key", e.target.value)}
+                            onChange={(e) =>
+                              handleFieldChange(
+                                field._id,
+                                "key",
+                                e.target.value,
+                              )
+                            }
                             className="w-full px-2 py-1 border border-[#D8E1EC] rounded text-xs"
                             placeholder="Unique key"
                           />
@@ -462,7 +574,11 @@ export function FormFieldManagement() {
                             type="text"
                             value={field.placeholder}
                             onChange={(e) =>
-                              handleFieldChange(field._id, "placeholder", e.target.value)
+                              handleFieldChange(
+                                field._id,
+                                "placeholder",
+                                e.target.value,
+                              )
                             }
                             className="w-full px-2 py-1 border border-[#D8E1EC] rounded text-xs"
                             placeholder="Placeholder text"
@@ -476,7 +592,11 @@ export function FormFieldManagement() {
                             type="text"
                             value={field.storyPropertyName}
                             onChange={(e) =>
-                              handleFieldChange(field._id, "storyPropertyName", e.target.value)
+                              handleFieldChange(
+                                field._id,
+                                "storyPropertyName",
+                                e.target.value,
+                              )
                             }
                             className="w-full px-2 py-1 border border-[#D8E1EC] rounded text-xs"
                             placeholder="Story property"
@@ -491,9 +611,14 @@ export function FormFieldManagement() {
                           <select
                             value={field.fieldType}
                             onChange={(e) =>
-                              handleFieldChange(field._id, "fieldType", e.target.value)
+                              handleFieldChange(
+                                field._id,
+                                "fieldType",
+                                e.target.value,
+                              )
                             }
-                            className="w-full px-2 py-1 border border-[#D8E1EC] rounded text-xs">
+                            className="w-full px-2 py-1 border border-[#D8E1EC] rounded text-xs"
+                          >
                             <option value="url">URL</option>
                             <option value="text">Text</option>
                             <option value="email">Email</option>
@@ -505,22 +630,34 @@ export function FormFieldManagement() {
                               type="checkbox"
                               checked={field.isEnabled}
                               onChange={(e) =>
-                                handleFieldChange(field._id, "isEnabled", e.target.checked)
+                                handleFieldChange(
+                                  field._id,
+                                  "isEnabled",
+                                  e.target.checked,
+                                )
                               }
                               className="rounded"
                             />
-                            <span className="text-xs text-[#525252]">Enabled</span>
+                            <span className="text-xs text-[#525252]">
+                              Enabled
+                            </span>
                           </label>
                           <label className="flex items-center gap-1">
                             <input
                               type="checkbox"
                               checked={field.isRequired}
                               onChange={(e) =>
-                                handleFieldChange(field._id, "isRequired", e.target.checked)
+                                handleFieldChange(
+                                  field._id,
+                                  "isRequired",
+                                  e.target.checked,
+                                )
                               }
                               className="rounded"
                             />
-                            <span className="text-xs text-[#525252]">Required</span>
+                            <span className="text-xs text-[#525252]">
+                              Required
+                            </span>
                           </label>
                         </div>
                       </div>
@@ -532,7 +669,11 @@ export function FormFieldManagement() {
                           type="text"
                           value={field.description || ""}
                           onChange={(e) =>
-                            handleFieldChange(field._id, "description", e.target.value)
+                            handleFieldChange(
+                              field._id,
+                              "description",
+                              e.target.value,
+                            )
                           }
                           className="w-full px-2 py-1 border border-[#D8E1EC] rounded text-xs"
                           placeholder="Brief description"
@@ -541,9 +682,14 @@ export function FormFieldManagement() {
                     </div>
                   ) : (
                     // View Mode
-                    <div className="cursor-pointer" onClick={() => setEditingFieldId(field._id)}>
+                    <div
+                      className="cursor-pointer"
+                      onClick={() => setEditingFieldId(field._id)}
+                    >
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-[#292929]">{field.label}</span>
+                        <span className="font-medium text-[#292929]">
+                          {field.label}
+                        </span>
                         <Edit3 className="w-3 h-3 text-gray-400" />
                         {field.isRequired && (
                           <span className="text-xs text-red-600 bg-red-100 px-1 rounded">
@@ -551,12 +697,17 @@ export function FormFieldManagement() {
                           </span>
                         )}
                         {!field.isEnabled && (
-                          <span className="text-xs text-gray-500">(Disabled)</span>
+                          <span className="text-xs text-gray-500">
+                            (Disabled)
+                          </span>
                         )}
                       </div>
                       <div className="text-sm text-[#545454] space-y-1">
                         <div>
-                          Key: <code className="bg-gray-100 px-1 rounded">{field.key}</code>
+                          Key:{" "}
+                          <code className="bg-gray-100 px-1 rounded">
+                            {field.key}
+                          </code>
                         </div>
                         <div>Placeholder: {field.placeholder}</div>
                         <div>Type: {field.fieldType}</div>
@@ -566,7 +717,9 @@ export function FormFieldManagement() {
                             {field.storyPropertyName}
                           </code>
                         </div>
-                        {field.description && <div>Description: {field.description}</div>}
+                        {field.description && (
+                          <div>Description: {field.description}</div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -584,7 +737,8 @@ export function FormFieldManagement() {
                         }}
                         className="text-green-600 hover:text-green-700 disabled:opacity-50 p-1"
                         title="Save changes"
-                        disabled={isProcessing}>
+                        disabled={isProcessing}
+                      >
                         <Check className="w-4 h-4" />
                       </button>
                       <button
@@ -592,7 +746,9 @@ export function FormFieldManagement() {
                           setEditingFieldId(null);
                           // Reset field to original state by refreshing from server data
                           if (storyFormFields) {
-                            const originalField = storyFormFields.find((f) => f._id === field._id);
+                            const originalField = storyFormFields.find(
+                              (f) => f._id === field._id,
+                            );
                             if (originalField) {
                               setEditableFields((prev) =>
                                 prev.map((f) =>
@@ -603,15 +759,16 @@ export function FormFieldManagement() {
                                         isModified: false,
                                         isDeleted: false,
                                       }
-                                    : f
-                                )
+                                    : f,
+                                ),
                               );
                             }
                           }
                         }}
                         className="text-red-500 hover:text-red-700 disabled:opacity-50 p-1"
                         title="Cancel changes"
-                        disabled={isProcessing}>
+                        disabled={isProcessing}
+                      >
                         <X className="w-4 h-4" />
                       </button>
                     </>
@@ -623,8 +780,11 @@ export function FormFieldManagement() {
                           <button
                             onClick={() => handleToggleEnabled(field._id)}
                             className="text-[#545454] hover:text-[#525252] disabled:opacity-50 p-1"
-                            title={field.isEnabled ? "Disable field" : "Enable field"}
-                            disabled={isProcessing}>
+                            title={
+                              field.isEnabled ? "Disable field" : "Enable field"
+                            }
+                            disabled={isProcessing}
+                          >
                             {field.isEnabled ? (
                               <Eye className="w-4 h-4 text-green-600" />
                             ) : (
@@ -635,7 +795,8 @@ export function FormFieldManagement() {
                             onClick={() => handleDeleteField(field._id)}
                             className="text-red-500 hover:text-red-700 disabled:opacity-50 p-1"
                             title="Delete field"
-                            disabled={isProcessing}>
+                            disabled={isProcessing}
+                          >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </>
@@ -643,7 +804,8 @@ export function FormFieldManagement() {
                         <button
                           onClick={() => handleUndeleteField(field._id)}
                           className="text-xs text-gray-600 hover:text-black font-medium disabled:opacity-50 p-1"
-                          disabled={isProcessing}>
+                          disabled={isProcessing}
+                        >
                           Undo Delete
                         </button>
                       )}
@@ -659,8 +821,9 @@ export function FormFieldManagement() {
         <div className="mt-6 text-xs text-[#545454]">
           <p>Manage form fields that appear in the story submission form.</p>
           <p className="mt-1">
-            <span className="font-medium">Note:</span> The core fields (Title, Description, URL,
-            Screenshot) are always shown and cannot be modified.
+            <span className="font-medium">Note:</span> The core fields (Title,
+            Description, URL, Screenshot) are always shown and cannot be
+            modified.
           </p>
         </div>
       </div>

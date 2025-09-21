@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -6,7 +6,6 @@ import {
   Plus,
   Trash2,
   GripVertical,
-  Star,
   Save,
   ArrowLeft,
   AlertCircle,
@@ -258,10 +257,17 @@ export function JudgingCriteriaEditor({
 
   const renderStarPreview = () => (
     <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star key={star} className="w-4 h-4 text-yellow-400 fill-current" />
-      ))}
-      <span className="ml-2 text-sm text-gray-600">1-5 Rating Scale</span>
+      <div className="flex items-center gap-1">
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => (
+          <span
+            key={score}
+            className="px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded"
+          >
+            {score}
+          </span>
+        ))}
+      </div>
+      <span className="ml-2 text-sm text-gray-600">1-10 Rating Scale</span>
     </div>
   );
 
@@ -364,7 +370,7 @@ export function JudgingCriteriaEditor({
               <p>
                 • Create questions that judges will use to evaluate submissions
               </p>
-              <p>• Each question uses a 1-5 star rating scale</p>
+              <p>• Each question uses a 1-10 point rating scale</p>
               <p>• Judges will score every submission against all criteria</p>
               <p>• Total scores are automatically calculated and ranked</p>
             </div>

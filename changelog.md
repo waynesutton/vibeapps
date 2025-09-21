@@ -7,6 +7,113 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### Enhanced Tag Management with Search & Numbered Ordering 🏷️
+
+**Added**
+
+- **Tag Search Functionality**: Added search input to quickly find tags in TagManagement
+  - **Real-time Filtering**: Type to filter tags by name instantly
+  - **Case-insensitive Search**: Works with any capitalization
+  - **Maintains All Features**: Search works alongside all existing tag management features
+
+- **Admin/User Tag Tracking**: Enhanced tag system to distinguish between admin and user-created tags
+  - **Visual Indicators**: Green "(Admin)" and orange "(User)" labels for easy identification
+  - **Smart Sorting**: Admin tags automatically appear first, then user tags
+  - **Database Schema**: Added `createdByAdmin` field to track tag origin
+  - **Automatic Detection**: Admin-created tags marked as admin, user submissions marked as user
+
+- **Numbered Order System**: Replaced up/down arrow sorting with flexible number-based ordering
+  - **0-999 Range**: Enter any number from 0-999 for precise ordering control
+  - **Lower First**: Lower numbers appear first in display order
+  - **Same Number Grouping**: Tags with same order number appear together
+  - **Visual Input**: Clear order input field with validation
+  - **Flexible Control**: Much more precise than simple up/down arrows
+
+**Enhanced**
+
+- **Tag Management Interface**: Improved admin tag management experience
+  - **Better Layout**: Order input positioned prominently for easy access
+  - **Clear Labels**: Visual indicators for admin/user origin and current order
+  - **Comprehensive Help**: Updated legend with new ordering and indicator explanations
+  - **Maintained Functionality**: All existing features (colors, icons, visibility) preserved
+
+**Technical**
+
+- Added `createdByAdmin` boolean field to tags schema
+- Updated all tag mutations to handle admin/user tracking
+- Enhanced `listAllAdmin` query with improved sorting logic
+- Modified tag creation in user submissions to mark as user-created
+- Added order validation (0-999) with input sanitization
+- Updated TypeScript interfaces to include new field
+
+## Previous Updates
+
+### Enhanced Tag Selection with Search Dropdown 🔍
+
+**Added**
+
+- **All Tags Dropdown Search**: Added new search dropdown on StoryForm.tsx that includes ALL available tags (including hidden ones)
+  - **Search Functionality**: Type to search and filter through all tags in the system
+  - **Visual Tag Display**: Shows tag colors, emojis, and icons in both visible tags and dropdown
+  - **Hidden Tag Access**: Users can now select tags that admins have hidden from the header display
+  - **Smart Filtering**: Excludes already selected tags and new tags being created from search results
+  - **Click Outside to Close**: Dropdown closes when clicking outside for better UX
+  - **Performance Optimized**: Limited to 10 search results to maintain performance
+  - **Consistent Styling**: Matches existing UI design patterns and color scheme
+
+- **Selected Tags Display**: Added comprehensive tag selection management
+  - **Visual Feedback**: Selected tags now appear in a dedicated "Selected Tags" section
+  - **Tag Counter**: Shows current selection count with 10-tag maximum (e.g., "Selected Tags (3/10)")
+  - **Remove Functionality**: Click X button on any selected tag to remove it
+  - **Hidden Tag Indicators**: Shows "(Hidden)" label for tags not visible in header
+  - **New Tag Indicators**: Shows "(New)" label for tags being created
+
+- **10-Tag Selection Limit**: Implemented comprehensive tag limit enforcement
+  - **Smart Validation**: Prevents selection beyond 10 total tags across all methods
+  - **User Feedback**: Clear error messages when limit is reached
+  - **UI Disabling**: Input fields and buttons disabled when at maximum
+  - **Dynamic Placeholders**: Helpful placeholder text when limit reached
+
+**Technical**
+
+- Added new Convex query `listAllForDropdown` to fetch all tags including hidden ones
+- Enhanced tag button styling to show custom colors, emojis, and icons when selected
+- Added React state management for dropdown search and visibility
+- Implemented click-outside handler to close dropdown automatically
+- Added comprehensive tag limit validation across all selection methods
+- Created unified selected tags display component with remove functionality
+
+## Previous Updates
+
+### Enhanced Admin Content Moderation Editing 🛠️
+
+**Added**
+
+- **Comprehensive Inline Editing**: Admins can now edit all submission data directly in Content Moderation without navigating away
+  - **All Story Fields**: Title, URL, description, long description, submitter name, video URL, email
+  - **Social Links**: LinkedIn, Twitter/X, GitHub, Chef Show URL, Chef App URL
+  - **Tag Management**: Visual tag selector with ability to add new tags on the fly
+  - **Screenshot Upload**: Full file upload functionality with preview, replace, and remove options
+  - **Form Validation**: Required field validation with user-friendly error messages
+  - **Organized Layout**: Grouped fields into logical sections (Basic Info, Social Links, Tags, Screenshot)
+  - **Background Color**: Uses site standard `#F2F4F7` background for consistency
+
+**Technical Implementation**
+
+- Enhanced `src/components/admin/ContentModeration.tsx` with comprehensive edit form
+- Added state management for tags, file uploads, and form data
+- Integrated with existing `updateStoryAdmin` mutation and `generateUploadUrl` for file handling
+- Added helper functions for tag management and file preview
+- Maintained all existing moderation workflow functionality
+- Removed admin edit functionality from `StoryDetail.tsx` component for cleaner separation of concerns
+
+**User Experience Improvements**
+
+- **Context Preservation**: Admins stay in moderation workflow without losing their place
+- **Visual Feedback**: Real-time preview for screenshot uploads and tag selections
+- **Error Handling**: Clear validation messages and upload status indicators
+- **Responsive Design**: Works seamlessly on desktop and mobile devices
+
 ### YC AI Hackathon Form 🚀
 
 **Added**

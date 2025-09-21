@@ -53,19 +53,7 @@ export function Settings() {
       const { _id, _creationTime, ...editableSettings } = currentSettings;
       // Ensure all new fields are initialized in localSettings, even if not in currentSettings initially
       setLocalSettings({
-        itemsPerPage: DEFAULT_SETTINGS_FRONTEND.itemsPerPage,
-        siteTitle: DEFAULT_SETTINGS_FRONTEND.siteTitle,
-        defaultSortPeriod: DEFAULT_SETTINGS_FRONTEND.defaultSortPeriod,
-        showListView: DEFAULT_SETTINGS_FRONTEND.showListView,
-        showGridView: DEFAULT_SETTINGS_FRONTEND.showGridView,
-        showVibeView: DEFAULT_SETTINGS_FRONTEND.showVibeView,
-        siteDefaultViewMode: DEFAULT_SETTINGS_FRONTEND.siteDefaultViewMode,
-        profilePageDefaultViewMode:
-          DEFAULT_SETTINGS_FRONTEND.profilePageDefaultViewMode,
-        adminDashboardDefaultViewMode:
-          DEFAULT_SETTINGS_FRONTEND.adminDashboardDefaultViewMode,
-        showSubmissionLimit: DEFAULT_SETTINGS_FRONTEND.showSubmissionLimit,
-        submissionLimitCount: DEFAULT_SETTINGS_FRONTEND.submissionLimitCount,
+        ...DEFAULT_SETTINGS_FRONTEND,
         ...editableSettings,
       });
     }
@@ -92,7 +80,7 @@ export function Settings() {
       processedValue = value as ViewMode | "none";
     }
 
-    setLocalSettings((prev) => ({ ...prev, [name]: processedValue }));
+    setLocalSettings((prev: any) => ({ ...prev, [name]: processedValue }));
     setShowSuccess(false); // Hide success message on new change
     setError(null);
   };

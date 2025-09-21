@@ -13,6 +13,7 @@ import {
   Link2,
   Play,
   Edit3,
+  Users,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useQuery, useMutation } from "convex/react"; // Import Convex hooks
@@ -199,6 +200,14 @@ export function StoryDetail({ story }: StoryDetailProps) {
     string | null
   >(null);
 
+  // Team info editing state
+  const [showTeamInfo, setShowTeamInfo] = React.useState(false);
+  const [teamData, setTeamData] = React.useState({
+    teamName: "",
+    teamMemberCount: 1,
+    teamMembers: [{ name: "", email: "" }],
+  });
+
   // Fetch APPROVED comments using Convex query
   const comments = useQuery(api.comments.listApprovedByStory, {
     storyId: story._id,
@@ -252,6 +261,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
   // Fetch enabled form fields for dynamic link display
   const enabledFormFields = useQuery(api.storyFormFields.listEnabled);
+  const settings = useQuery(api.settings.get);
 
   // Get current user's Convex data to check ownership
   const currentUser = useQuery(
@@ -261,13 +271,26 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
   // Handle edit mode initialization
   React.useEffect(() => {
+    // Regular edit mode: user owns the story
     const canEdit =
       isClerkLoaded &&
       isSignedIn &&
       currentUser &&
       story.userId === currentUser._id;
+
     if (isEditMode && canEdit) {
       setIsEditing(true);
+
+      // Scroll to edit form after a brief delay to ensure it's rendered
+      setTimeout(() => {
+        const editSection = document.getElementById("edit-submission-form");
+        if (editSection) {
+          editSection.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      }, 100);
       // Initialize form data with current story values
       setEditFormData({
         title: story.title,
@@ -289,6 +312,17 @@ export function StoryDetail({ story }: StoryDetailProps) {
       setEditDynamicFormData(dynamicData);
 
       setSelectedTagIds(story.tagIds || []);
+
+      // Initialize team data
+      setTeamData({
+        teamName: story.teamName || "",
+        teamMemberCount: story.teamMemberCount || 1,
+        teamMembers:
+          story.teamMembers && story.teamMembers.length > 0
+            ? story.teamMembers
+            : [{ name: "", email: "" }],
+      });
+      setShowTeamInfo(!!story.teamName);
 
       // Reset screenshot state
       setCurrentScreenshot(story.screenshotUrl || null);
@@ -501,6 +535,43 @@ export function StoryDetail({ story }: StoryDetailProps) {
     }
   };
 
+  // Team info helper functions
+  const handleTeamMemberCountChange = (count: number) => {
+    const newCount = Math.max(1, Math.min(10, count)); // Limit between 1-10 members
+    setTeamData((prev) => {
+      const newMembers = [...prev.teamMembers];
+
+      // Add new empty members if count increased
+      while (newMembers.length < newCount) {
+        newMembers.push({ name: "", email: "" });
+      }
+
+      // Remove members if count decreased
+      if (newMembers.length > newCount) {
+        newMembers.splice(newCount);
+      }
+
+      return {
+        ...prev,
+        teamMemberCount: newCount,
+        teamMembers: newMembers,
+      };
+    });
+  };
+
+  const handleTeamMemberChange = (
+    index: number,
+    field: "name" | "email",
+    value: string,
+  ) => {
+    setTeamData((prev) => ({
+      ...prev,
+      teamMembers: prev.teamMembers.map((member, i) =>
+        i === index ? { ...member, [field]: value } : member,
+      ),
+    }));
+  };
+
   // Cleanup preview URL on component unmount or when preview changes
   React.useEffect(() => {
     return () => {
@@ -512,7 +583,13 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser || story.userId !== currentUser._id) return;
+
+    // Check permissions based on edit mode
+    const canEdit = currentUser && story.userId === currentUser._id;
+
+    if (!(isEditMode && canEdit)) {
+      return;
+    }
 
     const totalTagsSelected = selectedTagIds.length + newTagNames.length;
     if (totalTagsSelected === 0) {
@@ -563,6 +640,19 @@ export function StoryDetail({ story }: StoryDetailProps) {
         githubUrl: editDynamicFormData.githubUrl || undefined,
         chefShowUrl: editDynamicFormData.chefShowUrl || undefined,
         chefAppUrl: editDynamicFormData.chefAppUrl || undefined,
+        // Team info (only include if team info is shown and has data)
+        teamName:
+          showTeamInfo && teamData.teamName ? teamData.teamName : undefined,
+        teamMemberCount:
+          showTeamInfo && teamData.teamName
+            ? teamData.teamMemberCount
+            : undefined,
+        teamMembers:
+          showTeamInfo && teamData.teamName
+            ? teamData.teamMembers.filter(
+                (member) => member.name.trim() || member.email.trim(),
+              )
+            : undefined,
         ...(newScreenshotFile || removeScreenshot
           ? { screenshotId: screenshotStorageId }
           : {}),
@@ -907,7 +997,10 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
       {/* Edit Form Section */}
       {isEditing && currentUser && story.userId === currentUser._id && (
-        <div className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC]">
+        <div
+          id="edit-submission-form"
+          className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC]"
+        >
           <form onSubmit={handleEditSubmit} className="space-y-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-medium text-[#525252]">
@@ -1201,6 +1294,147 @@ export function StoryDetail({ story }: StoryDetailProps) {
               </div>
             ))}
 
+            {/* Hackathon Team Info Section */}
+            {settings?.showHackathonTeamInfo && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowTeamInfo(!showTeamInfo)}
+                    className="flex items-center gap-2 text-sm font-medium text-[#525252] hover:text-[#292929] transition-colors"
+                  >
+                    <span
+                      className={`transform transition-transform ${showTeamInfo ? "rotate-90" : ""}`}
+                    >
+                      ▶
+                    </span>
+                    Team Info (Optional)
+                  </button>
+                </div>
+                <p className="text-xs text-gray-600 mb-4">
+                  Add your hackathon team information if you're participating as
+                  a team
+                </p>
+
+                {showTeamInfo && (
+                  <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+                    {/* Team Name */}
+                    <div>
+                      <label
+                        htmlFor="edit-teamName"
+                        className="block text-sm font-medium text-[#525252] mb-1"
+                      >
+                        Team Name
+                      </label>
+                      <input
+                        type="text"
+                        id="edit-teamName"
+                        placeholder="Enter your team name"
+                        value={teamData.teamName}
+                        onChange={(e) =>
+                          setTeamData((prev) => ({
+                            ...prev,
+                            teamName: e.target.value,
+                          }))
+                        }
+                        className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                        disabled={isSubmitting}
+                      />
+                    </div>
+
+                    {/* Number of Team Members */}
+                    <div>
+                      <label
+                        htmlFor="edit-teamMemberCount"
+                        className="block text-sm font-medium text-[#525252] mb-1"
+                      >
+                        Number of Team Members
+                      </label>
+                      <input
+                        type="number"
+                        id="edit-teamMemberCount"
+                        min="1"
+                        max="10"
+                        value={teamData.teamMemberCount}
+                        onChange={(e) =>
+                          handleTeamMemberCountChange(
+                            parseInt(e.target.value) || 1,
+                          )
+                        }
+                        className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] max-w-[120px]"
+                        disabled={isSubmitting}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Maximum 10 team members
+                      </p>
+                    </div>
+
+                    {/* Team Members */}
+                    <div>
+                      <h4 className="text-sm font-medium text-[#525252] mb-3">
+                        Team Members
+                      </h4>
+                      <div className="space-y-3">
+                        {teamData.teamMembers.map((member, index) => (
+                          <div
+                            key={index}
+                            className="grid grid-cols-1 md:grid-cols-2 gap-3"
+                          >
+                            <div>
+                              <label
+                                htmlFor={`edit-member-name-${index}`}
+                                className="block text-xs font-medium text-[#525252] mb-1"
+                              >
+                                Member {index + 1} Name
+                              </label>
+                              <input
+                                type="text"
+                                id={`edit-member-name-${index}`}
+                                placeholder="Full name"
+                                value={member.name}
+                                onChange={(e) =>
+                                  handleTeamMemberChange(
+                                    index,
+                                    "name",
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
+                                disabled={isSubmitting}
+                              />
+                            </div>
+                            <div>
+                              <label
+                                htmlFor={`edit-member-email-${index}`}
+                                className="block text-xs font-medium text-[#525252] mb-1"
+                              >
+                                Member {index + 1} Email
+                              </label>
+                              <input
+                                type="email"
+                                id={`edit-member-email-${index}`}
+                                placeholder="email@example.com"
+                                value={member.email}
+                                onChange={(e) =>
+                                  handleTeamMemberChange(
+                                    index,
+                                    "email",
+                                    e.target.value,
+                                  )
+                                }
+                                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
+                                disabled={isSubmitting}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Tags Selection */}
             <div>
               <label className="block text-sm font-medium text-[#525252] mb-2">
@@ -1344,6 +1578,64 @@ export function StoryDetail({ story }: StoryDetailProps) {
         </div>
       )}
       {/* Video demo end */}
+
+      {/* Team Info Section */}
+      {!isEditing && story.teamName && (
+        <div className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC]">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-5 h-5 text-[#545454]" />
+            <h2 className="text-lg font-medium text-[#525252]">Team Info</h2>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium text-[#525252] mb-1">
+                Team Name
+              </h3>
+              <p className="text-[#292929]">{story.teamName}</p>
+            </div>
+
+            {story.teamMemberCount && (
+              <div>
+                <h3 className="text-sm font-medium text-[#525252] mb-1">
+                  Team Size
+                </h3>
+                <p className="text-[#292929]">
+                  {story.teamMemberCount}{" "}
+                  {story.teamMemberCount === 1 ? "member" : "members"}
+                </p>
+              </div>
+            )}
+
+            {story.teamMembers && story.teamMembers.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-[#525252] mb-2">
+                  Team Members
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {story.teamMembers.map(
+                    (
+                      member: { name: string; email: string },
+                      index: number,
+                    ) => (
+                      <div
+                        key={index}
+                        className="p-3 bg-gray-50 rounded-md border border-gray-200"
+                      >
+                        {member.name && (
+                          <p className="font-medium text-[#292929] text-sm">
+                            {member.name}
+                          </p>
+                        )}
+                      </div>
+                    ),
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Rating Section */}
       {!isEditing && (
@@ -1510,9 +1802,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
               size="sm"
               className="text-xs border-blue-200 text-blue-600 hover:bg-blue-100"
               onClick={() => {
-                const url = new URL(window.location.href);
-                url.searchParams.set("edit", "true");
-                window.location.href = url.toString();
+                const newSearchParams = new URLSearchParams(searchParams);
+                newSearchParams.set("edit", "true");
+                setSearchParams(newSearchParams);
               }}
             >
               Edit Submission

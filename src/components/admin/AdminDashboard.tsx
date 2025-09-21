@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { Link, useSearchParams } from "react-router-dom";
 import { useConvexAuth } from "convex/react";
@@ -11,32 +11,61 @@ import { NumbersView } from "./NumbersView";
 import { UserModeration } from "./UserModeration";
 import { FormFieldManagement } from "./FormFieldManagement";
 import { Judging } from "./Judging";
+import { SubmitFormManagement } from "./SubmitFormManagement";
 // FormResults is typically viewed via a specific form, not as a main tab.
 // Consider removing it from the main tabs if it doesn't show an overview.
 
-// Define the possible tabs
-type AdminTab =
+// Define the possible main tabs
+type MainAdminTab =
   | "content"
   | "tags"
-  | "form-fields"
-  | "forms"
-  | "reports"
+  | "submit-forms"
+  | "judging"
   | "numbers"
   | "users"
-  | "settings"
-  | "judging";
+  | "settings";
+
+// Define sub-tabs
+type SubmitSubTab = "submit-forms-list" | "form-fields" | "forms";
+type UserSubTab = "user-moderation" | "reports";
 
 export function AdminDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = (searchParams.get("tab") as AdminTab) || "content";
-  const [activeTab, setActiveTab] = useState<AdminTab>(initialTab);
+  const initialMainTab = (searchParams.get("tab") as MainAdminTab) || "content";
+  const [activeMainTab, setActiveMainTab] =
+    useState<MainAdminTab>(initialMainTab);
+
+  const initialSubmitSubTab =
+    (searchParams.get("subtab") as SubmitSubTab) || "submit-forms-list";
+  const [activeSubmitSubTab, setActiveSubmitSubTab] =
+    useState<SubmitSubTab>(initialSubmitSubTab);
+
+  const initialUserSubTab =
+    (searchParams.get("subtab") as UserSubTab) || "user-moderation";
+  const [activeUserSubTab, setActiveUserSubTab] =
+    useState<UserSubTab>(initialUserSubTab);
 
   const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
 
-  const handleTabChange = (value: string) => {
-    const newTab = value as AdminTab;
-    setActiveTab(newTab);
-    setSearchParams({ tab: newTab }, { replace: true }); // Update URL query param
+  const handleMainTabChange = (value: string) => {
+    const newTab = value as MainAdminTab;
+    setActiveMainTab(newTab);
+    setSearchParams({ tab: newTab }, { replace: true }); // Update URL query param, removing subtab
+  };
+
+  const handleSubTabChange = (
+    mainTab: "submit-forms" | "users",
+    subTabValue: string,
+  ) => {
+    if (mainTab === "submit-forms") {
+      const newSubTab = subTabValue as SubmitSubTab;
+      setActiveSubmitSubTab(newSubTab);
+      setSearchParams({ tab: mainTab, subtab: newSubTab }, { replace: true });
+    } else if (mainTab === "users") {
+      const newSubTab = subTabValue as UserSubTab;
+      setActiveUserSubTab(newSubTab);
+      setSearchParams({ tab: mainTab, subtab: newSubTab }, { replace: true });
+    }
   };
 
   if (authIsLoading) {
@@ -70,8 +99,8 @@ export function AdminDashboard() {
       </h1>
 
       <Tabs.Root
-        value={activeTab}
-        onValueChange={handleTabChange}
+        value={activeMainTab}
+        onValueChange={handleMainTabChange}
         className="space-y-6"
       >
         <Tabs.List className="flex flex-wrap gap-1 sm:gap-4 border-b border-gray-200">
@@ -79,14 +108,12 @@ export function AdminDashboard() {
             [
               { value: "content", label: "Moderation" },
               { value: "tags", label: "Tags" },
-              { value: "form-fields", label: "Form Fields" },
-              { value: "forms", label: "Forms" },
+              { value: "submit-forms", label: "Forms" },
               { value: "judging", label: "Judging" },
-              { value: "reports", label: "Reports" },
               { value: "numbers", label: "Numbers" },
               { value: "users", label: "User Moderation" },
               { value: "settings", label: "Settings" },
-            ] as { value: AdminTab; label: string }[]
+            ] as { value: MainAdminTab; label: string }[]
           ).map((tab) => (
             <Tabs.Trigger
               key={tab.value}
@@ -106,20 +133,49 @@ export function AdminDashboard() {
           <TagManagement />
         </Tabs.Content>
 
-        <Tabs.Content value="form-fields" className="focus:outline-none">
-          <FormFieldManagement />
-        </Tabs.Content>
-
-        <Tabs.Content value="forms" className="focus:outline-none">
-          <Forms />
+        <Tabs.Content value="submit-forms" className="focus:outline-none">
+          <Tabs.Root
+            value={activeSubmitSubTab}
+            onValueChange={(value) => handleSubTabChange("submit-forms", value)}
+            className="space-y-6"
+          >
+            <Tabs.List className="flex flex-wrap gap-1 sm:gap-4 border-b border-gray-200">
+              <Tabs.Trigger
+                value="submit-forms-list"
+                className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-[#292929] data-[state=active]:border-b-2 data-[state=active]:border-[#292929] focus:outline-none focus:z-10 whitespace-nowrap"
+              >
+                Submit Forms
+              </Tabs.Trigger>
+              <Tabs.Trigger
+                value="form-fields"
+                className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-[#292929] data-[state=active]:border-b-2 data-[state=active]:border-[#292929] focus:outline-none focus:z-10 whitespace-nowrap"
+              >
+                Story Form Fields
+              </Tabs.Trigger>
+              <Tabs.Trigger
+                value="forms"
+                className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-[#292929] data-[state=active]:border-b-2 data-[state=active]:border-[#292929] focus:outline-none focus:z-10 whitespace-nowrap"
+              >
+                Custom Forms
+              </Tabs.Trigger>
+            </Tabs.List>
+            <Tabs.Content
+              value="submit-forms-list"
+              className="focus:outline-none"
+            >
+              <SubmitFormManagement />
+            </Tabs.Content>
+            <Tabs.Content value="form-fields" className="focus:outline-none">
+              <FormFieldManagement />
+            </Tabs.Content>
+            <Tabs.Content value="forms" className="focus:outline-none">
+              <Forms />
+            </Tabs.Content>
+          </Tabs.Root>
         </Tabs.Content>
 
         <Tabs.Content value="judging" className="focus:outline-none">
           <Judging />
-        </Tabs.Content>
-
-        <Tabs.Content value="reports" className="focus:outline-none">
-          <ReportManagement />
         </Tabs.Content>
 
         <Tabs.Content value="numbers" className="focus:outline-none">
@@ -127,7 +183,35 @@ export function AdminDashboard() {
         </Tabs.Content>
 
         <Tabs.Content value="users" className="focus:outline-none">
-          <UserModeration />
+          <Tabs.Root
+            value={activeUserSubTab}
+            onValueChange={(value) => handleSubTabChange("users", value)}
+            className="space-y-6"
+          >
+            <Tabs.List className="flex flex-wrap gap-1 sm:gap-4 border-b border-gray-200">
+              <Tabs.Trigger
+                value="user-moderation"
+                className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-[#292929] data-[state=active]:border-b-2 data-[state=active]:border-[#292929] focus:outline-none focus:z-10 whitespace-nowrap"
+              >
+                Users
+              </Tabs.Trigger>
+              <Tabs.Trigger
+                value="reports"
+                className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-[#292929] data-[state=active]:border-b-2 data-[state=active]:border-[#292929] focus:outline-none focus:z-10 whitespace-nowrap"
+              >
+                Reports
+              </Tabs.Trigger>
+            </Tabs.List>
+            <Tabs.Content
+              value="user-moderation"
+              className="focus:outline-none"
+            >
+              <UserModeration />
+            </Tabs.Content>
+            <Tabs.Content value="reports" className="focus:outline-none">
+              <ReportManagement />
+            </Tabs.Content>
+          </Tabs.Root>
         </Tabs.Content>
 
         <Tabs.Content value="settings" className="focus:outline-none">

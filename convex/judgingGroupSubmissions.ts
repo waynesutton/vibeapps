@@ -250,12 +250,18 @@ export const listByGroup = query({
         const averageScore =
           scores.length > 0 ? totalScores / scores.length : undefined;
         const uniqueJudges = new Set(scores.map((s) => s.judgeId)).size;
-        const maxPossibleScore = criteriaCount * 5 * judgeCount; // 5 is max score per criteria
-        const expectedScoreCount = criteriaCount * judgeCount;
+        const maxPossibleScore = criteriaCount * 10 * judgeCount; // 10 is max score per criteria
+
+        // Check if this submission is marked as completed
+        const submissionStatus = await ctx.db
+          .query("submissionStatuses")
+          .withIndex("by_groupId_storyId", (q) =>
+            q.eq("groupId", args.groupId).eq("storyId", submission.storyId),
+          )
+          .unique();
+
         const completionPercentage =
-          expectedScoreCount > 0
-            ? (scores.length / expectedScoreCount) * 100
-            : 0;
+          submissionStatus?.status === "completed" ? 100 : 0;
 
         return {
           ...submission,
@@ -430,6 +436,17 @@ export const getGroupSubmissions = query({
       chefShowUrl: v.optional(v.string()),
       chefAppUrl: v.optional(v.string()),
       votes: v.number(),
+      // Hackathon team info
+      teamName: v.optional(v.string()),
+      teamMemberCount: v.optional(v.number()),
+      teamMembers: v.optional(
+        v.array(
+          v.object({
+            name: v.string(),
+            email: v.string(),
+          }),
+        ),
+      ),
     }),
   ),
   handler: async (ctx, args) => {
@@ -474,6 +491,10 @@ export const getGroupSubmissions = query({
           chefShowUrl: story.chefShowUrl,
           chefAppUrl: story.chefAppUrl,
           votes: story.votes,
+          // Hackathon team info
+          teamName: story.teamName,
+          teamMemberCount: story.teamMemberCount,
+          teamMembers: story.teamMembers,
         };
       }),
     );

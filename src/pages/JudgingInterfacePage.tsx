@@ -4,7 +4,6 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import {
-  Star,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
@@ -21,6 +20,8 @@ import {
   FileX,
   PlayCircle,
   User,
+  Search,
+  Users,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
@@ -43,6 +44,8 @@ export default function JudgingInterfacePage() {
   const [replyContent, setReplyContent] = useState("");
   const [isMarkingCompleted, setIsMarkingCompleted] = useState(false);
   const [jumpToSubmission, setJumpToSubmission] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   // Get session ID from localStorage on mount
   useEffect(() => {
@@ -342,31 +345,60 @@ export default function JudgingInterfacePage() {
     }
   };
 
+  // Filter submissions based on search query
+  const filteredSubmissions =
+    submissions?.filter((submission) =>
+      submission.title.toLowerCase().includes(searchQuery.toLowerCase()),
+    ) || [];
+
+  const handleSearchSubmission = (submissionId: string) => {
+    if (!submissions) return;
+
+    const index = submissions.findIndex((s) => s._id === submissionId);
+    if (index !== -1) {
+      setCurrentSubmissionIndex(index);
+      setSearchQuery("");
+      setShowSearchResults(false);
+    }
+  };
+
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    setShowSearchResults(value.length > 0);
+  };
+
   const renderStarRating = (
     criteriaId: Id<"judgingCriteria">,
     currentScore?: number,
   ) => {
     return (
-      <div className="flex items-center gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <button
-            key={star}
-            onClick={() =>
-              handleScoreChange(criteriaId, star, scores[criteriaId]?.comments)
-            }
-            className="transition-colors hover:scale-110"
-          >
-            <Star
-              className={`w-6 h-6 ${
-                currentScore && star <= currentScore
-                  ? "fill-yellow-400 text-yellow-400"
-                  : "text-gray-300 hover:text-yellow-300"
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => (
+            <button
+              key={score}
+              onClick={() =>
+                handleScoreChange(
+                  criteriaId,
+                  score,
+                  scores[criteriaId]?.comments,
+                )
+              }
+              className={`px-2 py-1 text-sm font-medium rounded transition-colors ${
+                currentScore === score
+                  ? "bg-yellow-400 text-white"
+                  : currentScore && score <= currentScore
+                    ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
-            />
-          </button>
-        ))}
+            >
+              {score}
+            </button>
+          ))}
+        </div>
         <span className="ml-2 text-sm text-gray-600">
-          {currentScore ? `${currentScore}/5` : "Not scored"}
+          {currentScore ? `${currentScore}/10` : "Not scored"}
         </span>
       </div>
     );
@@ -435,17 +467,82 @@ export default function JudgingInterfacePage() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="max-w-6xl mx-auto px-2 sm:px-4 py-4 sm:py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
           {/* Submission Details */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-medium text-gray-900">
-                  Submission {currentSubmissionIndex + 1} of{" "}
-                  {submissions.length}
-                </h2>
-                <div className="flex items-center gap-2">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+              <h2 className="text-lg font-medium text-gray-900 mb-4">
+                Submission {currentSubmissionIndex + 1} of {submissions.length}
+              </h2>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-4">
+                {/* Search submissions */}
+                <div className="relative">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
+                    <Input
+                      type="text"
+                      value={searchQuery}
+                      onChange={handleSearchInputChange}
+                      onBlur={() => {
+                        // Delay hiding results to allow clicking on them
+                        setTimeout(() => setShowSearchResults(false), 200);
+                      }}
+                      onFocus={() => searchQuery && setShowSearchResults(true)}
+                      placeholder="Search submissions..."
+                      className="w-full sm:w-48 h-8 text-sm pl-7"
+                    />
+                  </div>
+
+                  {/* Search Results Dropdown */}
+                  {showSearchResults && filteredSubmissions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+                      {filteredSubmissions.slice(0, 10).map((submission) => {
+                        const submissionIndex = submissions.findIndex(
+                          (s) => s._id === submission._id,
+                        );
+                        return (
+                          <button
+                            key={submission._id}
+                            onClick={() =>
+                              handleSearchSubmission(submission._id)
+                            }
+                            className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-900 truncate">
+                                {submission.title}
+                              </span>
+                              <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
+                                #{submissionIndex + 1}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                      {filteredSubmissions.length > 10 && (
+                        <div className="px-3 py-2 text-xs text-gray-500 text-center border-t border-gray-100">
+                          Showing first 10 of {filteredSubmissions.length}{" "}
+                          results
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* No results message */}
+                  {showSearchResults &&
+                    searchQuery &&
+                    filteredSubmissions.length === 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                        <div className="px-3 py-2 text-sm text-gray-500 text-center">
+                          No submissions found matching "{searchQuery}"
+                        </div>
+                      </div>
+                    )}
+                </div>
+
+                {/* Jump to submission number */}
+                <div className="flex items-center gap-2 sm:gap-1">
                   <form
                     onSubmit={handleJumpToSubmission}
                     className="flex items-center gap-1"
@@ -459,33 +556,37 @@ export default function JudgingInterfacePage() {
                       placeholder="#"
                       min="1"
                       max={submissions.length}
-                      className="w-16 h-8 text-sm text-center"
+                      className="w-12 sm:w-16 h-8 text-sm text-center"
                     />
                     <Button
                       type="submit"
                       variant="outline"
                       size="sm"
                       disabled={!jumpToSubmission.trim()}
-                      className="px-2"
+                      className="px-2 text-xs sm:text-sm"
                     >
                       Go
                     </Button>
                   </form>
+
+                  {/* Navigation buttons */}
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={previousSubmission}
                     disabled={currentSubmissionIndex === 0}
+                    className="px-2 sm:px-3"
                   >
-                    <ChevronLeft className="w-4 h-4" />
+                    <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={nextSubmission}
                     disabled={currentSubmissionIndex === submissions.length - 1}
+                    className="px-2 sm:px-3"
                   >
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
                   </Button>
                 </div>
               </div>
@@ -616,7 +717,8 @@ export default function JudgingInterfacePage() {
                 )}
 
                 {/* Project Links Section */}
-                {((currentSubmission as any).linkedinUrl ||
+                {(currentSubmission.url ||
+                  (currentSubmission as any).linkedinUrl ||
                   (currentSubmission as any).twitterUrl ||
                   (currentSubmission as any).githubUrl ||
                   (currentSubmission as any).chefShowUrl ||
@@ -626,6 +728,20 @@ export default function JudgingInterfacePage() {
                       Project Links
                     </h4>
                     <div className="flex flex-wrap gap-4">
+                      {currentSubmission.url && (
+                        <div className="flex items-center gap-2">
+                          <ExternalLink className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                          <a
+                            href={currentSubmission.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-gray-700 hover:text-gray-900 hover:underline truncate"
+                            title={currentSubmission.url}
+                          >
+                            Live App
+                          </a>
+                        </div>
+                      )}
                       {(currentSubmission as any).linkedinUrl && (
                         <div className="flex items-center gap-2">
                           <Linkedin className="w-4 h-4 text-gray-600 flex-shrink-0" />
@@ -705,15 +821,13 @@ export default function JudgingInterfacePage() {
                 )}
 
                 <div className="flex items-center gap-4">
-                  <a
-                    href={currentSubmission.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <Link
+                    to={`/s/${currentSubmission.slug}`}
                     className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
                   >
                     <ExternalLink className="w-4 h-4 mr-2" />
                     Visit App
-                  </a>
+                  </Link>
                   {currentSubmission.videoUrl && (
                     <a
                       href={currentSubmission.videoUrl}
@@ -738,6 +852,66 @@ export default function JudgingInterfacePage() {
                   alt={`Screenshot of ${currentSubmission.title}`}
                   className="w-full rounded-lg border border-gray-200"
                 />
+              </div>
+            )}
+
+            {/* Team Info Section */}
+            {(currentSubmission as any).teamName && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Users className="w-4 h-4 text-gray-600" />
+                  <h3 className="font-medium text-gray-900">Team Info</h3>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">
+                      Team Name:{" "}
+                    </span>
+                    <span className="text-sm text-gray-900">
+                      {(currentSubmission as any).teamName}
+                    </span>
+                  </div>
+
+                  {(currentSubmission as any).teamMemberCount && (
+                    <div>
+                      <span className="text-sm font-medium text-gray-700">
+                        Team Size:{" "}
+                      </span>
+                      <span className="text-sm text-gray-900">
+                        {(currentSubmission as any).teamMemberCount}{" "}
+                        {(currentSubmission as any).teamMemberCount === 1
+                          ? "member"
+                          : "members"}
+                      </span>
+                    </div>
+                  )}
+
+                  {(currentSubmission as any).teamMembers &&
+                    (currentSubmission as any).teamMembers.length > 0 && (
+                      <div>
+                        <span className="text-sm font-medium text-gray-700 block mb-2">
+                          Team Members:
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {(currentSubmission as any).teamMembers.map(
+                            (member: any, index: number) => (
+                              <div
+                                key={index}
+                                className="p-2 bg-gray-50 rounded border border-gray-200"
+                              >
+                                {member.name && (
+                                  <p className="font-medium text-gray-900 text-xs">
+                                    {member.name}
+                                  </p>
+                                )}
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                    )}
+                </div>
               </div>
             )}
 
@@ -1044,13 +1218,22 @@ export default function JudgingInterfacePage() {
                   )}
 
                 <div className="pt-3 border-t border-gray-100">
-                  <Link
-                    to={`/judging/${slug}`}
-                    className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                  >
-                    <BarChart2 className="w-4 h-4" />
-                    Back to Group Page
-                  </Link>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <Link
+                      to={`/judging/${slug}/results`}
+                      className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      <BarChart2 className="w-4 h-4" />
+                      View Results
+                    </Link>
+                    <Link
+                      to={`/judging/${slug}`}
+                      className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      <BarChart2 className="w-4 h-4" />
+                      Back to Group Page
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>

@@ -52,6 +52,17 @@ export default defineSchema({
     isApproved: v.optional(v.boolean()),
     rejectionReason: v.optional(v.string()),
     email: v.optional(v.string()),
+    // Hackathon team info
+    teamName: v.optional(v.string()),
+    teamMemberCount: v.optional(v.number()),
+    teamMembers: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          email: v.string(),
+        }),
+      ),
+    ),
   })
     .index("by_slug", ["slug"])
     .index("by_status", ["status"])
@@ -101,6 +112,7 @@ export default defineSchema({
     emoji: v.optional(v.string()),
     iconUrl: v.optional(v.string()),
     order: v.optional(v.number()),
+    createdByAdmin: v.optional(v.boolean()), // Track if tag was created by admin or user
   })
     .index("by_name", ["name"])
     .index("by_slug", ["slug"]),
@@ -154,6 +166,8 @@ export default defineSchema({
     // Submission limit settings
     showSubmissionLimit: v.optional(v.boolean()),
     submissionLimitCount: v.optional(v.number()),
+    // Hackathon team info settings
+    showHackathonTeamInfo: v.optional(v.boolean()),
   }),
 
   forms: defineTable({
@@ -306,7 +320,7 @@ export default defineSchema({
     groupId: v.id("judgingGroups"), // Associated judging group
     storyId: v.id("stories"), // Submission being scored
     criteriaId: v.id("judgingCriteria"), // Specific criteria being scored
-    score: v.number(), // Score (1-5)
+    score: v.number(), // Score (1-10)
     comments: v.optional(v.string()), // Optional comments from judge
   })
     .index("by_judge_story_criteria", ["judgeId", "storyId", "criteriaId"]) // Unique constraint
@@ -340,4 +354,32 @@ export default defineSchema({
     .index("by_groupId_storyId", ["groupId", "storyId"])
     .index("by_replyToId", ["replyToId"])
     .index("by_judgeId", ["judgeId"]),
+
+  // Submit Forms Management System
+  submitForms: defineTable({
+    title: v.string(), // e.g., "YC AI Hackathon Submissions"
+    slug: v.string(), // URL slug e.g., "ychack", "newform"
+    description: v.optional(v.string()), // Form description
+    isEnabled: v.boolean(), // Enable/disable form
+    customHiddenTag: v.string(), // Hidden tag to auto-add (e.g., "ychackathon")
+    headerText: v.optional(v.string()), // Custom header text
+    submitButtonText: v.optional(v.string()), // Custom submit button text
+    successMessage: v.optional(v.string()), // Custom success message
+    disabledMessage: v.optional(v.string()), // Message when form is disabled
+    isBuiltIn: v.optional(v.boolean()), // Mark built-in forms like YCHackForm
+    createdBy: v.id("users"),
+    submissionCount: v.optional(v.number()), // Track submissions
+  })
+    .index("by_slug", ["slug"])
+    .index("by_enabled", ["isEnabled"])
+    .index("by_createdBy", ["createdBy"]),
+
+  submitFormToStoryFields: defineTable({
+    formId: v.id("submitForms"),
+    storyFieldId: v.id("storyFormFields"),
+    order: v.number(),
+  })
+    .index("by_formId_order", ["formId", "order"])
+    .index("by_storyFieldId", ["storyFieldId"])
+    .index("by_formId_storyFieldId", ["formId", "storyFieldId"]),
 });

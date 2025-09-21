@@ -33,7 +33,9 @@ Currently, when users share story URLs like `/s/my-awesome-app`, social media pl
 #### Server-Side Route Handler
 
 - **Location**: `convex/http.ts`
-- **Route**: `GET /meta/s/:slug`
+- **Route (Convex exact match)**: `GET /meta/s`
+- **Slug input**: Read from either query param `?slug=` or from the trailing path segment (see code)
+- **Why**: Convex HTTP routes are exact-match paths, not parameterized. Register a fixed path and parse the slug from the request URL.
 - **Purpose**: Generate HTML with proper meta tags for story pages
 - **Returns**: Complete HTML document with story-specific meta tags
 
@@ -90,24 +92,36 @@ Currently, when users share story URLs like `/s/my-awesome-app`, social media pl
 ```typescript
 // convex/http.ts
 http.route({
-  path: "/meta/s/:slug",
+  path: "/meta/s",
   method: "GET",
   handler: httpAction(async (ctx, request) => {
     const url = new URL(request.url);
-    const slug = url.pathname.split("/").pop();
+    // Prefer explicit query param, fall back to last path segment
+    let slug = url.searchParams.get("slug");
+    if (!slug) {
+      const parts = url.pathname.split("/");
+      slug = parts[parts.length - 1] || "";
+    }
+
+    if (!slug) {
+      return new Response("Missing slug", { status: 400 });
+    }
 
     const story = await ctx.runQuery(internal.stories.getStoryMetadata, {
       slug,
     });
-
     if (!story) {
       return new Response("Story not found", { status: 404 });
     }
 
     const html = generateStoryHTML(story);
-
     return new Response(html, {
-      headers: { "Content-Type": "text/html" },
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        // Cache for browsers and CDNs while allowing quick refreshes
+        "Cache-Control":
+          "public, max-age=60, s-maxage=300, stale-while-revalidate=600",
+      },
     });
   }),
 });
@@ -119,31 +133,49 @@ http.route({
 // convex/stories.ts
 export const getStoryMetadata = internalQuery({
   args: { slug: v.string() },
-  returns: v.object({
-    title: v.string(),
-    description: v.string(),
-    screenshotUrl: v.union(v.string(), v.null()),
-    slug: v.string(),
-    url: v.string(),
-    authorName: v.optional(v.string()),
-    tags: v.array(v.string()),
-  }),
+  returns: v.union(
+    v.object({
+      title: v.string(),
+      description: v.string(),
+      screenshotUrl: v.union(v.string(), v.null()),
+      slug: v.string(),
+      url: v.string(),
+      authorName: v.optional(v.string()),
+      // Keep tags minimal for meta, names only if needed
+      tags: v.optional(v.array(v.string())),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, args) => {
     // Implementation similar to getBySlug but optimized for metadata only
   },
 });
 ```
 
-#### Deployment Configuration
+#### Deployment configuration
 
 - **Current**: `/* /index.html 200` (SPA fallback)
-- **Required**: Update to handle both SPA routes and meta routes
-- **New \_redirects**:
+- **Goal**: Keep `/s/{slug}` for users, serve prerendered HTML to social crawlers without changing app code
+
+Option A — Netlify proxy to Convex HTTP action (simple, global):
 
 ```
-/meta/s/* /meta/s/:splat 200
+# Proxies any request to /meta/s/* on your site to your Convex deployment
+/meta/s/* https://YOUR_CONVEX_DEPLOYMENT.convex.site/meta/s?slug=:splat 200
+
+# Keep SPA behavior for everything else
 /* /index.html 200
 ```
+
+Option B — Bot-only rewrite with Edge Functions (recommended):
+
+- Use a Netlify Edge Function to detect crawler User-Agents (e.g., `facebookexternalhit`, `Twitterbot`, `LinkedInBot`, `Slackbot`, `Discordbot`, `Googlebot`) and rewrite `/s/:slug` to `/meta/s/:slug` so crawlers fetch server HTML while users get the SPA.
+- Keep the same proxy rule above for `/meta/s/*` to reach Convex.
+
+Notes:
+
+- Convex HTTP routes are exact paths. Register `/meta/s` in Convex and pass the slug via query (`?slug=`). The proxy rule above appends `?slug=:splat`.
+- If you cannot use Edge Functions, you can share `/meta/s/{slug}` URLs directly. The `og:url` should still reference `https://vibeapps.dev/s/{slug}`.
 
 ### Data Requirements
 
@@ -213,13 +245,13 @@ export const getStoryMetadata = internalQuery({
 #### Routing Updates
 
 - **React Router**: No changes needed for `/s/:slug` routes
-- **Server Routes**: Add new `/meta/s/:slug` routes for crawler-specific HTML
-- **Redirects**: Update deployment configuration
+- **Server Routes**: Add Convex HTTP action at `/meta/s` and proxy `/meta/s/*` to it
+- **Redirects/Proxy**: Update deployment configuration (see above). For bot-only behavior, add an Edge Function to rewrite `/s/:slug` to `/meta/s/:slug` for crawlers.
 
 #### Social Media Integration
 
 - **Share URLs**: Continue using `/s/{slug}` format
-- **Crawler Detection**: Automatic routing to `/meta/s/{slug}` for social crawlers
+- **Crawler Detection**: Implement via Edge Function policy to route crawlers to `/meta/s/{slug}` (user-agents list maintained in code)
 - **Testing**: Validate with Facebook Debugger, Twitter Card Validator, opengraph.xyz
 
 ## Testing Strategy

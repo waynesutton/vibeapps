@@ -55,7 +55,7 @@
 - `convex/bookmarks.ts`: User bookmarking system functions
 - `convex/storyRatings.ts`: 1-5 star rating system for apps
 - `convex/follows.ts`: User following system functions
-- `convex/tags.ts`: Tag management and categorization system
+- `convex/tags.ts`: Tag management and categorization system with enhanced dropdown search support
 
 ### Admin & Moderation
 
@@ -102,7 +102,7 @@
 
 ### Story/App Submission Features
 
-- `src/components/StoryForm.tsx`: Main app submission form with validation
+- `src/components/StoryForm.tsx`: Main app submission form with validation and enhanced tag search dropdown
 - `src/components/ResendForm.tsx`: Resend integration form for email collection
 - `src/components/YCHackForm.tsx`: YC AI Hackathon submission form (based on ResendForm)
 - `src/components/StoryDetail.tsx`: Detailed app view with comments, ratings, voting

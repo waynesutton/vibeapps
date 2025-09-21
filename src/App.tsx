@@ -3,6 +3,7 @@ import {
   BrowserRouter,
   Routes,
   Route,
+  Navigate,
   useParams,
   useSearchParams,
 } from "react-router-dom";
@@ -18,6 +19,7 @@ import { StoryList } from "./components/StoryList";
 import { StoryForm } from "./components/StoryForm";
 import { ResendForm } from "./components/ResendForm";
 import { YCHackForm } from "./components/YCHackForm";
+import { DynamicSubmitForm } from "./components/DynamicSubmitForm";
 import { StoryDetail } from "./components/StoryDetail";
 import { SearchResults } from "./components/SearchResults";
 import { AdminDashboard } from "./components/admin/AdminDashboard";
@@ -142,11 +144,12 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/ychack" element={<YCHackForm />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<HomePage />} />
           <Route path="/submit" element={<StoryForm />} />
+          <Route path="/submit/:slug" element={<DynamicSubmitForm />} />
           <Route path="/resend" element={<ResendForm />} />
-          <Route path="/ychack" element={<YCHackForm />} />
           <Route element={<ProtectedLayout />}>
             <Route path="/set-username" element={<SetUsernamePage />} />
           </Route>

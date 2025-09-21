@@ -18,6 +18,7 @@ import {
   PlayCircle,
   FileX,
   User,
+  Edit,
 } from "lucide-react";
 import * as Tabs from "@radix-ui/react-tabs";
 import {
@@ -30,7 +31,7 @@ import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import type { StoryWithDetails } from "../../../convex/stories";
 import { Doc } from "../../../convex/_generated/dataModel";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,6 +43,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { debounce } from "lodash-es";
+import { toast } from "sonner";
 
 type Comment = Doc<"comments"> & {
   authorName?: string;
@@ -55,6 +57,7 @@ type ModeratableItem =
 type StatusFilter = "all" | "pending" | "approved" | "rejected" | "hidden";
 
 export function ContentModeration() {
+  const navigate = useNavigate();
   const [activeItemType, setActiveItemType] = useState<
     "submissions" | "comments"
   >("submissions");
@@ -75,6 +78,37 @@ export function ContentModeration() {
     useState<Id<"stories"> | null>(null);
   const [selectedJudgingGroupId, setSelectedJudgingGroupId] =
     useState<Id<"judgingGroups"> | null>(null);
+
+  // State for inline editing
+  const [editingStoryId, setEditingStoryId] = useState<Id<"stories"> | null>(
+    null,
+  );
+  const [editFormData, setEditFormData] = useState({
+    title: "",
+    description: "",
+    longDescription: "",
+    submitterName: "",
+    url: "",
+    videoUrl: "",
+    email: "",
+    linkedinUrl: "",
+    twitterUrl: "",
+    githubUrl: "",
+    chefShowUrl: "",
+    chefAppUrl: "",
+    teamName: "",
+    teamMemberCount: 1,
+  });
+  const [selectedTagIds, setSelectedTagIds] = useState<Id<"tags">[]>([]);
+  const [newTagNames, setNewTagNames] = useState<string[]>([]);
+  const [newScreenshotFile, setNewScreenshotFile] = useState<File | null>(null);
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(
+    null,
+  );
+  const [removeScreenshot, setRemoveScreenshot] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<
+    Array<{ name: string; email: string }>
+  >([]);
 
   const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
 
@@ -143,6 +177,7 @@ export function ContentModeration() {
   const updateCustomMessage = useMutation(api.stories.updateStoryCustomMessage);
   const togglePin = useMutation(api.stories.toggleStoryPinStatus);
   const addTagsToStory = useMutation(api.stories.addTagsToStory);
+  const updateStoryAdmin = useMutation(api.stories.updateStoryAdmin);
 
   // Judging group queries and mutations
   const judgingGroups = useQuery(
@@ -156,11 +191,12 @@ export function ContentModeration() {
     api.judgingGroupSubmissions.removeSubmission,
   );
 
-  // Query to fetch all available tags
-  const allTags = useQuery(
+  // Additional queries for editing
+  const availableTags = useQuery(
     api.tags.listAllAdmin,
     authIsLoading || !isAuthenticated ? "skip" : {},
   );
+  const generateUploadUrl = useMutation(api.stories.generateUploadUrl);
 
   // Comment Mutations
   const approveComment = useMutation(api.comments.updateStatus);
@@ -319,6 +355,182 @@ export function ContentModeration() {
     }
   };
 
+  // Handler for edit story - show inline edit form
+  const handleEditStory = (item: StoryWithDetails) => {
+    setEditingStoryId(item._id);
+    setEditFormData({
+      title: item.title,
+      description: item.description,
+      longDescription: item.longDescription || "",
+      submitterName: item.submitterName || "",
+      url: item.url,
+      videoUrl: item.videoUrl || "",
+      email: item.email || "",
+      linkedinUrl: item.linkedinUrl || "",
+      twitterUrl: item.twitterUrl || "",
+      githubUrl: item.githubUrl || "",
+      chefShowUrl: item.chefShowUrl || "",
+      chefAppUrl: item.chefAppUrl || "",
+      teamName: (item as any).teamName || "",
+      teamMemberCount: (item as any).teamMemberCount || 1,
+    });
+    setTeamMembers((item as any).teamMembers || []);
+    setSelectedTagIds(item.tagIds || []);
+    setNewTagNames([]);
+    setNewScreenshotFile(null);
+    setScreenshotPreview(null);
+    setRemoveScreenshot(false);
+  };
+
+  // Handler to cancel editing
+  const handleCancelEdit = () => {
+    setEditingStoryId(null);
+    setEditFormData({
+      title: "",
+      description: "",
+      longDescription: "",
+      submitterName: "",
+      url: "",
+      videoUrl: "",
+      email: "",
+      linkedinUrl: "",
+      twitterUrl: "",
+      githubUrl: "",
+      chefShowUrl: "",
+      chefAppUrl: "",
+      teamName: "",
+      teamMemberCount: 1,
+    });
+    setTeamMembers([]);
+    setSelectedTagIds([]);
+    setNewTagNames([]);
+    setNewScreenshotFile(null);
+    setScreenshotPreview(null);
+    setRemoveScreenshot(false);
+  };
+
+  // Handler to save edit
+  const handleSaveEdit = async () => {
+    if (!editingStoryId) return;
+
+    try {
+      // Validate required fields
+      if (!editFormData.title.trim()) {
+        toast.error("Title is required");
+        return;
+      }
+      if (!editFormData.url.trim()) {
+        toast.error("URL is required");
+        return;
+      }
+
+      // Handle screenshot upload if there's a new file
+      let screenshotStorageId: Id<"_storage"> | undefined = undefined;
+      if (newScreenshotFile) {
+        const uploadUrl = await generateUploadUrl();
+        const result = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": newScreenshotFile.type },
+          body: newScreenshotFile,
+        });
+        if (!result.ok) {
+          throw new Error("Failed to upload screenshot");
+        }
+        const response = await result.json();
+        screenshotStorageId = response.storageId;
+      }
+
+      // Prepare mutation arguments
+      const mutationArgs: any = {
+        storyId: editingStoryId,
+        title: editFormData.title,
+        description: editFormData.description,
+        longDescription: editFormData.longDescription || undefined,
+        submitterName: editFormData.submitterName || undefined,
+        url: editFormData.url,
+        videoUrl: editFormData.videoUrl || undefined,
+        email: editFormData.email || undefined,
+        linkedinUrl: editFormData.linkedinUrl || undefined,
+        twitterUrl: editFormData.twitterUrl || undefined,
+        githubUrl: editFormData.githubUrl || undefined,
+        chefShowUrl: editFormData.chefShowUrl || undefined,
+        chefAppUrl: editFormData.chefAppUrl || undefined,
+        teamName: editFormData.teamName || undefined,
+        teamMemberCount: editFormData.teamMemberCount || undefined,
+        teamMembers: teamMembers.length > 0 ? teamMembers : undefined,
+        tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined,
+        newTagNames: newTagNames.length > 0 ? newTagNames : undefined,
+      };
+
+      // Handle screenshot update explicitly
+      if (removeScreenshot && !newScreenshotFile) {
+        // Only removing, no new upload
+        mutationArgs.removeScreenshot = true;
+      } else if (newScreenshotFile) {
+        // New upload (may or may not be replacing)
+        mutationArgs.screenshotId = screenshotStorageId;
+      }
+
+      await updateStoryAdmin(mutationArgs);
+
+      handleCancelEdit();
+      toast.success("Story updated successfully!");
+    } catch (error) {
+      console.error("Failed to update story:", error);
+      toast.error("Failed to update story");
+    }
+  };
+
+  // Tag management helpers
+  const toggleTag = (tagId: Id<"tags">) => {
+    setSelectedTagIds((prev) =>
+      prev.includes(tagId)
+        ? prev.filter((id) => id !== tagId)
+        : [...prev, tagId],
+    );
+  };
+
+  const handleAddNewTag = () => {
+    const newTag = prompt("Enter new tag name:");
+    if (newTag && newTag.trim()) {
+      const trimmedTag = newTag.trim();
+      if (!newTagNames.includes(trimmedTag)) {
+        setNewTagNames((prev) => [...prev, trimmedTag]);
+      }
+    }
+  };
+
+  const handleRemoveNewTag = (tagName: string) => {
+    setNewTagNames((prev) => prev.filter((name) => name !== tagName));
+  };
+
+  // File upload handlers
+  const handleScreenshotFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setNewScreenshotFile(file);
+      setRemoveScreenshot(false);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = () => setScreenshotPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveScreenshot = () => {
+    setNewScreenshotFile(null);
+    setScreenshotPreview(null);
+    setRemoveScreenshot(true);
+  };
+
+  const handleKeepCurrentScreenshot = () => {
+    setNewScreenshotFile(null);
+    setScreenshotPreview(null);
+    setRemoveScreenshot(false);
+  };
+
   // Combined loading state: check auth loading first, then query loading
   const uiIsLoading =
     authIsLoading ||
@@ -358,11 +570,491 @@ export function ContentModeration() {
                 </Link>
               )}
             </div>
-            <p
-              className={`text-sm ${item.type === "comment" ? "text-[#525252]" : "text-[#545454]"} mt-1 break-words`}
-            >
-              {item.type === "story" ? item.description : item.content}
-            </p>
+            {/* Comprehensive Inline Edit Form */}
+            {item.type === "story" && editingStoryId === item._id ? (
+              <div className="mt-3 space-y-4 p-4 bg-[#F2F4F7] rounded-lg border">
+                {/* Basic Information */}
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-3">
+                    Basic Information
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Title *
+                      </label>
+                      <Input
+                        value={editFormData.title}
+                        onChange={(e) =>
+                          setEditFormData((prev) => ({
+                            ...prev,
+                            title: e.target.value,
+                          }))
+                        }
+                        placeholder="Story title"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        URL *
+                      </label>
+                      <Input
+                        value={editFormData.url}
+                        onChange={(e) =>
+                          setEditFormData((prev) => ({
+                            ...prev,
+                            url: e.target.value,
+                          }))
+                        }
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Description
+                      </label>
+                      <Input
+                        value={editFormData.description}
+                        onChange={(e) =>
+                          setEditFormData((prev) => ({
+                            ...prev,
+                            description: e.target.value,
+                          }))
+                        }
+                        placeholder="Short description"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Submitter Name
+                      </label>
+                      <Input
+                        value={editFormData.submitterName}
+                        onChange={(e) =>
+                          setEditFormData((prev) => ({
+                            ...prev,
+                            submitterName: e.target.value,
+                          }))
+                        }
+                        placeholder="Submitter name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Video URL
+                      </label>
+                      <Input
+                        value={editFormData.videoUrl}
+                        onChange={(e) =>
+                          setEditFormData((prev) => ({
+                            ...prev,
+                            videoUrl: e.target.value,
+                          }))
+                        }
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Email
+                      </label>
+                      <Input
+                        value={editFormData.email}
+                        onChange={(e) =>
+                          setEditFormData((prev) => ({
+                            ...prev,
+                            email: e.target.value,
+                          }))
+                        }
+                        placeholder="contact@example.com"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Long Description
+                    </label>
+                    <Textarea
+                      value={editFormData.longDescription}
+                      onChange={(e) =>
+                        setEditFormData((prev) => ({
+                          ...prev,
+                          longDescription: e.target.value,
+                        }))
+                      }
+                      placeholder="Detailed description"
+                      rows={3}
+                    />
+                  </div>
+                </div>
+
+                {/* Social Links */}
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-3">
+                    Social & Project Links
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        LinkedIn URL
+                      </label>
+                      <Input
+                        value={editFormData.linkedinUrl}
+                        onChange={(e) =>
+                          setEditFormData((prev) => ({
+                            ...prev,
+                            linkedinUrl: e.target.value,
+                          }))
+                        }
+                        placeholder="https://linkedin.com/..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Twitter/X URL
+                      </label>
+                      <Input
+                        value={editFormData.twitterUrl}
+                        onChange={(e) =>
+                          setEditFormData((prev) => ({
+                            ...prev,
+                            twitterUrl: e.target.value,
+                          }))
+                        }
+                        placeholder="https://twitter.com/..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        GitHub URL
+                      </label>
+                      <Input
+                        value={editFormData.githubUrl}
+                        onChange={(e) =>
+                          setEditFormData((prev) => ({
+                            ...prev,
+                            githubUrl: e.target.value,
+                          }))
+                        }
+                        placeholder="https://github.com/..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Chef Show URL
+                      </label>
+                      <Input
+                        value={editFormData.chefShowUrl}
+                        onChange={(e) =>
+                          setEditFormData((prev) => ({
+                            ...prev,
+                            chefShowUrl: e.target.value,
+                          }))
+                        }
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Chef App URL
+                      </label>
+                      <Input
+                        value={editFormData.chefAppUrl}
+                        onChange={(e) =>
+                          setEditFormData((prev) => ({
+                            ...prev,
+                            chefAppUrl: e.target.value,
+                          }))
+                        }
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Team Info */}
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-3">
+                    Team Information
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Team Name
+                      </label>
+                      <Input
+                        value={editFormData.teamName}
+                        onChange={(e) =>
+                          setEditFormData((prev) => ({
+                            ...prev,
+                            teamName: e.target.value,
+                          }))
+                        }
+                        placeholder="Enter team name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Team Member Count
+                      </label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={editFormData.teamMemberCount}
+                        onChange={(e) => {
+                          const count = parseInt(e.target.value) || 1;
+                          setEditFormData((prev) => ({
+                            ...prev,
+                            teamMemberCount: count,
+                          }));
+                          // Adjust team members array
+                          const newMembers = [...teamMembers];
+                          while (newMembers.length < count) {
+                            newMembers.push({ name: "", email: "" });
+                          }
+                          if (newMembers.length > count) {
+                            newMembers.splice(count);
+                          }
+                          setTeamMembers(newMembers);
+                        }}
+                        placeholder="Number of members"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Team Members */}
+                  {editFormData.teamName && teamMembers.length > 0 && (
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Team Members
+                      </label>
+                      <div className="space-y-2">
+                        {teamMembers.map((member, index) => (
+                          <div
+                            key={index}
+                            className="grid grid-cols-1 md:grid-cols-2 gap-2"
+                          >
+                            <Input
+                              value={member.name}
+                              onChange={(e) => {
+                                const newMembers = [...teamMembers];
+                                newMembers[index] = {
+                                  ...member,
+                                  name: e.target.value,
+                                };
+                                setTeamMembers(newMembers);
+                              }}
+                              placeholder={`Member ${index + 1} name`}
+                            />
+                            <Input
+                              type="email"
+                              value={member.email}
+                              onChange={(e) => {
+                                const newMembers = [...teamMembers];
+                                newMembers[index] = {
+                                  ...member,
+                                  email: e.target.value,
+                                };
+                                setTeamMembers(newMembers);
+                              }}
+                              placeholder={`Member ${index + 1} email`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-3">Tags</h4>
+                  <div className="space-y-3">
+                    {/* Available Tags */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Select Tags
+                      </label>
+                      <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto border rounded p-2 bg-white">
+                        {availableTags?.map((tag) => (
+                          <button
+                            key={tag._id}
+                            type="button"
+                            onClick={() => toggleTag(tag._id)}
+                            className={`px-2 py-1 text-xs rounded transition-colors ${
+                              selectedTagIds.includes(tag._id)
+                                ? "bg-blue-100 text-blue-700 border border-blue-300"
+                                : "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200"
+                            }`}
+                          >
+                            {tag.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* New Tags */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <label className="text-sm font-medium text-gray-700">
+                          New Tags
+                        </label>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={handleAddNewTag}
+                        >
+                          <Plus className="w-3 h-3 mr-1" />
+                          Add New
+                        </Button>
+                      </div>
+                      {newTagNames.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {newTagNames.map((tagName) => (
+                            <span
+                              key={tagName}
+                              className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-700 rounded border border-green-300"
+                            >
+                              {tagName}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveNewTag(tagName)}
+                                className="text-green-600 hover:text-green-800"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Screenshot */}
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-3">Screenshot</h4>
+                  <div className="space-y-3">
+                    {/* Current Screenshot */}
+                    {item.screenshotUrl &&
+                      !removeScreenshot &&
+                      !screenshotPreview && (
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Current Screenshot
+                          </label>
+                          <div className="relative inline-block">
+                            <img
+                              src={item.screenshotUrl}
+                              alt="Current screenshot"
+                              className="w-32 h-24 object-cover rounded border"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={handleRemoveScreenshot}
+                              className="mt-2"
+                            >
+                              Remove Screenshot
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                    {/* New Screenshot Preview */}
+                    {screenshotPreview && (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          New Screenshot
+                        </label>
+                        <div className="relative inline-block">
+                          <img
+                            src={screenshotPreview}
+                            alt="New screenshot preview"
+                            className="w-32 h-24 object-cover rounded border"
+                          />
+                          <div className="flex gap-2 mt-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setNewScreenshotFile(null);
+                                setScreenshotPreview(null);
+                              }}
+                            >
+                              Remove New
+                            </Button>
+                            {item.screenshotUrl && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={handleKeepCurrentScreenshot}
+                              >
+                                Keep Current
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* File Upload */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {screenshotPreview
+                          ? "Replace with Different Image"
+                          : "Upload New Screenshot"}
+                      </label>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleScreenshotFileChange}
+                        className="file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+                      />
+                    </div>
+
+                    {/* Removed Screenshot Indicator */}
+                    {removeScreenshot && (
+                      <div className="text-sm text-orange-600 bg-orange-50 p-2 rounded border border-orange-200">
+                        Screenshot will be removed.{" "}
+                        <button
+                          type="button"
+                          onClick={handleKeepCurrentScreenshot}
+                          className="underline hover:no-underline"
+                        >
+                          Undo
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-2 border-t">
+                  <Button size="sm" onClick={handleSaveEdit}>
+                    Save Changes
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCancelEdit}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p
+                className={`text-sm ${item.type === "comment" ? "text-[#525252]" : "text-[#545454]"} mt-1 break-words`}
+              >
+                {item.type === "story" ? item.description : item.content}
+              </p>
+            )}
             {/* Always show custom message if present, as editing is disabled */}
             {item.type === "story" && item.customMessage && (
               <div className="mt-2 text-sm text-[#ffffff] bg-[#292929] border border-[#D8E1EC] rounded-md p-2 italic">
@@ -416,7 +1108,7 @@ export function ContentModeration() {
                       <SelectValue placeholder="Select a tag to add..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {allTags
+                      {availableTags
                         ?.filter(
                           (tag) =>
                             // Only show tags that aren't already on this story
@@ -587,11 +1279,10 @@ export function ContentModeration() {
               </div>
             )}
           </div>
-          <div className="flex flex-wrap gap-2 items-center flex-shrink-0">
-            {/* Standard Actions */}
+          <div className="flex flex-col gap-2 flex-shrink-0">
+            {/* Approve/Reject actions for pending items */}
             {item.status === "pending" && (
-              <>
-                {/* Use standard variants + classes for styling */}
+              <div className="flex flex-wrap gap-2 items-center">
                 <Button
                   variant="outline"
                   size="sm"
@@ -608,82 +1299,108 @@ export function ContentModeration() {
                 >
                   <X className="w-4 h-4 mr-1" /> Reject
                 </Button>
-              </>
-            )}
-            {item.isHidden ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-                onClick={() => handleAction("show", item)}
-              >
-                <Eye className="w-4 h-4 mr-1" /> Show
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
-                onClick={() => handleAction("hide", item)}
-              >
-                <EyeOff className="w-4 h-4 mr-1" /> Hide
-              </Button>
+              </div>
             )}
 
-            {/* Story Specific Actions */}
-            {item.type === "story" && (
-              <>
+            {/* Row 1: Hide/Show, Pin, Add Message, Add Tag */}
+            <div className="flex flex-wrap gap-2 items-center">
+              {/* Hide/Show Button */}
+              {item.isHidden ? (
                 <Button
                   variant="outline"
                   size="sm"
-                  className={`${item.isPinned ? "text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100" : "text-gray-600 hover:bg-gray-50"}`}
-                  onClick={() => handleAction("togglePin", item)}
+                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                  onClick={() => handleAction("show", item)}
                 >
-                  <Pin className="w-4 h-4 mr-1" />{" "}
-                  {item.isPinned ? "Unpin" : "Pin"}
+                  <Eye className="w-4 h-4 mr-1" /> Show
                 </Button>
-                {/* Commenting out Add Message button until Textarea is added */}
-                {!isEditing && (
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
+                  onClick={() => handleAction("hide", item)}
+                >
+                  <EyeOff className="w-4 h-4 mr-1" /> Hide
+                </Button>
+              )}
+
+              {/* Story Specific Actions for Row 1 */}
+              {item.type === "story" && (
+                <>
+                  {/* Pin Button */}
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleEditMessage(item as StoryWithDetails)}
+                    className={`${item.isPinned ? "text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100" : "text-gray-600 hover:bg-gray-50"}`}
+                    onClick={() => handleAction("togglePin", item)}
                   >
-                    <MessageSquare className="w-4 h-4 mr-1" /> Add Message
+                    <Pin className="w-4 h-4 mr-1" />{" "}
+                    {item.isPinned ? "Unpin" : "Pin"}
                   </Button>
-                )}
-                {/* Add Tag Button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    handleShowTagSelector(item._id as Id<"stories">)
-                  }
-                >
-                  <Tag className="w-4 h-4 mr-1" /> Add Tag
-                </Button>
-                {/* Add to Judging Button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    handleShowJudgingGroupSelector(item._id as Id<"stories">)
-                  }
-                >
-                  <Scale className="w-4 h-4 mr-1" /> Add to Judging
-                </Button>
-              </>
-            )}
+                  {/* Add Message Button */}
+                  {!isEditing && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        handleEditMessage(item as StoryWithDetails)
+                      }
+                    >
+                      <MessageSquare className="w-4 h-4 mr-1" /> Add Message
+                    </Button>
+                  )}
+                  {/* Add Tag Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      handleShowTagSelector(item._id as Id<"stories">)
+                    }
+                  >
+                    <Tag className="w-4 h-4 mr-1" /> Add Tag
+                  </Button>
+                </>
+              )}
+            </div>
 
-            {/* Delete Action (Common) - Use standard variant + classes */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-red-700 hover:bg-red-50 hover:text-red-800 border-red-200"
-              onClick={() => handleAction("delete", item)}
-            >
-              <Trash2 className="w-4 h-4 mr-1" /> Delete
-            </Button>
+            {/* Row 2: Add to Judging, Edit, Delete */}
+            <div className="flex flex-wrap gap-2 items-center">
+              {/* Story Specific Actions for Row 2 */}
+              {item.type === "story" && (
+                <>
+                  {/* Add to Judging Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      handleShowJudgingGroupSelector(item._id as Id<"stories">)
+                    }
+                  >
+                    <Scale className="w-4 h-4 mr-1" /> Add to Judging
+                  </Button>
+                  {/* Edit Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                    onClick={() => handleEditStory(item as StoryWithDetails)}
+                  >
+                    <Edit className="w-4 h-4 mr-1" /> Edit
+                  </Button>
+                </>
+              )}
+
+              {/* Delete Action (Common) */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-red-700 hover:bg-red-50 hover:text-red-800 border-red-200"
+                onClick={() => handleAction("delete", item)}
+              >
+                <Trash2 className="w-4 h-4 mr-1" /> Delete
+              </Button>
+            </div>
           </div>
         </div>
       </div>

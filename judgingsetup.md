@@ -75,7 +75,7 @@ judgeScores: defineTable({
   groupId: v.id("judgingGroups"), // Associated judging group
   storyId: v.id("stories"), // Submission being scored
   criteriaId: v.id("judgingCriteria"), // Specific criteria being scored
-  score: v.number(), // Score (1-5)
+  score: v.number(), // Score (1-10)
   comments: v.optional(v.string()), // Optional comments from judge
 })
   .index("by_judge_story_criteria", ["judgeId", "storyId", "criteriaId"]) // Unique constraint
@@ -213,7 +213,7 @@ type AdminTab =
 
 3. **Judging Criteria Editor** (`src/components/admin/JudgingCriteriaEditor.tsx`)
    - Dynamic form to add/edit/reorder judging questions
-   - 1-5 scale rating interface preview
+   - 1-10 scale rating interface preview
    - Weight assignment (optional)
 
 4. **Judging Submissions Manager** (`src/components/admin/JudgingSubmissionsManager.tsx`)
@@ -235,7 +235,7 @@ type AdminTab =
 
 2. **Judging Interface** (`src/components/JudgingInterface.tsx`)
    - Submission display with media/links
-   - Criteria scoring interface (1-5 stars/scale)
+   - Criteria scoring interface (1-10 point scale)
    - Progress tracking
    - Comments section
 
@@ -310,7 +310,7 @@ type AdminTab =
 #### Error Handling
 
 - Graceful handling of invalid group access
-- Validation for score ranges (1-5)
+- Validation for score ranges (1-10)
 - Conflict resolution for concurrent score updates
 - Comprehensive error messages for debugging
 
