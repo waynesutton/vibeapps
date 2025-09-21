@@ -61,7 +61,9 @@ function generateStoryHTML(story: {
   url: string;
   authorName?: string;
 }) {
-  const imageUrl = story.screenshotUrl || "/vibe-apps-open-graphi-image.png";
+  const imageUrl =
+    story.screenshotUrl ||
+    "https://vibeapps.dev/vibe-apps-open-graphi-image.png";
   const canonicalUrl = `https://vibeapps.dev/s/${story.slug}`;
   const siteName = "Vibe Apps";
   const twitterHandle = "@waynesutton";

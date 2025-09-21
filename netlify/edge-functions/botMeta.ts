@@ -32,16 +32,27 @@ export default async (request: Request, context: any) => {
     if (!match) return fetch(request);
     const slug = match[1];
 
-    const metaUrl = `https://acoustic-goldfinch-461.convex.site/meta/s?slug=${encodeURIComponent(
+    // IMPORTANT: Use PRODUCTION Convex deployment for crawler-visible metadata
+    // Prod convex cloud URL is whimsical-dalmatian-205; .site is required for HTTP actions
+    const metaUrl = `https://whimsical-dalmatian-205.convex.site/meta/s?slug=${encodeURIComponent(
       slug,
     )}`;
 
-    const res = await fetch(metaUrl, {
+    let res = await fetch(metaUrl, {
       headers: {
         "cache-control":
           "public, max-age=60, s-maxage=300, stale-while-revalidate=600",
       },
     });
+    if (res.status === 404) {
+      const devUrl = `https://acoustic-goldfinch-461.convex.site/meta/s?slug=${encodeURIComponent(slug)}`;
+      res = await fetch(devUrl, {
+        headers: {
+          "cache-control":
+            "public, max-age=60, s-maxage=300, stale-while-revalidate=600",
+        },
+      });
+    }
     return new Response(await res.text(), {
       status: res.status,
       headers: {
