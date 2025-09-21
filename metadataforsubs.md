@@ -125,6 +125,65 @@ http.route({
     });
   }),
 });
+
+function generateStoryHTML(story: {
+  title: string;
+  description: string;
+  screenshotUrl: string | null;
+  slug: string;
+  url: string;
+  authorName?: string;
+}) {
+  const imageUrl = story.screenshotUrl || "/vibe-apps-open-graphi-image.png";
+  const canonicalUrl = `https://vibeapps.dev/s/${story.slug}`;
+  const siteName = "Vibe Apps";
+  const twitterHandle = "@waynesutton";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Basic SEO -->
+  <title>${story.title} | ${siteName}</title>
+  <meta name="description" content="${story.description}">
+  <link rel="canonical" href="${canonicalUrl}">
+  
+  <!-- Open Graph -->
+  <meta property="og:title" content="${story.title} | ${siteName}">
+  <meta property="og:description" content="${story.description}">
+  <meta property="og:image" content="${imageUrl}">
+  <meta property="og:url" content="${canonicalUrl}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="${siteName}">
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="${twitterHandle}">
+  <meta name="twitter:creator" content="${twitterHandle}">
+  <meta name="twitter:title" content="${story.title} | ${siteName}">
+  <meta name="twitter:description" content="${story.description}">
+  <meta name="twitter:image" content="${imageUrl}">
+  
+  <!-- Redirect to actual app after a brief delay for crawlers -->
+  <script>
+    setTimeout(() => {
+      window.location.href = "${canonicalUrl}";
+    }, 100);
+  </script>
+</head>
+<body>
+  <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px;">
+    <h1>${story.title}</h1>
+    <p>${story.description}</p>
+    ${story.authorName ? `<p>By ${story.authorName}</p>` : ""}
+    <p><a href="${story.url}" target="_blank" rel="noopener noreferrer">Visit App →</a></p>
+    <p><small>Redirecting to full page...</small></p>
+  </div>
+</body>
+</html>`;
+}
 ```
 
 #### Story Metadata Query
@@ -147,7 +206,41 @@ export const getStoryMetadata = internalQuery({
     v.null(),
   ),
   handler: async (ctx, args) => {
-    // Implementation similar to getBySlug but optimized for metadata only
+    const story = await ctx.db
+      .query("stories")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("status"), "approved"),
+          q.neq(q.field("isHidden"), true),
+        ),
+      )
+      .unique();
+
+    if (!story) return null;
+
+    // Resolve screenshot URL (main image for social sharing)
+    const screenshotUrl = story.screenshotId
+      ? await ctx.storage.getUrl(story.screenshotId)
+      : null;
+
+    // Get author info if available
+    let authorName: string | undefined = undefined;
+    if (story.userId) {
+      const author = await ctx.db.get(story.userId);
+      authorName = author?.name || story.submitterName;
+    } else {
+      authorName = story.submitterName;
+    }
+
+    return {
+      title: story.title,
+      description: story.description,
+      screenshotUrl,
+      slug: story.slug,
+      url: story.url,
+      authorName,
+    };
   },
 });
 ```
@@ -184,8 +277,10 @@ Notes:
 - `title: string` - Main story title
 - `description: string` - Short tagline/description
 - `longDescription?: string` - Detailed description (can be truncated for meta)
-- `screenshotId?: Id<"_storage">` - Reference to screenshot
-- `screenshotUrl: string | null` - Computed URL from screenshotId
+- `screenshotId?: Id<"_storage">` - Reference to main screenshot
+- `additionalImageIds?: Array<Id<"_storage">>` - References to additional images (up to 4)
+- `screenshotUrl: string | null` - Computed URL from screenshotId via ctx.storage.getUrl()
+- `additionalImageUrls: string[]` - Computed URLs from additionalImageIds
 - `slug: string` - URL-friendly identifier
 - `url: string` - External link to the actual app
 - `submitterName?: string` - Author name
@@ -277,28 +372,71 @@ Notes:
 2. **Integration Tests**: Test HTTP action responses
 3. **E2E Tests**: Validate meta tag presence in generated HTML
 
-## Deployment Plan
+## Implementation Checklist
 
-### Phase 1: Infrastructure Setup
+### Step 1: Add HTTP Meta Route
 
-1. Implement HTTP action in `convex/http.ts`
-2. Create `getStoryMetadata` query in `convex/stories.ts`
-3. Add HTML template generation utility
-4. Update deployment redirects configuration
+1. **Update `convex/http.ts`**:
+   - Add the `/meta/s` route with HTTP action
+   - Include the `generateStoryHTML` function
+   - Handle slug parsing from URL path or query parameter
 
-### Phase 2: Testing & Validation
+2. **Add `getStoryMetadata` to `convex/stories.ts`**:
+   - Create the internal query to fetch story data optimized for metadata
+   - Resolve `screenshotUrl` from `screenshotId` using `ctx.storage.getUrl()`
+   - Include author name resolution from user records
 
-1. Deploy to staging environment
-2. Test with various social media platforms
-3. Validate Open Graph compliance
-4. Performance testing and optimization
+### Step 2: Update Deployment Configuration
 
-### Phase 3: Production Rollout
+3. **Update `_redirects` file** (Netlify):
 
-1. Deploy HTTP actions to production
-2. Update DNS/CDN configuration if needed
-3. Monitor performance and error rates
-4. Social media validation and testing
+   ```
+   # Proxy meta requests to Convex HTTP action
+   /meta/s/* https://YOUR_CONVEX_DEPLOYMENT.convex.site/meta/s?slug=:splat 200
+
+   # Keep SPA behavior for everything else
+   /* /index.html 200
+   ```
+
+4. **Optional: Add Edge Function** for bot-only behavior:
+   - Detect crawler User-Agents (`facebookexternalhit`, `Twitterbot`, `LinkedInBot`, etc.)
+   - Rewrite `/s/:slug` to `/meta/s/:slug` for crawlers only
+   - Let users continue to get the SPA
+
+### Step 3: Testing & Validation
+
+5. **Test the meta endpoint directly**:
+   - Visit `/meta/s/some-story-slug` and verify HTML contains correct meta tags
+   - Confirm fallback to `/vibe-apps-open-graphi-image.png` when no screenshot
+
+6. **Social media validation**:
+   - Test URLs with Facebook's Sharing Debugger
+   - Test with Twitter's Card Validator
+   - Test with LinkedIn's Post Inspector
+   - Test with opengraph.xyz
+
+7. **Verify user experience unchanged**:
+   - Ensure `/s/{slug}` still works normally for users
+   - Confirm SPA navigation and client-side meta updates still function
+
+### Step 4: Deployment
+
+8. **Deploy to production**:
+   - Push Convex functions with `npx convex deploy`
+   - Update `_redirects` file in your static site deployment
+   - Monitor for any 404s or errors in meta route requests
+
+### Step 5: Monitor & Iterate
+
+9. **Performance monitoring**:
+   - Check response times for `/meta/s/*` requests
+   - Monitor error rates and 404s
+   - Verify CDN caching is working effectively
+
+10. **Social media engagement tracking**:
+    - Monitor click-through rates from social platforms
+    - Track referral traffic from Facebook, Twitter, LinkedIn
+    - A/B test different meta descriptions or images if needed
 
 ## Future Enhancements
 
