@@ -250,40 +250,72 @@ export const listApproved = query({
     let initialFilteredStories: Doc<"stories">[];
 
     if (args.sortPeriod?.startsWith("votes_")) {
-      // If sorting by votes, use the index, order, filter, then paginate
-      paginatedResult = await ctx.db
-        .query("stories")
-        .withIndex("by_votes")
-        .order("desc")
-        .filter((q) =>
-          q.and(
-            q.eq(q.field("status"), "approved"),
-            q.neq(q.field("isHidden"), true),
-            q.gte(q.field("_creationTime"), startTime), // Apply time filter *after* index selection
-          ),
-        )
-        .paginate(args.paginationOpts);
-
-      initialFilteredStories = paginatedResult.page;
-      const storiesWithDetails = await fetchTagsAndCountsForStories(
-        ctx,
-        initialFilteredStories,
-      );
-
-      // Filter by tagId *after* pagination if needed (less efficient but necessary)
-      let finalPage = storiesWithDetails;
+      // For vote-based sorting with tagId, we need to collect all matching stories first
       if (args.tagId) {
-        console.warn("Filtering by tagId after pagination isn't efficient...");
-        finalPage = storiesWithDetails.filter((story) =>
+        // Collect all stories matching the criteria
+        const allStories = await ctx.db
+          .query("stories")
+          .withIndex("by_votes")
+          .order("desc")
+          .filter((q) =>
+            q.and(
+              q.eq(q.field("status"), "approved"),
+              q.neq(q.field("isHidden"), true),
+              q.gte(q.field("_creationTime"), startTime),
+            ),
+          )
+          .collect();
+
+        // Filter by tagId before pagination
+        const tagFilteredStories = allStories.filter((story) =>
           (story.tagIds || []).includes(args.tagId!),
         );
-      }
 
-      return {
-        page: finalPage,
-        isDone: paginatedResult.isDone,
-        continueCursor: paginatedResult.continueCursor,
-      };
+        // Apply manual pagination
+        const startIndex = args.paginationOpts.cursor
+          ? parseInt(args.paginationOpts.cursor, 10)
+          : 0;
+        const endIndex = startIndex + args.paginationOpts.numItems;
+        const pageStories = tagFilteredStories.slice(startIndex, endIndex);
+        const isDone = endIndex >= tagFilteredStories.length;
+        const continueCursor = isDone ? null : endIndex.toString();
+
+        const storiesWithDetails = await fetchTagsAndCountsForStories(
+          ctx,
+          pageStories,
+        );
+
+        return {
+          page: storiesWithDetails,
+          isDone,
+          continueCursor: continueCursor ?? "",
+        };
+      } else {
+        // No tagId filter, use efficient pagination
+        paginatedResult = await ctx.db
+          .query("stories")
+          .withIndex("by_votes")
+          .order("desc")
+          .filter((q) =>
+            q.and(
+              q.eq(q.field("status"), "approved"),
+              q.neq(q.field("isHidden"), true),
+              q.gte(q.field("_creationTime"), startTime),
+            ),
+          )
+          .paginate(args.paginationOpts);
+
+        const storiesWithDetails = await fetchTagsAndCountsForStories(
+          ctx,
+          paginatedResult.page,
+        );
+
+        return {
+          page: storiesWithDetails,
+          isDone: paginatedResult.isDone,
+          continueCursor: paginatedResult.continueCursor,
+        };
+      }
     } else {
       // For time-based sorting (or 'all'), filter first, collect all matching, then sort manually for pinning, then paginate manually
       const baseQuery = ctx.db
@@ -296,6 +328,13 @@ export const listApproved = query({
           ),
         );
       initialFilteredStories = await baseQuery.collect();
+
+      // Pre-filter by tagId if provided (BEFORE sorting and pagination)
+      if (args.tagId) {
+        initialFilteredStories = initialFilteredStories.filter((story) =>
+          (story.tagIds || []).includes(args.tagId!),
+        );
+      }
 
       // Manual sorting: Pinned first, then by creation time descending
       initialFilteredStories.sort((a, b) => {
@@ -320,13 +359,6 @@ export const listApproved = query({
         ctx,
         pageStories,
       );
-
-      // Post-filter by tagId if provided
-      if (args.tagId) {
-        storiesWithDetails = storiesWithDetails.filter((story) =>
-          (story.tagIds || []).includes(args.tagId!),
-        );
-      }
 
       return {
         page: storiesWithDetails,
