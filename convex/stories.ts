@@ -1973,3 +1973,56 @@ export const getApprovedCountByTag = query({
     return stories.length;
   },
 });
+
+// Internal query for fetching story metadata optimized for social sharing
+export const getStoryMetadata = internalQuery({
+  args: { slug: v.string() },
+  returns: v.union(
+    v.object({
+      title: v.string(),
+      description: v.string(),
+      screenshotUrl: v.union(v.string(), v.null()),
+      slug: v.string(),
+      url: v.string(),
+      authorName: v.optional(v.string()),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const story = await ctx.db
+      .query("stories")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("status"), "approved"),
+          q.neq(q.field("isHidden"), true),
+        ),
+      )
+      .unique();
+
+    if (!story) return null;
+
+    // Resolve screenshot URL (main image for social sharing)
+    const screenshotUrl = story.screenshotId
+      ? await ctx.storage.getUrl(story.screenshotId)
+      : null;
+
+    // Get author info if available
+    let authorName: string | undefined = undefined;
+    if (story.userId) {
+      const author = await ctx.db.get(story.userId);
+      authorName = author?.name || story.submitterName;
+    } else {
+      authorName = story.submitterName;
+    }
+
+    return {
+      title: story.title,
+      description: story.description,
+      screenshotUrl,
+      slug: story.slug,
+      url: story.url,
+      authorName,
+    };
+  },
+});

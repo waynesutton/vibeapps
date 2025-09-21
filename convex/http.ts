@@ -52,4 +52,121 @@ http.route({
   }),
 });
 
+// HTML generation function for story metadata
+function generateStoryHTML(story: {
+  title: string;
+  description: string;
+  screenshotUrl: string | null;
+  slug: string;
+  url: string;
+  authorName?: string;
+}) {
+  const imageUrl = story.screenshotUrl || "/vibe-apps-open-graphi-image.png";
+  const canonicalUrl = `https://vibeapps.dev/s/${story.slug}`;
+  const siteName = "Vibe Apps";
+  const twitterHandle = "@waynesutton";
+
+  // Escape HTML characters in dynamic content
+  const escapeHtml = (text: string) => {
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  };
+
+  const safeTitle = escapeHtml(story.title);
+  const safeDescription = escapeHtml(story.description);
+  const safeAuthorName = story.authorName ? escapeHtml(story.authorName) : "";
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Basic SEO -->
+  <title>${safeTitle} | ${siteName}</title>
+  <meta name="description" content="${safeDescription}">
+  <link rel="canonical" href="${canonicalUrl}">
+  
+  <!-- Open Graph -->
+  <meta property="og:title" content="${safeTitle} | ${siteName}">
+  <meta property="og:description" content="${safeDescription}">
+  <meta property="og:image" content="${imageUrl}">
+  <meta property="og:url" content="${canonicalUrl}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="${siteName}">
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="${twitterHandle}">
+  <meta name="twitter:creator" content="${twitterHandle}">
+  <meta name="twitter:title" content="${safeTitle} | ${siteName}">
+  <meta name="twitter:description" content="${safeDescription}">
+  <meta name="twitter:image" content="${imageUrl}">
+  
+  <!-- Redirect to actual app after a brief delay for crawlers -->
+  <script>
+    setTimeout(() => {
+      window.location.href = "${canonicalUrl}";
+    }, 100);
+  </script>
+</head>
+<body>
+  <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px;">
+    <h1>${safeTitle}</h1>
+    <p>${safeDescription}</p>
+    ${safeAuthorName ? `<p>By ${safeAuthorName}</p>` : ""}
+    <p><a href="${story.url}" target="_blank" rel="noopener noreferrer">Visit App →</a></p>
+    <p><small>Redirecting to full page...</small></p>
+  </div>
+</body>
+</html>`;
+}
+
+// Route for serving story metadata for social media crawlers
+http.route({
+  path: "/meta/s",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const url = new URL(request.url);
+
+    // Prefer explicit query param, fall back to last path segment
+    let slug = url.searchParams.get("slug");
+    if (!slug) {
+      const parts = url.pathname.split("/");
+      slug = parts[parts.length - 1] || "";
+    }
+
+    if (!slug) {
+      return new Response("Missing slug parameter", { status: 400 });
+    }
+
+    try {
+      const story = await ctx.runQuery(internal.stories.getStoryMetadata, {
+        slug,
+      });
+
+      if (!story) {
+        return new Response("Story not found", { status: 404 });
+      }
+
+      const html = generateStoryHTML(story);
+      return new Response(html, {
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          // Cache for browsers and CDNs while allowing quick refreshes
+          "Cache-Control":
+            "public, max-age=60, s-maxage=300, stale-while-revalidate=600",
+        },
+      });
+    } catch (error) {
+      console.error("Error generating story metadata:", error);
+      return new Response("Internal server error", { status: 500 });
+    }
+  }),
+});
+
 export default http;
