@@ -6,56 +6,63 @@ A modern social network platform for app creators to showcase their projects, bu
 
 ### Core Platform Features
 
-- **App Submissions**: Users can submit their apps with title, description, URL, video demos, and screenshots
+- **App Submissions**: Users can submit their apps with title, description, URL, video demos, and multiple screenshots
+- **Multi-Image Gallery**: Support for up to 4 additional images with thumbnail navigation and modal lightbox viewer
 - **Anonymous Submissions**: Support for non-authenticated app submissions with email collection
 - **Dynamic Form Fields**: Configurable form fields for submissions (LinkedIn, Twitter, GitHub, etc.)
-- **Tag System**: Categorize apps with existing tags or create new ones during submission
+- **Tag System**: Categorize apps with existing tags or create new ones during submission with enhanced search dropdown
 - **User Authentication**: Secure login/signup with Clerk Auth
 - **User Verification**: Blue checkmark verification system for verified users
-- **User Profiles**: Custom username pages with activity feeds and stats
-- **Following System**: Users can follow other creators and see their activity
+- **User Profiles**: Custom username pages at /username with activity feeds, stats, and following system
+- **Following System**: Users can follow other creators and see their activity in real-time
 - **Real-time Updates**: Live updates powered by Convex database
 - **Responsive Design**: Clean, modern UI that works on all devices
 - **Search & Discovery**: Full-text search across apps and users with advanced filtering
+- **Hackathon Team Support**: Team submissions with member information and custom forms
 
 ### Content & Engagement
 
-- **Comment System**: Threaded comments on app submissions with moderation
-- **Bookmarking**: Save favorite apps for later viewing
+- **Comment System**: Threaded comments on app submissions with 10-word minimum and moderation
+- **Bookmarking**: Save favorite apps for later viewing with improved interface
 - **Rating System**: 1-5 star rating system for submitted apps
 - **Voting System**: Upvote apps to show appreciation
-- **Weekly Leaderboards**: Discover trending apps and top creators
+- **Weekly Leaderboards**: Discover trending apps and top creators in sidebar
 - **Top Categories**: Weekly trending categories and tags
+- **Related Apps**: Show 3 related products by tags below comments
+- **User Reports**: Report inappropriate content with admin review system
 
 ### Admin & Moderation
 
 - **Admin Dashboard**: Comprehensive content moderation with approval/rejection workflows
-- **User Management**: Admin interface for user verification, moderation, and profile management
-- **Content Moderation**: Report management system with admin review capabilities
-- **Tag Management**: Create, edit, and organize tags with custom styling
-- **Settings Management**: Site-wide configuration and customization
+- **User Management**: Admin interface for user verification, ban/pause users, and profile management
+- **Content Moderation**: Report management system with admin review capabilities and image management
+- **Tag Management**: Create, edit, and organize tags with custom styling, colors, emojis, and ordering
+- **Settings Management**: Site-wide configuration and customization with view mode controls
 - **Analytics Dashboard**: Detailed metrics and user engagement tracking
-- **ConvexBox**: Dismissible notification system for announcements
+- **ConvexBox**: Dismissible notification system for announcements with custom styling
+- **Image Management**: Admin can manage additional images for submissions
 
 ### Custom Forms & Data Collection
 
-- **Dynamic Form Builder**: Create custom forms with various field types
-- **Form Management**: Public/private forms with configurable access
-- **Form Results**: View and export form submissions
-- **Field Configuration**: Customizable form fields with validation
+- **Dynamic Form Builder**: Create custom forms with various field types and validation
+- **Form Management**: Public/private forms with configurable access and submission tracking
+- **Form Results**: View and export form submissions with search functionality
+- **Field Configuration**: Customizable form fields with ordering and enable/disable toggles
+- **Submit Form System**: Create specialized submission forms (e.g., YC AI Hackathon) with custom fields
+- **Story Form Fields**: Dynamic configuration of submission form fields
 
 ### Comprehensive Judging System
 
-- **Judging Groups**: Create public or private judging competitions
-- **Custom Criteria**: Define scoring questions with 1-5 star ratings
-- **Judge Management**: Session-based judge authentication and tracking
-- **Submission Management**: Add/remove submissions from judging groups
-- **Real-time Scoring**: Live score submission and progress tracking
-- **Results Dashboard**: Comprehensive results with rankings and analytics
-- **CSV Export**: Export detailed judging results and scores
+- **Judging Groups**: Create public or private judging competitions with password protection
+- **Custom Criteria**: Define scoring questions with 1-10 star ratings and weighted scoring
+- **Judge Management**: Session-based judge authentication and tracking with progress monitoring
+- **Submission Management**: Add/remove submissions from judging groups with search functionality
+- **Real-time Scoring**: Live score submission and progress tracking across all submissions
+- **Results Dashboard**: Comprehensive results with rankings, analytics, and CSV export
 - **Public Results**: Optional public results pages with password protection
-- **Judge Collaboration**: Notes and comments system for judges
-- **Status Tracking**: Pending/Completed/Skip status for submissions
+- **Judge Collaboration**: Notes and comments system for judges with threaded discussions
+- **Status Tracking**: Pending/Completed/Skip status for submissions with assignment tracking
+- **Submission Search**: Search submissions by name during judging process
 
 ### Email Integration (Resend)
 
@@ -148,35 +155,40 @@ After initial setup, the first registered user will need to be granted admin pri
 
 ### For Users
 
-- Submit and showcase apps
-- Follow other creators
-- Comment and rate apps
-- Bookmark favorites
-- Search and discover content
-- User verification system
+- Submit and showcase apps with multiple images and team information
+- Follow other creators and see their activity in real-time
+- Comment and rate apps with enhanced moderation
+- Bookmark favorites with improved interface
+- Search and discover content with advanced filtering
+- User verification system with blue checkmarks
+- Report inappropriate content
+- View related apps by tags
 
 ### For Judges
 
 - **Access Control**: Join public judging groups or enter private groups with passwords
-- **Custom Scoring**: Rate submissions using configurable 1-5 star criteria
-- **Detailed Evaluation**: Score submissions against multiple custom questions
+- **Custom Scoring**: Rate submissions using configurable 1-10 star criteria
+- **Detailed Evaluation**: Score submissions against multiple custom questions with weighted scoring
 - **Progress Tracking**: Track judging status (pending/completed/skip) across all submissions
-- **Collaboration**: Add notes and comments for other judges to see
+- **Collaboration**: Add notes and comments for other judges with threaded discussions
 - **Real-time Updates**: See live scoring progress and submission status
 - **Session Management**: Secure session-based authentication without requiring accounts
+- **Submission Search**: Find submissions by name during the judging process
 
 ### For Admins
 
-- **Content Moderation**: Approve/reject submissions with custom messages
-- **User Management**: Verify users, manage bans/pauses, and profile administration
-- **Tag Management**: Create and customize tags with colors, emojis, and ordering
+- **Content Moderation**: Approve/reject submissions with custom messages and image management
+- **User Management**: Verify users, manage bans/pauses, and comprehensive profile administration
+- **Tag Management**: Create and customize tags with colors, emojis, ordering, and search
 - **Custom Form Builder**: Create dynamic forms with various field types and validation
-- **Judging System**: Create and manage judging groups, criteria, and competitions
-- **Report Management**: Review and resolve user-reported content
-- **Analytics Dashboard**: Comprehensive metrics on users, submissions, engagement
+- **Submit Form Management**: Create specialized submission forms like hackathon entries
+- **Judging System**: Create and manage judging groups, criteria, and competitions with full control
+- **Report Management**: Review and resolve user-reported content with detailed tracking
+- **Analytics Dashboard**: Comprehensive metrics on users, submissions, engagement, and judging
 - **Site Configuration**: Manage view modes, submission limits, and platform settings
-- **Email Integration**: Configure Resend integration for notifications
-- **ConvexBox Management**: Control platform-wide notification banners
+- **Email Integration**: Configure Resend integration for notifications (in development)
+- **ConvexBox Management**: Control platform-wide notification banners with custom styling
+- **Image Gallery Management**: Manage multiple images for submissions with admin controls
 
 ## Contributing
 

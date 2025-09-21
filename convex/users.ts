@@ -625,6 +625,16 @@ export const getUserProfileByUsername = query({
           ? await ctx.storage.getUrl(storyDoc.screenshotId)
           : null;
 
+        // Resolve additional image URLs
+        const additionalImageUrls = storyDoc.additionalImageIds
+          ? await Promise.all(
+              storyDoc.additionalImageIds.map(async (imageId) => {
+                const url = await ctx.storage.getUrl(imageId);
+                return url || "";
+              }),
+            ).then((urls) => urls.filter((url) => url !== ""))
+          : [];
+
         const tagsDocsIntermediate = storyDoc.tagIds
           ? await Promise.all(storyDoc.tagIds.map((id) => ctx.db.get(id)))
           : [];
@@ -668,6 +678,7 @@ export const getUserProfileByUsername = query({
           authorIsVerified: author?.isVerified ?? false, // Add verified status for author
           tags: validTags, // Use the explicitly constructed validTags
           screenshotUrl: screenshotUrl,
+          additionalImageUrls: additionalImageUrls,
           voteScore: storyDoc.votes, // Assuming storyDoc.votes is the voteScore
           averageRating: averageRating,
           commentsCount: commentsCount,

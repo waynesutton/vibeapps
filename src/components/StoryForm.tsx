@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
-import { Plus, X } from "lucide-react";
+import { Plus, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
 
@@ -31,6 +31,12 @@ export function StoryForm() {
     email: "",
     image: null as File | null,
   });
+
+  // Additional images state
+  const [additionalImages, setAdditionalImages] = React.useState<File[]>([]);
+  const [imageModalOpen, setImageModalOpen] = React.useState(false);
+  const [imageModalImages, setImageModalImages] = React.useState<string[]>([]);
+  const [imageModalCurrentIndex, setImageModalCurrentIndex] = React.useState(0);
 
   const [dynamicFormData, setDynamicFormData] = React.useState<
     Record<string, string>
@@ -129,7 +135,9 @@ export function StoryForm() {
 
     try {
       let screenshotId: Id<"_storage"> | undefined = undefined;
+      let additionalImageIds: Id<"_storage">[] | undefined = undefined;
 
+      // Upload main screenshot
       if (formData.image) {
         const postUrl = await generateUploadUrl();
         const result = await fetch(postUrl, {
@@ -144,6 +152,25 @@ export function StoryForm() {
         screenshotId = storageId;
       }
 
+      // Upload additional images
+      if (additionalImages.length > 0) {
+        const uploadPromises = additionalImages.map(async (file) => {
+          const postUrl = await generateUploadUrl();
+          const result = await fetch(postUrl, {
+            method: "POST",
+            headers: { "Content-Type": file.type },
+            body: file,
+          });
+          const { storageId } = await result.json();
+          if (!storageId) {
+            throw new Error(`Failed to get storage ID for ${file.name}`);
+          }
+          return storageId;
+        });
+
+        additionalImageIds = await Promise.all(uploadPromises);
+      }
+
       await submitStory({
         title: formData.title,
         tagline: formData.tagline,
@@ -155,6 +182,7 @@ export function StoryForm() {
         tagIds: selectedTagIds,
         newTagNames: newTagNames,
         screenshotId: screenshotId,
+        additionalImageIds: additionalImageIds,
         linkedinUrl: dynamicFormData.linkedinUrl || undefined,
         twitterUrl: dynamicFormData.twitterUrl || undefined,
         githubUrl: dynamicFormData.githubUrl || undefined,
@@ -222,6 +250,82 @@ export function StoryForm() {
       setFormData((prev) => ({ ...prev, image: null }));
     }
   };
+
+  const handleAdditionalImagesChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const files = Array.from(e.target.files || []);
+    const validFiles: File[] = [];
+
+    for (const file of files) {
+      if (file.size > 5 * 1024 * 1024) {
+        setSubmitError(`File ${file.name} exceeds 5MB limit.`);
+        continue;
+      }
+      if (!file.type.startsWith("image/")) {
+        setSubmitError(`File ${file.name} is not an image.`);
+        continue;
+      }
+      validFiles.push(file);
+    }
+
+    const totalImages = additionalImages.length + validFiles.length;
+    if (totalImages > 4) {
+      setSubmitError("Maximum of 4 additional images allowed.");
+      return;
+    }
+
+    setAdditionalImages((prev) => [...prev, ...validFiles]);
+    setSubmitError(null);
+  };
+
+  const removeAdditionalImage = (index: number) => {
+    setAdditionalImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const openImageModal = (images: string[]) => {
+    setImageModalImages(images);
+    setImageModalCurrentIndex(0);
+    setImageModalOpen(true);
+  };
+
+  const closeImageModal = () => {
+    setImageModalOpen(false);
+    setImageModalImages([]);
+    setImageModalCurrentIndex(0);
+  };
+
+  const navigateImageModal = (direction: "prev" | "next") => {
+    setImageModalCurrentIndex((prev) => {
+      if (direction === "prev") {
+        return prev > 0 ? prev - 1 : imageModalImages.length - 1;
+      } else {
+        return prev < imageModalImages.length - 1 ? prev + 1 : 0;
+      }
+    });
+  };
+
+  // Keyboard navigation for image modal
+  React.useEffect(() => {
+    if (!imageModalOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case "Escape":
+          closeImageModal();
+          break;
+        case "ArrowLeft":
+          navigateImageModal("prev");
+          break;
+        case "ArrowRight":
+          navigateImageModal("next");
+          break;
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [imageModalOpen]);
 
   // Close dropdown when clicking outside
   React.useEffect(() => {
@@ -467,6 +571,68 @@ export function StoryForm() {
             {formData.image && (
               <div className="text-sm text-[#545454] mt-1">
                 Selected: {formData.image.name}
+              </div>
+            )}
+          </div>
+          <div>
+            <label
+              htmlFor="additionalImages"
+              className="block text-sm font-medium text-[#525252] mb-1"
+            >
+              Additional Images (Optional)
+            </label>
+            <div className="text-sm text-[#545454] mb-2">
+              Upload up to 4 additional images to showcase your app
+            </div>
+            <input
+              type="file"
+              id="additionalImages"
+              accept="image/*"
+              multiple
+              onChange={handleAdditionalImagesChange}
+              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#F4F0ED] file:text-[#525252] hover:file:bg-[#e5e1de]"
+              disabled={isSubmitting || additionalImages.length >= 4}
+            />
+            {additionalImages.length > 0 && (
+              <div className="mt-3">
+                <div className="text-sm text-[#545454] mb-2">
+                  Selected images ({additionalImages.length}/4):
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {additionalImages.map((file, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`Preview ${index + 1}`}
+                        className="w-16 h-16 object-cover rounded border border-[#D8E1EC] cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => {
+                          const allImages = [
+                            ...(formData.image
+                              ? [URL.createObjectURL(formData.image)]
+                              : []),
+                            ...additionalImages.map((f) =>
+                              URL.createObjectURL(f),
+                            ),
+                          ];
+                          openImageModal(allImages);
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeAdditionalImage(index)}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                        disabled={isSubmitting}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {additionalImages.length >= 4 && (
+              <div className="text-sm text-amber-600 mt-1">
+                Maximum of 4 additional images reached
               </div>
             )}
           </div>
@@ -975,6 +1141,62 @@ export function StoryForm() {
         title="Sign in to submit"
         description="You need to be signed in to submit apps to the community. Join to share your projects!"
       />
+
+      {/* Image Modal */}
+      {imageModalOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"
+          onClick={closeImageModal}
+        >
+          <div
+            className="relative max-w-4xl max-h-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={closeImageModal}
+              className="absolute top-4 right-4 z-10 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors"
+              aria-label="Close image viewer"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            {/* Navigation Buttons */}
+            {imageModalImages.length > 1 && (
+              <>
+                <button
+                  onClick={() => navigateImageModal("prev")}
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors"
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button
+                  onClick={() => navigateImageModal("next")}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-colors"
+                  aria-label="Next image"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </>
+            )}
+
+            {/* Main Image in Modal */}
+            <img
+              src={imageModalImages[imageModalCurrentIndex]}
+              alt="Preview"
+              className="max-w-full max-h-full object-contain rounded-lg"
+            />
+
+            {/* Image Counter */}
+            {imageModalImages.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
+                {imageModalCurrentIndex + 1} / {imageModalImages.length}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

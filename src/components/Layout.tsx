@@ -554,7 +554,7 @@ export function Layout({ children }: { children?: ReactNode }) {
               )}
           </div>
         </header>
-        <main className="flex-grow container mx-auto px-4 py-8">
+        <main className="flex-grow container mx-auto px-4 py-1">
           <div className="flex flex-col md:flex-row gap-8">
             <div className={showSidebar ? "md:w-3/4" : "w-full"}>
               {children || (

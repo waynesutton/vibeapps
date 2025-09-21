@@ -6,6 +6,7 @@ export type Story = Doc<"stories"> & {
   // Resolved data often added in queries:
   tags: Tag[];
   screenshotUrl: string | null;
+  additionalImageUrls: string[]; // URLs for additional images
   userId?: Id<"users">;
   authorName?: string;
   authorUsername?: string;

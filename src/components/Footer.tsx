@@ -13,8 +13,14 @@ export function Footer() {
     <footer className="mt-12">
       <div className="container mx-auto px-4 py-6">
         <div className="flex items-center gap-4 text-xs text-[#545454]">
-          <span className="text-[#545454]">{new Date().getFullYear()} </span>
-          <button onClick={() => setShowAboutModal(true)} className="hover:text-[#525252]">
+          <span className="text-[#545454]">
+            {" "}
+            © {new Date().getFullYear()}{" "}
+          </span>
+          <button
+            onClick={() => setShowAboutModal(true)}
+            className="hover:text-[#525252]"
+          >
             About
           </button>
           {/* <a href="#" target="_blank" rel="noopener noreferrer" className="hover:text-[#525252]">
@@ -23,14 +29,16 @@ export function Footer() {
           {isSignedIn ? (
             <button
               onClick={() => signOut()}
-              className="bg-transparent border-none p-0 m-0 cursor-pointer hover:text-[#525252]">
+              className="bg-transparent border-none p-0 m-0 cursor-pointer hover:text-[#525252]"
+            >
               Sign Out
             </button>
           ) : (
             <SignInButton mode="modal">
               <button
                 className="bg-transparent border-none p-0 m-0 cursor-pointer hover:text-[#525252]"
-                type="button">
+                type="button"
+              >
                 Sign In
               </button>
             </SignInButton>
@@ -39,22 +47,27 @@ export function Footer() {
             href="https://convex.dev?utm_source=vibeapps-dev"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-[#525252]">
+            className="hover:text-[#525252]"
+          >
             Powered by Convex
           </a>
-          <a
-            href="https://chef.convex.dev/?utm_source=vibeapps-dev"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-[#525252]">
-            Cooked on Chef
-          </a>
+
           <a
             href="https://github.com/waynesutton/vibeapps"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-[#525252]">
-            Open-Source on GitHub
+            className="hover:text-[#525252]"
+          >
+            Open-Source Project
+          </a>
+
+          <a
+            href="https://www.convex.dev/legal/tos/v2022-03-02"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-[#525252]"
+          >
+            Privacy Policy | Terms
           </a>
         </div>
       </div>
@@ -75,14 +88,14 @@ export function Footer() {
               <p>Vibe Apps – The place to share and discover new apps.</p>
 
               <p>
-                Vibe Apps is a real-time feed of apps. It's where you go to show off what you've
-                built with tools like Convex.dev, Cursor, Bolt, Windsurf, Lovable, and Tempo—and see
-                what others are pushing live.{" "}
+                Vibe Apps is a real-time feed of apps. It's where you go to show
+                off what you've built, and see what others are building.{" "}
                 <a
                   href="https://convex.dev?utm_source=vibeapps-dev"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-[#525252]">
+                  className="hover:text-[#525252]"
+                >
                   Powered by Convex
                 </a>
                 , the site runs fast, syncs in real time, and makes it easy to:
@@ -93,8 +106,8 @@ export function Footer() {
                 <li>Leave feedback or get inspired</li>
               </ul>
               <p>
-                Whether it's a weekend build, a fresh SaaS idea, or something weird and
-                experimental—drop it here.{" "}
+                Whether it's a weekend build, for a hackathon, or just vibe
+                coding, drop it here.{" "}
               </p>
               <p></p>
 
@@ -103,7 +116,8 @@ export function Footer() {
                   href="https://github.com/waynesutton/vibeapps"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-[#525252]">
+                  className="hover:text-[#525252]"
+                >
                   Vibe Apps is Open-Source on GitHub
                 </a>
               </p>

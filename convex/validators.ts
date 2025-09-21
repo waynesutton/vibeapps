@@ -28,6 +28,7 @@ export const baseStoryValidator = {
   votes: v.number(),
   commentCount: v.number(), // This should be updated by a separate mechanism or a trigger
   screenshotId: v.optional(v.id("_storage")),
+  additionalImageIds: v.optional(v.array(v.id("_storage"))), // Up to 4 additional images
   ratingSum: v.number(),
   ratingCount: v.number(),
   videoUrl: v.optional(v.string()),
@@ -69,6 +70,7 @@ export const storyWithDetailsValidator = v.object({
   authorIsVerified: v.optional(v.boolean()),
   tags: v.array(tagDocValidator), // Array of full tag objects
   screenshotUrl: v.union(v.string(), v.null()), // URL for the screenshot
+  additionalImageUrls: v.array(v.string()), // URLs for additional images
   voteScore: v.number(), // Made non-optional
   averageRating: v.number(), // Added: average rating for the story
   commentsCount: v.number(), // Added: count of comments (distinct from story.commentCount which might be different)
@@ -148,6 +150,7 @@ export type StoryWithDetailsPublic = {
   votes: number;
   commentCount: number;
   screenshotId?: Id<"_storage">;
+  additionalImageIds?: Id<"_storage">[]; // Up to 4 additional images
   ratingSum: number;
   ratingCount: number;
   videoUrl?: string;
@@ -186,6 +189,7 @@ export type StoryWithDetailsPublic = {
     textColor?: string;
   }>;
   screenshotUrl: string | null;
+  additionalImageUrls: string[]; // URLs for additional images
   voteScore: number; // Made non-optional
   averageRating: number; // Added field
   commentsCount: number; // Added field

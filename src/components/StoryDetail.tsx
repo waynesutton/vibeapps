@@ -34,6 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button"; // For modal buttons
 import { toast } from "sonner";
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
+import { ImageGallery } from "./ImageGallery";
 
 // Removed MOCK_COMMENTS
 
@@ -723,13 +724,6 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
   return (
     <div className="max-w-7xl mx-auto pb-10">
-      <Link
-        to="/"
-        className="text-[#545454] hover:text-[#525252] inline-block mb-6 text-sm"
-      >
-        ← Back to Apps
-      </Link>
-
       <div className="flex gap-8">
         {/* Main Content */}
         <div className="flex-1 min-w-0">
@@ -755,7 +749,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <h1 className="text-xl lg:text-2xl font-bold  text-transform: capitalize text-[#000000] mb-2">
+                <h1 className="text-xl lg:text-1xl font-bold  text-transform: capitalize text-[#000000] mb-2">
                   <a
                     href={story.url}
                     className="hover:text-[#555555] break-words"
@@ -770,16 +764,11 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     {story.customMessage}
                   </div>
                 )}
-                {story.screenshotUrl && (
-                  <div className="mb-4 rounded-md overflow-hidden border border-[#F4F0ED]">
-                    <img
-                      src={story.screenshotUrl}
-                      alt={`${story.title} screenshot`}
-                      className="w-full max-h-[60vh] object-contain bg-gray-100"
-                      loading="lazy"
-                    />
-                  </div>
-                )}
+                <ImageGallery
+                  mainImageUrl={story.screenshotUrl}
+                  additionalImageUrls={story.additionalImageUrls || []}
+                  altText={`${story.title} screenshot`}
+                />
                 <p className="text-[#000000] mb-4 mt-[20px] prose prose-base max-w-none">
                   {story.description}
                 </p>
@@ -992,6 +981,12 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 )}
               </div>
             </div>
+            <Link
+              to="/"
+              className="text-[#545454] hover:text-[#525252] inline-block mb-6 text-sm mt-[1.5625rem]"
+            >
+              ← Back to Apps List
+            </Link>
           </div>
         )}
       </div>

@@ -33,6 +33,7 @@ export default defineSchema({
     votes: v.number(),
     commentCount: v.number(),
     screenshotId: v.optional(v.id("_storage")),
+    additionalImageIds: v.optional(v.array(v.id("_storage"))), // Up to 4 additional images
     ratingSum: v.number(),
     ratingCount: v.number(),
     videoUrl: v.optional(v.string()),

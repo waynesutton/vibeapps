@@ -42,10 +42,9 @@ Brief description of the feature and its purpose.
 - [x] search for submission name next to number in the judging form
 - [x] add view judging results to the judging form
 - [x] Add options to add team
+- [x] add option for multiple image upload
 
 ## In Progress Tasks
-
-- [ ] add option for multiple image upload
 - [ ] fix open graph image
 - [ ] setup resend for emails for notifications on post
 - [ ] add option to turn off email notifications

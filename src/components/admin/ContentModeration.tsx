@@ -103,6 +103,8 @@ export function ContentModeration() {
     chefAppUrl: "",
     teamName: "",
     teamMemberCount: 1,
+    additionalImageIds: undefined as Id<"_storage">[] | undefined,
+    removeAdditionalImages: false,
   });
   const [editSelectedTagIds, setEditSelectedTagIds] = useState<Id<"tags">[]>(
     [],
@@ -403,6 +405,8 @@ export function ContentModeration() {
       chefAppUrl: item.chefAppUrl || "",
       teamName: (item as any).teamName || "",
       teamMemberCount: (item as any).teamMemberCount || 1,
+      additionalImageIds: (item as any).additionalImageIds || undefined,
+      removeAdditionalImages: false,
     });
     setTeamMembers((item as any).teamMembers || []);
     setEditSelectedTagIds(item.tagIds || []);
@@ -430,6 +434,8 @@ export function ContentModeration() {
       chefAppUrl: "",
       teamName: "",
       teamMemberCount: 1,
+      additionalImageIds: undefined,
+      removeAdditionalImages: false,
     });
     setTeamMembers([]);
     setEditSelectedTagIds([]);
@@ -490,6 +496,8 @@ export function ContentModeration() {
         teamMembers: teamMembers.length > 0 ? teamMembers : undefined,
         tagIds: editSelectedTagIds.length > 0 ? editSelectedTagIds : undefined,
         newTagNames: newTagNames.length > 0 ? newTagNames : undefined,
+        additionalImageIds: editFormData.additionalImageIds,
+        removeAdditionalImages: editFormData.removeAdditionalImages,
       };
 
       // Handle screenshot update explicitly
@@ -1095,6 +1103,126 @@ export function ContentModeration() {
                         </button>
                       </div>
                     )}
+                  </div>
+                </div>
+
+                {/* Additional Images */}
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-3">
+                    Additional Images ({item.additionalImageUrls?.length || 0})
+                  </h4>
+                  <div className="space-y-3">
+                    {/* Current Additional Images */}
+                    {item.additionalImageUrls &&
+                      item.additionalImageUrls.length > 0 && (
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Current Additional Images
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {item.additionalImageUrls.map((imageUrl, index) => (
+                              <div key={index} className="relative">
+                                <img
+                                  src={imageUrl}
+                                  alt={`Additional image ${index + 1}`}
+                                  className="w-20 h-16 object-cover rounded border"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditFormData((prev) => ({
+                                ...prev,
+                                removeAdditionalImages: true,
+                              }));
+                            }}
+                            className="mt-2"
+                          >
+                            Remove All Additional Images
+                          </Button>
+                        </div>
+                      )}
+
+                    {/* File Upload for Additional Images */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Upload Additional Images (Max 4)
+                      </label>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={async (e) => {
+                          const files = Array.from(e.target.files || []);
+                          if (files.length === 0) return;
+
+                          // Validate files
+                          const validFiles: File[] = [];
+                          for (const file of files) {
+                            if (file.size > 5 * 1024 * 1024) {
+                              alert(`File ${file.name} exceeds 5MB limit.`);
+                              continue;
+                            }
+                            if (!file.type.startsWith("image/")) {
+                              alert(`File ${file.name} is not an image.`);
+                              continue;
+                            }
+                            validFiles.push(file);
+                          }
+
+                          if (validFiles.length === 0) return;
+
+                          const totalImages =
+                            (item.additionalImageUrls?.length || 0) +
+                            validFiles.length;
+                          if (totalImages > 4) {
+                            alert("Maximum of 4 additional images allowed.");
+                            return;
+                          }
+
+                          // Upload files
+                          const uploadPromises = validFiles.map(
+                            async (file) => {
+                              const postUrl = await generateUploadUrl();
+                              const result = await fetch(postUrl, {
+                                method: "POST",
+                                headers: { "Content-Type": file.type },
+                                body: file,
+                              });
+                              const { storageId } = await result.json();
+                              if (!storageId) {
+                                throw new Error(
+                                  `Failed to upload ${file.name}`,
+                                );
+                              }
+                              return storageId;
+                            },
+                          );
+
+                          try {
+                            const newImageIds =
+                              await Promise.all(uploadPromises);
+                            const existingIds = item.additionalImageIds || [];
+                            const allImageIds = [
+                              ...existingIds,
+                              ...newImageIds,
+                            ];
+
+                            setEditFormData((prev) => ({
+                              ...prev,
+                              additionalImageIds: allImageIds,
+                            }));
+                          } catch (error) {
+                            alert(`Failed to upload images: ${error}`);
+                          }
+                        }}
+                        className="file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+                      />
+                    </div>
                   </div>
                 </div>
 

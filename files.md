@@ -49,13 +49,14 @@
 
 ### Core App Features
 
-- `convex/stories.ts`: App submission functions (create, update, approve, search)
-- `convex/comments.ts`: Comment system queries and mutations
+- `convex/stories.ts`: App submission functions (create, update, approve, search) with multi-image support
+- `convex/comments.ts`: Comment system queries and mutations with 10-word minimum validation
 - `convex/votes.ts`: Voting system for app submissions
-- `convex/bookmarks.ts`: User bookmarking system functions
+- `convex/bookmarks.ts`: User bookmarking system functions with improved interface
 - `convex/storyRatings.ts`: 1-5 star rating system for apps
-- `convex/follows.ts`: User following system functions
+- `convex/follows.ts`: User following system functions with real-time updates
 - `convex/tags.ts`: Tag management and categorization system with enhanced dropdown search support
+- `convex/reports.ts`: User reporting system for content moderation
 
 ### Admin & Moderation
 
@@ -68,14 +69,15 @@
 
 - `convex/forms.ts`: Dynamic form builder backend functions
 - `convex/storyFormFields.ts`: Configurable form fields for story submissions
+- `convex/submitForms.ts`: Submit form management system for specialized forms (hackathons, etc.)
 
 ### Comprehensive Judging System
 
-- `convex/judgingGroups.ts`: Judging group management with public/private access
-- `convex/judgingCriteria.ts`: Judging criteria and scoring questions management
-- `convex/judgingGroupSubmissions.ts`: Submission assignment within judging groups
-- `convex/judges.ts`: Judge registration, session management, and progress tracking
-- `convex/judgeScores.ts`: Score submission, calculation, and results with CSV export
+- `convex/judgingGroups.ts`: Judging group management with public/private access and password protection
+- `convex/judgingCriteria.ts`: Judging criteria and scoring questions management with 1-10 star ratings
+- `convex/judgingGroupSubmissions.ts`: Submission assignment within judging groups with search functionality
+- `convex/judges.ts`: Judge registration, session management, and progress tracking with status updates
+- `convex/judgeScores.ts`: Score submission, calculation, and results with CSV export and weighted scoring
 
 ### Utilities & Configuration
 
@@ -102,11 +104,12 @@
 
 ### Story/App Submission Features
 
-- `src/components/StoryForm.tsx`: Main app submission form with validation and enhanced tag search dropdown
+- `src/components/StoryForm.tsx`: Main app submission form with validation, enhanced tag search dropdown, and multi-image upload support
 - `src/components/ResendForm.tsx`: Resend integration form for email collection
-- `src/components/YCHackForm.tsx`: YC AI Hackathon submission form (based on ResendForm)
-- `src/components/StoryDetail.tsx`: Detailed app view with comments, ratings, voting
+- `src/components/YCHackForm.tsx`: YC AI Hackathon submission form with team information support
+- `src/components/StoryDetail.tsx`: Detailed app view with comments, ratings, voting, and image gallery
 - `src/components/StoryList.tsx`: List/grid view of app submissions
+- `src/components/ImageGallery.tsx`: Multi-image gallery component with thumbnail navigation and modal lightbox
 
 ### User Interaction Components
 
@@ -121,13 +124,13 @@
 
 ### Admin Dashboard Components
 
-- `src/components/admin/AdminDashboard.tsx`: Main admin dashboard overview
-- `src/components/admin/ContentModeration.tsx`: Content approval/rejection interface
-- `src/components/admin/UserModeration.tsx`: User management and verification
-- `src/components/admin/TagManagement.tsx`: Tag creation and customization
-- `src/components/admin/Settings.tsx`: Site-wide settings configuration
-- `src/components/admin/NumbersView.tsx`: Analytics and metrics dashboard
-- `src/components/admin/ReportManagement.tsx`: User report review and resolution
+- `src/components/admin/AdminDashboard.tsx`: Main admin dashboard overview with comprehensive navigation
+- `src/components/admin/ContentModeration.tsx`: Content approval/rejection interface with image management
+- `src/components/admin/UserModeration.tsx`: User management, verification, and ban/pause functionality
+- `src/components/admin/TagManagement.tsx`: Tag creation and customization with colors, emojis, and ordering
+- `src/components/admin/Settings.tsx`: Site-wide settings configuration with view mode controls
+- `src/components/admin/NumbersView.tsx`: Analytics and metrics dashboard with detailed tracking
+- `src/components/admin/ReportManagement.tsx`: User report review and resolution with status tracking
 
 ### Form Management Components
 
@@ -135,21 +138,23 @@
 - `src/components/admin/FormBuilder.tsx`: Form creation and field configuration
 - `src/components/admin/FormResults.tsx`: Form submission results and export
 - `src/components/admin/FormFieldManagement.tsx`: Story form field configuration
+- `src/components/admin/SubmitFormManagement.tsx`: Submit form management for specialized forms
+- `src/components/admin/SubmitFormBuilder.tsx`: Submit form creation and configuration
 - `src/components/PublicForm.tsx`: Public-facing form display
 
 ### Judging System Components
 
-- `src/components/admin/Judging.tsx`: Main judging group management interface
-- `src/components/admin/CreateJudgingGroupModal.tsx`: Judging group creation modal
-- `src/components/admin/JudgingCriteriaEditor.tsx`: Scoring criteria management
-- `src/components/admin/JudgingResultsDashboard.tsx`: Admin results and analytics
-- `src/components/PublicJudgingResultsDashboard.tsx`: Public-facing results display
+- `src/components/admin/Judging.tsx`: Main judging group management interface with comprehensive controls
+- `src/components/admin/CreateJudgingGroupModal.tsx`: Judging group creation modal with password protection
+- `src/components/admin/JudgingCriteriaEditor.tsx`: Scoring criteria management with 1-10 star ratings
+- `src/components/admin/JudgingResultsDashboard.tsx`: Admin results and analytics with CSV export
+- `src/components/PublicJudgingResultsDashboard.tsx`: Public-facing results display with password protection
 - `src/components/PublicResultsViewer.tsx`: Public results viewer component
 
 ### Notification & Configuration
 
-- `src/components/ConvexBox.tsx`: Dismissible notification banner system
-- `src/components/admin/ConvexBoxSettingsForm.tsx`: ConvexBox configuration
+- `src/components/ConvexBox.tsx`: Dismissible notification banner system with custom styling
+- `src/components/admin/ConvexBoxSettingsForm.tsx`: ConvexBox configuration with image upload support
 
 ### UI Components (src/components/ui/)
 

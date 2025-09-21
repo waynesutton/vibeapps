@@ -32,6 +32,7 @@ import {
 export type StoryWithDetails = Doc<"stories"> & {
   voteScore: number;
   screenshotUrl: string | null;
+  additionalImageUrls: string[];
   tags: Array<{
     _id: Id<"tags">;
     _creationTime: number;
@@ -82,6 +83,16 @@ const fetchTagsAndCountsForStories = async (
       const screenshotUrl = story.screenshotId
         ? await ctx.storage.getUrl(story.screenshotId)
         : null;
+
+      // Resolve additional image URLs
+      const additionalImageUrls = story.additionalImageIds
+        ? await Promise.all(
+            story.additionalImageIds.map(async (imageId) => {
+              const url = await ctx.storage.getUrl(imageId);
+              return url || "";
+            }),
+          ).then((urls) => urls.filter((url) => url !== ""))
+        : [];
 
       const storyTagsIntermediate = (story.tagIds || []).map((id) =>
         tagsMap.get(id),
@@ -154,6 +165,7 @@ const fetchTagsAndCountsForStories = async (
         ...story,
         voteScore,
         screenshotUrl,
+        additionalImageUrls,
         tags: processedStoryTags, // Use the new explicitly constructed array
         commentsCount: calculatedCommentsCount,
         authorName: author?.name,
@@ -461,6 +473,7 @@ export const getBySlug = query({
       authorEmail: storyWithDetails.authorEmail,
       tags: storyWithDetails.tags,
       screenshotUrl: storyWithDetails.screenshotUrl,
+      additionalImageUrls: storyWithDetails.additionalImageUrls,
       voteScore: storyWithDetails.voteScore,
       averageRating: storyWithDetails.averageRating,
       commentsCount: storyWithDetails.commentsCount,
@@ -512,6 +525,7 @@ export const submit = mutation({
     tagIds: v.array(v.id("tags")),
     newTagNames: v.array(v.string()),
     screenshotId: v.optional(v.id("_storage")),
+    additionalImageIds: v.optional(v.array(v.id("_storage"))),
     linkedinUrl: v.optional(v.string()),
     twitterUrl: v.optional(v.string()),
     githubUrl: v.optional(v.string()),
@@ -534,6 +548,11 @@ export const submit = mutation({
     await ensureUserNotBanned(ctx); // Check if user is banned
     const userId = await getAuthenticatedUserId(ctx);
     const userRecord = await ctx.db.get(userId);
+
+    // Validate additional images limit
+    if (args.additionalImageIds && args.additionalImageIds.length > 4) {
+      throw new Error("Maximum of 4 additional images allowed");
+    }
 
     if (!userRecord) {
       throw new Error("Authenticated user record not found. Sync issue?");
@@ -595,6 +614,7 @@ export const submit = mutation({
       votes: 1,
       commentCount: 0,
       screenshotId: args.screenshotId,
+      additionalImageIds: args.additionalImageIds,
       ratingSum: 0,
       ratingCount: 0,
       videoUrl: args.videoUrl,
@@ -638,6 +658,7 @@ export const submitAnonymous = mutation({
     tagIds: v.array(v.id("tags")),
     newTagNames: v.array(v.string()),
     screenshotId: v.optional(v.id("_storage")),
+    additionalImageIds: v.optional(v.array(v.id("_storage"))),
     linkedinUrl: v.optional(v.string()),
     twitterUrl: v.optional(v.string()),
     githubUrl: v.optional(v.string()),
@@ -647,6 +668,11 @@ export const submitAnonymous = mutation({
   },
   handler: async (ctx, args) => {
     // No authentication required for anonymous submissions
+
+    // Validate additional images limit
+    if (args.additionalImageIds && args.additionalImageIds.length > 4) {
+      throw new Error("Maximum of 4 additional images allowed");
+    }
 
     // Basic rate limiting by email - allow up to 10 submissions per day per email
     const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
@@ -709,6 +735,7 @@ export const submitAnonymous = mutation({
       votes: 1,
       commentCount: 0,
       screenshotId: args.screenshotId,
+      additionalImageIds: args.additionalImageIds,
       ratingSum: 0,
       ratingCount: 0,
       videoUrl: args.videoUrl,
@@ -981,7 +1008,21 @@ export const deleteStory = mutation({
       }
     }
 
-    // 6. Delete the story itself
+    // 6. Delete additional images from storage if they exist
+    if (story.additionalImageIds && story.additionalImageIds.length > 0) {
+      for (const imageId of story.additionalImageIds) {
+        try {
+          await ctx.storage.delete(imageId);
+        } catch (error) {
+          console.warn(
+            `Failed to delete additional image ${imageId} for story ${args.storyId}: ${error}`,
+          );
+          // Continue even if additional image deletion fails
+        }
+      }
+    }
+
+    // 7. Delete the story itself
     await ctx.db.delete(args.storyId);
     return { success: true };
   },
@@ -1127,6 +1168,7 @@ export const updateOwnStory = mutation({
     videoUrl: v.optional(v.string()),
     email: v.optional(v.string()),
     screenshotId: v.optional(v.id("_storage")),
+    additionalImageIds: v.optional(v.array(v.id("_storage"))),
     tagIds: v.optional(v.array(v.id("tags"))),
     newTagNames: v.optional(v.array(v.string())),
     linkedinUrl: v.optional(v.string()),
@@ -1152,6 +1194,11 @@ export const updateOwnStory = mutation({
 
     if (!story) {
       throw new Error("Story not found.");
+    }
+
+    // Validate additional images limit
+    if (args.additionalImageIds && args.additionalImageIds.length > 4) {
+      throw new Error("Maximum of 4 additional images allowed");
     }
 
     if (story.userId !== userId) {
@@ -1201,6 +1248,8 @@ export const updateOwnStory = mutation({
     if (args.email !== undefined) updateData.email = args.email;
     if (args.screenshotId !== undefined)
       updateData.screenshotId = args.screenshotId;
+    if (args.additionalImageIds !== undefined)
+      updateData.additionalImageIds = args.additionalImageIds;
     if (finalTagIds !== undefined) updateData.tagIds = finalTagIds;
     if (args.linkedinUrl !== undefined)
       updateData.linkedinUrl = args.linkedinUrl;
@@ -1241,6 +1290,8 @@ export const updateStoryAdmin = mutation({
     email: v.optional(v.string()),
     screenshotId: v.optional(v.id("_storage")),
     removeScreenshot: v.optional(v.boolean()), // Add this line
+    additionalImageIds: v.optional(v.array(v.id("_storage"))),
+    removeAdditionalImages: v.optional(v.boolean()),
     tagIds: v.optional(v.array(v.id("tags"))),
     newTagNames: v.optional(v.array(v.string())),
     linkedinUrl: v.optional(v.string()),
@@ -1268,6 +1319,11 @@ export const updateStoryAdmin = mutation({
 
     if (!story) {
       throw new Error("Story not found.");
+    }
+
+    // Validate additional images limit
+    if (args.additionalImageIds && args.additionalImageIds.length > 4) {
+      throw new Error("Maximum of 4 additional images allowed");
     }
 
     // Handle new tags if provided
@@ -1315,6 +1371,13 @@ export const updateStoryAdmin = mutation({
       updateData.screenshotId = undefined;
     } else if (args.screenshotId !== undefined) {
       updateData.screenshotId = args.screenshotId;
+    }
+
+    // Handle additional images removal or update
+    if (args.removeAdditionalImages) {
+      updateData.additionalImageIds = undefined;
+    } else if (args.additionalImageIds !== undefined) {
+      updateData.additionalImageIds = args.additionalImageIds;
     }
 
     if (finalTagIds !== undefined) updateData.tagIds = finalTagIds;
@@ -1546,6 +1609,7 @@ export const _getStoryDetailsBatch = internalQuery({
         authorEmail: story.authorEmail,
         tags: story.tags,
         screenshotUrl: story.screenshotUrl,
+        additionalImageUrls: story.additionalImageUrls,
         voteScore: story.voteScore,
         averageRating: story.averageRating,
         commentsCount: story.commentsCount,
@@ -1815,11 +1879,28 @@ export const getRelatedStoriesByTags = query({
             )
           : [];
 
+        // Resolve screenshot URL from storage
+        const screenshotUrl = story.screenshotId
+          ? await ctx.storage.getUrl(story.screenshotId)
+          : null;
+
+        // Resolve additional image URLs
+        const additionalImageUrls = story.additionalImageIds
+          ? await Promise.all(
+              story.additionalImageIds.map(async (imageId) => {
+                const url = await ctx.storage.getUrl(imageId);
+                return url || "";
+              }),
+            ).then((urls) => urls.filter((url) => url !== ""))
+          : [];
+
         return {
           ...story,
           authorUsername,
           authorName,
           tags: resolvedTags.filter((tag) => tag !== null) as Doc<"tags">[],
+          screenshotUrl,
+          additionalImageUrls,
         };
       }),
     );
