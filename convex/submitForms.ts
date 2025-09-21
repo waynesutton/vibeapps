@@ -2,7 +2,7 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { requireAdminRole, getAuthenticatedUserId } from "./users";
-import { api, internal } from "../../convex/_generated/api";
+import { api, internal } from "./_generated/api";
 
 // Helper to generate slugs
 function generateSlug(title: string): string {
