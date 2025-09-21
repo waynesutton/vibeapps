@@ -85,9 +85,9 @@ Currently, when users share story URLs like `/s/my-awesome-app`, social media pl
 <link rel="canonical" href="https://vibeapps.dev/s/{story.slug}" />
 ```
 
-### Implementation Architecture
+### Implementation Architecture (Final)
 
-#### Option 1: HTTP Action with HTML Generation (Recommended)
+#### HTTP Action with HTML Generation (Convex)
 
 ```typescript
 // convex/http.ts
@@ -134,7 +134,9 @@ function generateStoryHTML(story: {
   url: string;
   authorName?: string;
 }) {
-  const imageUrl = story.screenshotUrl || "/vibe-apps-open-graphi-image.png";
+  const imageUrl =
+    story.screenshotUrl ||
+    "https://vibeapps.dev/vibe-apps-open-graphi-image.png";
   const canonicalUrl = `https://vibeapps.dev/s/${story.slug}`;
   const siteName = "Vibe Apps";
   const twitterHandle = "@waynesutton";
@@ -245,30 +247,27 @@ export const getStoryMetadata = internalQuery({
 });
 ```
 
-#### Deployment configuration
+#### Deployment configuration (Final)
 
-- **Current**: `/* /index.html 200` (SPA fallback)
-- **Goal**: Keep `/s/{slug}` for users, serve prerendered HTML to social crawlers without changing app code
-
-Option A — Netlify proxy to Convex HTTP action (simple, global):
+- Keep SPA fallback: `/* /index.html 200`
+- Add Netlify Edge Function at `netlify/edge-functions/botMeta.ts` and map in `netlify.toml`:
 
 ```
-# Proxies any request to /meta/s/* on your site to your Convex deployment
-/meta/s/* https://YOUR_CONVEX_DEPLOYMENT.convex.site/meta/s?slug=:splat 200
-
-# Keep SPA behavior for everything else
-/* /index.html 200
+[[edge_functions]]
+path = "/s/*"
+function = "botMeta"
 ```
 
-Option B — Bot-only rewrite with Edge Functions (recommended):
+- Edge function logic (summary):
+  - Detect crawler UAs: facebookexternalhit, Twitterbot, LinkedInBot, Slackbot, Discordbot, TelegramBot, WhatsApp, Pinterest, opengraph/opengraphbot
+  - For bots, rewrite to PROD Convex meta endpoint:
+    - https://whimsical-dalmatian-205.convex.site/meta/s?slug={slug}
+    - Fallback to DEV Convex if PROD returns 404:
+      - https://acoustic-goldfinch-461.convex.site/meta/s?slug={slug}
+  - For browsers, `context.next()` → SPA serves `/s/{slug}`
 
-- Use a Netlify Edge Function to detect crawler User-Agents (e.g., `facebookexternalhit`, `Twitterbot`, `LinkedInBot`, `Slackbot`, `Discordbot`, `Googlebot`) and rewrite `/s/:slug` to `/meta/s/:slug` so crawlers fetch server HTML while users get the SPA.
-- Keep the same proxy rule above for `/meta/s/*` to reach Convex.
-
-Notes:
-
-- Convex HTTP routes are exact paths. Register `/meta/s` in Convex and pass the slug via query (`?slug=`). The proxy rule above appends `?slug=:splat`.
-- If you cannot use Edge Functions, you can share `/meta/s/{slug}` URLs directly. The `og:url` should still reference `https://vibeapps.dev/s/{slug}`.
+- Homepage meta tags (index.html): Use absolute URLs for images:
+  - `og:image` and `twitter:image` set to `https://vibeapps.dev/vibe-apps-open-graphi-image.png`
 
 ### Data Requirements
 
@@ -519,13 +518,13 @@ Success will be measured through improved social media engagement, proper Open G
 - **For Social Crawlers**: JavaScript meta tag updates provide story-specific data
 - **Meta Endpoint**: Available at `/meta/s/{slug}` for testing and validation
 
-### Test URLs:
+### Test URLs (Examples):
 
 - **Story with Screenshot**: https://vibeapps.dev/s/test-4-images-v1
 - **Story without Screenshot**: https://vibeapps.dev/s/convex
-- **Meta Endpoint**: https://vibeapps.dev/meta/s/test-4-images-v1
+- **Meta Endpoint (prod)**: https://whimsical-dalmatian-205.convex.site/meta/s?slug=sandcastle
 
-### Social Media Validators:
+### Social Media Validators (Use canonical `/s/{slug}`):
 
 - **Facebook**: https://developers.facebook.com/tools/debug/
 - **Twitter**: https://cards-dev.twitter.com/validator
