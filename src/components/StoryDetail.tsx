@@ -959,7 +959,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     {(story.tags || []).map(
                       (tag: Doc<"tags">) =>
                         !tag.isHidden &&
-                        tag.name !== "resendhackathon" && (
+                        tag.name !== "resendhackathon" &&
+                        tag.name !== "ychackathon" && (
                           <Link
                             key={tag._id}
                             to={`/tag/${tag.slug}`}

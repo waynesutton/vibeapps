@@ -657,7 +657,11 @@ export function StoryForm() {
                 <span className="text-sm text-gray-500">Loading tags...</span>
               )}
               {availableTags
-                ?.filter((tag: Tag) => tag.name !== "resendhackathon")
+                ?.filter(
+                  (tag: Tag) =>
+                    tag.name !== "resendhackathon" &&
+                    tag.name !== "ychackathon",
+                )
                 .map((tag: Tag) => (
                   <button
                     key={tag._id}

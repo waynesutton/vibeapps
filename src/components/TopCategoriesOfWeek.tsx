@@ -11,29 +11,42 @@ interface TopCategoriesOfWeekProps {
   setSelectedTagId: (tagId: Id<"tags"> | undefined) => void;
 }
 
-export function TopCategoriesOfWeek({ selectedTagId, setSelectedTagId }: TopCategoriesOfWeekProps) {
-  const topCategories = useQuery(api.tags.getWeeklyTopCategories, { limit: 10 });
+export function TopCategoriesOfWeek({
+  selectedTagId,
+  setSelectedTagId,
+}: TopCategoriesOfWeekProps) {
+  const topCategories = useQuery(api.tags.getWeeklyTopCategories, {
+    limit: 10,
+  });
   const navigate = useNavigate();
   const location = useLocation();
 
   if (topCategories === undefined) {
     return (
-      <div className="p-4 bg-white rounded-lg border border-[#D8E1EC]">Loading categories...</div>
+      <div className="p-4 bg-white rounded-lg border border-[#D8E1EC]">
+        Loading categories...
+      </div>
     );
   }
 
   if (!topCategories || topCategories.length === 0) {
     return (
       <div className="p-4 bg-white rounded-lg border border-[#D8E1EC]">
-        <h3 className="text-lg font-semibold text-[#292929] mb-3">Top Categories This Week</h3>
-        <p className="text-sm text-[#545454]">No active categories this week.</p>
+        <h3 className="text-lg font-semibold text-[#292929] mb-3">
+          Top Categories This Week
+        </h3>
+        <p className="text-sm text-[#545454]">
+          No active categories this week.
+        </p>
       </div>
     );
   }
 
   return (
     <div className="p-4 bg-white rounded-lg border border-[#D8E1EC]">
-      <h3 className="text-lg font-semibold text-[#292929] mb-3">Top Categories This Week</h3>
+      <h3 className="text-lg font-semibold text-[#292929] mb-3">
+        Top Categories This Week
+      </h3>
       <ul className="space-y-2">
         {/* "All" button */}
         <li>
@@ -50,7 +63,8 @@ export function TopCategoriesOfWeek({ selectedTagId, setSelectedTagId }: TopCate
                             ? "text-[#292929] font-semibold ring-1 ring-offset-1 bg-[#F3F4F6] ring-gray-400"
                             : "text-[#545454] hover:text-[#292929] hover:underline"
                         }`}
-            title="Show All Categories">
+            title="Show All Categories"
+          >
             <Hash className="w-4 h-4 text-[#787672]" />
             <span className="flex-grow truncate" title="All Categories">
               All
@@ -60,7 +74,11 @@ export function TopCategoriesOfWeek({ selectedTagId, setSelectedTagId }: TopCate
         </li>
 
         {topCategories
-          .filter((category) => category.name !== "resendhackathon")
+          .filter(
+            (category) =>
+              category.name !== "resendhackathon" &&
+              category.name !== "ychackathon",
+          )
           .map((category) => {
             if (!category.slug) {
               // Optionally, render something different for tags without slugs, or just skip
@@ -69,12 +87,18 @@ export function TopCategoriesOfWeek({ selectedTagId, setSelectedTagId }: TopCate
               return (
                 <li
                   key={category._id}
-                  className="flex boohide items-center gap-2 text-sm text-[#101828] py-1 opacity-90">
+                  className="flex boohide items-center gap-2 text-sm text-[#101828] py-1 opacity-90"
+                >
                   <Hash className="w-4 h-4 text-[#787672]" />
-                  <span className="flex-grow truncate" title={`${category.name} (no slug)`}>
+                  <span
+                    className="flex-grow truncate"
+                    title={`${category.name} (no slug)`}
+                  >
                     {category.name}
                   </span>
-                  <span className="text-xs text-[#787672]">({category.count})</span>
+                  <span className="text-xs text-[#787672]">
+                    ({category.count})
+                  </span>
                 </li>
               );
             }
@@ -96,12 +120,15 @@ export function TopCategoriesOfWeek({ selectedTagId, setSelectedTagId }: TopCate
                                 ? "text-[#292929] font-semibold ring-1 ring-offset-1  bg-[#F3F4F6] ring-gray-400"
                                 : "text-[#545454] hover:text-[#292929] hover:underline"
                             }`}
-                  title={category.name}>
+                  title={category.name}
+                >
                   <Hash className="w-4 h-4 text-[#787672]" />
                   <span className="flex-grow truncate" title={category.name}>
                     {category.name}
                   </span>
-                  <span className="text-xs text-[#787672]">({category.count})</span>
+                  <span className="text-xs text-[#787672]">
+                    ({category.count})
+                  </span>
                 </button>
               </li>
             );

@@ -417,8 +417,10 @@ export function Layout({ children }: { children?: ReactNode }) {
                       {headerTags
                         ?.filter(
                           (tag) =>
-                            !tag.isHidden && tag.name !== "resendhackathon",
-                        ) // Filter hidden tags and resendhackathon
+                            !tag.isHidden &&
+                            tag.name !== "resendhackathon" &&
+                            tag.name !== "ychackathon",
+                        ) // Filter hidden tags and hackathon tracking tags
                         .map((tag) => (
                           <option key={tag._id} value={tag._id}>
                             {tag.name}
@@ -516,7 +518,8 @@ export function Layout({ children }: { children?: ReactNode }) {
                         (tag) =>
                           !tag.isHidden &&
                           tag.showInHeader &&
-                          tag.name !== "resendhackathon",
+                          tag.name !== "resendhackathon" &&
+                          tag.name !== "ychackathon",
                       ) // Ensure only relevant tags are mapped
                       .map((tag) => (
                         <Link

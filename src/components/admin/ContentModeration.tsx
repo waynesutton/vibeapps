@@ -79,6 +79,11 @@ export function ContentModeration() {
   const [selectedJudgingGroupId, setSelectedJudgingGroupId] =
     useState<Id<"judgingGroups"> | null>(null);
 
+  // State for tag filtering
+  const [selectedTagIds, setSelectedTagIds] = useState<Id<"tags">[]>([]);
+  const [tagSearchTerm, setTagSearchTerm] = useState("");
+  const [showTagDropdown, setShowTagDropdown] = useState(false);
+
   // State for inline editing
   const [editingStoryId, setEditingStoryId] = useState<Id<"stories"> | null>(
     null,
@@ -99,7 +104,9 @@ export function ContentModeration() {
     teamName: "",
     teamMemberCount: 1,
   });
-  const [selectedTagIds, setSelectedTagIds] = useState<Id<"tags">[]>([]);
+  const [editSelectedTagIds, setEditSelectedTagIds] = useState<Id<"tags">[]>(
+    [],
+  );
   const [newTagNames, setNewTagNames] = useState<string[]>([]);
   const [newScreenshotFile, setNewScreenshotFile] = useState<File | null>(null);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(
@@ -125,7 +132,7 @@ export function ContentModeration() {
     debouncedSetSearch(value);
   };
 
-  const filters = useMemo(() => {
+  const storyFilters = useMemo(() => {
     const convexFilters: any = {};
     if (statusFilter === "hidden") {
       convexFilters.isHidden = true;
@@ -136,6 +143,29 @@ export function ContentModeration() {
       // For 'all', explicitly set isHidden to undefined
       convexFilters.isHidden = undefined;
     }
+
+    // Add tag filtering for stories
+    if (selectedTagIds.length > 0) {
+      convexFilters.tagIds = selectedTagIds;
+    }
+
+    return convexFilters;
+  }, [statusFilter, selectedTagIds]);
+
+  const commentFilters = useMemo(() => {
+    const convexFilters: any = {};
+    if (statusFilter === "hidden") {
+      convexFilters.isHidden = true;
+    } else if (statusFilter !== "all") {
+      convexFilters.status = statusFilter;
+      convexFilters.isHidden = false; // Explicitly set to false for non-hidden, non-all filters
+    } else {
+      // For 'all', explicitly set isHidden to undefined
+      convexFilters.isHidden = undefined;
+    }
+
+    // Comments don't have tag filtering - no tagIds field
+
     return convexFilters;
   }, [statusFilter]);
 
@@ -148,7 +178,7 @@ export function ContentModeration() {
     authIsLoading || !isAuthenticated
       ? "skip"
       : {
-          filters: filters,
+          filters: storyFilters,
           searchTerm: debouncedSearchTerm || undefined,
         },
     { initialNumItems: 10 },
@@ -163,7 +193,7 @@ export function ContentModeration() {
     authIsLoading || !isAuthenticated
       ? "skip"
       : {
-          filters: filters, // Assuming comments don't have search yet
+          filters: commentFilters, // Comments use separate filters without tagIds
         },
     { initialNumItems: 10 },
   );
@@ -375,7 +405,7 @@ export function ContentModeration() {
       teamMemberCount: (item as any).teamMemberCount || 1,
     });
     setTeamMembers((item as any).teamMembers || []);
-    setSelectedTagIds(item.tagIds || []);
+    setEditSelectedTagIds(item.tagIds || []);
     setNewTagNames([]);
     setNewScreenshotFile(null);
     setScreenshotPreview(null);
@@ -402,7 +432,7 @@ export function ContentModeration() {
       teamMemberCount: 1,
     });
     setTeamMembers([]);
-    setSelectedTagIds([]);
+    setEditSelectedTagIds([]);
     setNewTagNames([]);
     setNewScreenshotFile(null);
     setScreenshotPreview(null);
@@ -458,7 +488,7 @@ export function ContentModeration() {
         teamName: editFormData.teamName || undefined,
         teamMemberCount: editFormData.teamMemberCount || undefined,
         teamMembers: teamMembers.length > 0 ? teamMembers : undefined,
-        tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined,
+        tagIds: editSelectedTagIds.length > 0 ? editSelectedTagIds : undefined,
         newTagNames: newTagNames.length > 0 ? newTagNames : undefined,
       };
 
@@ -484,6 +514,15 @@ export function ContentModeration() {
   // Tag management helpers
   const toggleTag = (tagId: Id<"tags">) => {
     setSelectedTagIds((prev) =>
+      prev.includes(tagId)
+        ? prev.filter((id) => id !== tagId)
+        : [...prev, tagId],
+    );
+  };
+
+  // Tag management helpers for inline editing
+  const toggleEditTag = (tagId: Id<"tags">) => {
+    setEditSelectedTagIds((prev) =>
       prev.includes(tagId)
         ? prev.filter((id) => id !== tagId)
         : [...prev, tagId],
@@ -536,6 +575,31 @@ export function ContentModeration() {
     authIsLoading ||
     storiesStatus === "LoadingFirstPage" ||
     commentsStatus === "LoadingFirstPage";
+
+  // Close tag dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest(".tag-search-container")) {
+        setShowTagDropdown(false);
+      }
+    };
+
+    if (showTagDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showTagDropdown]);
+
+  // Clear tag filters when switching to comments
+  React.useEffect(() => {
+    if (activeItemType === "comments") {
+      setSelectedTagIds([]);
+      setTagSearchTerm("");
+      setShowTagDropdown(false);
+    }
+  }, [activeItemType]);
 
   if (authIsLoading) {
     return <div className="p-4">Loading authentication...</div>;
@@ -881,9 +945,9 @@ export function ContentModeration() {
                           <button
                             key={tag._id}
                             type="button"
-                            onClick={() => toggleTag(tag._id)}
+                            onClick={() => toggleEditTag(tag._id)}
                             className={`px-2 py-1 text-xs rounded transition-colors ${
-                              selectedTagIds.includes(tag._id)
+                              editSelectedTagIds.includes(tag._id)
                                 ? "bg-blue-100 text-blue-700 border border-blue-300"
                                 : "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200"
                             }`}
@@ -1433,7 +1497,7 @@ export function ContentModeration() {
           Content Moderation
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <Select
             value={activeItemType}
             onValueChange={(v: string) => setActiveItemType(v as any)}
@@ -1479,7 +1543,145 @@ export function ContentModeration() {
               </span>
             )}
           </div>
+
+          {/* Tag Filter - Only show for submissions */}
+          {activeItemType === "submissions" && (
+            <div className="relative tag-search-container">
+              <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                type="search"
+                placeholder="Search tags to filter..."
+                value={tagSearchTerm}
+                onChange={(e) => {
+                  setTagSearchTerm(e.target.value);
+                  setShowTagDropdown(e.target.value.length > 0);
+                }}
+                onFocus={() => setShowTagDropdown(tagSearchTerm.length > 0)}
+                className="pl-10"
+              />
+
+              {/* Tag Dropdown */}
+              {showTagDropdown && availableTags && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-[#D8E1EC] rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {(() => {
+                    const searchTerm = tagSearchTerm.toLowerCase();
+                    const filteredTags = availableTags
+                      .filter(
+                        (tag) =>
+                          tag.name.toLowerCase().includes(searchTerm) &&
+                          !selectedTagIds.includes(tag._id),
+                      )
+                      .slice(0, 10);
+
+                    if (filteredTags.length === 0) {
+                      return (
+                        <div className="px-3 py-2 text-sm text-gray-500">
+                          No matching tags found
+                        </div>
+                      );
+                    }
+
+                    return filteredTags.map((tag) => (
+                      <button
+                        key={tag._id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedTagIds((prev) => [...prev, tag._id]);
+                          setTagSearchTerm("");
+                          setShowTagDropdown(false);
+                        }}
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-[#F4F0ED] focus:bg-[#F4F0ED] focus:outline-none flex items-center gap-2"
+                      >
+                        {tag.emoji && (
+                          <span className="text-sm">{tag.emoji}</span>
+                        )}
+                        {tag.iconUrl && !tag.emoji && (
+                          <img
+                            src={tag.iconUrl}
+                            alt=""
+                            className="w-4 h-4 rounded-sm object-cover"
+                          />
+                        )}
+                        <span
+                          className="inline-block px-2 py-0.5 rounded text-xs font-medium"
+                          style={{
+                            backgroundColor: tag.backgroundColor || "#F4F0ED",
+                            color: tag.textColor || "#525252",
+                            border: `1px solid ${tag.backgroundColor ? "transparent" : "#D5D3D0"}`,
+                          }}
+                        >
+                          {tag.name}
+                        </span>
+                      </button>
+                    ));
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
         </div>
+
+        {/* Selected Tags Display */}
+        {activeItemType === "submissions" && selectedTagIds.length > 0 && (
+          <div className="mb-6 p-4 bg-[#F2F4F7] rounded-lg border border-gray-200">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-gray-700">
+                Filtering by Tags ({selectedTagIds.length})
+              </h3>
+              <button
+                onClick={() => setSelectedTagIds([])}
+                className="text-xs text-gray-500 hover:text-gray-700 underline"
+              >
+                Clear all
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {availableTags &&
+                selectedTagIds.map((tagId) => {
+                  const tag = availableTags.find((t) => t._id === tagId);
+                  if (!tag) return null;
+
+                  return (
+                    <span
+                      key={tag._id}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm border transition-colors"
+                      style={{
+                        backgroundColor: tag.backgroundColor || "#F4F0ED",
+                        color: tag.textColor || "#292929",
+                        borderColor: tag.backgroundColor
+                          ? "transparent"
+                          : "#D5D3D0",
+                      }}
+                    >
+                      {tag.emoji && (
+                        <span className="text-sm">{tag.emoji}</span>
+                      )}
+                      {tag.iconUrl && !tag.emoji && (
+                        <img
+                          src={tag.iconUrl}
+                          alt=""
+                          className="w-4 h-4 rounded-sm object-cover"
+                        />
+                      )}
+                      {tag.name}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedTagIds((prev) =>
+                            prev.filter((id) => id !== tag._id),
+                          )
+                        }
+                        className="ml-1 text-current hover:opacity-70 transition-opacity"
+                        title="Remove tag filter"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  );
+                })}
+            </div>
+          </div>
+        )}
 
         {uiIsLoading && (
           <div className="text-center py-6 text-lg font-medium text-[#545454]">

@@ -1335,6 +1335,7 @@ export const listAllStoriesAdmin = query({
         ),
       ),
       isHidden: v.optional(v.boolean()),
+      tagIds: v.optional(v.array(v.id("tags"))), // Add tag filtering
     }),
     searchTerm: v.optional(v.string()),
   },
@@ -1394,6 +1395,19 @@ export const listAllStoriesAdmin = query({
           return conditions.length > 0 ? q.and(...conditions) : true;
         })
         .collect();
+    }
+
+    // Apply tag filtering if specified
+    if (args.filters.tagIds && args.filters.tagIds.length > 0) {
+      initialStories = initialStories.filter((story) => {
+        if (!story.tagIds || story.tagIds.length === 0) {
+          return false;
+        }
+        // Check if story has at least one of the specified tags
+        return args.filters.tagIds!.some((tagId) =>
+          story.tagIds!.includes(tagId),
+        );
+      });
     }
 
     // Manual Sorting: Pinned first, then by creation time descending

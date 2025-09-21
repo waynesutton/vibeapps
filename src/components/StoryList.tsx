@@ -35,8 +35,13 @@ const BookmarkButton = ({
   onAuthRequired: () => void;
 }) => {
   const { isSignedIn } = useAuth();
-  const isBookmarked = useQuery(api.bookmarks.isStoryBookmarked, isSignedIn ? { storyId } : "skip");
-  const addOrRemoveBookmarkMutation = useMutation(api.bookmarks.addOrRemoveBookmark);
+  const isBookmarked = useQuery(
+    api.bookmarks.isStoryBookmarked,
+    isSignedIn ? { storyId } : "skip",
+  );
+  const addOrRemoveBookmarkMutation = useMutation(
+    api.bookmarks.addOrRemoveBookmark,
+  );
 
   const handleBookmarkClick = async () => {
     if (!isSignedIn) {
@@ -55,7 +60,8 @@ const BookmarkButton = ({
     return (
       <button
         className="flex items-center gap-2 text-[#787672] hover:text-[#525252] cursor-not-allowed"
-        title="Sign in to bookmark">
+        title="Sign in to bookmark"
+      >
         <Bookmark className="w-4 h-4" />
       </button>
     );
@@ -65,7 +71,8 @@ const BookmarkButton = ({
     <button
       onClick={handleBookmarkClick}
       className="flex items-center gap-2 text-[#787672] hover:text-[#525252]"
-      title={isBookmarked ? "Remove bookmark" : "Bookmark story"}>
+      title={isBookmarked ? "Remove bookmark" : "Bookmark story"}
+    >
       {isBookmarked ? (
         <BookmarkCheck className="w-4 h-4 text-black" />
       ) : (
@@ -75,7 +82,13 @@ const BookmarkButton = ({
   );
 };
 
-export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }: StoryListProps) {
+export function StoryList({
+  stories,
+  viewMode,
+  status,
+  loadMore,
+  itemsPerPage,
+}: StoryListProps) {
   const { isSignedIn, isLoaded: isClerkLoaded } = useAuth();
   const voteStory = useMutation(api.stories.voteStory);
 
@@ -111,34 +124,42 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
     }
   };
 
-  const mainContentContainerClass = viewMode === "vibe" ? "flex-grow" : "w-full";
+  const mainContentContainerClass =
+    viewMode === "vibe" ? "flex-grow" : "w-full";
   const rightSidebarClass = "w-80 flex-shrink-0 space-y-6 hidden lg:block";
 
   return (
-    <div className={`flex ${viewMode === "vibe" ? "flex-row gap-6" : "flex-col"}`}>
+    <div
+      className={`flex ${viewMode === "vibe" ? "flex-row gap-6" : "flex-col"}`}
+    >
       <div className={mainContentContainerClass}>
         <div className="space-y-8">
           <div className={containerClass}>
             {stories.map((story) => (
               <article
                 key={story._id}
-                className={`flex ${viewMode === "grid" ? "flex-col bg-white rounded-lg p-4 border border-[#D8E1EC]" : viewMode === "vibe" ? "flex-col md:flex-row items-start" : "flex-row bg-white rounded-lg p-4 border border-[#D8E1EC]"} gap-4`}>
+                className={`flex ${viewMode === "grid" ? "flex-col bg-white rounded-lg p-4 border border-[#D8E1EC]" : viewMode === "vibe" ? "flex-col md:flex-row items-start" : "flex-row bg-white rounded-lg p-4 border border-[#D8E1EC]"} gap-4`}
+              >
                 {viewMode !== "grid" && (
                   <div
                     className={`flex ${
                       viewMode === "vibe"
                         ? "flex-col items-center w-[70px] flex-shrink-0"
                         : "flex-col items-center min-w-[40px] pt-1"
-                    }`}>
+                    }`}
+                  >
                     {viewMode === "vibe" ? (
                       <div className="flex flex-col items-center w-full">
                         <div className="bg-gradient-to-b from-[#FBF5DB] to-[#FAF9F1] rounded-t-md w-full h-[62px] flex flex-col items-center justify-center text-lg border border border-[#D8E1EC] font-normal text-[#292929] mb-[0px]">
-                          <span className="font-alfa-slab-one">{story.votes}</span>
+                          <span className="font-alfa-slab-one">
+                            {story.votes}
+                          </span>
                           <div className="text-xs">Vibes</div>
                         </div>
                         <button
                           onClick={() => handleVote(story._id)}
-                          className="bg-white border border-t-0 border-[#D5D3D0] text-[#292929] hover:bg-[#FBF5DB] w-full rounded-b-md py-1 px-2 flex items-center justify-center gap-1 text-sm font-normal h-[24px]">
+                          className="bg-white border border-t-0 border-[#D5D3D0] text-[#292929] hover:bg-[#FBF5DB] w-full rounded-b-md py-1 px-2 flex items-center justify-center gap-1 text-sm font-normal h-[24px]"
+                        >
                           Vibe it
                         </button>
                       </div>
@@ -146,10 +167,13 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                       <>
                         <button
                           onClick={() => handleVote(story._id)}
-                          className="text-[#292929] hover:bg-[#FBF5DB] p-1 rounded">
+                          className="text-[#292929] hover:bg-[#FBF5DB] p-1 rounded"
+                        >
                           <ChevronUp className="w-5 h-5" />
                         </button>
-                        <span className="text-[#292929] font-medium text-sm">{story.votes}</span>
+                        <span className="text-[#292929] font-medium text-sm">
+                          {story.votes}
+                        </span>
                       </>
                     )}
                   </div>
@@ -159,7 +183,8 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                 {viewMode === "vibe" && story.screenshotUrl && (
                   <Link
                     to={`/s/${story.slug}`}
-                    className="w-full md:w-[195px] md:flex-shrink-0 aspect-video block overflow-hidden rounded-md">
+                    className="w-full md:w-[195px] md:flex-shrink-0 aspect-video block overflow-hidden rounded-md"
+                  >
                     <img
                       src={story.screenshotUrl}
                       alt={`${story.title} thumbnail`}
@@ -171,7 +196,8 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
 
                 {/* STORY CONTENT - Apply bg/border/padding here for vibe mode */}
                 <div
-                  className={`flex-1 min-w-0 ${viewMode === "vibe" ? "bg-white rounded-lg p-3.5 border border-[#D8E1EC]" : ""}`}>
+                  className={`flex-1 min-w-0 ${viewMode === "vibe" ? "bg-white rounded-lg p-3.5 border border-[#D8E1EC]" : ""}`}
+                >
                   {story.customMessage && (
                     <div className="mb-4 text-sm text-[#ffffff] bg-[#292929] border border-[#D8E1EC] rounded-md p-3 italic">
                       {story.customMessage}
@@ -188,14 +214,20 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                       <>
                         <button
                           onClick={() => handleVote(story._id)}
-                          className="text-[#292929] hover:bg-[#FBF5DB] p-1 rounded">
+                          className="text-[#292929] hover:bg-[#FBF5DB] p-1 rounded"
+                        >
                           <ChevronUp className="w-5 h-5" />
                         </button>
-                        <span className="text-[#292929] font-medium text-sm">{story.votes}</span>
+                        <span className="text-[#292929] font-medium text-sm">
+                          {story.votes}
+                        </span>
                       </>
                     )}
                     <h2 className="text-[#292929] font-bold truncate">
-                      <Link to={`/s/${story.slug}`} className="hover:text-[#292929] break-words">
+                      <Link
+                        to={`/s/${story.slug}`}
+                        className="hover:text-[#292929] break-words"
+                      >
                         {story.title}
                       </Link>
                     </h2>
@@ -208,7 +240,8 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                   {viewMode === "grid" && story.screenshotUrl && (
                     <Link
                       to={`/s/${story.slug}`}
-                      className="block mb-4 rounded-md overflow-hidden hover:opacity-90 transition-opacity">
+                      className="block mb-4 rounded-md overflow-hidden hover:opacity-90 transition-opacity"
+                    >
                       <img
                         src={story.screenshotUrl}
                         alt={story.title}
@@ -227,7 +260,12 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                   {story.tags && story.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-2">
                       {story.tags
-                        .filter((tag) => !tag.isHidden && tag.name !== "resendhackathon")
+                        .filter(
+                          (tag) =>
+                            !tag.isHidden &&
+                            tag.name !== "resendhackathon" &&
+                            tag.name !== "ychackathon",
+                        )
                         .map((tag) => (
                           <Link
                             key={tag._id}
@@ -238,8 +276,11 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                               color: tag.textColor || "#525252",
                               border: `1px solid ${tag.backgroundColor ? "transparent" : "#D5D3D0"}`,
                             }}
-                            title={`View all apps tagged with ${tag.name}`}>
-                            {tag.emoji && <span className="mr-1">{tag.emoji}</span>}
+                            title={`View all apps tagged with ${tag.name}`}
+                          >
+                            {tag.emoji && (
+                              <span className="mr-1">{tag.emoji}</span>
+                            )}
                             {tag.iconUrl && !tag.emoji && (
                               <img
                                 src={tag.iconUrl}
@@ -257,16 +298,26 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                     {story.authorUsername ? (
                       <Link
                         to={`/${story.authorUsername}`}
-                        className="hover:text-[#525252] hover:underline">
-                        by {story.submitterName || story.authorName || story.authorUsername}
+                        className="hover:text-[#525252] hover:underline"
+                      >
+                        by{" "}
+                        {story.submitterName ||
+                          story.authorName ||
+                          story.authorUsername}
                       </Link>
                     ) : (
-                      <span>by {story.submitterName || story.authorName || "Anonymous User"}</span>
+                      <span>
+                        by{" "}
+                        {story.submitterName ||
+                          story.authorName ||
+                          "Anonymous User"}
+                      </span>
                     )}
                     <span>{formatDate(story._creationTime)}</span>
                     <Link
                       to={`/s/${story.slug}#comments`}
-                      className="flex items-center gap-2 hover:text-[#525252]">
+                      className="flex items-center gap-2 hover:text-[#525252]"
+                    >
                       <MessageSquare className="w-4 h-4" />
                       {story.commentCount}
                     </Link>
@@ -283,7 +334,8 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-2 text-[#545454] hover:text-[#525252]"
-                        title="View GitHub Repo">
+                        title="View GitHub Repo"
+                      >
                         <Github className="w-4 h-4" />
                         <span>Repo</span>
                       </a>
@@ -299,7 +351,8 @@ export function StoryList({ stories, viewMode, status, loadMore, itemsPerPage }:
               <button
                 onClick={() => loadMore(itemsPerPage)}
                 className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 mx-auto"
-                disabled={status !== "CanLoadMore"}>
+                disabled={status !== "CanLoadMore"}
+              >
                 Load More
                 {status === "CanLoadMore" && <ArrowDown className="w-4 h-4" />}
               </button>
