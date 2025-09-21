@@ -7,7 +7,7 @@ export const getTotalSubmissions = query({
   returns: v.number(),
   handler: async (ctx) => {
     await requireAdminRole(ctx);
-    const documents = await ctx.db.query("formSubmissions").collect();
+    const documents = await ctx.db.query("stories").collect();
     return documents.length;
   },
 });
