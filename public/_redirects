@@ -1,5 +1,5 @@
-# Proxy story pages to meta endpoint for social media crawlers
-/s/:slug https://acoustic-goldfinch-461.convex.site/meta/s?slug=:slug 200
+# Meta endpoint for social sharing (for manual testing and direct access)
+/meta/s/:slug https://acoustic-goldfinch-461.convex.site/meta/s?slug=:slug 200
 
-# Fallback to SPA for all other routes
+# All routes go to the SPA (including /s/:slug)
 /* /index.html 200 
