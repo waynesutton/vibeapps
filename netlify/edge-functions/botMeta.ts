@@ -1,4 +1,4 @@
-export default async (request: Request) => {
+export default async (request: Request, context: any) => {
   try {
     const url = new URL(request.url);
     const ua = (request.headers.get("user-agent") || "").toLowerCase();
@@ -25,7 +25,7 @@ export default async (request: Request) => {
     const isBot = bots.some((b) => ua.includes(b));
 
     // Only intercept bot traffic; let browsers hit SPA normally
-    if (!isBot) return fetch(request);
+    if (!isBot) return context.next();
 
     // Extract slug from /s/{slug}
     const match = url.pathname.match(/^\/s\/(.+)$/);
@@ -52,7 +52,7 @@ export default async (request: Request) => {
     });
   } catch (e) {
     // On failure, fall back to SPA
-    return fetch(request);
+    return context.next();
   }
 };
 
