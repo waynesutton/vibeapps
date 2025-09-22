@@ -7,7 +7,7 @@ A modern social network platform for app creators to showcase their projects, bu
 ### Core Platform Features
 
 - **App Submissions**: Users can submit their apps with title, description, URL, video demos, and multiple screenshots
-- **Multi-Image Gallery**: Support for up to 4 additional images with thumbnail navigation and modal lightbox viewer
+- **Multi-Image Gallery**: Support for up to 4 additional images with thumbnail navigation and modal Lightbox viewer
 - **Anonymous Submissions**: Support for non-authenticated app submissions with email collection
 - **Dynamic Form Fields**: Configurable form fields for submissions (LinkedIn, Twitter, GitHub, etc.)
 - **Tag System**: Categorize apps with existing tags or create new ones during submission with enhanced search dropdown
@@ -70,15 +70,25 @@ A modern social network platform for app creators to showcase their projects, bu
 - **Form Submissions**: Email notifications for form completions
 - **Admin Notifications**: Daily reports and system updates
 
+## Recent Updates
+
+- Submit Forms system expanded:
+  - Admin create/edit modals for submit forms (`CreateSubmitFormModal`, `EditSubmitFormModal`)
+  - Field-level management for submit forms (`SubmitFormFieldManagement`)
+  - Dynamic public renderer for submit forms (`DynamicSubmitForm`)
+- Judging: Public results dashboard and viewer (`PublicJudgingResultsDashboard`, `PublicResultsViewer`)
+- ConvexBox: Settings UI (`ConvexBoxSettingsForm`) and config in `convex/convexBoxConfig.ts`
+- User sync: Clerk ↔ Convex synchronization component (`UserSyncer`)
+
 ## Tech Stack
 
-- **Frontend**: React 18, TypeScript, Vite
-- **Backend**: Convex (real-time database and serverless functions)
+- **Frontend**: React 18, TypeScript, `Vite`
+- **Backend**: Convex (real-time database and `serverless` functions)
 - **Authentication**: Clerk Auth
 - **Styling**: Tailwind CSS
-- **UI Components**: Custom components with shadcn/ui patterns
+- **UI Components**: Custom components with `shadcn/ui` patterns
 - **Package Manager**: Bun
-- **Deployment**: Netlify (with \_redirects for SPA routing)
+- **Deployment**: `Netlify` (with \_redirects for SPA routing)
 
 ## Project Structure
 
@@ -102,7 +112,7 @@ vibeapps/
 
 ### Prerequisites
 
-- Node.js 18+ or Bun
+- Node 18+ or Bun
 - Convex account
 - Clerk account
 

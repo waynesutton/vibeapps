@@ -245,6 +245,13 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_storyId", ["storyId"]),
 
+  // Site files (robots.txt, llms.txt) generated content
+  siteFiles: defineTable({
+    key: v.string(), // e.g., "robots.txt" or "llms.txt"
+    content: v.string(), // file body
+    updatedAt: v.number(), // timestamp
+  }).index("by_key", ["key"]),
+
   // New follows table
   follows: defineTable({
     followerId: v.id("users"), // The ID of the user who is performing the follow action

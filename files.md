@@ -6,17 +6,17 @@
 
 - `package.json`: Project dependencies and scripts configuration
 - `tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json`: TypeScript configuration files
-- `vite.config.ts`: Vite build tool configuration
+- `vite.config.ts`: `Vite` build tool configuration
 - `tailwind.config.js`: Tailwind CSS styling configuration
 - `postcss.config.js`: PostCSS configuration for CSS processing
 - `eslint.config.js`: ESLint code quality and style configuration
-- `components.json`: shadcn/ui components configuration
+- `components.json`: `shadcn/ui` components configuration
 - `bun.lockb`: Bun package manager lock file
 
 ### Documentation Files
 
 - `README.md`: Main project documentation and setup guide
-- `changelog.MD`: Developer-friendly changelog of new features
+- `changelog.MD`: Developer-friendly change log of new features
 - `files.MD`: This file - comprehensive codebase documentation
 - `TASK.MD`: Project task and feature requirements
 - `addresend.md`: Resend email integration PRD and requirements
@@ -41,6 +41,7 @@
 - `convex/auth.config.js` & `convex/auth.ts`: Convex authentication configuration
 - `convex/tsconfig.json`: TypeScript configuration for Convex functions
 - `convex/README.md`: Convex-specific documentation
+- `convex/migrations.ts`: Data/backfill helpers and migration utilities
 
 ### Authentication & User Management
 
@@ -93,7 +94,7 @@
 - `src/main.tsx`: React application entry point
 - `src/App.tsx`: Main app component with routing configuration
 - `src/index.css`: Global CSS styles and Tailwind imports
-- `src/vite-env.d.ts`: Vite environment type definitions
+- `src/vite-env.d.ts`: `Vite` environment type definitions
 
 ### Core Components
 
@@ -101,6 +102,7 @@
 - `src/components/ProtectedLayout.tsx`: Authentication-protected layout wrapper
 - `src/components/Footer.tsx`: Site footer with links and information
 - `src/components/UserSyncer.tsx`: Clerk-Convex user synchronization component
+- `src/components/DynamicSubmitForm.tsx`: Public dynamic submit form renderer
 
 ### Story/App Submission Features
 
@@ -109,7 +111,7 @@
 - `src/components/YCHackForm.tsx`: YC AI Hackathon submission form with team information support
 - `src/components/StoryDetail.tsx`: Detailed app view with comments, ratings, voting, and image gallery
 - `src/components/StoryList.tsx`: List/grid view of app submissions
-- `src/components/ImageGallery.tsx`: Multi-image gallery component with thumbnail navigation and modal lightbox
+- `src/components/ImageGallery.tsx`: Multi-image gallery component with thumbnail navigation and modal Lightbox
 
 ### User Interaction Components
 
@@ -131,6 +133,9 @@
 - `src/components/admin/Settings.tsx`: Site-wide settings configuration with view mode controls
 - `src/components/admin/NumbersView.tsx`: Analytics and metrics dashboard with detailed tracking
 - `src/components/admin/ReportManagement.tsx`: User report review and resolution with status tracking
+- `src/components/admin/SubmitFormFieldManagement.tsx`: Manage fields for a specific submit form
+- `src/components/admin/CreateSubmitFormModal.tsx`: Modal to create new submit forms
+- `src/components/admin/EditSubmitFormModal.tsx`: Modal to edit existing submit forms
 
 ### Form Management Components
 
@@ -189,7 +194,7 @@
 
 ## Static Assets (public Directory)
 
-### Icons & Favicons
+### Icons & Favicon
 
 - Various favicon sizes and formats for different devices
 - Apple touch icons for iOS devices
@@ -198,7 +203,7 @@
 
 ### Configuration Files
 
-- `_redirects`: Netlify routing configuration for SPA
+- `_redirects`: `Netlify` routing configuration for SPA
 - `robots.txt`: Search engine crawling instructions
 - `sitemap.xml`: Site structure for search engines
 

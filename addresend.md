@@ -4,6 +4,52 @@
 
 This document outlines the implementation of Resend email integration for VibeApps, providing automated email notifications for admin reporting, user engagement, onboarding, and messaging. The system will leverage Convex.dev's real-time capabilities with Resend's email API to deliver timely, relevant communications to users and administrators.
 
+## Chronological Implementation Plan
+
+1. Environment & Dependencies
+   - Create Resend account and set `RESEND_API_KEY`.
+   - Confirm Convex deployment environment variables are set (Convex URL, Clerk webhook secret).
+   - use the Convex Resend Component.
+
+2. Schema & Settings
+   - Add `emailSettings` (with `weeklyDigestEmails`), `emailLogs`, `dailyEngagementSummary`, `dailyMetrics`.
+   - Add `emailUnsubscribeTokens`, `broadcastEmails`, and `appSettings` with `emailsEnabled` flag.
+   - Ensure existing domain tables have needed indexes (see Schema section); prefer `withIndex` over `filter`.
+
+3. Email Templates & Style
+   - Implement HTML templates in `convex/emails/templates.ts` matching app style (black/white, no emojis).
+   - Standardize footer: settings link + one‑click unsubscribe link.
+
+4. Core Email Sender
+   - Implement `convex/emails/resend.ts` action to send emails.
+   - Read global `emailsEnabled` kill‑switch before sending. Log results in `emailLogs`.
+
+5. Unsubscribe
+   - Create token generation + storage in `emailUnsubscribeTokens`.
+   - Add HTTP GET endpoint `/api/unsubscribe?token=...` to consume token and update `emailSettings`.
+   - Add unsubscribe link to all templates.
+
+6. Daily Flows
+   - Implement daily admin metrics pipeline and email.
+   - Implement user daily engagement pipeline: compute summary (engagement, new followers, followed submissions) and send one digest if active in last 24h.
+   - Add crons: 9:00 admin, 17:30 compute engagement, 18:00 send user emails (PST).
+
+7. Weekly Digest
+   - Implement weekly "Most Vibes This Week" computation and template.
+   - Add cron: Monday 9:00 AM PST. Respect `weeklyDigestEmails` and global kill‑switch.
+
+8. Admin Controls
+   - Admin Settings: add UI toggle to set `emailsEnabled` via `appSettings`.
+   - Admin Broadcast: compose email to all users; create `broadcastEmails` record; scheduler batches sends respecting rate limits and per‑user preferences.
+
+9. Frontend Settings UI
+   - Profile settings to manage: daily engagement, message notifications, marketing, weekly digest, timezone, unsubscribe all.
+
+10. Monitoring & Cleanup
+
+- Track email status with `emailLogs`.
+- Optional: integrate Convex Resend component cleanup crons.
+
 ## Current System Analysis
 
 ### Existing Infrastructure
@@ -89,19 +135,27 @@ Platform Health:
 **Content Structure**:
 
 ```
-Subject: Your apps got some love today! 💪
+Subject: Your apps received engagement today
 
 Hey [UserName],
 
-Great news! Your apps received engagement today:
+Here’s your daily summary:
 
-[AppName] received:
-• 3 new votes
-• 1 new rating (4.2/5 average)
-• 2 new comments
-• 1 bookmark
+[AppName]
+- 3 new votes
+- 1 new rating (4.2/5 average)
+- 2 new comments
+- 1 new bookmark
 
-[Read Comments] [View App Stats]
+New followers today: 2
+- jane_doe
+- devmax
+
+New submissions from people you follow:
+- "SaaS Starter" by buildwithtom
+- "AI Notes" by makerjules
+
+[Read Comments]  [View App Stats]  [See New Followers]
 
 Keep building amazing things!
 - The VibeApps Team
@@ -110,11 +164,38 @@ Keep building amazing things!
 **Conditions**:
 
 - Only send if user was active (logged in) in last 24 hours
-- Only send if they received actual engagement
-- Group all engagement for user's apps into single daily email
-- Include unsubscribe link
+- Only send if they received any engagement OR gained new followers OR accounts they follow posted new submissions
+- Group all events for the user into a single daily email
+- Include unsubscribe link and a link to notification settings
 
-### 3. Welcome Onboarding Email
+### 3. Weekly Digest: Most Vibes This Week
+
+**Purpose**: Weekly roundup highlighting the most vibed (voted) submissions across the platform.
+
+**Frequency**: Once weekly on Monday at 9:00 AM PST
+
+**Recipients**: Users who did not unsubscribe from digests (see `weeklyDigestEmails` in `emailSettings`).
+
+**Content Structure**:
+
+```
+Subject: Most Vibes This Week
+
+Top submissions this week (by vibes):
+1) [App Title] — 124 vibes
+2) [App Title] — 98 vibes
+3) [App Title] — 77 vibes
+
+[View Full Leaderboard]
+```
+
+**Notes**:
+
+- Calculated over rolling 7-day window (Mon 00:00:00 to Sun 23:59:59 PST).
+- Ties broken by recent activity, then creation time.
+- Respect `appSettings.emailsEnabled` and per-user `emailSettings.weeklyDigestEmails`.
+
+### 4. Welcome Onboarding Email
 
 **Purpose**: Welcome new users and guide them through platform features
 
@@ -157,7 +238,7 @@ Happy building!
 [Unsubscribe] | [Help Center] | [Follow us]
 ```
 
-### 4. Inbox Message Notifications
+### 5. Inbox Message Notifications
 
 **Purpose**: Notify users of new direct messages (from planned messaging system)
 
@@ -205,6 +286,7 @@ export default defineSchema({
     dailyEngagementEmails: v.boolean(), // Default: true
     messageNotifications: v.boolean(), // Default: true
     marketingEmails: v.boolean(), // Default: false
+    weeklyDigestEmails: v.boolean(), // Default: true
     timezone: v.optional(v.string()), // User's timezone, default PST
     unsubscribedAt: v.optional(v.number()), // Timestamp if unsubscribed
   }).index("by_user", ["userId"]),
@@ -216,12 +298,18 @@ export default defineSchema({
       v.literal("daily_admin"),
       v.literal("daily_engagement"),
       v.literal("welcome"),
-      v.literal("message_notification")
+      v.literal("message_notification"),
+      v.literal("weekly_digest"),
+      v.literal("admin_broadcast"),
     ),
     recipientEmail: v.string(),
     sentAt: v.number(),
     resendMessageId: v.optional(v.string()), // Store Resend message ID
-    status: v.union(v.literal("sent"), v.literal("failed"), v.literal("delivered")),
+    status: v.union(
+      v.literal("sent"),
+      v.literal("failed"),
+      v.literal("delivered"),
+    ),
     metadata: v.optional(v.any()), // Store email-specific data
   })
     .index("by_user_type_date", ["userId", "emailType", "sentAt"])
@@ -245,7 +333,7 @@ export default defineSchema({
         ratings: v.number(),
         comments: v.number(),
         bookmarks: v.number(),
-      })
+      }),
     ),
   })
     .index("by_user_date", ["userId", "date"])
@@ -266,6 +354,46 @@ export default defineSchema({
     pendingReports: v.number(),
     resolvedReports: v.number(),
   }).index("by_date", ["date"]),
+
+  // Unsubscribe tokens for one-click unsubscribe links
+  emailUnsubscribeTokens: defineTable({
+    userId: v.id("users"),
+    token: v.string(), // signed token
+    purpose: v.union(
+      v.literal("all"),
+      v.literal("daily_engagement"),
+      v.literal("weekly_digest"),
+      v.literal("marketing"),
+    ),
+    expiresAt: v.number(),
+    consumedAt: v.optional(v.number()),
+  })
+    .index("by_token", ["token"])
+    .index("by_user", ["userId"]),
+
+  // Admin broadcast campaigns
+  broadcastEmails: defineTable({
+    createdBy: v.id("users"),
+    subject: v.string(),
+    html: v.string(),
+    filter: v.optional(v.object({})), // optional targeting; keep simple in v1
+    status: v.union(
+      v.literal("draft"),
+      v.literal("queued"),
+      v.literal("sending"),
+      v.literal("completed"),
+      v.literal("cancelled"),
+    ),
+    totalRecipients: v.optional(v.number()),
+    sentCount: v.optional(v.number()),
+    cancelledAt: v.optional(v.number()),
+  }).index("by_status", ["status"]),
+
+  // App/site settings (global flags)
+  appSettings: defineTable({
+    key: v.string(), // e.g., "emailsEnabled"
+    valueBoolean: v.optional(v.boolean()),
+  }).index("by_key", ["key"]),
 });
 ```
 
@@ -278,7 +406,8 @@ convex/
 ├── emails/
 │   ├── resend.ts           # Resend API integration
 │   ├── templates.ts        # Email template functions
-│   ├── daily.ts           # Daily email processing
+│   ├── daily.ts            # Daily email processing
+│   ├── weekly.ts           # Weekly digest processing
 │   └── notifications.ts    # Real-time email notifications
 ├── crons.ts               # Scheduled email jobs
 └── emailSettings.ts       # User email preferences
@@ -311,6 +440,14 @@ export const sendEmail = internalAction({
   }),
   handler: async (ctx, args) => {
     try {
+      // Global kill switch: skip sending if disabled
+      const emailsEnabled = await ctx.runQuery(internal.settings.getBoolean, {
+        key: "emailsEnabled",
+      });
+      if (emailsEnabled === false) {
+        return { success: true, messageId: undefined };
+      }
+
       const { data, error } = await resend.emails.send({
         from: args.from || "VibeApps <noreply@vibeapps.dev>",
         to: [args.to],
@@ -331,6 +468,52 @@ export const sendEmail = internalAction({
     }
   },
 });
+```
+
+> Note: `internal.settings.getBoolean` should be defined alongside existing settings utilities to read `appSettings` by key.
+
+#### Admin Controls & Broadcast
+
+```
+Admin Global Email Toggle:
+- Store `appSettings` with key `emailsEnabled` (boolean).
+- Expose `settings.getBoolean` internal query:
+
+// convex/settings.ts (excerpt)
+import { internalQuery, internalMutation } from "./_generated/server";
+import { v } from "convex/values";
+
+export const getBoolean = internalQuery({
+  args: { key: v.string() },
+  returns: v.union(v.null(), v.boolean()),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("appSettings")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+    return row?.valueBoolean ?? null;
+  },
+});
+
+export const setBoolean = internalMutation({
+  args: { key: v.string(), value: v.boolean() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("appSettings")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+    if (existing) await ctx.db.patch(existing._id, { valueBoolean: args.value });
+    else await ctx.db.insert("appSettings", { key: args.key, valueBoolean: args.value });
+    return null;
+  },
+});
+
+Admin Broadcast:
+- New admin dashboard section to compose `subject` + HTML body.
+- Create a `broadcastEmails` record (status `queued`).
+- Scheduler fans out batches reading user list respecting per-user settings and `emailsEnabled`.
+- Log to `emailLogs` with type `admin_broadcast`.
 ```
 
 #### `convex/emails/templates.ts`
@@ -384,29 +567,29 @@ export const generateDailyAdminEmail = internalQuery({
             <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h2 style="margin-top: 0;">Daily Growth</h2>
               <ul style="list-style: none; padding: 0;">
-                <li>📱 New Apps Submitted: <strong>${metrics.newSubmissions}</strong>${calculateChange(metrics.newSubmissions, previousMetrics?.newSubmissions)}</li>
-                <li>👥 New Users Signed Up: <strong>${metrics.newUsers}</strong>${calculateChange(metrics.newUsers, previousMetrics?.newUsers)}</li>
-                <li>🌟 Total Platform Users: <strong>${metrics.totalUsers}</strong></li>
+                <li>New Apps Submitted: <strong>${metrics.newSubmissions}</strong>${calculateChange(metrics.newSubmissions, previousMetrics?.newSubmissions)}</li>
+                <li>New Users Signed Up: <strong>${metrics.newUsers}</strong>${calculateChange(metrics.newUsers, previousMetrics?.newUsers)}</li>
+                <li>Total Platform Users: <strong>${metrics.totalUsers}</strong></li>
               </ul>
             </div>
 
             <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h2 style="margin-top: 0;">Daily Engagement</h2>
               <ul style="list-style: none; padding: 0;">
-                <li>👍 Votes Cast: <strong>${metrics.dailyVotes}</strong></li>
-                <li>💬 Comments Added: <strong>${metrics.dailyComments}</strong></li>
-                <li>⭐ Ratings Given: <strong>${metrics.dailyRatings}</strong></li>
-                <li>🔖 Bookmarks Added: <strong>${metrics.dailyBookmarks}</strong></li>
-                <li>👤 New Follows: <strong>${metrics.dailyFollows}</strong></li>
-                <li>🔥 Active Users: <strong>${metrics.activeUsers}</strong></li>
+                <li>Votes Cast: <strong>${metrics.dailyVotes}</strong></li>
+                <li>Comments Added: <strong>${metrics.dailyComments}</strong></li>
+                <li>Ratings Given: <strong>${metrics.dailyRatings}</strong></li>
+                <li>Bookmarks Added: <strong>${metrics.dailyBookmarks}</strong></li>
+                <li>New Follows: <strong>${metrics.dailyFollows}</strong></li>
+                <li>Active Users: <strong>${metrics.activeUsers}</strong></li>
               </ul>
             </div>
 
             <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h2 style="margin-top: 0;">Platform Health</h2>
               <ul style="list-style: none; padding: 0;">
-                <li>⚠️ Reports Pending: <strong>${metrics.pendingReports}</strong></li>
-                <li>✅ Reports Resolved: <strong>${metrics.resolvedReports}</strong></li>
+                <li>Reports Pending: <strong>${metrics.pendingReports}</strong></li>
+                <li>Reports Resolved: <strong>${metrics.resolvedReports}</strong></li>
               </ul>
             </div>
 
@@ -436,7 +619,7 @@ export const generateWelcomeEmail = internalQuery({
     html: v.string(),
   }),
   handler: async (ctx, args) => {
-    const subject = "Welcome to VibeApps! Let's get you started 🚀";
+    const subject = "Welcome to VibeApps! Let's get you started";
 
     const html = `
       <!DOCTYPE html>
@@ -453,25 +636,25 @@ export const generateWelcomeEmail = internalQuery({
               <h2 style="margin-top: 0;">Here's how to get started:</h2>
               
               <div style="margin: 15px 0;">
-                <strong>🔍 Explore Apps</strong><br>
+                <strong>Explore Apps</strong><br>
                 Browse our collection of apps by category<br>
                 <a href="https://vibeapps.dev" style="color: #292929;">Explore Apps →</a>
               </div>
               
               <div style="margin: 15px 0;">
-                <strong>📱 Submit Your App</strong><br>
+                <strong>Submit Your App</strong><br>
                 Share your project with the community<br>
                 <a href="https://vibeapps.dev/submit" style="color: #292929;">Submit App →</a>
               </div>
               
               <div style="margin: 15px 0;">
-                <strong>👥 Connect & Follow</strong><br>
+                <strong>Connect & Follow</strong><br>
                 Follow creators you admire<br>
                 <a href="https://vibeapps.dev/users" style="color: #292929;">Browse Creators →</a>
               </div>
               
               <div style="margin: 15px 0;">
-                <strong>💬 Join Conversations</strong><br>
+                <strong>Join Conversations</strong><br>
                 Comment and rate apps you love<br>
                 <a href="https://vibeapps.dev/trending" style="color: #292929;">See Trending →</a>
               </div>
@@ -507,7 +690,7 @@ export const generateEngagementEmail = internalQuery({
           ratings: v.number(),
           comments: v.number(),
           bookmarks: v.number(),
-        })
+        }),
       ),
     }),
   },
@@ -516,17 +699,24 @@ export const generateEngagementEmail = internalQuery({
     html: v.string(),
   }),
   handler: async (ctx, args) => {
-    const subject = "Your apps got some love today! 💪";
+    const subject = "Your apps received engagement today";
 
     const generateAppSection = (app: any) => {
       const engagements = [];
-      if (app.votes > 0) engagements.push(`${app.votes} new vote${app.votes !== 1 ? "s" : ""}`);
+      if (app.votes > 0)
+        engagements.push(`${app.votes} new vote${app.votes !== 1 ? "s" : ""}`);
       if (app.ratings > 0)
-        engagements.push(`${app.ratings} new rating${app.ratings !== 1 ? "s" : ""}`);
+        engagements.push(
+          `${app.ratings} new rating${app.ratings !== 1 ? "s" : ""}`,
+        );
       if (app.comments > 0)
-        engagements.push(`${app.comments} new comment${app.comments !== 1 ? "s" : ""}`);
+        engagements.push(
+          `${app.comments} new comment${app.comments !== 1 ? "s" : ""}`,
+        );
       if (app.bookmarks > 0)
-        engagements.push(`${app.bookmarks} new bookmark${app.bookmarks !== 1 ? "s" : ""}`);
+        engagements.push(
+          `${app.bookmarks} new bookmark${app.bookmarks !== 1 ? "s" : ""}`,
+        );
 
       return `
         <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 10px 0;">
@@ -544,7 +734,7 @@ export const generateEngagementEmail = internalQuery({
       <html>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
           <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h1 style="color: #292929;">Your apps got some love today!</h1>
+            <h1 style="color: #292929;">Your apps received engagement today</h1>
             
             <p>Hey ${args.userName},</p>
             
@@ -606,7 +796,8 @@ export const calculateDailyMetrics = internalQuery({
       .query("stories")
       .filter(
         (q) =>
-          q.gte(q.field("_creationTime"), startOfDay) && q.lte(q.field("_creationTime"), endOfDay)
+          q.gte(q.field("_creationTime"), startOfDay) &&
+          q.lte(q.field("_creationTime"), endOfDay),
       )
       .collect();
 
@@ -614,7 +805,8 @@ export const calculateDailyMetrics = internalQuery({
       .query("users")
       .filter(
         (q) =>
-          q.gte(q.field("_creationTime"), startOfDay) && q.lte(q.field("_creationTime"), endOfDay)
+          q.gte(q.field("_creationTime"), startOfDay) &&
+          q.lte(q.field("_creationTime"), endOfDay),
       )
       .collect();
 
@@ -624,7 +816,8 @@ export const calculateDailyMetrics = internalQuery({
       .query("votes")
       .filter(
         (q) =>
-          q.gte(q.field("_creationTime"), startOfDay) && q.lte(q.field("_creationTime"), endOfDay)
+          q.gte(q.field("_creationTime"), startOfDay) &&
+          q.lte(q.field("_creationTime"), endOfDay),
       )
       .collect();
 
@@ -632,7 +825,8 @@ export const calculateDailyMetrics = internalQuery({
       .query("comments")
       .filter(
         (q) =>
-          q.gte(q.field("_creationTime"), startOfDay) && q.lte(q.field("_creationTime"), endOfDay)
+          q.gte(q.field("_creationTime"), startOfDay) &&
+          q.lte(q.field("_creationTime"), endOfDay),
       )
       .collect();
 
@@ -640,7 +834,8 @@ export const calculateDailyMetrics = internalQuery({
       .query("storyRatings")
       .filter(
         (q) =>
-          q.gte(q.field("_creationTime"), startOfDay) && q.lte(q.field("_creationTime"), endOfDay)
+          q.gte(q.field("_creationTime"), startOfDay) &&
+          q.lte(q.field("_creationTime"), endOfDay),
       )
       .collect();
 
@@ -648,7 +843,8 @@ export const calculateDailyMetrics = internalQuery({
       .query("bookmarks")
       .filter(
         (q) =>
-          q.gte(q.field("_creationTime"), startOfDay) && q.lte(q.field("_creationTime"), endOfDay)
+          q.gte(q.field("_creationTime"), startOfDay) &&
+          q.lte(q.field("_creationTime"), endOfDay),
       )
       .collect();
 
@@ -656,7 +852,8 @@ export const calculateDailyMetrics = internalQuery({
       .query("follows")
       .filter(
         (q) =>
-          q.gte(q.field("_creationTime"), startOfDay) && q.lte(q.field("_creationTime"), endOfDay)
+          q.gte(q.field("_creationTime"), startOfDay) &&
+          q.lte(q.field("_creationTime"), endOfDay),
       )
       .collect();
 
@@ -671,10 +868,10 @@ export const calculateDailyMetrics = internalQuery({
         (q) =>
           q.or(
             q.eq(q.field("status"), "resolved_hidden"),
-            q.eq(q.field("status"), "resolved_deleted")
+            q.eq(q.field("status"), "resolved_deleted"),
           ) &&
           q.gte(q.field("_creationTime"), startOfDay) &&
-          q.lte(q.field("_creationTime"), endOfDay)
+          q.lte(q.field("_creationTime"), endOfDay),
       )
       .collect();
 
@@ -728,7 +925,7 @@ export const processUserEngagement = internalMutation({
           .filter(
             (q) =>
               q.gte(q.field("_creationTime"), startOfDay) &&
-              q.lte(q.field("_creationTime"), endOfDay)
+              q.lte(q.field("_creationTime"), endOfDay),
           )
           .collect();
 
@@ -738,7 +935,7 @@ export const processUserEngagement = internalMutation({
           .filter(
             (q) =>
               q.gte(q.field("_creationTime"), startOfDay) &&
-              q.lte(q.field("_creationTime"), endOfDay)
+              q.lte(q.field("_creationTime"), endOfDay),
           )
           .collect();
 
@@ -748,7 +945,7 @@ export const processUserEngagement = internalMutation({
           .filter(
             (q) =>
               q.gte(q.field("_creationTime"), startOfDay) &&
-              q.lte(q.field("_creationTime"), endOfDay)
+              q.lte(q.field("_creationTime"), endOfDay),
           )
           .collect();
 
@@ -758,11 +955,12 @@ export const processUserEngagement = internalMutation({
           .filter(
             (q) =>
               q.gte(q.field("_creationTime"), startOfDay) &&
-              q.lte(q.field("_creationTime"), endOfDay)
+              q.lte(q.field("_creationTime"), endOfDay),
           )
           .collect();
 
-        const storyEngagement = votes.length + ratings.length + comments.length + bookmarks.length;
+        const storyEngagement =
+          votes.length + ratings.length + comments.length + bookmarks.length;
         totalEngagement += storyEngagement;
 
         if (storyEngagement > 0) {
@@ -782,15 +980,86 @@ export const processUserEngagement = internalMutation({
           userId,
           date: args.date,
           votesReceived: storyEngagements.reduce((sum, s) => sum + s.votes, 0),
-          ratingsReceived: storyEngagements.reduce((sum, s) => sum + s.ratings, 0),
-          commentsReceived: storyEngagements.reduce((sum, s) => sum + s.comments, 0),
-          bookmarksReceived: storyEngagements.reduce((sum, s) => sum + s.bookmarks, 0),
+          ratingsReceived: storyEngagements.reduce(
+            (sum, s) => sum + s.ratings,
+            0,
+          ),
+          commentsReceived: storyEngagements.reduce(
+            (sum, s) => sum + s.comments,
+            0,
+          ),
+          bookmarksReceived: storyEngagements.reduce(
+            (sum, s) => sum + s.bookmarks,
+            0,
+          ),
           totalEngagement,
           storyEngagements,
         });
       }
     }
 
+    return null;
+  },
+});
+```
+
+#### `convex/emails/weekly.ts`
+
+```typescript
+import { internalQuery, internalMutation } from "../_generated/server";
+import { v } from "convex/values";
+
+// Compute weekly leaderboard by vibes
+export const computeWeeklyMostVibes = internalQuery({
+  args: {
+    weekStartMs: v.number(),
+    weekEndMs: v.number(),
+    limit: v.number(),
+  },
+  returns: v.array(
+    v.object({
+      storyId: v.id("stories"),
+      title: v.string(),
+      vibes: v.number(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    // NOTE: Replace with indexed queries as available in schema
+    const votes = await ctx.db
+      .query("votes")
+      .filter(
+        (q) =>
+          q.gte(q.field("_creationTime"), args.weekStartMs) &&
+          q.lte(q.field("_creationTime"), args.weekEndMs),
+      )
+      .collect();
+
+    const countByStory: Record<string, number> = {};
+    for (const vte of votes) {
+      const key = String(vte.storyId);
+      countByStory[key] = (countByStory[key] ?? 0) + 1;
+    }
+
+    const entries = Object.entries(countByStory)
+      .map(([storyId, vibes]) => ({ storyId, vibes }))
+      .sort((a, b) => b.vibes - a.vibes)
+      .slice(0, args.limit);
+
+    const results = [] as Array<{ storyId: any; title: string; vibes: number }>;
+    for (const e of entries) {
+      const doc = await ctx.db.get(e.storyId as any);
+      if (doc)
+        results.push({ storyId: doc._id, title: doc.title, vibes: e.vibes });
+    }
+    return results;
+  },
+});
+
+export const sendWeeklyDigest = internalMutation({
+  args: { date: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // implementation outline in PRD only
     return null;
   },
 });
@@ -805,15 +1074,43 @@ import { internal } from "./_generated/api";
 const crons = cronJobs();
 
 // Daily admin email at 9:00 AM PST
-crons.cron("daily admin email", "0 9 * * *", internal.emails.daily.sendDailyAdminEmail, {});
+crons.cron(
+  "daily admin email",
+  "0 9 * * *",
+  internal.emails.daily.sendDailyAdminEmail,
+  {},
+);
 
 // Process daily engagement at 5:30 PM PST (before user emails)
-crons.cron("process daily engagement", "30 17 * * *", internal.emails.daily.processUserEngagement, {
-  date: new Date().toISOString().split("T")[0],
-});
+crons.cron(
+  "process daily engagement",
+  "30 17 * * *",
+  internal.emails.daily.processUserEngagement,
+  {
+    date: new Date().toISOString().split("T")[0],
+  },
+);
 
 // Send user engagement emails at 6:00 PM PST
-crons.cron("daily user emails", "0 18 * * *", internal.emails.daily.sendDailyUserEmails, {});
+crons.cron(
+  "daily user emails",
+  "0 18 * * *",
+  internal.emails.daily.sendDailyUserEmails,
+  {},
+);
+
+// Weekly digest Monday 9:00 AM PST
+crons.cron(
+  "weekly most vibes",
+  "0 9 * * MON",
+  internal.emails.weekly.sendWeeklyDigest,
+  {
+    date: new Date().toISOString().split("T")[0],
+  },
+);
+
+// Optional: cleanup resend component data hourly (see Convex Resend component docs)
+// crons.interval("cleanup resend", { hours: 1 }, internal.crons.cleanupResend, {});
 
 export default crons;
 ```
@@ -837,7 +1134,7 @@ export const getEmailSettings = query({
       marketingEmails: v.boolean(),
       timezone: v.optional(v.string()),
       unsubscribedAt: v.optional(v.number()),
-    })
+    }),
   ),
   handler: async (ctx) => {
     const { user } = await requireAuth(ctx);
@@ -921,6 +1218,80 @@ export const unsubscribeUser = mutation({
 });
 ```
 
+### One-Click Unsubscribe Flow
+
+```
+Flow:
+1) Generate token and store in `emailUnsubscribeTokens` per user and purpose (e.g., "all").
+2) Include link in footer: https://<convex-site>/api/unsubscribe?token=<signedToken>
+3) HTTP endpoint verifies token, patches `emailSettings` accordingly, logs event to `emailLogs`, and renders a confirmation page.
+```
+
+```typescript
+// convex/http.ts (excerpt)
+import { httpRouter } from "convex/server";
+import { httpAction } from "./_generated/server";
+import { internal } from "./_generated/api";
+
+const http = httpRouter();
+
+http.route({
+  path: "/api/unsubscribe",
+  method: "GET",
+  handler: httpAction(async (ctx, req) => {
+    const url = new URL(req.url);
+    const token = url.searchParams.get("token");
+    if (!token) return new Response("Missing token", { status: 400 });
+    const ok: boolean = await ctx.runMutation(
+      internal.emails.unsubscribe.handleToken,
+      { token },
+    );
+    if (!ok) return new Response("Invalid or expired token", { status: 400 });
+    return new Response("You have been unsubscribed.", { status: 200 });
+  }),
+});
+
+export default http;
+```
+
+```typescript
+// convex/emails/unsubscribe.ts (outline)
+import { internalMutation } from "../_generated/server";
+import { v } from "convex/values";
+
+export const handleToken = internalMutation({
+  args: { token: v.string() },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const rec = await ctx.db
+      .query("emailUnsubscribeTokens")
+      .withIndex("by_token", (q) => q.eq("token", args.token))
+      .unique();
+    if (!rec || rec.consumedAt || rec.expiresAt < Date.now()) return false;
+    const { userId, purpose } = rec;
+    const settings = await ctx.db
+      .query("emailSettings")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .unique();
+    if (settings) {
+      const patch: any = { unsubscribedAt: Date.now() };
+      if (purpose === "all") {
+        patch.dailyEngagementEmails = false;
+        patch.messageNotifications = false;
+        patch.marketingEmails = false;
+        patch.weeklyDigestEmails = false;
+      } else if (purpose === "daily_engagement")
+        patch.dailyEngagementEmails = false;
+      else if (purpose === "weekly_digest") patch.weeklyDigestEmails = false;
+      else if (purpose === "marketing") patch.marketingEmails = false;
+      await ctx.db.patch(settings._id, patch);
+    }
+    await ctx.db.patch(rec._id, { consumedAt: Date.now() });
+    return true;
+  },
+});
+```
+
 ## Integration Points
 
 ### 1. Welcome Email Trigger
@@ -935,9 +1306,13 @@ if (!existingUser) {
   });
 
   // Trigger welcome email
-  await ctx.scheduler.runAfter(0, internal.emails.notifications.sendWelcomeEmail, {
-    userId: userId,
-  });
+  await ctx.scheduler.runAfter(
+    0,
+    internal.emails.notifications.sendWelcomeEmail,
+    {
+      userId: userId,
+    },
+  );
 
   return userId;
 }
@@ -979,11 +1354,15 @@ export const sendMessage = mutation({
       .unique();
 
     if (recipientSettings?.messageNotifications !== false) {
-      await ctx.scheduler.runAfter(0, internal.emails.notifications.sendMessageNotification, {
-        recipientId: args.recipientId,
-        senderId: args.senderId,
-        messagePreview: args.content.substring(0, 150),
-      });
+      await ctx.scheduler.runAfter(
+        0,
+        internal.emails.notifications.sendMessageNotification,
+        {
+          recipientId: args.recipientId,
+          senderId: args.senderId,
+          messagePreview: args.content.substring(0, 150),
+        },
+      );
     }
   },
 });
@@ -1008,13 +1387,14 @@ CLERK_WEBHOOK_SECRET=whsec_xxx
 
 ## Email Templates Design
 
-### Visual Design Standards
+### Visual Design Standards (match app style)
 
-- **Brand Colors**: #292929 (primary dark), #f9f9f9 (light background)
+- **Brand Colors**: #292929 (primary), #f9f9f9 (surface light), #ffffff (background)
 - **Typography**: Arial, sans-serif for cross-client compatibility
 - **Layout**: Maximum 600px width for mobile compatibility
 - **CTA Buttons**: Consistent styling with #292929 background
 - **Footer**: Standard unsubscribe and settings links
+- **Icons/Emojis**: Do not use emojis to keep consistent with app and deliverability
 
 ### Content Guidelines
 
@@ -1023,6 +1403,7 @@ CLERK_WEBHOOK_SECRET=whsec_xxx
 - **Personalization**: Use first names, relevant user data
 - **CTAs**: Clear, actionable next steps
 - **Value**: Always provide clear value to the recipient
+- **Accessibility**: Sufficient contrast, descriptive link text, no image-only CTAs
 
 ## Implementation Timeline
 
@@ -1107,6 +1488,7 @@ CLERK_WEBHOOK_SECRET=whsec_xxx
 - **User Limits**: Max 1 engagement email per user per day
 - **Admin Limits**: Max 1 admin email per day
 - **Message Limits**: Max 5 message notifications per user per day
+- **Broadcast Batching**: Use batches of 500 recipients with backoff respecting Resend limits
 
 ### Error Handling
 
@@ -1118,6 +1500,7 @@ CLERK_WEBHOOK_SECRET=whsec_xxx
 ### Privacy & Compliance
 
 - **Unsubscribe**: One-click unsubscribe in all emails
+- **One-Click UX**: Confirmation page via `/api/unsubscribe` endpoint; no re-login required
 - **Data Protection**: Minimal data in email content
 - **Consent**: Clear opt-in for marketing emails
 - **Audit Trail**: Log all email sends for compliance
@@ -1148,3 +1531,13 @@ CLERK_WEBHOOK_SECRET=whsec_xxx
 ---
 
 This comprehensive email integration will enhance user engagement, provide valuable admin insights, and create a more connected VibeApps community experience.
+
+## References
+
+- Convex Docs: https://docs.convex.dev/
+- Convex Resend Component: https://www.convex.dev/components/resend
+- Resend Knowledge Base: https://resend.com/docs/knowledge-base/introduction
+- Resend Email Templates: https://resend.com/docs/dashboard/emails/email-templates
+- React Email + Resend: https://react.email/docs/integrations/resend
+- React Email v4: https://resend.com/blog/react-email-4
+- Resend Dashboard Emails Intro: https://resend.com/docs/dashboard/emails/introduction

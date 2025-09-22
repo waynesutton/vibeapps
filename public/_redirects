@@ -1,5 +1,9 @@
 # Meta endpoint for social sharing (for manual testing and direct access)
 /meta/s/:slug https://acoustic-goldfinch-461.convex.site/meta/s?slug=:slug 200
 
+# Dynamic text files
+/robots.txt https://acoustic-goldfinch-461.convex.site/robots.txt 200
+/llms.txt https://acoustic-goldfinch-461.convex.site/llms.txt 200
+
 # All routes go to the SPA (including /s/:slug)
 /* /index.html 200 

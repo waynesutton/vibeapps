@@ -1,11 +1,37 @@
-# Changelog
+# Change Log
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+The format is based on [Keep a Change Log](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Latest Updates
+
+### Submit Forms, Public Results, and ConvexBox
+
+**Added**
+
+- Admin submit form tooling:
+  - `CreateSubmitFormModal`, `EditSubmitFormModal`
+  - `SubmitFormFieldManagement` for per-form fields
+- Public-facing submit form renderer: `DynamicSubmitForm`
+- Public judging artifacts:
+  - `PublicJudgingResultsDashboard`
+  - `PublicResultsViewer`
+- ConvexBox configuration UI: `ConvexBoxSettingsForm` and `convex/convexBoxConfig.ts`
+- Clerk ↔ Convex synchronization: `UserSyncer`
+- Backend utilities: `convex/migrations.ts`
+
+**Changed**
+
+- Documentation refresh:
+  - README: Added Recent Updates section
+  - files.MD: Synced file inventory and new modules
+- Standardized terminology in docs: Lightbox, `Vite`, `shadcn/ui`, `Netlify`, Node 18 wording
+
+**Technical**
+
+- No schema changes; added UI and docs, plus non-breaking backend utilities
 
 ### Enhanced Tag Management with Search & Numbered Ordering 🏷️
 
@@ -52,7 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Added**
 
-- **All Tags Dropdown Search**: Added new search dropdown on StoryForm.tsx that includes ALL available tags (including hidden ones)
+- **All Tags Dropdown Search**: Added new search dropdown on `StoryForm.tsx` that includes ALL available tags (including hidden ones)
   - **Search Functionality**: Type to search and filter through all tags in the system
   - **Visual Tag Display**: Shows tag colors, emojis, and icons in both visible tags and dropdown
   - **Hidden Tag Access**: Users can now select tags that admins have hidden from the header display
@@ -123,15 +149,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed "closed form" message and enabled active submissions
   - Updated all text references from "Resend" to "YC AI Hackathon"
   - Changed placeholder text to focus on AI usage instead of Resend integration
-  - Auto-adds "ychackathon" tracking tag to submissions
+  - Auto-adds `ychackathon` tracking tag to submissions
   - Maintains all existing functionality (file uploads, dynamic fields, tag selection)
   - **Hidden Sidebar**: Removed WeeklyLeaderboard and TopCategoriesOfWeek sidebar components from YC Hackathon form page for focused submission experience
 
 **Technical Details**
 
-- Created `src/components/YCHackForm.tsx` component
+- Created `src/components/YCHackForm.tsx` component (TypeScript React file)
 - Added `/ychack` route to `src/App.tsx` routing configuration
-- Updated form submission to use "ychackathon" tracking tag
+- Updated form submission to use `ychackathon` tracking tag
 - Fixed TypeScript linter errors and maintained type safety
 - Preserved all existing form validation and submission logic
 
@@ -193,7 +219,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Form Improvements**
 
 - **Updated Tagline Field**: Changed "App Project Tagline or Description" to "App/Project Tagline" (kept required)
-- **New Description Field**: Added optional long-form description textarea with structured placeholder:
+- **New Description Field**: Added optional long-form description text area with structured placeholder:
   - What it does
   - Key Features
   - How you built it
@@ -305,8 +331,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Updated `convex/users.ts` to include follower/following counts and status in user profiles.
     - Created `convex/adminFollowsQueries.ts` with queries for admin dashboard statistics (`getTopUsersByFollowers`, `getTopUsersByFollowing`, `getTotalFollowRelationships`).
   - **Frontend**:
-    - Updated `src/pages/UserProfilePage.tsx` to display follow/unfollow buttons, follower/following counts, and new tabs for follower/following lists.
-    - Updated `src/components/admin/NumbersView.tsx` to display top followers/following users and total follow relationships.
+- Updated `src/pages/UserProfilePage.tsx` to display follow/unfollow buttons, follower/following counts, and new tabs for follower/following lists.
+- Updated `src/components/admin/NumbersView.tsx` to display top followers/following users and total follow relationships.
 - Updated `files.md` with comprehensive descriptions for all files and directories, aligning with `README.md` features.
 - Initial project setup.
 - Detailed file documentation in `files.md` for all components, including admin dashboard and utility files.

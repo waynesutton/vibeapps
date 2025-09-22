@@ -171,4 +171,40 @@ http.route({
   }),
 });
 
+// Export router at bottom after routes are defined
+// New routes for robots.txt and llms.txt
+http.route({
+  path: "/robots.txt",
+  method: "GET",
+  handler: httpAction(async (ctx) => {
+    const body = await ctx.runQuery(internal.siteFiles.getFile, {
+      key: "robots.txt",
+    });
+    return new Response(body ?? "User-agent: *\nAllow: /\n", {
+      status: 200,
+      headers: {
+        "content-type": "text/plain; charset=utf-8",
+        "cache-control": "public, max-age=300, s-maxage=600",
+      },
+    });
+  }),
+});
+
 export default http;
+
+http.route({
+  path: "/llms.txt",
+  method: "GET",
+  handler: httpAction(async (ctx) => {
+    const body = await ctx.runQuery(internal.siteFiles.getFile, {
+      key: "llms.txt",
+    });
+    return new Response(body ?? "User-agent: *\nAllow: /\n", {
+      status: 200,
+      headers: {
+        "content-type": "text/plain; charset=utf-8",
+        "cache-control": "public, max-age=300, s-maxage=600",
+      },
+    });
+  }),
+});
