@@ -7,6 +7,7 @@ export type Story = Doc<"stories"> & {
   tags: Tag[];
   screenshotUrl: string | null;
   additionalImageUrls: string[]; // URLs for additional images
+  additionalImageIds?: Id<"_storage">[]; // Storage IDs for additional images (for owner edits)
   userId?: Id<"users">;
   authorName?: string;
   authorUsername?: string;

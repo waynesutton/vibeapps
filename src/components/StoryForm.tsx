@@ -447,7 +447,7 @@ export function StoryForm() {
               htmlFor="longDescription"
               className="block text-sm font-medium text-[#525252] mb-1"
             >
-              Description
+              Description (Markdown supported)
             </label>
             <textarea
               id="longDescription"

@@ -474,6 +474,8 @@ export const getBySlug = query({
       tags: storyWithDetails.tags,
       screenshotUrl: storyWithDetails.screenshotUrl,
       additionalImageUrls: storyWithDetails.additionalImageUrls,
+      // Surface storage ids to allow precise owner edits of gallery
+      additionalImageIds: storyWithDetails.additionalImageIds,
       voteScore: storyWithDetails.voteScore,
       averageRating: storyWithDetails.averageRating,
       commentsCount: storyWithDetails.commentsCount,
@@ -1610,6 +1612,7 @@ export const _getStoryDetailsBatch = internalQuery({
         tags: story.tags,
         screenshotUrl: story.screenshotUrl,
         additionalImageUrls: story.additionalImageUrls,
+        additionalImageIds: story.additionalImageIds,
         voteScore: story.voteScore,
         averageRating: story.averageRating,
         commentsCount: story.commentsCount,

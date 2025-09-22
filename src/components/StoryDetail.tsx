@@ -201,6 +201,22 @@ export function StoryDetail({ story }: StoryDetailProps) {
   const [screenshotPreview, setScreenshotPreview] = React.useState<
     string | null
   >(null);
+  // Additional images (gallery) editing state
+  const [existingAdditionalImages, setExistingAdditionalImages] =
+    React.useState<Array<{ id: Id<"_storage">; url: string }>>(
+      () =>
+        (story.additionalImageIds || []).map(
+          (id: Id<"_storage">, index: number) => ({
+            id,
+            url: (story.additionalImageUrls || [])[index] || "",
+          }),
+        ) || [],
+    );
+  const [newAdditionalImages, setNewAdditionalImages] = React.useState<File[]>(
+    [],
+  );
+  const [newAdditionalPreviewUrls, setNewAdditionalPreviewUrls] =
+    React.useState<string[]>([]);
 
   // Team info editing state
   const [showTeamInfo, setShowTeamInfo] = React.useState(false);
@@ -331,6 +347,17 @@ export function StoryDetail({ story }: StoryDetailProps) {
       setNewScreenshotFile(null);
       setRemoveScreenshot(false);
       setScreenshotPreview(null);
+      // Initialize additional images state
+      setExistingAdditionalImages(
+        (story.additionalImageIds || []).map(
+          (id: Id<"_storage">, index: number) => ({
+            id,
+            url: (story.additionalImageUrls || [])[index] || "",
+          }),
+        ) || [],
+      );
+      setNewAdditionalImages([]);
+      setNewAdditionalPreviewUrls([]);
     } else if (isEditMode && !canEdit) {
       // Remove edit parameter if user can't edit
       const newSearchParams = new URLSearchParams(searchParams);
@@ -536,6 +563,45 @@ export function StoryDetail({ story }: StoryDetailProps) {
       fileInput.value = "";
     }
   };
+  // Additional images handlers
+  const handleAdditionalImagesChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const total =
+      existingAdditionalImages.length +
+      newAdditionalImages.length +
+      files.length;
+    if (total > 4) {
+      toast.error("Maximum of 4 additional images allowed.");
+      return;
+    }
+    const previews: string[] = [];
+    const validImages: File[] = [];
+    for (const f of files) {
+      if (f.type.startsWith("image/")) {
+        validImages.push(f);
+        previews.push(URL.createObjectURL(f));
+      }
+    }
+    setNewAdditionalImages((prev) => [...prev, ...validImages]);
+    setNewAdditionalPreviewUrls((prev) => [...prev, ...previews]);
+    e.currentTarget.value = "";
+  };
+
+  const removeExistingAdditionalImage = (index: number) => {
+    setExistingAdditionalImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeNewAdditionalImage = (index: number) => {
+    setNewAdditionalImages((prev) => prev.filter((_, i) => i !== index));
+    setNewAdditionalPreviewUrls((prev) => {
+      const toRevoke = prev[index];
+      if (toRevoke) URL.revokeObjectURL(toRevoke);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
 
   // Team info helper functions
   const handleTeamMemberCountChange = (count: number) => {
@@ -582,6 +648,12 @@ export function StoryDetail({ story }: StoryDetailProps) {
       }
     };
   }, [screenshotPreview]);
+  // Cleanup new additional preview URLs on component unmount or when preview changes
+  React.useEffect(() => {
+    return () => {
+      newAdditionalPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [newAdditionalPreviewUrls]);
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -604,6 +676,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
     try {
       let screenshotStorageId: Id<"_storage"> | undefined = undefined;
+      let uploadedAdditionalImageIds: Array<Id<"_storage">> = [];
 
       // Handle screenshot upload if a new file is selected
       if (newScreenshotFile) {
@@ -624,6 +697,32 @@ export function StoryDetail({ story }: StoryDetailProps) {
       } else {
         // Keep current screenshot by not passing screenshotId parameter
         // (the mutation will only update fields that are provided)
+      }
+
+      // Upload new additional images
+      if (newAdditionalImages.length > 0) {
+        const uploadPromises = newAdditionalImages.map(async (file) => {
+          const postUrl = await generateUploadUrl();
+          const uploadRes = await fetch(postUrl, {
+            method: "POST",
+            headers: { "Content-Type": file.type },
+            body: file,
+          });
+          const { storageId } = await uploadRes.json();
+          if (!storageId)
+            throw new Error("Failed to upload an additional image");
+          return storageId as Id<"_storage">;
+        });
+        uploadedAdditionalImageIds = await Promise.all(uploadPromises);
+      }
+
+      // Build final additional image ids (existing retained + newly uploaded)
+      const finalAdditionalImageIds: Array<Id<"_storage">> = [
+        ...existingAdditionalImages.map((img) => img.id),
+        ...uploadedAdditionalImageIds,
+      ];
+      if (finalAdditionalImageIds.length > 4) {
+        throw new Error("Maximum of 4 additional images allowed.");
       }
 
       const result = await updateOwnStoryMutation({
@@ -658,6 +757,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
         ...(newScreenshotFile || removeScreenshot
           ? { screenshotId: screenshotStorageId }
           : {}),
+        additionalImageIds: finalAdditionalImageIds,
       });
 
       toast.success("Submission updated successfully!");
@@ -1042,6 +1142,72 @@ export function StoryDetail({ story }: StoryDetailProps) {
               </div>
             </div>
 
+            <div>
+              {/* Additional Images (Gallery) Upload & Manage */}
+              <label className="block text-sm font-medium text-[#525252] mb-1">
+                Additional Images (max 4)
+              </label>
+              {(existingAdditionalImages.length > 0 ||
+                newAdditionalImages.length > 0) && (
+                <div className="mb-2 text-sm text-[#545454]">
+                  {existingAdditionalImages.length + newAdditionalImages.length}
+                  /4 selected
+                </div>
+              )}
+              <div className="flex flex-wrap gap-3 mb-3">
+                {existingAdditionalImages.map(
+                  (img: { id: Id<"_storage">; url: string }, index: number) => (
+                    <div key={`exist-${index}`} className="relative">
+                      <img
+                        src={img.url}
+                        alt={`Additional ${index + 1}`}
+                        className="w-24 h-24 object-cover rounded border border-[#D8E1EC]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeExistingAdditionalImage(index)}
+                        disabled={isSubmitting}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 disabled:opacity-50"
+                        title="Remove image"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ),
+                )}
+                {newAdditionalPreviewUrls.map((url: string, index: number) => (
+                  <div key={`new-${index}`} className="relative">
+                    <img
+                      src={url}
+                      alt={`New Additional ${index + 1}`}
+                      className="w-24 h-24 object-cover rounded border border-[#D8E1EC]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeNewAdditionalImage(index)}
+                      disabled={isSubmitting}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 disabled:opacity-50"
+                      title="Remove image"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleAdditionalImagesChange}
+                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#F4F0ED] file:text-[#525252] hover:file:bg-[#e5e1de]"
+                disabled={
+                  isSubmitting ||
+                  existingAdditionalImages.length +
+                    newAdditionalImages.length >=
+                    4
+                }
+              />
+            </div>
             <div>
               <label
                 htmlFor="edit-title"

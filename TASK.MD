@@ -43,11 +43,13 @@ Brief description of the feature and its purpose.
 - [x] add view judging results to the judging form
 - [x] Add options to add team
 - [x] add option for multiple image upload
+- [x] added markdown support and preview for story details page
+- [x] fix open graph image
 
 ## In Progress Tasks
-- [ ] fix open graph image
+
 - [ ] setup resend for emails for notifications on post
-- [ ] add option to turn off email notifications
+- [ ] add option to turn off email notifications on user profiles
 
 ## Bugs
 
