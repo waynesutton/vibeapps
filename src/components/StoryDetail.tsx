@@ -35,6 +35,7 @@ import { Button } from "@/components/ui/button"; // For modal buttons
 import { toast } from "sonner";
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
 import { ImageGallery } from "./ImageGallery";
+import ReactMarkdown from "react-markdown";
 
 // Removed MOCK_COMMENTS
 
@@ -773,8 +774,20 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   {story.description}
                 </p>
                 {story.longDescription && (
-                  <div className="text-[#525252] mb-4 prose prose-base max-w-none whitespace-pre-line">
-                    {story.longDescription}
+                  <div className="text-[#525252] mb-4 prose prose-base max-w-none">
+                    <ReactMarkdown
+                      components={{
+                        a: ({ node, ...props }) => (
+                          <a
+                            {...props}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          />
+                        ),
+                      }}
+                    >
+                      {story.longDescription}
+                    </ReactMarkdown>
                   </div>
                 )}
                 <div className="flex items-center gap-2 text-sm text-[#545454] flex-wrap mb-3">
