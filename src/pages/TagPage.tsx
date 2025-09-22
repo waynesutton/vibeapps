@@ -117,7 +117,11 @@ export function TagPage() {
         </p>
       </div>
 
-      {stories && stories.length > 0 ? (
+      {stories === undefined ? (
+        <div className="text-center py-12">
+          <div className="text-[#545454]">Loading apps...</div>
+        </div>
+      ) : stories.length > 0 ? (
         <StoryList
           stories={stories as Story[]}
           viewMode={viewMode || "list"}
