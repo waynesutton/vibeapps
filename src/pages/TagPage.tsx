@@ -113,7 +113,7 @@ export function TagPage() {
           {getTagDisplay()}
         </div>
         <p className="text-[#545454]">
-          {totalCount || 0} {totalCount === 1 ? "app" : "apps"} found
+          {totalCount === undefined ? "Loading..." : `${totalCount || 0} ${totalCount === 1 ? "app" : "apps"} found`}
         </p>
       </div>
 
@@ -129,6 +129,10 @@ export function TagPage() {
           loadMore={loadMore}
           itemsPerPage={20}
         />
+      ) : totalCount === undefined ? (
+        <div className="text-center py-12">
+          <div className="text-[#545454]">Loading apps...</div>
+        </div>
       ) : (
         <div className="text-center py-12">
           <h2 className="text-xl font-medium text-[#292929] mb-2">
