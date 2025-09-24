@@ -13,6 +13,7 @@ import {
   Search,
   ThumbsUp,
   ChevronDown,
+  Menu,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -76,6 +77,7 @@ export function Layout({ children }: { children?: ReactNode }) {
 
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);
+  const [isTagsMenuOpen, setIsTagsMenuOpen] = React.useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   // Auth required dialog state
@@ -396,10 +398,36 @@ export function Layout({ children }: { children?: ReactNode }) {
                       <ThumbsUp className="w-5 h-5 text-[#545454]" />
                     </button>
                   )}
+
+                  {/* Mobile Search Icon - Show only on mobile, next to view options */}
+                  <button
+                    type="button"
+                    onClick={handleSearchIconClick}
+                    className="md:hidden p-2 text-[#525252] hover:text-[#292929]"
+                    aria-label="Search"
+                  >
+                    <Search className="w-5 h-5" />
+                  </button>
                 </div>
 
-                {/* Row 3 content: Dropdowns & Search */}
-                <div className="flex w-full md:w-auto items-center gap-3">
+                {/* Mobile Search Bar - Show below view options when expanded */}
+                {isSearchExpanded && (
+                  <div className="md:hidden w-full mt-2 mb-1">
+                    <form onSubmit={handleSearch} className="flex items-center">
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search..."
+                        className="w-full h-9 px-3 text-sm focus:outline-none bg-white text-[#525252] rounded-md border border-[#D5D3D0]"
+                      />
+                    </form>
+                  </div>
+                )}
+
+                {/* Row 3 content: Dropdowns & Desktop Search */}
+                <div className="flex w-full md:w-auto items-center gap-1 md:gap-3">
                   {/* Categories Dropdown */}
                   <div className="relative inline-block text-left">
                     <select
@@ -411,7 +439,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                             : undefined,
                         )
                       }
-                      className="appearance-none cursor-pointer pl-3 pr-8 py-2 bg-white border border-[#D8E1EC] rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] hover:border-[#A8A29E]"
+                      className="appearance-none cursor-pointer pl-2 md:pl-3 pr-6 md:pr-8 py-1.5 md:py-2 bg-white border border-[#D8E1EC] rounded-md text-xs md:text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] hover:border-[#A8A29E]"
                     >
                       <option value="">All Categories</option>
                       {headerTags
@@ -427,8 +455,8 @@ export function Layout({ children }: { children?: ReactNode }) {
                           </option>
                         ))}
                     </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#545454]">
-                      <ChevronDown className="h-4 w-4" />
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1 md:px-2 text-[#545454]">
+                      <ChevronDown className="h-3 w-3 md:h-4 md:w-4" />
                     </div>
                   </div>
 
@@ -440,7 +468,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                         setSortPeriod(e.target.value as SortPeriod);
                         setUserChangedSortPeriod(true); // User has made a selection
                       }}
-                      className="appearance-none cursor-pointer pl-3 pr-8 py-2 bg-white border border-[#D8E1EC] rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] hover:border-[#A8A29E]"
+                      className="appearance-none cursor-pointer pl-2 md:pl-3 pr-6 md:pr-8 py-1.5 md:py-2 bg-white border border-[#D8E1EC] rounded-md text-xs md:text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] hover:border-[#A8A29E]"
                     >
                       <option value="today">Today</option>
                       <option value="week">This Week</option>
@@ -452,36 +480,38 @@ export function Layout({ children }: { children?: ReactNode }) {
                       <option value="votes_month">Most Vibes (Month)</option>
                       <option value="votes_year">Most Vibes (Year)</option>
                     </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#545454]">
-                      <ChevronDown className="h-4 w-4" />
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1 md:px-2 text-[#545454]">
+                      <ChevronDown className="h-3 w-3 md:h-4 md:w-4" />
                     </div>
                   </div>
 
-                  {/* Search */}
-                  <button
-                    type="button"
-                    onClick={handleSearchIconClick}
-                    className="p-2 text-[#525252] hover:text-[#292929]"
-                    aria-label="Search"
-                  >
-                    <Search className="w-5 h-5" />
-                  </button>
-                  <form onSubmit={handleSearch} className="flex items-center">
-                    <input
-                      ref={searchInputRef}
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search..."
-                      className={`transition-all duration-300 ease-in-out h-9 text-sm focus:outline-none bg-white text-[#525252] rounded-md border ${isSearchExpanded ? "w-48 opacity-100 px-3 border-[#D5D3D0]" : "w-0 opacity-0 p-0 border-none"}`}
-                      style={{
-                        borderColor: isSearchExpanded
-                          ? "#D5D3D0"
-                          : "transparent",
-                      }}
-                      tabIndex={isSearchExpanded ? 0 : -1}
-                    />
-                  </form>
+                  {/* Desktop Search - Hidden on mobile */}
+                  <div className="hidden md:flex items-center gap-0">
+                    <button
+                      type="button"
+                      onClick={handleSearchIconClick}
+                      className="p-2 text-[#525252] hover:text-[#292929]"
+                      aria-label="Search"
+                    >
+                      <Search className="w-5 h-5" />
+                    </button>
+                    <form onSubmit={handleSearch} className="flex items-center">
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search..."
+                        className={`transition-all duration-300 ease-in-out h-9 text-sm focus:outline-none bg-white text-[#525252] rounded-md border ${isSearchExpanded ? "w-48 opacity-100 px-3 border-[#D5D3D0]" : "w-0 opacity-0 p-0 border-none"}`}
+                        style={{
+                          borderColor: isSearchExpanded
+                            ? "#D5D3D0"
+                            : "transparent",
+                        }}
+                        tabIndex={isSearchExpanded ? 0 : -1}
+                      />
+                    </form>
+                  </div>
                 </div>
               </div>
             </div>
@@ -493,62 +523,76 @@ export function Layout({ children }: { children?: ReactNode }) {
                 .length > 0 && (
                 <div className="py-3 mt-1 border-t border-[#D8E1EC]">
                   {" "}
-                  {/* Tailwind gray-200 */}
-                  <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-2">
-                    {/* "All" button */}
+                  {/* Mobile: Hamburger menu button - Hidden on screens 450px and smaller */}
+                  <div className="hidden sm:block md:hidden mb-2">
                     <button
-                      onClick={() => {
-                        setSelectedTagId(undefined);
-                        if (location.pathname !== "/") navigate("/");
-                      }}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors  focus:outline-none
+                      onClick={() => setIsTagsMenuOpen(!isTagsMenuOpen)}
+                      className="flex items-center gap-2 px-3 py-1 bg-[#F3F4F6] text-gray-700 border border-[#D8E1EC] rounded-md text-xs font-medium hover:bg-white transition-colors"
+                    >
+                      <Menu className="w-4 h-4" />
+                      Categories
+                    </button>
+                  </div>
+                  {/* Desktop: Always visible tags, Mobile: Collapsible tags */}
+                  <div
+                    className={`${isTagsMenuOpen ? "block" : "hidden"} md:block`}
+                  >
+                    <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-2">
+                      {/* "All" button */}
+                      <button
+                        onClick={() => {
+                          setSelectedTagId(undefined);
+                          if (location.pathname !== "/") navigate("/");
+                        }}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-colors  focus:outline-none
                                 ${
                                   selectedTagId === undefined
                                     ? "text-slate-700 ring-1 ring-gray-400 ring-offset-1"
                                     : "bg-[#F3F4F6] text-gray-700 border-[#D8E1EC] hover:bg-[white]"
                                 }`}
-                      title="Show All Categories"
-                    >
-                      All
-                    </button>
+                        title="Show All Categories"
+                      >
+                        All
+                      </button>
 
-                    {/* Tag links */}
-                    {headerTags
-                      .filter(
-                        (tag) =>
-                          !tag.isHidden &&
-                          tag.showInHeader &&
-                          tag.name !== "resendhackathon" &&
-                          tag.name !== "ychackathon",
-                      ) // Ensure only relevant tags are mapped
-                      .map((tag) => (
-                        <Link
-                          key={tag._id}
-                          to={`/tag/${tag.slug}`}
-                          className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-colors hover:opacity-80 focus:outline-none"
-                          style={{
-                            backgroundColor: tag.backgroundColor || "#F9FAFB", // Default to gray-50
-                            color: tag.textColor || "#374151", // Default to gray-700
-                            border: `1px solid ${tag.backgroundColor ? "transparent" : "#D1D5DB"}`, // Tailwind gray-300
-                          }}
-                          title={`View all apps tagged with ${tag.name}`}
-                        >
-                          {/* Show emoji or icon if present */}
-                          {tag.emoji ? (
-                            <span className="mr-1 align-middle text-base">
-                              {tag.emoji}
-                            </span>
-                          ) : tag.iconUrl ? (
-                            <img
-                              src={tag.iconUrl}
-                              alt=""
-                              className="inline-block w-4 h-4 mr-1 align-middle object-cover rounded-sm"
-                              style={{ verticalAlign: "middle" }}
-                            />
-                          ) : null}
-                          {tag.name}
-                        </Link>
-                      ))}
+                      {/* Tag links */}
+                      {headerTags
+                        .filter(
+                          (tag) =>
+                            !tag.isHidden &&
+                            tag.showInHeader &&
+                            tag.name !== "resendhackathon" &&
+                            tag.name !== "ychackathon",
+                        ) // Ensure only relevant tags are mapped
+                        .map((tag) => (
+                          <Link
+                            key={tag._id}
+                            to={`/tag/${tag.slug}`}
+                            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-colors hover:opacity-80 focus:outline-none"
+                            style={{
+                              backgroundColor: tag.backgroundColor || "#F9FAFB", // Default to gray-50
+                              color: tag.textColor || "#374151", // Default to gray-700
+                              border: `1px solid ${tag.backgroundColor ? "transparent" : "#D1D5DB"}`, // Tailwind gray-300
+                            }}
+                            title={`View all apps tagged with ${tag.name}`}
+                          >
+                            {/* Show emoji or icon if present */}
+                            {tag.emoji ? (
+                              <span className="mr-1 align-middle text-base">
+                                {tag.emoji}
+                              </span>
+                            ) : tag.iconUrl ? (
+                              <img
+                                src={tag.iconUrl}
+                                alt=""
+                                className="inline-block w-4 h-4 mr-1 align-middle object-cover rounded-sm"
+                                style={{ verticalAlign: "middle" }}
+                              />
+                            ) : null}
+                            {tag.name}
+                          </Link>
+                        ))}
+                    </div>
                   </div>
                 </div>
               )}

@@ -12,7 +12,7 @@ export function Footer() {
   return (
     <footer className="mt-12">
       <div className="container mx-auto px-4 py-6">
-        <div className="flex items-center gap-4 text-xs text-[#545454]">
+        <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 text-xs text-[#545454]">
           <span className="text-[#545454]">
             {" "}
             © {new Date().getFullYear()}{" "}
@@ -26,23 +26,7 @@ export function Footer() {
           {/* <a href="#" target="_blank" rel="noopener noreferrer" className="hover:text-[#525252]">
             Submit
           </a> */}
-          {isSignedIn ? (
-            <button
-              onClick={() => signOut()}
-              className="bg-transparent border-none p-0 m-0 cursor-pointer hover:text-[#525252]"
-            >
-              Sign Out
-            </button>
-          ) : (
-            <SignInButton mode="modal">
-              <button
-                className="bg-transparent border-none p-0 m-0 cursor-pointer hover:text-[#525252]"
-                type="button"
-              >
-                Sign In
-              </button>
-            </SignInButton>
-          )}
+
           <a
             href="https://convex.dev?utm_source=vibeapps-dev"
             target="_blank"
