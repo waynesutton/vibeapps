@@ -346,15 +346,24 @@ export function StoryList({
             ))}
           </div>
 
-          {status === "CanLoadMore" && (
+          {(status === "CanLoadMore" || status === "LoadingMore") && (
             <div className="text-center mt-8">
               <button
                 onClick={() => loadMore(itemsPerPage)}
-                className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 mx-auto"
-                disabled={status !== "CanLoadMore"}
+                className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 mx-auto disabled:opacity-75 disabled:cursor-not-allowed"
+                disabled={status === "LoadingMore"}
               >
-                Load More
-                {status === "CanLoadMore" && <ArrowDown className="w-4 h-4" />}
+                {status === "LoadingMore" ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-[#525252] border-t-transparent rounded-full animate-spin"></div>
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    Load More
+                    <ArrowDown className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </div>
           )}
