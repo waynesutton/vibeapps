@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext, ReactNode } from "react";
+import React, { ReactNode } from "react";
 import {
   Link,
   Outlet,
@@ -14,17 +14,16 @@ import {
   ThumbsUp,
   ChevronDown,
   Menu,
+  User,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import type { SiteSettings, Tag } from "../types";
 import { ConvexBox } from "./ConvexBox";
 import { Footer } from "./Footer";
 import {
   SignedIn,
   SignedOut,
-  UserButton,
   useUser,
   useClerk,
   SignInButton,
@@ -33,7 +32,6 @@ import {
 import { UserSyncer } from "./UserSyncer";
 import { WeeklyLeaderboard } from "./WeeklyLeaderboard";
 import { TopCategoriesOfWeek } from "./TopCategoriesOfWeek";
-import { dark } from "@clerk/themes";
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
 
 interface LayoutContextType {
@@ -82,6 +80,10 @@ export function Layout({ children }: { children?: ReactNode }) {
 
   // Auth required dialog state
   const [showAuthDialog, setShowAuthDialog] = React.useState(false);
+
+  // Profile dropdown state
+  const [showProfileDropdown, setShowProfileDropdown] = React.useState(false);
+  const profileDropdownRef = React.useRef<HTMLDivElement>(null);
 
   const headerTags = useQuery(api.tags.listHeader);
 
@@ -237,7 +239,6 @@ export function Layout({ children }: { children?: ReactNode }) {
   const siteTitle = settings?.siteTitle || "Vibe Apps";
 
   let profileUrl = "/sign-in";
-  let avatarUrl = clerkUser?.imageUrl;
   if (isClerkLoaded && isSignedIn) {
     if (convexUserDoc === undefined) {
       profileUrl = "#";
@@ -259,6 +260,21 @@ export function Layout({ children }: { children?: ReactNode }) {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showProfileMenu]);
+
+  // Close profile dropdown on outside click
+  React.useEffect(() => {
+    if (!showProfileDropdown) return;
+    function handleClick(e: MouseEvent) {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowProfileDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showProfileDropdown]);
 
   // Determine if the sidebar should be shown based on view mode and settings
   // Ensure settings is loaded before trying to access its properties for showSidebar
@@ -316,11 +332,56 @@ export function Layout({ children }: { children?: ReactNode }) {
                   </SignedOut>
                   <SignedIn>
                     <UserSyncer />
-                    {/* Clerk UserButton */}
-                    <UserButton 
-                      afterSignOutUrl="/"
-                      userProfileMode="modal"
-                    />
+                    {/* Custom Profile Dropdown */}
+                    <div className="relative" ref={profileDropdownRef}>
+                      <button
+                        onClick={() =>
+                          setShowProfileDropdown(!showProfileDropdown)
+                        }
+                        className="flex items-center justify-center w-8 h-8 rounded-full bg-[#292929] hover:bg-[#525252] transition-colors"
+                        aria-label="Profile menu"
+                      >
+                        {clerkUser?.imageUrl ? (
+                          <img
+                            src={clerkUser.imageUrl}
+                            alt="Profile"
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <User className="w-4 h-4 text-white" />
+                        )}
+                      </button>
+
+                      {showProfileDropdown && (
+                        <div className="absolute right-0 mt-2 w-36 bg-white rounded-md shadow-lg border border-[#D8E1EC] py-0.5 z-50">
+                          <Link
+                            to={profileUrl}
+                            className="block px-3 py-1.5 text-xs text-[#292929] hover:bg-[#F2F4F7] transition-colors"
+                            onClick={() => setShowProfileDropdown(false)}
+                          >
+                            My Profile
+                          </Link>
+                          <button
+                            onClick={() => {
+                              clerk.openUserProfile();
+                              setShowProfileDropdown(false);
+                            }}
+                            className="block w-full px-3 py-1.5 text-xs text-[#292929] hover:bg-[#F2F4F7] transition-colors text-left"
+                          >
+                            Manage Account
+                          </button>
+                          <button
+                            onClick={() => {
+                              clerk.signOut({ redirectUrl: "/" });
+                              setShowProfileDropdown(false);
+                            }}
+                            className="block w-full px-3 py-1.5 text-xs text-[#292929] hover:bg-[#F2F4F7] transition-colors text-left"
+                          >
+                            Sign Out
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </SignedIn>
                 </div>
               </div>
