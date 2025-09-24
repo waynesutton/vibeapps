@@ -319,9 +319,11 @@ export default defineSchema({
     groupId: v.id("judgingGroups"), // Associated judging group
     sessionId: v.string(), // Unique session identifier
     lastActiveAt: v.number(), // Last activity timestamp
+    userId: v.optional(v.id("users")), // Optional link to authenticated user profile
   })
     .index("by_groupId", ["groupId"])
-    .index("by_sessionId", ["sessionId"]),
+    .index("by_sessionId", ["sessionId"])
+    .index("by_userId", ["userId"]),
 
   judgeScores: defineTable({
     judgeId: v.id("judges"), // Judge who gave the score
@@ -330,6 +332,7 @@ export default defineSchema({
     criteriaId: v.id("judgingCriteria"), // Specific criteria being scored
     score: v.number(), // Score (1-10)
     comments: v.optional(v.string()), // Optional comments from judge
+    isHidden: v.optional(v.boolean()), // Admin can hide scores from results
   })
     .index("by_judge_story_criteria", ["judgeId", "storyId", "criteriaId"]) // Unique constraint
     .index("by_groupId_storyId", ["groupId", "storyId"])

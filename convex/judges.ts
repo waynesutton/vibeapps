@@ -64,6 +64,7 @@ export const listByGroup = query({
         const scores = await ctx.db
           .query("judgeScores")
           .filter((q) => q.eq(q.field("judgeId"), judge._id))
+          .filter((q) => q.neq(q.field("isHidden"), true))
           .collect();
 
         const scoreCount = scores.length;
@@ -152,6 +153,42 @@ export const registerJudge = mutation({
       throw new Error("Name must be at least 2 characters long");
     }
 
+    // Check if user is authenticated and get their profile
+    const identity = await ctx.auth.getUserIdentity();
+    let userId: Id<"users"> | undefined = undefined;
+
+    if (identity) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+        .unique();
+
+      if (user) {
+        userId = user._id;
+
+        // Check if this user is already registered as a judge for this group
+        const existingUserJudge = await ctx.db
+          .query("judges")
+          .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+          .filter((q) => q.eq(q.field("userId"), user._id))
+          .first();
+
+        if (existingUserJudge) {
+          // Update their info and return existing session
+          await ctx.db.patch(existingUserJudge._id, {
+            name: trimmedName,
+            email: args.email?.trim(),
+            lastActiveAt: now,
+          });
+
+          return {
+            judgeId: existingUserJudge._id,
+            sessionId: existingUserJudge.sessionId,
+          };
+        }
+      }
+    }
+
     // Check if judge with same name already exists in this group
     const existingJudge = await ctx.db
       .query("judges")
@@ -160,6 +197,15 @@ export const registerJudge = mutation({
       .first();
 
     if (existingJudge) {
+      // If user is authenticated and judge doesn't have userId, link them
+      if (userId && !existingJudge.userId) {
+        await ctx.db.patch(existingJudge._id, {
+          userId: userId,
+          email: args.email?.trim() || existingJudge.email,
+          lastActiveAt: now,
+        });
+      }
+
       // Return existing judge's session
       return {
         judgeId: existingJudge._id,
@@ -175,6 +221,7 @@ export const registerJudge = mutation({
       groupId: args.groupId,
       sessionId,
       lastActiveAt: now,
+      userId: userId,
     });
 
     return {
@@ -315,28 +362,50 @@ export const getJudgeProgress = query({
       .withIndex("by_groupId", (q) => q.eq("groupId", judge.groupId))
       .collect();
 
+    // Get submission statuses to determine which submissions are available for this judge
+    const submissionStatuses = await ctx.db
+      .query("submissionStatuses")
+      .withIndex("by_groupId", (q) => q.eq("groupId", judge.groupId))
+      .collect();
+
+    // Filter submissions that this judge can score (pending or skip status, or completed by this judge)
+    const availableSubmissions = submissions.filter((submission) => {
+      const status = submissionStatuses.find(
+        (s) => s.storyId === submission.storyId,
+      );
+      if (!status) return true; // If no status, assume available
+
+      // Can judge if pending, skip, or completed by this judge
+      return (
+        status.status === "pending" ||
+        status.status === "skip" ||
+        (status.status === "completed" && status.assignedJudgeId === judge._id)
+      );
+    });
+
     // Get group criteria
     const criteria = await ctx.db
       .query("judgingCriteria")
       .withIndex("by_groupId_order", (q) => q.eq("groupId", judge.groupId))
       .collect();
 
-    // Get judge's scores
+    // Get judge's scores (excluding hidden scores)
     const scores = await ctx.db
       .query("judgeScores")
       .filter((q) => q.eq(q.field("judgeId"), judge._id))
+      .filter((q) => q.neq(q.field("isHidden"), true))
       .collect();
 
-    const totalSubmissions = submissions.length;
+    const totalSubmissions = availableSubmissions.length; // Only count available submissions
     const totalCriteria = criteria.length;
     const expectedScores = totalSubmissions * totalCriteria;
     const completedScores = scores.length;
     const completionPercentage =
       expectedScores > 0 ? (completedScores / expectedScores) * 100 : 0;
 
-    // Calculate progress per submission
+    // Calculate progress per submission (only for available submissions)
     const submissionProgress = await Promise.all(
-      submissions.map(async (submission) => {
+      availableSubmissions.map(async (submission) => {
         const story = await ctx.db.get(submission.storyId);
         if (!story) {
           throw new Error(`Story ${submission.storyId} not found`);

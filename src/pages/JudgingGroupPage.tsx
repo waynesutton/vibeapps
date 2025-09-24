@@ -183,19 +183,30 @@ export default function JudgingGroupPage() {
 
         <form onSubmit={handleJudgeRegistration} className="space-y-4">
           <div>
-            <Label htmlFor="judgeName">Your Name *</Label>
+            <Label htmlFor="judgeName">
+              Your Name * <br />
+              <strong>
+                {" "}
+                Use the same first name if you need to come back and continue
+                judging.
+              </strong>
+            </Label>
             <Input
               id="judgeName"
               type="text"
               value={judgeName}
-              onChange={(e) => setJudgeName(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value
+                  .toLowerCase()
+                  .replace(/[^a-z]/g, "");
+                setJudgeName(value);
+              }}
               placeholder="Enter your full name"
               required
               minLength={2}
             />
             <p className="mt-1 text-sm text-gray-500">
-              This will identify your scores in the system. Use the same name if
-              you need to come back and continue judging.
+              This will identify your scores in the system.
             </p>
           </div>
 

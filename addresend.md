@@ -50,6 +50,12 @@ This document outlines the implementation of Resend email integration for VibeAp
 - Track email status with `emailLogs`.
 - Optional: integrate Convex Resend component cleanup crons.
 
+11. @Mention Notifications
+
+- Add user handles and mention parsing.
+- Trigger mention emails from comments and judging notes.
+- Respect per-user mention notification setting and online activity heuristics.
+
 ## Current System Analysis
 
 ### Existing Infrastructure
@@ -270,6 +276,42 @@ Manage your notification preferences: [Settings Link]
 - Don't send if user is currently online/active
 - Rate limit: Max 5 message notification emails per day per user
 
+### 6. @Mention Notifications (Comments & Judging Notes)
+
+**Purpose**: Notify users when they are mentioned with `@username` in:
+
+- Public comments on stories/apps
+- Judge notes thread within the judging interface
+
+**Trigger**:
+
+- On create of a comment or judge note containing `@handle` tokens
+
+**Recipients**: Users whose username is mentioned, if they have mention notifications enabled
+
+**Content Structure**:
+
+```
+Subject: You were mentioned by [AuthorName]
+
+Hey [UserName],
+
+You were mentioned in a [comment|judge note] on: [StoryTitle]
+
+"[excerpt of content around the @mention]"
+
+[View Thread]
+
+- The VibeApps Team
+```
+
+**Conditions**:
+
+- Skip if the mentioned user is the author of the message
+- Skip if user has `mentionNotifications` set to false
+- Skip if user is currently online (optional heuristic)
+- Rate limit: Max 10 mention emails per day per user (distinct from 30/day mention creation quota in mentions.md)
+
 ## Database Schema Updates
 
 ### New Tables Required
@@ -287,6 +329,7 @@ export default defineSchema({
     messageNotifications: v.boolean(), // Default: true
     marketingEmails: v.boolean(), // Default: false
     weeklyDigestEmails: v.boolean(), // Default: true
+    mentionNotifications: v.boolean(), // Default: true
     timezone: v.optional(v.string()), // User's timezone, default PST
     unsubscribedAt: v.optional(v.number()), // Timestamp if unsubscribed
   }).index("by_user", ["userId"]),
@@ -300,6 +343,7 @@ export default defineSchema({
       v.literal("welcome"),
       v.literal("message_notification"),
       v.literal("weekly_digest"),
+      v.literal("mention_notification"),
       v.literal("admin_broadcast"),
     ),
     recipientEmail: v.string(),
@@ -396,6 +440,50 @@ export default defineSchema({
   }).index("by_key", ["key"]),
 });
 ```
+
+### Mentions Data Model and Utilities (Cross‑Reference)
+
+This email PRD reuses the mentions pipeline defined in `mentions.md` for durable events, rate limiting, and future rollups.
+
+```typescript
+// convex/schema.ts additions (from mentions.md)
+
+export default defineSchema({
+  // ...existing tables...
+
+  mentions: defineTable({
+    actorUserId: v.id("users"),
+    targetUserId: v.id("users"),
+    context: v.union(v.literal("comment"), v.literal("judge_note")),
+    sourceId: v.union(v.id("comments"), v.id("submissionNotes")),
+    storyId: v.id("stories"),
+    groupId: v.optional(v.id("judgingGroups")),
+    contentExcerpt: v.string(),
+    date: v.string(), // YYYY-MM-DD
+  })
+    .index("by_actor_and_date", ["actorUserId", "date"]) // quota checks
+    .index("by_target_and_date", ["targetUserId", "date"]) // daily rollups
+    .index("by_context_and_source", ["context", "sourceId"]),
+});
+```
+
+Utilities to reuse (from `convex/mentions.ts` per mentions.md):
+
+- `internal.mentions.extractHandles` (args: `{ text }`) → returns `string[]` of usernames without `@`
+- `internal.mentions.resolveHandlesToUsers` (args: `{ handles }`) → returns `{ handle, userId }[]` via `users.by_username`
+- `internal.mentions.getActorDailyCount` (args: `{ actorUserId, date }`) → `number`
+- `internal.mentions.recordMentions` (args include `actorUserId`, `resolvedTargets`, `context`, `sourceId`, `storyId`, `groupId`, `contentExcerpt`, `date`) → counters object
+
+Email fanout for @mentions in this PRD should:
+
+1. Call `extractHandles` and `resolveHandlesToUsers` (do not reimplement parsing/resolution here).
+2. Call `recordMentions` to enforce the 30/day actor quota and persist durable events.
+3. Filter recipients by `emailSettings.mentionNotifications !== false` and skip self‑mentions.
+4. Apply email rate limit of 10/day per recipient for mention emails (separate from the 30/day actor creation quota).
+5. Send via the core Resend action, log to `emailLogs` as `mention_notification`.
+6. Link to the specific thread using the `permalink` built in the integration point.
+
+Note: A future daily digest could aggregate `mentions` via `by_target_and_date` to batch mention emails, if desired.
 
 ## Backend Implementation
 
@@ -758,6 +846,58 @@ export const generateEngagementEmail = internalQuery({
     `;
 
     return { subject, html };
+  },
+});
+```
+
+#### `convex/emails/mentions.ts`
+
+```typescript
+import { internalMutation, internalQuery } from "../_generated/server";
+import { v } from "convex/values";
+
+// Parse @usernames from text (aligned with mentions.md)
+export const extractMentions = internalQuery({
+  args: { text: v.string() },
+  returns: v.array(v.string()),
+  handler: async (ctx, args) => {
+    const handles = new Set<string>();
+    const regex = /(^|\s)@([a-zA-Z0-9_\.]+)/g; // same as mentions.md
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(args.text))) handles.add(match[2]);
+    return Array.from(handles);
+  },
+});
+
+// Resolve usernames to users via by_username (aligned with mentions.md)
+export const resolveHandles = internalQuery({
+  args: { handles: v.array(v.string()) },
+  returns: v.array(v.object({ userId: v.id("users"), handle: v.string() })),
+  handler: async (ctx, args) => {
+    const results: Array<{ userId: any; handle: string }> = [];
+    for (const h of args.handles) {
+      const u = await ctx.db
+        .query("users")
+        .withIndex("by_username", (q) => q.eq("username", h))
+        .unique();
+      if (u) results.push({ userId: u._id, handle: h });
+    }
+    return results;
+  },
+});
+
+export const sendMentionNotifications = internalMutation({
+  args: {
+    context: v.union(v.literal("comment"), v.literal("judge_note")),
+    storyId: v.id("stories"),
+    authorId: v.id("users"),
+    rawText: v.string(),
+    permalink: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Outline only in PRD: resolve handles, filter recipients by settings, rate-limit, send via resend
+    return null;
   },
 });
 ```
@@ -1364,6 +1504,62 @@ export const sendMessage = mutation({
         },
       );
     }
+  },
+});
+```
+
+### 4. Comments @Mention Integration
+
+```typescript
+// In comments create mutation (outline)
+export const createComment = mutation({
+  // ...existing args/returns
+  handler: async (ctx, args) => {
+    const commentId = await ctx.db.insert("comments", {
+      /* ... */
+    });
+    // Mention fanout (non-blocking):
+    await ctx.scheduler.runAfter(
+      0,
+      internal.emails.mentions.sendMentionNotifications,
+      {
+        context: "comment",
+        storyId: args.storyId,
+        authorId: args.authorId,
+        rawText: args.content,
+        permalink: `https://vibeapps.dev/s/${args.storySlug}#c-${String(commentId)}`,
+      },
+    );
+    return commentId;
+  },
+});
+```
+
+### 5. Judging Notes @Mention Integration
+
+```typescript
+// In addSubmissionNote mutation (judging notes)
+export const addSubmissionNote = mutation({
+  // ...existing impl
+  handler: async (ctx, args) => {
+    const noteId = await /* existing insert */ ctx.db.insert(
+      "submissionNotes",
+      {
+        /*...*/
+      },
+    );
+    await ctx.scheduler.runAfter(
+      0,
+      internal.emails.mentions.sendMentionNotifications,
+      {
+        context: "judge_note",
+        storyId: args.storyId,
+        authorId: args.judgeId as any, // judge as user id or mapped
+        rawText: args.content,
+        permalink: `https://vibeapps.dev/judging/${args.groupSlug}?story=${String(args.storyId)}#n-${String(noteId)}`,
+      },
+    );
+    return noteId;
   },
 });
 ```

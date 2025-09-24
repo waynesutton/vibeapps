@@ -221,10 +221,11 @@ export const getGroupScores = query({
   handler: async (ctx, args) => {
     await requireAdminRole(ctx);
 
-    // Get all scores for this group
+    // Get all scores for this group (excluding hidden scores for results calculations)
     const scores = await ctx.db
       .query("judgeScores")
       .withIndex("by_groupId_storyId", (q) => q.eq("groupId", args.groupId))
+      .filter((q) => q.neq(q.field("isHidden"), true))
       .collect();
 
     // Get group metadata
@@ -517,12 +518,13 @@ export const getSubmissionScores = query({
       throw new Error("Story not found");
     }
 
-    // Get all scores for this submission
+    // Get all scores for this submission (excluding hidden scores)
     const scores = await ctx.db
       .query("judgeScores")
       .withIndex("by_groupId_storyId", (q) =>
         q.eq("groupId", args.groupId).eq("storyId", args.storyId),
       )
+      .filter((q) => q.neq(q.field("isHidden"), true))
       .collect();
 
     // Get criteria and judges for context
@@ -682,10 +684,11 @@ export const getPublicGroupScores = query({
       return null;
     }
 
-    // Get all scores for this group
+    // Get all scores for this group (excluding hidden scores)
     const scores = await ctx.db
       .query("judgeScores")
       .withIndex("by_groupId_storyId", (q) => q.eq("groupId", args.groupId))
+      .filter((q) => q.neq(q.field("isHidden"), true))
       .collect();
 
     // Get group metadata
@@ -845,10 +848,11 @@ export const getPublicGroupJudgeDetails = query({
 
     const result = await Promise.all(
       judges.map(async (judge) => {
-        // Get all scores for this group and filter by judgeId
+        // Get all scores for this group and filter by judgeId (excluding hidden scores)
         const allGroupScores = await ctx.db
           .query("judgeScores")
           .withIndex("by_groupId_storyId", (q) => q.eq("groupId", args.groupId))
+          .filter((q) => q.neq(q.field("isHidden"), true))
           .collect();
 
         const scores = allGroupScores.filter(

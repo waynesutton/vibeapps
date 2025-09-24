@@ -14,6 +14,7 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as adminFollowsQueries from "../adminFollowsQueries.js";
+import type * as adminJudgeTracking from "../adminJudgeTracking.js";
 import type * as adminQueries from "../adminQueries.js";
 import type * as auth from "../auth.js";
 import type * as bookmarks from "../bookmarks.js";
@@ -52,6 +53,7 @@ import type * as validators from "../validators.js";
  */
 declare const fullApi: ApiFromModules<{
   adminFollowsQueries: typeof adminFollowsQueries;
+  adminJudgeTracking: typeof adminJudgeTracking;
   adminQueries: typeof adminQueries;
   auth: typeof auth;
   bookmarks: typeof bookmarks;

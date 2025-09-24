@@ -12,13 +12,15 @@ const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string;
 
 if (!publishableKey) {
   throw new Error(
-    "Missing Publishable Key. Make sure VITE_CLERK_PUBLISHABLE_KEY is set in your .env file."
+    "Missing Publishable Key. Make sure VITE_CLERK_PUBLISHABLE_KEY is set in your .env file.",
   );
 }
 
 if (!import.meta.env.VITE_CONVEX_URL) {
   // Added check for VITE_CONVEX_URL
-  throw new Error("Missing Convex URL. Make sure VITE_CONVEX_URL is set in your .env file.");
+  throw new Error(
+    "Missing Convex URL. Make sure VITE_CONVEX_URL is set in your .env file.",
+  );
 }
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -28,5 +30,5 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <App />
       </ConvexProviderWithClerk>
     </ClerkProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
 );

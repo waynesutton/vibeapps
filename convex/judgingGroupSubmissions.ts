@@ -428,6 +428,7 @@ export const getGroupSubmissions = query({
       url: v.string(),
       screenshotId: v.optional(v.id("_storage")),
       screenshotUrl: v.optional(v.string()),
+      additionalImageUrls: v.array(v.string()),
       videoUrl: v.optional(v.string()),
       longDescription: v.optional(v.string()),
       linkedinUrl: v.optional(v.string()),
@@ -475,6 +476,16 @@ export const getGroupSubmissions = query({
           ? (await ctx.storage.getUrl(story.screenshotId)) || undefined
           : undefined;
 
+        // Resolve additional image URLs
+        const additionalImageUrls = story.additionalImageIds
+          ? await Promise.all(
+              story.additionalImageIds.map(async (imageId) => {
+                const url = await ctx.storage.getUrl(imageId);
+                return url || "";
+              }),
+            ).then((urls) => urls.filter((url) => url !== ""))
+          : [];
+
         return {
           _id: story._id,
           title: story.title,
@@ -483,6 +494,7 @@ export const getGroupSubmissions = query({
           url: story.url,
           screenshotId: story.screenshotId,
           screenshotUrl: screenshotUrl,
+          additionalImageUrls: additionalImageUrls,
           videoUrl: story.videoUrl,
           longDescription: story.longDescription,
           linkedinUrl: story.linkedinUrl,
