@@ -316,27 +316,11 @@ export function Layout({ children }: { children?: ReactNode }) {
                   </SignedOut>
                   <SignedIn>
                     <UserSyncer />
-                    {/* Custom Avatar Button and Dropdown */}
-                    <div className="relative" ref={menuRef}>
-                      <a
-                        href={profileUrl}
-                        className="block px-4 py-2 text-sm text-[#292929] hover:bg-[#F3F4F6]"
-                        onClick={() => setShowProfileMenu(false)}
-                      >
-                        <button
-                          onClick={() => setShowProfileMenu((v) => !v)}
-                          className="rounded-full border border-[#D8E1EC] w-9 h-9 overflow-hidden focus:outline-none"
-                          aria-label="Open profile menu"
-                          type="button"
-                        >
-                          <img
-                            src={avatarUrl}
-                            alt="User avatar"
-                            className="w-9 h-9 object-cover"
-                          />
-                        </button>
-                      </a>
-                    </div>
+                    {/* Clerk UserButton */}
+                    <UserButton 
+                      afterSignOutUrl="/"
+                      userProfileMode="modal"
+                    />
                   </SignedIn>
                 </div>
               </div>
