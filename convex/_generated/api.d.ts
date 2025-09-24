@@ -30,6 +30,7 @@ import type * as judges from "../judges.js";
 import type * as judgingCriteria from "../judgingCriteria.js";
 import type * as judgingGroupSubmissions from "../judgingGroupSubmissions.js";
 import type * as judgingGroups from "../judgingGroups.js";
+import type * as mentions from "../mentions.js";
 import type * as migrations from "../migrations.js";
 import type * as reports from "../reports.js";
 import type * as settings from "../settings.js";
@@ -69,6 +70,7 @@ declare const fullApi: ApiFromModules<{
   judgingCriteria: typeof judgingCriteria;
   judgingGroupSubmissions: typeof judgingGroupSubmissions;
   judgingGroups: typeof judgingGroups;
+  mentions: typeof mentions;
   migrations: typeof migrations;
   reports: typeof reports;
   settings: typeof settings;

@@ -29,6 +29,8 @@ import { Textarea } from "../components/ui/textarea";
 import { Label } from "../components/ui/label";
 import { Input } from "../components/ui/input";
 import { ImageGallery } from "../components/ImageGallery";
+import { renderTextWithMentions } from "../utils/mentions";
+import { MentionTextarea } from "../components/ui/MentionTextarea";
 
 export default function JudgingInterfacePage() {
   const { slug } = useParams<{ slug: string }>();
@@ -1052,10 +1054,10 @@ export default function JudgingInterfacePage() {
 
               {/* Add Note Form */}
               <div className="mb-6">
-                <Textarea
+                <MentionTextarea
                   value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  placeholder="Add a note for other judges to see..."
+                  onChange={setNewNote}
+                  placeholder="Add a note for other judges to see... (use @username to mention users)"
                   rows={3}
                   className="mb-2"
                 />
@@ -1099,9 +1101,9 @@ export default function JudgingInterfacePage() {
                         </Button>
                       </div>
 
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap mb-3">
-                        {note.content}
-                      </p>
+                      <div className="text-sm text-gray-700 whitespace-pre-wrap mb-3">
+                        {renderTextWithMentions(note.content)}
+                      </div>
 
                       {/* Replies */}
                       {note.replies && note.replies.length > 0 && (
@@ -1122,9 +1124,9 @@ export default function JudgingInterfacePage() {
                                   ).toLocaleString()}
                                 </span>
                               </div>
-                              <p className="text-xs text-gray-700 whitespace-pre-wrap">
-                                {reply.content}
-                              </p>
+                              <div className="text-xs text-gray-700 whitespace-pre-wrap">
+                                {renderTextWithMentions(reply.content)}
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -1133,10 +1135,10 @@ export default function JudgingInterfacePage() {
                       {/* Reply Form */}
                       {replyingTo === note._id && (
                         <div className="ml-6 mt-3 border-l-2 border-blue-200 pl-4">
-                          <Textarea
+                          <MentionTextarea
                             value={replyContent}
-                            onChange={(e) => setReplyContent(e.target.value)}
-                            placeholder="Write a reply..."
+                            onChange={setReplyContent}
+                            placeholder="Write a reply... (use @username to mention users)"
                             rows={2}
                             className="mb-2"
                           />

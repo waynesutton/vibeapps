@@ -393,4 +393,19 @@ export default defineSchema({
     .index("by_formId_order", ["formId", "order"])
     .index("by_storyFieldId", ["storyFieldId"])
     .index("by_formId_storyFieldId", ["formId", "storyFieldId"]),
+
+  // Mentions system for @username references in comments and judging notes
+  mentions: defineTable({
+    actorUserId: v.id("users"), // Who wrote the content
+    targetUserId: v.id("users"), // Who was mentioned
+    context: v.union(v.literal("comment"), v.literal("judge_note")), // Where the mention occurred
+    sourceId: v.union(v.id("comments"), v.id("submissionNotes")), // ID of comment or note
+    storyId: v.id("stories"), // Always present for both contexts
+    groupId: v.optional(v.id("judgingGroups")), // Present for judge notes
+    contentExcerpt: v.string(), // First 240 chars for moderation and email previews
+    date: v.string(), // Calendar date YYYY-MM-DD for indexed rate limiting and digest queries
+  })
+    .index("by_actor_and_date", ["actorUserId", "date"]) // For fast quota checks
+    .index("by_target_and_date", ["targetUserId", "date"]) // For future daily email rollups
+    .index("by_context_and_source", ["context", "sourceId"]), // For debugging and idempotency checks
 });

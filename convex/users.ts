@@ -1401,3 +1401,67 @@ export const getUserNumber = query({
     return earlierUsers.length + 1;
   },
 });
+
+/**
+ * Search users by username or name for @mention autocomplete
+ * Returns up to 10 matches for performance
+ */
+export const searchUsersForMentions = query({
+  args: { query: v.string() },
+  returns: v.array(
+    v.object({
+      _id: v.id("users"),
+      username: v.string(),
+      name: v.string(),
+      profileImageUrl: v.optional(v.string()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    if (!args.query || args.query.length < 1) {
+      return [];
+    }
+
+    const query = args.query.toLowerCase();
+
+    // First try exact username match for fast lookup
+    const exactMatch = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", query))
+      .filter((q) => q.neq(q.field("isBanned"), true))
+      .unique();
+
+    if (exactMatch && exactMatch.username) {
+      return [
+        {
+          _id: exactMatch._id,
+          username: exactMatch.username,
+          name: exactMatch.name,
+          profileImageUrl: exactMatch.imageUrl,
+        },
+      ];
+    }
+
+    // Then do prefix search across all users
+    const users = await ctx.db
+      .query("users")
+      .filter((q) => q.neq(q.field("isBanned"), true))
+      .collect();
+
+    const matches = users
+      .filter(
+        (user) =>
+          user.username &&
+          (user.username.toLowerCase().startsWith(query) ||
+            user.name.toLowerCase().includes(query)),
+      )
+      .slice(0, 10) // Limit to 10 results for performance
+      .map((user) => ({
+        _id: user._id,
+        username: user.username!,
+        name: user.name,
+        profileImageUrl: user.imageUrl,
+      }));
+
+    return matches;
+  },
+});

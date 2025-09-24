@@ -51,6 +51,7 @@ Brief description of the feature and its purpose.
 ## In Progress Tasks
 
 - [ ] add @mentions for usernames in judging notes, comments for profiles and in the comments section.
+- [ ] clerk roles for hackathon organizers to see judges section in admin dashboad only
 - [ ] setup resend for emails for notifications on post
 - [ ] add option to turn off email notifications on user profiles
 

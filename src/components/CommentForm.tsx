@@ -5,6 +5,7 @@ import { useAuth, useUser } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom"; // Added
 import { Link } from "react-router-dom";
 import { toast } from "sonner"; // Corrected import for toast
+import { MentionTextarea } from "./ui/MentionTextarea";
 
 interface CommentFormProps {
   onSubmit: (content: string) => void; // Removed author from onSubmit
@@ -42,10 +43,10 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
     setContent(""); // Clear the textarea after submission
   };
 
-  const handleContentChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setContent(event.target.value);
+  const handleContentChange = (value: string) => {
+    setContent(value);
     // Clear error when user starts typing
-    if (error && event.target.value.trim().length >= 50) {
+    if (error && value.trim().length >= 50) {
       setError(null);
     }
   };
@@ -61,17 +62,18 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
   return (
     <>
       <form onSubmit={handleSubmit} className="mt-4">
-        <textarea
+        <MentionTextarea
           value={content}
           onChange={handleContentChange}
           placeholder={
             canSubmit
-              ? "Write your comment... (Markdown supported, min. 50 characters)"
+              ? "Write your comment... (Markdown supported, min. 50 characters, use @username to mention users)"
               : "Sign in to write your comment..."
           }
-          className={`w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] min-h-[100px] disabled:opacity-50 disabled:bg-gray-100 ${
+          className={`min-h-[100px] ${
             error ? "border-red-500 ring-red-500" : ""
           }`}
+          rows={4}
           required
           disabled={!canSubmit}
         />
@@ -89,12 +91,15 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
               : !isContentValid && content.trim()
                 ? "Comment must be at least 50 characters."
                 : undefined
-          }>
+          }
+        >
           {parentId ? "Reply" : "Comment"}
         </button>
       </form>
 
-      {!isClerkLoaded && <p className="mt-2 text-sm text-gray-500">Loading user status...</p>}
+      {!isClerkLoaded && (
+        <p className="mt-2 text-sm text-gray-500">Loading user status...</p>
+      )}
 
       {isClerkLoaded && !isSignedIn && (
         <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-md text-sm">
@@ -102,13 +107,15 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
             Please{" "}
             <button
               onClick={handleSignIn}
-              className="text-blue-600 hover:underline font-medium focus:outline-none">
+              className="text-blue-600 hover:underline font-medium focus:outline-none"
+            >
               sign in
             </button>{" "}
             or{" "}
             <button
               onClick={handleSignIn}
-              className="text-blue-600 hover:underline font-medium focus:outline-none">
+              className="text-blue-600 hover:underline font-medium focus:outline-none"
+            >
               sign up
             </button>{" "}
             to leave a comment.

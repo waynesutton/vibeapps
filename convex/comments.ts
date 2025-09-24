@@ -2,7 +2,12 @@ import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
-import { getAuthenticatedUserId, requireAdminRole, ensureUserNotBanned } from "./users"; // Import the centralized helper and requireAdminRole
+import {
+  getAuthenticatedUserId,
+  requireAdminRole,
+  ensureUserNotBanned,
+} from "./users"; // Import the centralized helper and requireAdminRole
+import { internal } from "./_generated/api";
 
 // We might not need this specific type if we don't enhance comments further yet
 // export type CommentWithDetails = Doc<"comments"> & {
@@ -38,11 +43,15 @@ export const listApprovedByStory = query({
   returns: v.array(commentWithAuthorValidator), // Use the new validator
   handler: async (
     ctx,
-    args
-  ): Promise<Array<Doc<"comments"> & { authorName?: string; authorUsername?: string }>> => {
+    args,
+  ): Promise<
+    Array<Doc<"comments"> & { authorName?: string; authorUsername?: string }>
+  > => {
     const comments = await ctx.db
       .query("comments")
-      .withIndex("by_storyId_status", (q) => q.eq("storyId", args.storyId).eq("status", "approved"))
+      .withIndex("by_storyId_status", (q) =>
+        q.eq("storyId", args.storyId).eq("status", "approved"),
+      )
       .filter((q) => q.neq(q.field("isHidden"), true))
       .order("asc")
       .collect();
@@ -55,7 +64,7 @@ export const listApprovedByStory = query({
           authorName: author?.name,
           authorUsername: author?.username,
         };
-      })
+      }),
     );
     return commentsWithAuthors;
   },
@@ -67,7 +76,9 @@ export const listPendingByStory = query({
   handler: async (ctx, args): Promise<Doc<"comments">[]> => {
     const comments = await ctx.db
       .query("comments")
-      .withIndex("by_storyId_status", (q) => q.eq("storyId", args.storyId).eq("status", "pending"))
+      .withIndex("by_storyId_status", (q) =>
+        q.eq("storyId", args.storyId).eq("status", "pending"),
+      )
       .order("asc")
       .collect();
     return comments;
@@ -81,7 +92,11 @@ export const listAllCommentsAdmin = query({
     filters: v.object({
       storyId: v.optional(v.id("stories")), // Optional filter by story
       status: v.optional(
-        v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected"))
+        v.union(
+          v.literal("pending"),
+          v.literal("approved"),
+          v.literal("rejected"),
+        ),
       ),
       isHidden: v.optional(v.boolean()),
     }),
@@ -89,9 +104,11 @@ export const listAllCommentsAdmin = query({
   },
   handler: async (
     ctx,
-    args
+    args,
   ): Promise<{
-    page: Array<Doc<"comments"> & { authorName?: string; authorUsername?: string }>;
+    page: Array<
+      Doc<"comments"> & { authorName?: string; authorUsername?: string }
+    >;
     isDone: boolean;
     continueCursor: string;
   }> => {
@@ -99,30 +116,36 @@ export const listAllCommentsAdmin = query({
     let queryBuilder;
     if (args.searchTerm && args.searchTerm.trim() !== "") {
       // Use full text search
-      queryBuilder = ctx.db.query("comments").withSearchIndex("search_content", (q) => {
-        let builder = q.search("content", args.searchTerm!);
-        if (args.filters.status) {
-          builder = builder.eq("status", args.filters.status);
-        }
-        if (args.filters.isHidden !== undefined) {
-          builder = builder.eq("isHidden", args.filters.isHidden);
-        }
-        return builder;
-      });
+      queryBuilder = ctx.db
+        .query("comments")
+        .withSearchIndex("search_content", (q) => {
+          let builder = q.search("content", args.searchTerm!);
+          if (args.filters.status) {
+            builder = builder.eq("status", args.filters.status);
+          }
+          if (args.filters.isHidden !== undefined) {
+            builder = builder.eq("isHidden", args.filters.isHidden);
+          }
+          return builder;
+        });
       // Do NOT call .order() on search index queries
       // Execute pagination directly
-      const paginatedComments = await queryBuilder.paginate(args.paginationOpts);
+      const paginatedComments = await queryBuilder.paginate(
+        args.paginationOpts,
+      );
 
       // Enrich with author information
       const commentsWithAuthors = await Promise.all(
         paginatedComments.page.map(async (comment) => {
-          const author = comment.userId ? await ctx.db.get(comment.userId) : null;
+          const author = comment.userId
+            ? await ctx.db.get(comment.userId)
+            : null;
           return {
             ...comment,
             authorName: author?.name,
             authorUsername: author?.username,
           };
-        })
+        }),
       );
 
       return {
@@ -132,20 +155,26 @@ export const listAllCommentsAdmin = query({
       };
     } else {
       // Fallback to previous logic
-      if (args.filters.storyId && args.filters.isHidden !== undefined && args.filters.status) {
+      if (
+        args.filters.storyId &&
+        args.filters.isHidden !== undefined &&
+        args.filters.status
+      ) {
         queryBuilder = ctx.db
           .query("comments")
           .withIndex("by_hidden_status", (q) =>
             q
               .eq("storyId", args.filters.storyId!)
               .eq("isHidden", args.filters.isHidden!)
-              .eq("status", args.filters.status!)
+              .eq("status", args.filters.status!),
           );
       } else if (args.filters.storyId && args.filters.status) {
         queryBuilder = ctx.db
           .query("comments")
           .withIndex("by_storyId_status", (q) =>
-            q.eq("storyId", args.filters.storyId!).eq("status", args.filters.status!)
+            q
+              .eq("storyId", args.filters.storyId!)
+              .eq("status", args.filters.status!),
           );
       } else if (args.filters.isHidden !== undefined && args.filters.status) {
         queryBuilder = ctx.db
@@ -153,13 +182,15 @@ export const listAllCommentsAdmin = query({
           .filter((q) =>
             q.and(
               q.eq(q.field("isHidden"), args.filters.isHidden),
-              q.eq(q.field("status"), args.filters.status)
-            )
+              q.eq(q.field("status"), args.filters.status),
+            ),
           );
       } else if (args.filters.storyId) {
         queryBuilder = ctx.db
           .query("comments")
-          .withIndex("by_storyId_status", (q) => q.eq("storyId", args.filters.storyId!));
+          .withIndex("by_storyId_status", (q) =>
+            q.eq("storyId", args.filters.storyId!),
+          );
       } else if (args.filters.status) {
         queryBuilder = ctx.db
           .query("comments")
@@ -174,18 +205,22 @@ export const listAllCommentsAdmin = query({
       // Apply default ordering for non-search queries
       const orderedQuery = queryBuilder.order("desc"); // Default order: newest first
       // Execute pagination
-      const paginatedComments = await orderedQuery.paginate(args.paginationOpts);
+      const paginatedComments = await orderedQuery.paginate(
+        args.paginationOpts,
+      );
 
       // Enrich with author information
       const commentsWithAuthors = await Promise.all(
         paginatedComments.page.map(async (comment) => {
-          const author = comment.userId ? await ctx.db.get(comment.userId) : null;
+          const author = comment.userId
+            ? await ctx.db.get(comment.userId)
+            : null;
           return {
             ...comment,
             authorName: author?.name,
             authorUsername: author?.username,
           };
-        })
+        }),
       );
 
       return {
@@ -219,7 +254,9 @@ export const add = mutation({
     if (args.parentId) {
       const parentComment = await ctx.db.get(args.parentId);
       if (!parentComment || parentComment.storyId !== args.storyId) {
-        throw new Error("Parent comment not found or doesn't belong to this story");
+        throw new Error(
+          "Parent comment not found or doesn't belong to this story",
+        );
       }
       // TODO: Check if parent comment is approved?
       // if (parentComment.status !== 'approved') {
@@ -227,7 +264,7 @@ export const add = mutation({
       // }
     }
 
-    await ctx.db.insert("comments", {
+    const commentId = await ctx.db.insert("comments", {
       storyId: args.storyId,
       content: args.content,
       userId: userId, // Use authenticated user's ID
@@ -242,6 +279,44 @@ export const add = mutation({
     await ctx.db.patch(args.storyId, {
       commentCount: (story.commentCount || 0) + 1, // Use || 0 for safety
     });
+
+    // Process mentions in comment content (non-blocking)
+    try {
+      // Extract @username handles from content
+      const handles = await ctx.runQuery(internal.mentions.extractHandles, {
+        text: args.content,
+      });
+
+      if (handles.length > 0) {
+        // Resolve handles to user documents
+        const resolvedTargets = await ctx.runQuery(
+          internal.mentions.resolveHandlesToUsers,
+          {
+            handles,
+          },
+        );
+
+        if (resolvedTargets.length > 0) {
+          // Record mentions with quota enforcement
+          const contentExcerpt = args.content.slice(0, 240);
+          const date = new Date().toISOString().split("T")[0];
+
+          await ctx.runMutation(internal.mentions.recordMentions, {
+            actorUserId: userId,
+            resolvedTargets,
+            context: "comment",
+            sourceId: commentId,
+            storyId: args.storyId,
+            groupId: undefined, // Not applicable for comments
+            contentExcerpt,
+            date,
+          });
+        }
+      }
+    } catch (error) {
+      // Log mention processing errors but don't fail the comment creation
+      console.error("Error processing mentions in comment:", error);
+    }
   },
 });
 
@@ -330,7 +405,9 @@ export const deleteOwnComment = mutation({
     }
 
     if (comment.userId !== userId) {
-      throw new Error("User not authorized to delete this comment. Only the owner can delete.");
+      throw new Error(
+        "User not authorized to delete this comment. Only the owner can delete.",
+      );
     }
 
     const story = await ctx.db.get(comment.storyId);
@@ -339,7 +416,9 @@ export const deleteOwnComment = mutation({
       // (Assuming commentCount reflects approved comments)
       if (comment.status === "approved") {
         // You might need to define what status means for comment count
-        await ctx.db.patch(story._id, { commentCount: Math.max(0, (story.commentCount || 0) - 1) });
+        await ctx.db.patch(story._id, {
+          commentCount: Math.max(0, (story.commentCount || 0) - 1),
+        });
       }
     }
 

@@ -2,6 +2,7 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { requireAdminRole } from "./users";
+import { internal } from "./_generated/api";
 
 // --- Admin Functions ---
 
@@ -729,6 +730,47 @@ export const addSubmissionNote = mutation({
       content: args.content.trim(),
       replyToId: args.replyToId,
     });
+
+    // Process mentions in judge note content (non-blocking)
+    // Only process mentions if the judge has a linked user account
+    if (judge.userId) {
+      try {
+        // Extract @username handles from content
+        const handles = await ctx.runQuery(internal.mentions.extractHandles, {
+          text: args.content,
+        });
+
+        if (handles.length > 0) {
+          // Resolve handles to user documents
+          const resolvedTargets = await ctx.runQuery(
+            internal.mentions.resolveHandlesToUsers,
+            {
+              handles,
+            },
+          );
+
+          if (resolvedTargets.length > 0) {
+            // Record mentions with quota enforcement
+            const contentExcerpt = args.content.trim().slice(0, 240);
+            const date = new Date().toISOString().split("T")[0];
+
+            await ctx.runMutation(internal.mentions.recordMentions, {
+              actorUserId: judge.userId,
+              resolvedTargets,
+              context: "judge_note",
+              sourceId: noteId,
+              storyId: args.storyId,
+              groupId: args.groupId,
+              contentExcerpt,
+              date,
+            });
+          }
+        }
+      } catch (error) {
+        // Log mention processing errors but don't fail the note creation
+        console.error("Error processing mentions in judge note:", error);
+      }
+    }
 
     return noteId;
   },
