@@ -26,23 +26,6 @@ export function Footer() {
           {/* <a href="#" target="_blank" rel="noopener noreferrer" className="hover:text-[#525252]">
             Submit
           </a> */}
-          {isSignedIn ? (
-            <button
-              onClick={() => signOut()}
-              className="bg-transparent border-none p-0 m-0 cursor-pointer hover:text-[#525252]"
-            >
-              Sign Out
-            </button>
-          ) : (
-            <SignInButton mode="modal">
-              <button
-                className="bg-transparent border-none p-0 m-0 cursor-pointer hover:text-[#525252]"
-                type="button"
-              >
-                Sign In
-              </button>
-            </SignInButton>
-          )}
           <a
             href="https://convex.dev?utm_source=vibeapps-dev"
             target="_blank"
