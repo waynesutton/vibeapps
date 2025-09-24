@@ -26,7 +26,6 @@ export function Footer() {
           {/* <a href="#" target="_blank" rel="noopener noreferrer" className="hover:text-[#525252]">
             Submit
           </a> */}
-
           <a
             href="https://convex.dev?utm_source=vibeapps-dev"
             target="_blank"
