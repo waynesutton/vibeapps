@@ -208,25 +208,25 @@ export function Judging() {
             <table className="w-full text-sm">
               <thead className="border-b border-gray-200 bg-gray-50">
                 <tr>
-                  <th className="text-left p-3 px-4 text-[#525252] font-medium">
+                  <th className="text-left p-2 px-3 text-[#525252] font-medium">
                     Group Name
                   </th>
-                  <th className="text-left p-3 px-4 text-[#525252] font-medium">
+                  <th className="text-left p-2 px-2 text-[#525252] font-medium">
                     Status
                   </th>
-                  <th className="text-left p-3 px-4 text-[#525252] font-medium">
+                  <th className="text-left p-2 px-2 text-[#525252] font-medium">
                     Access
                   </th>
-                  <th className="text-left p-3 px-4 text-[#525252] font-medium">
-                    Submissions
+                  <th className="text-left p-2 px-2 text-[#525252] font-medium">
+                    Subs
                   </th>
-                  <th className="text-left p-3 px-4 text-[#525252] font-medium">
+                  <th className="text-left p-2 px-2 text-[#525252] font-medium">
                     Judges
                   </th>
-                  <th className="text-left p-3 px-4 text-[#525252] font-medium">
+                  <th className="text-left p-2 px-2 text-[#525252] font-medium">
                     Created
                   </th>
-                  <th className="text-left p-3 px-4 text-[#525252] font-medium">
+                  <th className="text-left p-2 px-3 text-[#525252] font-medium">
                     Actions
                   </th>
                 </tr>
@@ -237,7 +237,7 @@ export function Judging() {
                     key={group._id}
                     className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50"
                   >
-                    <td className="p-3 px-4">
+                    <td className="p-2 px-3">
                       <div className="flex flex-col">
                         <span className="font-medium text-[#525252]">
                           {group.name}
@@ -252,8 +252,8 @@ export function Judging() {
                         </span>
                       </div>
                     </td>
-                    <td className="p-3 px-4">
-                      <div className="flex items-center gap-2">
+                    <td className="p-2 px-2">
+                      <div className="flex items-center gap-1">
                         {getStatusBadge(group)}
                         <button
                           onClick={() => toggleGroupStatus(group)}
@@ -272,18 +272,18 @@ export function Judging() {
                         </button>
                       </div>
                     </td>
-                    <td className="p-3 px-4">
-                      <div className="flex items-center gap-2">
+                    <td className="p-2 px-2">
+                      <div className="flex items-center gap-1">
                         <span className="flex items-center gap-1 text-sm text-gray-600">
                           {group.isPublic ? (
                             <>
                               <Unlock className="w-3 h-3" />
-                              Public
+                              Pub
                             </>
                           ) : (
                             <>
                               <Lock className="w-3 h-3" />
-                              Private
+                              Priv
                             </>
                           )}
                         </span>
@@ -302,20 +302,20 @@ export function Judging() {
                         </button>
                       </div>
                     </td>
-                    <td className="p-3 px-4">
+                    <td className="p-2 px-2 text-center">
                       <span className="text-[#525252] font-medium">
                         {group.submissionCount}
                       </span>
                     </td>
-                    <td className="p-3 px-4">
+                    <td className="p-2 px-2 text-center">
                       <span className="text-[#525252] font-medium">
                         {group.judgeCount}
                       </span>
                     </td>
-                    <td className="p-3 px-4 text-gray-500">
+                    <td className="p-2 px-2 text-gray-500 text-sm">
                       {formatDistanceToNow(group._creationTime)} ago
                     </td>
-                    <td className="p-3 px-4">
+                    <td className="p-2 px-3">
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => copyGroupUrl(group)}

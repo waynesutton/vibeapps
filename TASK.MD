@@ -45,10 +45,11 @@ Brief description of the feature and its purpose.
 - [x] add option for multiple image upload
 - [x] added markdown support and preview for story details page
 - [x] fix open graph image
+- [x] add gallery images also show up in judging page with popup modal
+- [ ] added judges score moderations sytem
 
 ## In Progress Tasks
 
-- [ ] add gallery images also show up in judging page with popup modal
 - [ ] add @mentions for usernames in judging notes, comments for profiles and in the comments section.
 - [ ] setup resend for emails for notifications on post
 - [ ] add option to turn off email notifications on user profiles

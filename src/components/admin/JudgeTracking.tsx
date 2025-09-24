@@ -259,28 +259,28 @@ export function JudgeTracking({
                       </div>
                     </div>
                   </button>
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <div className="text-center">
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <div className="text-center min-w-12">
                       <div className="font-medium text-gray-900">
                         {judge.scoresCount}
                       </div>
                       <div className="text-xs">scores</div>
                     </div>
-                    <div className="text-center">
+                    <div className="text-center min-w-16">
                       <div className="font-medium text-gray-900">
                         {judge.submissionsJudged}
                       </div>
-                      <div className="text-xs">submissions</div>
+                      <div className="text-xs">subs</div>
                     </div>
-                    <div className="text-center">
+                    <div className="text-center min-w-12">
                       <div className="font-medium text-gray-900">
                         {judge.averageScore
                           ? judge.averageScore.toFixed(1)
                           : "N/A"}
                       </div>
-                      <div className="text-xs">avg score</div>
+                      <div className="text-xs">avg</div>
                     </div>
-                    <div className="text-center min-w-20">
+                    <div className="text-center min-w-16">
                       <div className="text-xs">
                         {judge.lastScoreAt
                           ? formatDistanceToNow(judge.lastScoreAt, {
