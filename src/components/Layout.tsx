@@ -314,45 +314,11 @@ export function Layout({ children }: { children?: ReactNode }) {
                   </SignedOut>
                   <SignedIn>
                     <UserSyncer />
-                    {/* Custom Avatar Button and Dropdown */}
-                    <div className="relative" ref={menuRef}>
-                      <button
-                        onClick={() => setShowProfileMenu((v) => !v)}
-                        className="rounded-full border border-[#D8E1EC] w-9 h-9 overflow-hidden focus:outline-none"
-                        aria-label="Open profile menu"
-                        type="button"
-                      >
-                        <img
-                          src={avatarUrl}
-                          alt="User avatar"
-                          className="w-9 h-9 object-cover"
-                        />
-                      </button>
-                      
-                      {/* Dropdown Menu */}
-                      {showProfileMenu && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-[#D8E1EC] z-50">
-                          <div className="py-1">
-                            <a
-                              href={profileUrl}
-                              className="block px-4 py-2 text-sm text-[#292929] hover:bg-[#F3F4F6]"
-                              onClick={() => setShowProfileMenu(false)}
-                            >
-                              My Profile
-                            </a>
-                            <button
-                              onClick={() => {
-                                clerk.signOut();
-                                setShowProfileMenu(false);
-                              }}
-                              className="block w-full text-left px-4 py-2 text-sm text-[#292929] hover:bg-[#F3F4F6]"
-                            >
-                              Sign Out
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    {/* Clerk UserButton */}
+                    <UserButton 
+                      afterSignOutUrl="/"
+                      userProfileMode="modal"
+                    />
                   </SignedIn>
                 </div>
               </div>
