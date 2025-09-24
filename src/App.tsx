@@ -42,6 +42,7 @@ import { TagPage } from "./pages/TagPage";
 import JudgingGroupPage from "./pages/JudgingGroupPage";
 import JudgingInterfacePage from "./pages/JudgingInterfacePage";
 import PublicJudgingResultsPage from "./pages/PublicJudgingResultsPage";
+import { NotificationsPage } from "./pages/NotificationsPage";
 
 function HomePage() {
   const { viewMode, selectedTagId, sortPeriod } = useLayoutContext();
@@ -165,6 +166,7 @@ function App() {
           <Route path="/f/:formSlug" element={<PublicFormPage />} />
           <Route path="/results/:slug" element={<PublicResultsViewer />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/judging/:slug" element={<JudgingGroupPage />} />
           <Route
             path="/judging/:slug/judge"

@@ -139,6 +139,96 @@
 - Exceeding the 30 daily limit silently records only the first remaining mentions and drops the rest the parent write still succeeds
 - Rendering on both target pages converts `@username` into profile links without breaking existing styling
 
+---
+
+## ✅ IMPLEMENTATION STATUS: COMPLETED
+
+### What Was Implemented
+
+#### 1. **Core Schema & Functions** ✅
+
+- **Schema**: Added `mentions` table with proper indexes for quota enforcement and future email rollups
+- **Core utilities**: Created `convex/mentions.ts` with extract, resolve, record functions
+- **User search**: Added `searchUsersForMentions` query for autocomplete functionality
+
+#### 2. **Backend Integration** ✅
+
+- **Comments flow**: Integrated mentions processing in `convex/comments.ts`
+- **Judging notes flow**: Integrated mentions processing in `convex/judgingGroupSubmissions.ts`
+- **Quota enforcement**: 30 mentions per user per day with server-side validation
+
+#### 3. **Frontend Features** ✅
+
+- **Link rendering**: Added `renderTextWithMentions` utility and integrated in both surfaces
+- **Autocomplete**: Built LinkedIn-style `MentionTextarea` component with real-time user search
+- **UI Integration**: Replaced textareas in `CommentForm` and `JudgingInterfacePage`
+
+### Key Features Delivered
+
+#### **LinkedIn-Style Autocomplete** 🎯
+
+- **Real-time search**: As you type `@username`, dropdown appears with matching users
+- **Keyboard navigation**: Arrow keys, Enter/Tab to select, Escape to close
+- **Visual design**: User avatars, real names, hover states, selected highlighting
+- **Performance optimized**: Up to 10 results, debounced search, efficient queries
+
+#### **Smart Context Detection** 🔍
+
+- **Intelligent parsing**: Only triggers on `@` at start of word or line
+- **Clean insertion**: Automatically adds space after username
+- **Focus management**: Maintains cursor position and textarea focus
+
+#### **Complete Integration** 🔄
+
+- **Comments**: Full autocomplete in story comment threads
+- **Judging notes**: Autocomplete in both main notes and replies
+- **Link rendering**: All existing and new mentions render as profile links
+
+### Technical Fixes Applied
+
+#### **TypeScript Issues** 🔧
+
+- **Field mapping**: Fixed `profileImageUrl` → `imageUrl` to match user schema
+- **Optional fields**: Added proper handling for `username` being optional
+- **Type safety**: Used non-null assertions after filtering undefined values
+
+#### **Convex Query Optimization** ⚡
+
+- **Efficient search**: Uses `by_username` index for exact matches first
+- **Fallback search**: Full collection scan only when needed
+- **User filtering**: Excludes banned users from autocomplete results
+
+#### **UI/UX Enhancements** ✨
+
+- **Dropdown positioning**: Proper z-index and overflow handling
+- **Loading states**: Graceful handling when no users found
+- **Accessibility**: Keyboard navigation and proper focus management
+
+### How It Works
+
+1. **User types `@`** in comment or judging note textarea
+2. **Autocomplete activates** with real-time user search
+3. **Dropdown shows** up to 10 matching users with avatars/names
+4. **User selects** via keyboard or mouse click
+5. **Username inserted** with proper spacing and focus maintained
+6. **Server processes** mentions on submit with quota enforcement
+7. **Links render** for all mentions in the UI
+
+### Performance & Security
+
+- **Search optimized**: Index-based lookups with collection fallback
+- **Quota enforced**: 30 mentions/day limit server-side
+- **User filtering**: Banned users excluded from autocomplete
+- **Efficient queries**: Limited results, proper indexes used
+
+### Future Integration Ready
+
+- **Email system**: `mentions` table designed for daily digest emails
+- **Admin visibility**: Indexes support admin queries and moderation
+- **Audit trail**: Full mention history preserved for compliance
+
+**Status**: ✅ **Production ready** - Full LinkedIn-style @mention system with autocomplete, quota enforcement, and seamless UX integration!
+
 ### Technical references
 
 - Users schema fields in `convex/schema.ts` include `username` and index `by_username` which will be used for handle resolution

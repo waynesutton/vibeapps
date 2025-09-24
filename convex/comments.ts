@@ -280,6 +280,17 @@ export const add = mutation({
       commentCount: (story.commentCount || 0) + 1, // Use || 0 for safety
     });
 
+    // Create alert for story owner (non-blocking)
+    if (story.userId) {
+      await ctx.scheduler.runAfter(0, internal.alerts.createAlert, {
+        recipientUserId: story.userId,
+        actorUserId: userId,
+        type: "comment",
+        storyId: args.storyId,
+        commentId: commentId,
+      });
+    }
+
     // Process mentions in comment content (non-blocking)
     try {
       // Extract @username handles from content

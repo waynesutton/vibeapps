@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { getUserByCtx } from "./users"; // Assuming this helper exists and is correctly implemented
+import { internal } from "./_generated/api";
 
 // --- MUTATIONS ---
 
@@ -19,7 +20,9 @@ export const followUser = mutation({
     const existingFollow = await ctx.db
       .query("follows")
       .withIndex("by_followerId_followingId", (q) =>
-        q.eq("followerId", currentUser._id).eq("followingId", args.userIdToFollow)
+        q
+          .eq("followerId", currentUser._id)
+          .eq("followingId", args.userIdToFollow),
       )
       .unique();
 
@@ -31,6 +34,14 @@ export const followUser = mutation({
       followerId: currentUser._id,
       followingId: args.userIdToFollow,
     });
+
+    // Create alert for the followed user (non-blocking)
+    await ctx.scheduler.runAfter(0, internal.alerts.createAlert, {
+      recipientUserId: args.userIdToFollow,
+      actorUserId: currentUser._id,
+      type: "follow",
+    });
+
     return { success: true, message: "User followed" };
   },
 });
@@ -46,7 +57,9 @@ export const unfollowUser = mutation({
     const followRecord = await ctx.db
       .query("follows")
       .withIndex("by_followerId_followingId", (q) =>
-        q.eq("followerId", currentUser._id).eq("followingId", args.userIdToUnfollow)
+        q
+          .eq("followerId", currentUser._id)
+          .eq("followingId", args.userIdToUnfollow),
       )
       .unique();
 
@@ -75,7 +88,7 @@ export const getFollowers = query({
         const user = await ctx.db.get(id);
         // Attach username if it exists, handle potential null user
         return user ? { ...user, username: user.username || "N/A" } : null;
-      })
+      }),
     );
     return followers.filter(Boolean); // Filter out any nulls if users were deleted or issues
   },
@@ -96,7 +109,7 @@ export const getFollowing = query({
         const user = await ctx.db.get(id);
         // Attach username if it exists, handle potential null user
         return user ? { ...user, username: user.username || "N/A" } : null;
-      })
+      }),
     );
     return following.filter(Boolean);
   },
@@ -136,7 +149,9 @@ export const isFollowing = query({
     const existingFollow = await ctx.db
       .query("follows")
       .withIndex("by_followerId_followingId", (q) =>
-        q.eq("followerId", currentUser._id).eq("followingId", args.profileUserId)
+        q
+          .eq("followerId", currentUser._id)
+          .eq("followingId", args.profileUserId),
       )
       .unique();
     return !!existingFollow;

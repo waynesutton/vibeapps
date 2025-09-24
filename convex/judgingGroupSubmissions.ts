@@ -560,6 +560,19 @@ export const updateSubmissionStatus = mutation({
       lastUpdatedAt: Date.now(),
     });
 
+    // Create alert for story owner when marked as completed (non-blocking)
+    if (args.status === "completed") {
+      const story = await ctx.db.get(args.storyId);
+      if (story && story.userId) {
+        await ctx.scheduler.runAfter(0, internal.alerts.createAlert, {
+          recipientUserId: story.userId,
+          actorUserId: undefined, // No judge identity per PRD
+          type: "judged",
+          storyId: args.storyId,
+        });
+      }
+    }
+
     return null;
   },
 });

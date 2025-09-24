@@ -1,7 +1,9 @@
 import { useState } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { Link, useSearchParams } from "react-router-dom";
-import { useConvexAuth } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { NotFoundPage } from "../../pages/NotFoundPage";
 import { TagManagement } from "./TagManagement";
 import { ContentModeration } from "./ContentModeration";
 import { Settings } from "./Settings";
@@ -47,6 +49,12 @@ export function AdminDashboard() {
 
   const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
 
+  // Check if user is admin
+  const isUserAdmin = useQuery(
+    api.users.checkIsUserAdmin,
+    isAuthenticated ? {} : "skip",
+  );
+
   const handleMainTabChange = (value: string) => {
     const newTab = value as MainAdminTab;
     setActiveMainTab(newTab);
@@ -68,7 +76,7 @@ export function AdminDashboard() {
     }
   };
 
-  if (authIsLoading) {
+  if (authIsLoading || (isAuthenticated && isUserAdmin === undefined)) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8 text-center">
         Loading authentication...
@@ -76,13 +84,9 @@ export function AdminDashboard() {
     );
   }
 
-  if (!isAuthenticated) {
-    return (
-      <div className="max-w-6xl mx-auto px-4 py-8 text-center">
-        Please log in to access the admin dashboard.
-        {/* Optionally, add a <SignInButton /> here if you have Clerk components readily available */}
-      </div>
-    );
+  // Show 404 for non-authenticated users or users without admin role
+  if (!isAuthenticated || isUserAdmin === false) {
+    return <NotFoundPage />;
   }
 
   return (

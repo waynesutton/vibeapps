@@ -15,6 +15,7 @@ import {
   ChevronDown,
   Menu,
   User,
+  Bell,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -33,6 +34,7 @@ import { UserSyncer } from "./UserSyncer";
 import { WeeklyLeaderboard } from "./WeeklyLeaderboard";
 import { TopCategoriesOfWeek } from "./TopCategoriesOfWeek";
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
+import { formatDistanceToNow } from "date-fns";
 
 interface LayoutContextType {
   viewMode: "list" | "grid" | "vibe";
@@ -85,10 +87,24 @@ export function Layout({ children }: { children?: ReactNode }) {
   const [showProfileDropdown, setShowProfileDropdown] = React.useState(false);
   const profileDropdownRef = React.useRef<HTMLDivElement>(null);
 
+  // Alerts dropdown state
+  const [showAlertsDropdown, setShowAlertsDropdown] = React.useState(false);
+  const alertsDropdownRef = React.useRef<HTMLDivElement>(null);
+
   const headerTags = useQuery(api.tags.listHeader);
 
   const convexUserDoc = useQuery(
     api.users.getMyUserDocument,
+    isClerkLoaded && isSignedIn ? {} : "skip",
+  );
+
+  // Alerts queries
+  const hasUnreadAlerts = useQuery(
+    api.alerts.hasUnread,
+    isClerkLoaded && isSignedIn ? {} : "skip",
+  );
+  const recentAlerts = useQuery(
+    api.alerts.listRecentForDropdown,
     isClerkLoaded && isSignedIn ? {} : "skip",
   );
 
@@ -276,6 +292,21 @@ export function Layout({ children }: { children?: ReactNode }) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [showProfileDropdown]);
 
+  // Close alerts dropdown on outside click
+  React.useEffect(() => {
+    if (!showAlertsDropdown) return;
+    function handleClick(e: MouseEvent) {
+      if (
+        alertsDropdownRef.current &&
+        !alertsDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowAlertsDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [showAlertsDropdown]);
+
   // Determine if the sidebar should be shown based on view mode and settings
   // Ensure settings is loaded before trying to access its properties for showSidebar
   // Never show sidebar on story detail pages, judging pages, hackathon forms, or dynamic submit forms
@@ -332,6 +363,60 @@ export function Layout({ children }: { children?: ReactNode }) {
                   </SignedOut>
                   <SignedIn>
                     <UserSyncer />
+                    {/* Alerts Bell Icon */}
+                    <div className="relative" ref={alertsDropdownRef}>
+                      <button
+                        onClick={() =>
+                          setShowAlertsDropdown(!showAlertsDropdown)
+                        }
+                        className="flex items-center justify-center w-8 h-8 rounded-full border border-[#D8E1EC] bg-white hover:bg-[#F2F4F7] transition-colors mr-2"
+                        aria-label="Notifications"
+                      >
+                        <Bell className="w-4 h-4 text-[#525252]" />
+                        {hasUnreadAlerts && (
+                          <div className="alerts-notification-dot absolute top-0 right-2 w-2 h-2 bg-black rounded-full"></div>
+                        )}
+                      </button>
+
+                      {showAlertsDropdown && (
+                        <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg border border-[#D8E1EC] py-2 z-50">
+                          <div className="px-3 py-2 border-b border-[#F4F0ED]">
+                            <h3 className="text-sm font-medium text-[#292929]">
+                              Notifications
+                            </h3>
+                          </div>
+
+                          <div className="max-h-80 overflow-y-auto">
+                            {recentAlerts && recentAlerts.length > 0 ? (
+                              recentAlerts.map((alert: any) => (
+                                <DropdownNotificationItem
+                                  key={alert._id}
+                                  alert={alert}
+                                />
+                              ))
+                            ) : (
+                              <div className="px-3 py-4 text-center text-xs text-[#545454]">
+                                No notifications yet
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="border-t border-[#F4F0ED] pt-2">
+                            <Link
+                              to="/notifications"
+                              onClick={() => {
+                                setShowAlertsDropdown(false);
+                                // Mark all as read will be handled by the notifications page
+                              }}
+                              className="block w-full px-3 py-2 text-center text-xs text-[#292929] hover:bg-[#F2F4F7] transition-colors"
+                            >
+                              View all
+                            </Link>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
                     {/* Custom Profile Dropdown */}
                     <div className="relative" ref={profileDropdownRef}>
                       <button
@@ -679,4 +764,76 @@ export function Layout({ children }: { children?: ReactNode }) {
 
 export function useLayoutContext() {
   return useOutletContext<LayoutContextType>();
+}
+
+// Dropdown notification item component
+function DropdownNotificationItem({ alert }: { alert: any }) {
+  const actorUser = useQuery(
+    api.users.getUserById,
+    alert.actorUserId ? { userId: alert.actorUserId } : "skip",
+  );
+
+  const getNotificationText = () => {
+    switch (alert.type) {
+      case "vote":
+        return "vibed your app";
+      case "comment":
+        return "commented on your app";
+      case "rating":
+        return `rated your app ${alert.ratingValue} stars`;
+      case "follow":
+        return "started following you";
+      case "judged":
+        return "Your app has been judged";
+      default:
+        return "interacted with your content";
+    }
+  };
+
+  return (
+    <div
+      className={`px-3 py-2 border-b border-[#F4F0ED] last:border-b-0 hover:bg-[#F2F4F7] transition-colors ${
+        !alert.isRead ? "bg-blue-50" : ""
+      }`}
+    >
+      <div className="flex items-start gap-2">
+        {/* Actor Avatar */}
+        {actorUser && (
+          <div className="flex-shrink-0">
+            {actorUser.imageUrl ? (
+              <img
+                src={actorUser.imageUrl}
+                alt={actorUser.name}
+                className="w-6 h-6 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-[#292929] flex items-center justify-center">
+                <span className="text-white text-xs">
+                  {actorUser.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex-1 min-w-0">
+          <div className="text-xs text-[#525252]">
+            {alert.type === "judged" ? (
+              <span>{getNotificationText()}</span>
+            ) : actorUser ? (
+              <>
+                <span className="font-medium">{actorUser.name}</span>{" "}
+                {getNotificationText()}
+              </>
+            ) : (
+              <span>Someone {getNotificationText()}</span>
+            )}
+          </div>
+          <div className="text-xs text-[#545454] mt-1">
+            {formatDistanceToNow(alert._creationTime, { addSuffix: true })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

@@ -19,7 +19,9 @@
 - `changelog.MD`: Developer-friendly change log of new features
 - `files.MD`: This file - comprehensive codebase documentation
 - `TASK.MD`: Project task and feature requirements
+- `mentions.md`: @Mentions system PRD and implementation documentation
 - `addresend.md`: Resend email integration PRD and requirements
+- `metadataforsubs.md`: Server-side metadata generation PRD for social sharing
 - `inboxforapp.md`: Inbox messaging system PRD (planned feature)
 - `following-plan.MD`: User following system implementation plan
 - `judgingsetup.md`: Judging system setup and configuration guide
@@ -46,12 +48,13 @@
 ### Authentication & User Management
 
 - `convex/clerk.ts`: Clerk authentication integration with Convex
-- `convex/users.ts`: User management functions (queries, mutations, admin functions)
+- `convex/users.ts`: User management functions (queries, mutations, admin functions, mention search)
+- `convex/mentions.ts`: @Mentions system core utilities (extract, resolve, record, quota enforcement)
 
 ### Core App Features
 
 - `convex/stories.ts`: App submission functions (create, update, approve, search) with multi-image support
-- `convex/comments.ts`: Comment system queries and mutations with 10-word minimum validation
+- `convex/comments.ts`: Comment system queries and mutations with @mentions integration and validation
 - `convex/votes.ts`: Voting system for app submissions
 - `convex/bookmarks.ts`: User bookmarking system functions with improved interface
 - `convex/storyRatings.ts`: 1-5 star rating system for apps
@@ -76,7 +79,7 @@
 
 - `convex/judgingGroups.ts`: Judging group management with public/private access and password protection
 - `convex/judgingCriteria.ts`: Judging criteria and scoring questions management with 1-10 star ratings
-- `convex/judgingGroupSubmissions.ts`: Submission assignment within judging groups with search functionality
+- `convex/judgingGroupSubmissions.ts`: Submission assignment within judging groups with @mentions in notes and search functionality
 - `convex/judges.ts`: Judge registration, session management, and progress tracking with status updates
 - `convex/judgeScores.ts`: Score submission, calculation, and results with CSV export and weighted scoring
 
@@ -115,8 +118,9 @@
 
 ### User Interaction Components
 
-- `src/components/Comment.tsx`: Individual comment display component
-- `src/components/CommentForm.tsx`: Comment creation and editing form
+- `src/components/Comment.tsx`: Individual comment display component with @mention link rendering
+- `src/components/CommentForm.tsx`: Comment creation and editing form with @mention autocomplete
+- `src/components/ui/MentionTextarea.tsx`: LinkedIn-style @mention autocomplete textarea component
 
 ### Discovery & Navigation
 
@@ -182,7 +186,7 @@
 - `src/pages/UserProfilePage.tsx`: User profile display and management
 - `src/pages/TagPage.tsx`: Tag-specific app listings
 - `src/pages/JudgingGroupPage.tsx`: Judge interface for scoring submissions
-- `src/pages/JudgingInterfacePage.tsx`: Individual submission judging interface
+- `src/pages/JudgingInterfacePage.tsx`: Individual submission judging interface with @mention autocomplete in notes
 - `src/pages/PublicJudgingResultsPage.tsx`: Public judging results page
 - `src/pages/NotFoundPage.tsx`: 404 error page
 - `src/pages/NavTestPage.tsx`: Navigation testing page
@@ -190,6 +194,7 @@
 ### Utilities & Types
 
 - `src/lib/utils.ts`: Shared utility functions and helpers
+- `src/utils/mentions.tsx`: @Mention link rendering utility for converting @username to profile links
 - `src/types/index.ts`: TypeScript type definitions for the frontend
 
 ## Static Assets (public Directory)

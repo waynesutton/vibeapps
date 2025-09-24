@@ -408,4 +408,24 @@ export default defineSchema({
     .index("by_actor_and_date", ["actorUserId", "date"]) // For fast quota checks
     .index("by_target_and_date", ["targetUserId", "date"]) // For future daily email rollups
     .index("by_context_and_source", ["context", "sourceId"]), // For debugging and idempotency checks
+
+  // Alerts notifications system
+  alerts: defineTable({
+    recipientUserId: v.id("users"), // Who receives the notification
+    actorUserId: v.optional(v.id("users")), // Who performed the action (null for system events like judged)
+    type: v.union(
+      v.literal("vote"),
+      v.literal("comment"),
+      v.literal("rating"),
+      v.literal("follow"),
+      v.literal("judged"),
+    ),
+    storyId: v.optional(v.id("stories")), // Related story for vote, comment, rating, judged alerts
+    commentId: v.optional(v.id("comments")), // Specific comment for comment alerts
+    ratingValue: v.optional(v.number()), // Rating value for rating alerts
+    isRead: v.boolean(), // Read status
+    readAt: v.optional(v.number()), // When alert was marked as read
+  })
+    .index("by_recipient", ["recipientUserId"]) // Paginate and order by _creationTime desc
+    .index("by_recipient_and_isRead", ["recipientUserId", "isRead"]), // Efficient unread checks
 });

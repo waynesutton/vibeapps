@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Download, ArrowLeft, ArrowUp, ArrowDown } from "lucide-react";
 import { useQuery, useConvexAuth } from "convex/react";
+import { NotFoundPage } from "../../pages/NotFoundPage";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import type { CustomForm, FormSubmission, FormField } from "../../types";
@@ -32,12 +33,18 @@ const getFieldValue = (data: any, fieldLabel: string): string => {
 };
 
 // Function to generate CSV content
-const generateCSV = (fields: FormField[], submissions: FormSubmission[]): string => {
+const generateCSV = (
+  fields: FormField[],
+  submissions: FormSubmission[],
+): string => {
   const headers = ["Submitted At", ...fields.map((f) => f.label)];
   const rows = submissions.map((sub) => {
     const rowData = [
       formatDate(sub._creationTime),
-      ...fields.map((field) => `"${getFieldValue(sub.data, field.label).replace(/"/g, '""')}"`), // Escape quotes
+      ...fields.map(
+        (field) =>
+          `"${getFieldValue(sub.data, field.label).replace(/"/g, '""')}"`,
+      ), // Escape quotes
     ];
     return rowData.join(",");
   });
@@ -48,10 +55,22 @@ export function FormResults() {
   const { formId } = useParams<{ formId?: Id<"forms"> }>();
   const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
 
+  // Check if user is admin
+  const isUserAdmin = useQuery(
+    api.users.checkIsUserAdmin,
+    isAuthenticated ? {} : "skip",
+  );
+
   const skipQuery = !formId || (formId && (authIsLoading || !isAuthenticated));
 
-  const formData = useQuery(api.forms.getFormWithFields, skipQuery ? "skip" : { formId: formId! });
-  const submissions = useQuery(api.forms.listSubmissions, skipQuery ? "skip" : { formId: formId! });
+  const formData = useQuery(
+    api.forms.getFormWithFields,
+    skipQuery ? "skip" : { formId: formId! },
+  );
+  const submissions = useQuery(
+    api.forms.listSubmissions,
+    skipQuery ? "skip" : { formId: formId! },
+  );
 
   const [sortField, setSortField] = useState<string>("_creationTime");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
@@ -103,17 +122,21 @@ export function FormResults() {
   }, [submissions, sortField, sortDirection]);
 
   // Handle auth loading state first
-  if (authIsLoading) {
+  if (authIsLoading || (isAuthenticated && isUserAdmin === undefined)) {
     return <div>Loading authentication...</div>;
   }
 
-  // If formId is required but user is not authenticated
-  if (formId && !isAuthenticated) {
-    return <div>Please log in to view form results.</div>;
+  // Show 404 for non-authenticated users or users without admin role
+  if (!isAuthenticated || isUserAdmin === false) {
+    return <NotFoundPage />;
   }
 
   // Loading state for data (only if formId is present and auth is fine)
-  if (formId && isAuthenticated && (formData === undefined || submissions === undefined)) {
+  if (
+    formId &&
+    isAuthenticated &&
+    (formData === undefined || submissions === undefined)
+  ) {
     return <div>Loading results...</div>;
   }
 
@@ -137,15 +160,19 @@ export function FormResults() {
         <div>
           <Link
             to="/admin?tab=forms"
-            className="text-sm text-[#545454] hover:text-[#525252] flex items-center gap-1 mb-1">
+            className="text-sm text-[#545454] hover:text-[#525252] flex items-center gap-1 mb-1"
+          >
             <ArrowLeft className="w-4 h-4" /> Back to Forms List
           </Link>
-          <h2 className="text-xl font-medium text-[#525252]">Results for: {formData.title}</h2>
+          <h2 className="text-xl font-medium text-[#525252]">
+            Results for: {formData.title}
+          </h2>
         </div>
         <button
           onClick={exportCSV}
           disabled={!submissions || submissions.length === 0}
-          className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+          className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           <Download className="w-4 h-4" />
           Export CSV ({sortedSubmissions.length} rows)
         </button>
@@ -154,7 +181,9 @@ export function FormResults() {
       {/* Results Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         {sortedSubmissions.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">No submissions received yet.</div>
+          <div className="p-6 text-center text-gray-500">
+            No submissions received yet.
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -163,7 +192,8 @@ export function FormResults() {
                   {/* Submitted At Column (Sortable) */}
                   <th
                     className="text-left p-3 px-4 text-gray-600 font-medium cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort("_creationTime")}>
+                    onClick={() => handleSort("_creationTime")}
+                  >
                     <div className="flex items-center gap-1">
                       Submitted At
                       {sortField === "_creationTime" &&
@@ -198,14 +228,18 @@ export function FormResults() {
                 {sortedSubmissions.map((submission) => (
                   <tr
                     key={submission._id}
-                    className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
+                    className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50"
+                  >
                     {/* Submitted At Data */}
                     <td className="p-3 px-4 text-gray-500 whitespace-nowrap">
                       {formatDate(submission._creationTime)}
                     </td>
                     {/* Dynamic Data based on Form Fields */}
                     {formFields.map((field) => (
-                      <td key={field._id} className="p-3 px-4 text-gray-700 align-top">
+                      <td
+                        key={field._id}
+                        className="p-3 px-4 text-gray-700 align-top"
+                      >
                         {getFieldValue(submission.data, field.label)}
                       </td>
                     ))}

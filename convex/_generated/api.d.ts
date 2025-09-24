@@ -16,6 +16,7 @@ import type {
 import type * as adminFollowsQueries from "../adminFollowsQueries.js";
 import type * as adminJudgeTracking from "../adminJudgeTracking.js";
 import type * as adminQueries from "../adminQueries.js";
+import type * as alerts from "../alerts.js";
 import type * as auth from "../auth.js";
 import type * as bookmarks from "../bookmarks.js";
 import type * as clerk from "../clerk.js";
@@ -56,6 +57,7 @@ declare const fullApi: ApiFromModules<{
   adminFollowsQueries: typeof adminFollowsQueries;
   adminJudgeTracking: typeof adminJudgeTracking;
   adminQueries: typeof adminQueries;
+  alerts: typeof alerts;
   auth: typeof auth;
   bookmarks: typeof bookmarks;
   clerk: typeof clerk;

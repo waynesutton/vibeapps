@@ -811,6 +811,17 @@ export const voteStory = mutation({
 
     // Increment the vote count on the story
     await ctx.db.patch(args.storyId, { votes: story.votes + 1 });
+
+    // Create alert for story owner (non-blocking)
+    if (story.userId) {
+      await ctx.scheduler.runAfter(0, internal.alerts.createAlert, {
+        recipientUserId: story.userId,
+        actorUserId: userId,
+        type: "vote",
+        storyId: args.storyId,
+      });
+    }
+
     return { success: true, action: "voted", newVoteCount: story.votes + 1 };
   },
 });
@@ -868,6 +879,17 @@ export const rate = mutation({
       ratingSum: story.ratingSum + args.rating,
       ratingCount: story.ratingCount + 1,
     });
+
+    // Create alert for story owner (non-blocking)
+    if (story.userId) {
+      await ctx.scheduler.runAfter(0, internal.alerts.createAlert, {
+        recipientUserId: story.userId,
+        actorUserId: userId,
+        type: "rating",
+        storyId: args.storyId,
+        ratingValue: args.rating,
+      });
+    }
 
     return { success: true };
   },
@@ -1974,6 +1996,36 @@ export const getApprovedCountByTag = query({
     }
 
     return stories.length;
+  },
+});
+
+/**
+ * Get basic story information by ID for notifications and other features
+ */
+export const getById = query({
+  args: { id: v.id("stories") },
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("stories"),
+      title: v.string(),
+      slug: v.string(),
+      url: v.string(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const story = await ctx.db.get(args.id);
+
+    if (!story || story.isHidden || story.status !== "approved") {
+      return null;
+    }
+
+    return {
+      _id: story._id,
+      title: story.title,
+      slug: story.slug,
+      url: story.url,
+    };
   },
 });
 

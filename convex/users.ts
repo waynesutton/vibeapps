@@ -1403,6 +1403,38 @@ export const getUserNumber = query({
 });
 
 /**
+ * Get user by ID for notifications and other features
+ */
+export const getUserById = query({
+  args: { userId: v.id("users") },
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("users"),
+      _creationTime: v.number(),
+      name: v.string(),
+      username: v.optional(v.string()),
+      imageUrl: v.optional(v.string()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+
+    if (!user || user.isBanned) {
+      return null;
+    }
+
+    return {
+      _id: user._id,
+      _creationTime: user._creationTime,
+      name: user.name,
+      username: user.username,
+      imageUrl: user.imageUrl,
+    };
+  },
+});
+
+/**
  * Search users by username or name for @mention autocomplete
  * Returns up to 10 matches for performance
  */

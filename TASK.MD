@@ -46,12 +46,12 @@ Brief description of the feature and its purpose.
 - [x] added markdown support and preview for story details page
 - [x] fix open graph image
 - [x] add gallery images also show up in judging page with popup modal
-- [ ] added judges score moderations sytem
+- [x] added judges score moderations system
+- [x] add @mentions for usernames in judging notes, comments for profiles and in the comments section.
 
 ## In Progress Tasks
-
-- [ ] add @mentions for usernames in judging notes, comments for profiles and in the comments section.
-- [ ] clerk roles for hackathon organizers to see judges section in admin dashboad only
+- [ ] add notification section like product hunt that works with sending emails too, move notiction dot and background from page
+- [ ] clerk roles for hackathon organizers to see judges section in admin dashboard only
 - [ ] setup resend for emails for notifications on post
 - [ ] add option to turn off email notifications on user profiles
 
