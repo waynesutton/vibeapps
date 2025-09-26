@@ -729,14 +729,14 @@ export function Layout({ children }: { children?: ReactNode }) {
           </div>
         </header>
         <main className="flex-grow container mx-auto px-4 py-1">
-          <div className="flex flex-col md:flex-row gap-8">
-            <div className={showSidebar ? "md:w-3/4" : "w-full"}>
+          <div className="flex flex-col lg:flex-row gap-8">
+            <div className={showSidebar ? "lg:w-3/4" : "w-full"}>
               {children || (
                 <Outlet context={{ viewMode, selectedTagId, sortPeriod }} />
               )}
             </div>
             {showSidebar && (
-              <aside className="md:w-1/4 space-y-6">
+              <aside className="lg:w-1/4 space-y-6">
                 <WeeklyLeaderboard />
                 <TopCategoriesOfWeek
                   selectedTagId={selectedTagId}
@@ -822,7 +822,7 @@ function DropdownNotificationItem({ alert }: { alert: any }) {
               <span>{getNotificationText()}</span>
             ) : actorUser ? (
               <>
-                <span className="font-medium">{actorUser.name}</span>{" "}
+                <span className="font-medium">{actorUser.name}</span>{" "}Top Categories This Week
                 {getNotificationText()}
               </>
             ) : (
