@@ -16,7 +16,8 @@ type AlertType = {
     | "follow"
     | "judged"
     | "bookmark"
-    | "report";
+    | "report"
+    | "verified";
   isRead: boolean;
   actorUserId?: Id<"users">;
   storyId?: Id<"stories">;
@@ -139,6 +140,8 @@ function NotificationItem({ alert }: NotificationItemProps) {
         return "bookmarked your app";
       case "report":
         return "reported a submission";
+      case "verified":
+        return "verified your account";
       default:
         return "interacted with your content";
     }
@@ -169,7 +172,8 @@ function NotificationItem({ alert }: NotificationItemProps) {
             )}
           </div>
         ) : (
-          alert.type !== "judged" && (
+          alert.type !== "judged" &&
+          alert.type !== "verified" && (
             <div className="flex-shrink-0">
               <div className="w-8 h-8 rounded-full bg-[#525252] flex items-center justify-center">
                 <span className="text-white text-xs">?</span>
@@ -178,11 +182,39 @@ function NotificationItem({ alert }: NotificationItemProps) {
           )
         )}
 
+        {/* System notification icon for verified */}
+        {alert.type === "verified" && !actorUser && (
+          <div className="flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
+              <svg
+                className="w-4 h-4 text-white"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  Someone
+                  interacted
+                  with
+                  your
+                  content
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+          </div>
+        )}
+
         {/* Notification Content */}
         <div className="flex-1 min-w-0">
           <div className="text-sm text-[#292929]">
             {alert.type === "judged" ? (
               <span>{getNotificationText()}</span>
+            ) : alert.type === "verified" ? (
+              <span className="font-medium text-blue-600">
+                Congratulations! Your account has been verified
+              </span>
             ) : actorUser ? (
               <>
                 <Link

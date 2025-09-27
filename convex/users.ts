@@ -1356,6 +1356,13 @@ export const verifyUserByAdmin = mutation({
       throw new Error("User not found.");
     }
     await ctx.db.patch(args.userId, { isVerified: true });
+
+    // Create verification notification for the user
+    await ctx.runMutation(internal.alerts.createAlert, {
+      recipientUserId: args.userId,
+      type: "verified",
+    });
+
     console.log(`Admin: User ${args.userId} has been verified.`);
     return { success: true, userId: args.userId, newVerifiedStatus: true };
   },
