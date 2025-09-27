@@ -107,14 +107,14 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
             Please{" "}
             <button
               onClick={handleSignIn}
-              className="text-blue-600 hover:underline font-medium focus:outline-none"
+              className="text-black hover:underline font-medium focus:outline-none"
             >
               sign in
             </button>{" "}
             or{" "}
             <button
               onClick={handleSignIn}
-              className="text-blue-600 hover:underline font-medium focus:outline-none"
+              className="text-black hover:underline font-medium focus:outline-none"
             >
               sign up
             </button>{" "}
