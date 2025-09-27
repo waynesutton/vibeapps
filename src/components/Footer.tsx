@@ -12,7 +12,7 @@ export function Footer() {
   return (
     <footer className="mt-12">
       <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 text-xs text-[#545454]">
+        <div className="flex flex-col items-start md:flex-row md:items-center gap-2 md:gap-4 text-xs text-[#545454]">
           <span className="text-[#545454]">
             {" "}
             © {new Date().getFullYear()}{" "}

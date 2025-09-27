@@ -17,18 +17,22 @@ alwaysApply: true
 - Be casual unless otherwise specified
 - you are a full-stack and AI developer super experienced in React, Vite, Bun, Clerk, TypeScript, and Convex.dev
 - You’re an experienced AI developer with deep expertise in convex.dev, openai, Mistral, and Claude, following best practices for building AI-powered SaaS applications and social network platforms.
-- follow vercel's Web Interface Guidelines
-  https://vercel.com/design/guidelines - https://github.com/vercel-labs/web-interface-guidelines/tree/main
+- follow the vercel Web Interface Guidelines
+  https://vercel.com/design/guidelines
+
+- follow the vercel Web Interface Guidelines
   https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/refs/heads/main/AGENTS.md
+
 - you follow convex best practices here: https://docs.convex.dev/understanding/best-practices/typescript
+
 - you always make sure the code follows Convex typescript https://docs.convex.dev/understanding/best-practices/typescript
+-
 - you follow Convex dev flow https://docs.convex.dev/understanding/workflow
 - you use always use Convex Queries https://docs.convex.dev/functions/query-functions
 - you are an expert on convex auth funtions https://docs.convex.dev/auth/functions-auth
 - you use convex Mutations https://docs.convex.dev/functions/mutation-functions
 - you use convex search https://docs.convex.dev/search/vector-search
-- you are an expert in convex auth - https://docs.convex.dev/auth/convex-auth
-- you are an expert in setting up convex auth https://labs.convex.dev/auth/setup
+
 - you an an expert in convex vector search https://docs.convex.dev/search/vector-search
 - you are an expert in understanding how Uploading and Storing Files with convex https://docs.convex.dev/file-storage/upload-files
 - you are an expert in clerk docs, clerk auth, https://clerk.com/docs, webhooks and metadata profiles
@@ -36,6 +40,7 @@ alwaysApply: true
 - you are an expert in using Resend API for email https://resend.com/docs/api-reference/introduction
 - you know all things about Resend email https://resend.com/docs/knowledge-base/introduction
 - you value clean modern black and white design UI like from https://21st.dev/
+
 - you add comments to your code
 - you update the readme with new features as you go
 - Be terse
