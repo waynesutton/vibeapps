@@ -758,9 +758,9 @@ export default function UserProfilePage() {
         className="mb-4 p-6 bg-[#ffffff] rounded-lg border border-gray-200"
         style={{ fontFamily: "Inter, sans-serif" }}
       >
-        <div className="flex flex-col sm:flex-row items-center sm:items-start">
+        <div className="flex flex-col sm:flex-row items-start sm:items-start">
           {/* Profile Image Section */}
-          <div className="relative mb-4 sm:mb-0 sm:mr-6  rounded-full w-24 h-24 overflow-hidden">
+          <div className="relative mb-4 sm:mb-0 sm:mr-6 rounded-full w-24 h-24 overflow-hidden">
             {isEditing ? (
               <button
                 onClick={triggerFileEdit}
@@ -804,7 +804,7 @@ export default function UserProfilePage() {
           </div>
 
           {/* Profile Info Section */}
-          <div className="flex-grow text-center sm:text-left">
+          <div className="flex-grow text-left sm:text-left">
             {isEditing ? (
               <div className="space-y-2 mb-2">
                 {/* Name Input */}
@@ -859,7 +859,7 @@ export default function UserProfilePage() {
             )}
 
             {/* Bio Section - Full Width */}
-            <div className="mb-3 w-full">
+            <div className="mb-3 w-full text-left">
               {isEditing ? (
                 <textarea
                   value={newBio}
@@ -872,14 +872,14 @@ export default function UserProfilePage() {
                 />
               ) : loadedProfileUser?.bio ? (
                 <p
-                  className="text-sm text-gray-700 w-full"
+                  className="text-sm text-gray-700 w-full text-left"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 >
                   {loadedProfileUser.bio}
                 </p>
               ) : (
                 <p
-                  className="text-sm text-gray-400 italic w-full"
+                  className="text-sm text-gray-400 italic w-full text-left"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 >
                   No bio yet.
@@ -888,7 +888,7 @@ export default function UserProfilePage() {
             </div>
 
             {/* Social Links Section - Horizontal */}
-            <div className="flex flex-wrap gap-3 items-center mb-3">
+            <div className="flex flex-wrap gap-3 items-center mb-3 justify-start">
               {isEditing ? (
                 <>
                   <input
@@ -1077,57 +1077,67 @@ export default function UserProfilePage() {
             </span>
           )}
         </h2>
-        <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+        <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:gap-3 md:justify-start">
           {/* Submissions */}
           <button
             onClick={() => handleMiniDashboardClick("submissions")}
             aria-label={`View ${loadedProfileUser?.name || "user"}'s submissions`}
-            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]"
+            className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
           >
-            <BookOpen className="w-6 h-6 mb-1 text-gray-600" />
-            <span className="text-xl font-bold text-[#292929]">
-              {stories.length}
-            </span>
-            <span className="text-xs text-gray-500 mt-0.5">Submissions</span>
+            <BookOpen className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+            <div className="flex flex-col md:items-center">
+              <span className="text-xl font-bold text-[#292929]">
+                {stories.length}
+              </span>
+              <span className="text-xs text-gray-500 md:mt-0.5">
+                Submissions
+              </span>
+            </div>
           </button>
 
           {/* Votes */}
           <button
             onClick={() => handleMiniDashboardClick("votes")}
             aria-label={`View ${loadedProfileUser?.name || "user"}'s votes`}
-            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]"
+            className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
           >
-            <ThumbsUp className="w-6 h-6 mb-1 text-gray-600" />
-            <span className="text-xl font-bold text-[#292929]">
-              {votes.length}
-            </span>
-            <span className="text-xs text-gray-500 mt-0.5">Votes</span>
+            <ThumbsUp className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+            <div className="flex flex-col md:items-center">
+              <span className="text-xl font-bold text-[#292929]">
+                {votes.length}
+              </span>
+              <span className="text-xs text-gray-500 md:mt-0.5">Votes</span>
+            </div>
           </button>
 
           {/* Ratings Given */}
           <button
             onClick={() => handleMiniDashboardClick("ratings")}
             aria-label={`View ratings given by ${loadedProfileUser?.name || "user"}`}
-            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]"
+            className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
           >
-            <Star className="w-6 h-6 mb-1 text-gray-600" />
-            <span className="text-xl font-bold text-[#292929]">
-              {ratings.length}
-            </span>
-            <span className="text-xs text-gray-500 mt-0.5">Ratings</span>
+            <Star className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+            <div className="flex flex-col md:items-center">
+              <span className="text-xl font-bold text-[#292929]">
+                {ratings.length}
+              </span>
+              <span className="text-xs text-gray-500 md:mt-0.5">Ratings</span>
+            </div>
           </button>
 
           {/* Comments */}
           <button
             onClick={() => handleMiniDashboardClick("comments")}
             aria-label={`View comments made by ${loadedProfileUser?.name || "user"}`}
-            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]"
+            className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
           >
-            <MessageCircle className="w-6 h-6 mb-1 text-gray-600" />
-            <span className="text-xl font-bold text-[#292929]">
-              {comments.length}
-            </span>
-            <span className="text-xs text-gray-500 mt-0.5">Comments</span>
+            <MessageCircle className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+            <div className="flex flex-col md:items-center">
+              <span className="text-xl font-bold text-[#292929]">
+                {comments.length}
+              </span>
+              <span className="text-xs text-gray-500 md:mt-0.5">Comments</span>
+            </div>
           </button>
 
           {/* Bookmarks (Own Profile Only) */}
@@ -1135,13 +1145,17 @@ export default function UserProfilePage() {
             <button
               onClick={() => handleMiniDashboardClick("bookmarks")}
               aria-label={`View your bookmarks`}
-              className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]"
+              className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
             >
-              <Bookmark className="w-6 h-6 mb-1 text-gray-600" />
-              <span className="text-xl font-bold text-[#292929]">
-                {userBookmarksCount ?? 0}
-              </span>
-              <span className="text-xs text-gray-500 mt-0.5">Bookmarks</span>
+              <Bookmark className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+              <div className="flex flex-col md:items-center">
+                <span className="text-xl font-bold text-[#292929]">
+                  {userBookmarksCount ?? 0}
+                </span>
+                <span className="text-xs text-gray-500 md:mt-0.5">
+                  Bookmarks
+                </span>
+              </div>
             </button>
           )}
 
@@ -1149,26 +1163,30 @@ export default function UserProfilePage() {
           <button
             onClick={() => handleMiniDashboardClick("followers")}
             aria-label={`View followers of ${loadedProfileUser?.name || "user"}`}
-            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]"
+            className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
           >
-            <Users className="w-6 h-6 mb-1 text-gray-600" />
-            <span className="text-xl font-bold text-[#292929]">
-              {followersCount ?? 0}
-            </span>
-            <span className="text-xs text-gray-500 mt-0.5">Followers</span>
+            <Users className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+            <div className="flex flex-col md:items-center">
+              <span className="text-xl font-bold text-[#292929]">
+                {followersCount ?? 0}
+              </span>
+              <span className="text-xs text-gray-500 md:mt-0.5">Followers</span>
+            </div>
           </button>
 
           {/* Following */}
           <button
             onClick={() => handleMiniDashboardClick("following")}
             aria-label={`View users followed by ${loadedProfileUser?.name || "user"}`}
-            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]"
+            className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
           >
-            <UserPlus className="w-6 h-6 mb-1 text-gray-600" />
-            <span className="text-xl font-bold text-[#292929]">
-              {followingCount ?? 0}
-            </span>
-            <span className="text-xs text-gray-500 mt-0.5">Following</span>
+            <UserPlus className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+            <div className="flex flex-col md:items-center">
+              <span className="text-xl font-bold text-[#292929]">
+                {followingCount ?? 0}
+              </span>
+              <span className="text-xs text-gray-500 md:mt-0.5">Following</span>
+            </div>
           </button>
 
           {/* Achievements (Hidden for later) */}
