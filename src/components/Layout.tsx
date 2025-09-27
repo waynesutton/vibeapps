@@ -826,7 +826,7 @@ function DropdownNotificationItem({ alert }: { alert: any }) {
               <span>{getNotificationText()}</span>
             ) : actorUser ? (
               <>
-                <span className="font-medium">{actorUser.name}</span>{" "}Top Categories This Week
+                <span className="font-medium">{actorUser.name}</span>{" "}
                 {getNotificationText()}
               </>
             ) : (
