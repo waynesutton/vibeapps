@@ -15,9 +15,8 @@ import { UsePaginatedQueryResult, useMutation, useQuery } from "convex/react";
 import { Id, Doc } from "../../convex/_generated/dataModel";
 import { api } from "../../convex/_generated/api";
 import { useAuth } from "@clerk/clerk-react";
-import { WeeklyLeaderboard } from "./WeeklyLeaderboard";
-import { TopCategoriesOfWeek } from "./TopCategoriesOfWeek";
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
+import { ProfileHoverCard } from "./ui/ProfileHoverCard";
 
 interface StoryListProps {
   stories: Story[];
@@ -126,7 +125,6 @@ export function StoryList({
 
   const mainContentContainerClass =
     viewMode === "vibe" ? "flex-grow" : "w-full";
-  const rightSidebarClass = "w-80 flex-shrink-0 space-y-6 hidden lg:block";
 
   return (
     <div
@@ -261,12 +259,12 @@ export function StoryList({
                     <div className="flex flex-wrap gap-1 mb-2">
                       {story.tags
                         .filter(
-                          (tag) =>
+                          (tag: Doc<"tags">) =>
                             !tag.isHidden &&
                             tag.name !== "resendhackathon" &&
                             tag.name !== "ychackathon",
                         )
-                        .map((tag) => (
+                        .map((tag: Doc<"tags">) => (
                           <Link
                             key={tag._id}
                             to={`/tag/${tag.slug}`}
@@ -296,15 +294,17 @@ export function StoryList({
 
                   <div className="flex items-center gap-2 text-sm text-[#545454] flex-wrap">
                     {story.authorUsername ? (
-                      <Link
-                        to={`/${story.authorUsername}`}
-                        className="hover:text-[#525252] hover:underline"
-                      >
-                        by{" "}
-                        {story.submitterName ||
-                          story.authorName ||
-                          story.authorUsername}
-                      </Link>
+                      <ProfileHoverCard username={story.authorUsername}>
+                        <Link
+                          to={`/${story.authorUsername}`}
+                          className="hover:text-[#525252] hover:underline"
+                        >
+                          by{" "}
+                          {story.submitterName ||
+                            story.authorName ||
+                            story.authorUsername}
+                        </Link>
+                      </ProfileHoverCard>
                     ) : (
                       <span>
                         by{" "}
@@ -374,7 +374,7 @@ export function StoryList({
       </div>
 
       {/* {viewMode === "vibe" && (
-        <aside className={rightSidebarClass}>
+        <aside className="w-80 flex-shrink-0 space-y-6 hidden lg:block">
           <WeeklyLeaderboard />
           <TopCategoriesOfWeek />
         </aside>

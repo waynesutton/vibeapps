@@ -27,6 +27,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
+import { ProfileHoverCard } from "../ui/ProfileHoverCard";
 
 interface JudgeTrackingProps {
   groupId: Id<"judgingGroups">;
@@ -236,14 +237,18 @@ export function JudgeTracking({
                           {judge.name}
                         </span>
                         {judge.userProfile && (
-                          <Link
-                            to={`/${judge.userProfile.username || judge.userProfile._id}`}
-                            className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
-                            title={`View profile: ${judge.userProfile.name}`}
+                          <ProfileHoverCard
+                            username={judge.userProfile.username}
                           >
-                            <UserCheck className="w-3 h-3 mr-1" />
-                            Linked Profile
-                          </Link>
+                            <Link
+                              to={`/${judge.userProfile.username || judge.userProfile._id}`}
+                              className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
+                              title={`View profile: ${judge.userProfile.name}`}
+                            >
+                              <UserCheck className="w-3 h-3 mr-1" />
+                              Linked Profile
+                            </Link>
+                          </ProfileHoverCard>
                         )}
                       </div>
                       <div className="text-sm text-gray-500 flex items-center gap-4">

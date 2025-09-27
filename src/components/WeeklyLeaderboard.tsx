@@ -1,9 +1,8 @@
-import React from "react";
 import { useQuery } from "convex/react";
 import { Link } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
-import type { LeaderboardStory } from "../../convex/stories"; // Import the type
 import { ThumbsUp, UserCircle } from "lucide-react"; // Example icons
+import { ProfileHoverCard } from "./ui/ProfileHoverCard";
 
 export function WeeklyLeaderboard() {
   const topStories = useQuery(api.stories.getWeeklyLeaderboardStories, {
@@ -52,13 +51,15 @@ export function WeeklyLeaderboard() {
               </Link>
               <div className="text-xs text-[#787672] flex items-center gap-2 mt-0.5">
                 {story.authorUsername ? (
-                  <Link
-                    to={`/${story.authorUsername}`}
-                    className="hover:underline flex items-center gap-1"
-                  >
-                    <UserCircle className="w-3 h-3" />
-                    {story.authorName || story.authorUsername}
-                  </Link>
+                  <ProfileHoverCard username={story.authorUsername}>
+                    <Link
+                      to={`/${story.authorUsername}`}
+                      className="hover:underline flex items-center gap-1"
+                    >
+                      <UserCircle className="w-3 h-3" />
+                      {story.authorName || story.authorUsername}
+                    </Link>
+                  </ProfileHoverCard>
                 ) : story.authorName ? (
                   <span className="flex items-center gap-1">
                     <UserCircle className="w-3 h-3" />

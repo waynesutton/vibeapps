@@ -6,6 +6,7 @@ import ReactMarkdown from "react-markdown";
 import { Id } from "../../convex/_generated/dataModel";
 import { Link } from "react-router-dom";
 import { renderTextWithMentions } from "../utils/mentions";
+import { ProfileHoverCard } from "./ui/ProfileHoverCard";
 
 interface CommentProps {
   comment: CommentType;
@@ -21,13 +22,15 @@ export function Comment({ comment, onReply }: CommentProps) {
   return (
     <div className="pl-4 mt-4">
       <div className="flex gap-2 items-center text-sm text-[#545454] mb-2">
-        {authorProfileUrl ? (
-          <Link
-            to={authorProfileUrl}
-            className="font-medium text-[#525252] hover:underline"
-          >
-            {authorDisplayName}
-          </Link>
+        {authorProfileUrl && comment.authorUsername ? (
+          <ProfileHoverCard username={comment.authorUsername}>
+            <Link
+              to={authorProfileUrl}
+              className="font-medium text-[#525252] hover:underline"
+            >
+              {authorDisplayName}
+            </Link>
+          </ProfileHoverCard>
         ) : (
           <span className="font-medium text-[#525252]">
             {authorDisplayName}

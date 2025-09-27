@@ -35,6 +35,7 @@ import { Button } from "@/components/ui/button"; // For modal buttons
 import { toast } from "sonner";
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
 import { ImageGallery } from "./ImageGallery";
+import { ProfileHoverCard } from "./ui/ProfileHoverCard";
 import ReactMarkdown from "react-markdown";
 
 // Removed MOCK_COMMENTS
@@ -892,15 +893,17 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 )}
                 <div className="flex items-center gap-2 text-sm text-[#545454] flex-wrap mb-3">
                   {story.authorUsername ? (
-                    <Link
-                      to={`/${story.authorUsername}`}
-                      className="hover:text-[#525252] hover:underline"
-                    >
-                      by{" "}
-                      {story.submitterName ||
-                        story.authorName ||
-                        story.authorUsername}
-                    </Link>
+                    <ProfileHoverCard username={story.authorUsername}>
+                      <Link
+                        to={`/${story.authorUsername}`}
+                        className="hover:text-[#525252] hover:underline"
+                      >
+                        by{" "}
+                        {story.submitterName ||
+                          story.authorName ||
+                          story.authorUsername}
+                      </Link>
+                    </ProfileHoverCard>
                   ) : (
                     <span>
                       by{" "}

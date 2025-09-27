@@ -1089,6 +1089,53 @@ export const updateProfileDetails = mutation({
 // --- Admin User Management Functions ---
 
 /**
+ * Get user data for profile hover card
+ */
+export const getUserForHoverCard = query({
+  args: { username: v.string() },
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("users"),
+      _creationTime: v.number(),
+      name: v.string(),
+      username: v.optional(v.string()),
+      imageUrl: v.optional(v.string()),
+      bio: v.optional(v.string()),
+      website: v.optional(v.string()),
+      twitter: v.optional(v.string()),
+      bluesky: v.optional(v.string()),
+      linkedin: v.optional(v.string()),
+      isVerified: v.optional(v.boolean()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .unique();
+
+    if (!user) {
+      return null;
+    }
+
+    return {
+      _id: user._id,
+      _creationTime: user._creationTime,
+      name: user.name,
+      username: user.username,
+      imageUrl: user.imageUrl,
+      bio: user.bio,
+      website: user.website,
+      twitter: user.twitter,
+      bluesky: user.bluesky,
+      linkedin: user.linkedin,
+      isVerified: user.isVerified ?? false,
+    };
+  },
+});
+
+/**
  * [Admin] Lists all users for moderation purposes.
  * Includes pagination and optional search by name, email, or username.
  */

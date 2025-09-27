@@ -34,6 +34,7 @@ import { UserSyncer } from "./UserSyncer";
 import { WeeklyLeaderboard } from "./WeeklyLeaderboard";
 import { TopCategoriesOfWeek } from "./TopCategoriesOfWeek";
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
+import { ProfileHoverCard } from "./ui/ProfileHoverCard";
 import { formatDistanceToNow } from "date-fns";
 
 interface LayoutContextType {
@@ -826,7 +827,15 @@ function DropdownNotificationItem({ alert }: { alert: any }) {
               <span>{getNotificationText()}</span>
             ) : actorUser ? (
               <>
-                <span className="font-medium">{actorUser.name}</span>{" "}
+                {actorUser.username ? (
+                  <ProfileHoverCard username={actorUser.username}>
+                    <span className="font-medium hover:underline cursor-pointer">
+                      {actorUser.name}
+                    </span>
+                  </ProfileHoverCard>
+                ) : (
+                  <span className="font-medium">{actorUser.name}</span>
+                )}{" "}
                 {getNotificationText()}
               </>
             ) : (
