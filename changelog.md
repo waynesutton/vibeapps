@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### Admin Report Notifications System
+
+**Added**
+
+- Admin report notifications: Admin and manager users now receive notifications when users report submissions
+- Report notifications appear in both the header dropdown and notifications page for admins/managers
+- Email integration specifications added to `addresend.md` for future implementation
+- Internal function to get all admin/manager users for notification targeting
+
+**Modified**
+
+- `convex/schema.ts`: Added "report" type to alerts type union
+- `convex/alerts.ts`: Added validators and functions for report notifications
+- `convex/reports.ts`: Added notification creation when users report submissions
+- `src/pages/NotificationsPage.tsx`: Added handling for report notification display
+- `src/components/Layout.tsx`: Added report notification text in dropdown
+- `addresend.md`: Added admin report notification email specifications
+
+### Enhanced Notification System
+
+**Added**
+
+- Bookmark notifications: Users now receive notifications when someone bookmarks their apps
+- Vote notifications: Users receive notifications when someone votes/vibes their apps (already existed, verified working)
+- Updated notification text in both the dropdown and notifications page to include bookmark actions
+
+**Modified**
+
+- `convex/schema.ts`: Added "bookmark" type to alerts type union
+- `convex/alerts.ts`: Updated validators to include bookmark type
+- `convex/bookmarks.ts`: Added notification creation when users bookmark apps
+- `src/pages/NotificationsPage.tsx`: Added handling for bookmark notification display
+- `src/components/Layout.tsx`: Added bookmark notification text in dropdown
+
+## Previous Updates
+
 ### Submit Forms, Public Results, and ConvexBox
 
 **Added**

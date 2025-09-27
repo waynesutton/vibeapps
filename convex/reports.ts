@@ -4,6 +4,7 @@ import { Id, Doc, TableNames } from "./_generated/dataModel";
 import { QueryCtx, MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api"; // Import internal API
 import { requireAdminRole } from "./users"; // Import requireAdminRole
+import { getAdminUserIds } from "./alerts"; // Import admin user helper
 // import { Expression } from "convex/values"; // REMOVE THIS LINE
 // import { Users } from "./schema"; // REMOVE THIS LINE
 // import { DatabaseReader } from "convex/server"; // REMOVE THIS LINE
@@ -48,7 +49,9 @@ export const createReport = mutation({
       .first();
 
     if (existingReport) {
-      throw new Error("You have already reported this story, and it is pending review.");
+      throw new Error(
+        "You have already reported this story, and it is pending review.",
+      );
     }
 
     const story = await ctx.db.get(args.storyId);
@@ -56,12 +59,33 @@ export const createReport = mutation({
       throw new Error("Story not found.");
     }
 
-    return await ctx.db.insert("reports", {
+    const reportId = await ctx.db.insert("reports", {
       storyId: args.storyId,
       reporterUserId: user._id,
       reason: args.reason,
       status: "pending",
     });
+
+    // Get all admin and manager user IDs
+    const adminUserIds = await getAdminUserIds(ctx);
+
+    // Create notifications for all admin and manager users (non-blocking)
+    if (adminUserIds.length > 0) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.alerts.createReportNotifications,
+        {
+          reporterUserId: user._id,
+          storyId: args.storyId,
+          reportId: reportId,
+          adminUserIds: adminUserIds,
+        },
+      );
+    } else {
+      console.warn("No admin users found to notify about report");
+    }
+
+    return reportId;
   },
 });
 
@@ -83,10 +107,10 @@ export const listAllReportsAdmin = query({
             v.literal("pending"),
             v.literal("resolved_hidden"),
             v.literal("resolved_deleted"),
-            v.literal("dismissed")
-          )
+            v.literal("dismissed"),
+          ),
         ),
-      })
+      }),
     ),
   },
   handler: async (ctx, args): Promise<ReportWithDetails[]> => {
@@ -127,7 +151,7 @@ export const updateReportStatusByAdmin = mutation({
       v.literal("pending"),
       v.literal("resolved_hidden"),
       v.literal("resolved_deleted"),
-      v.literal("dismissed")
+      v.literal("dismissed"),
     ),
     permanentlyDeleteStory: v.optional(v.boolean()),
   },
@@ -145,7 +169,7 @@ export const updateReportStatusByAdmin = mutation({
       const story = await ctx.db.get(report.storyId);
       if (!story) {
         console.warn(
-          `Story ${report.storyId} not found for report ${args.reportId}. Updating report status only.`
+          `Story ${report.storyId} not found for report ${args.reportId}. Updating report status only.`,
         );
         // If story is gone, and we are not setting to pending, still update report
         return await ctx.db.patch(args.reportId, { status: args.newStatus });
@@ -159,7 +183,10 @@ export const updateReportStatusByAdmin = mutation({
             storyId: report.storyId,
           });
         } else {
-          await ctx.db.patch(report.storyId, { isHidden: true, status: "rejected" });
+          await ctx.db.patch(report.storyId, {
+            isHidden: true,
+            status: "rejected",
+          });
         }
       }
       // No specific story action if newStatus is "dismissed" and not "pending"
@@ -187,7 +214,9 @@ export const deleteStoryAndAssociations = internalMutation({
     }
 
     const allRatings = await ctx.db.query("storyRatings").collect();
-    const ratingsToDelete = allRatings.filter((rating) => rating.storyId === args.storyId);
+    const ratingsToDelete = allRatings.filter(
+      (rating) => rating.storyId === args.storyId,
+    );
     for (const rating of ratingsToDelete) {
       await ctx.db.delete(rating._id);
     }
@@ -201,7 +230,9 @@ export const deleteStoryAndAssociations = internalMutation({
     }
 
     await ctx.db.delete(args.storyId);
-    console.log(`Story ${args.storyId} and associated data permanently deleted by admin.`);
+    console.log(
+      `Story ${args.storyId} and associated data permanently deleted by admin.`,
+    );
     return true;
   },
 });

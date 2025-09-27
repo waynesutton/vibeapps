@@ -30,6 +30,7 @@ A modern social network platform for app creators to showcase their projects, bu
 - **Top Categories**: Weekly trending categories and tags
 - **Related Apps**: Show 3 related products by tags below comments
 - **User Reports**: Report inappropriate content with admin review system
+- **Notification System**: Real-time notifications for votes, comments, ratings, follows, bookmarks, and admin reports
 
 ### Admin & Moderation
 
@@ -41,6 +42,7 @@ A modern social network platform for app creators to showcase their projects, bu
 - **Analytics Dashboard**: Detailed metrics and user engagement tracking
 - **ConvexBox**: Dismissible notification system for announcements with custom styling
 - **Image Management**: Admin can manage additional images for submissions
+- **Admin Notifications**: Real-time notifications for admins and managers when users report submissions
 
 ### Custom Forms & Data Collection
 
@@ -69,6 +71,7 @@ A modern social network platform for app creators to showcase their projects, bu
 - **Email Collection**: Integrated email capture for notifications
 - **Form Submissions**: Email notifications for form completions
 - **Admin Notifications**: Daily reports and system updates
+- **Report Notifications**: Immediate email alerts for admin/managers when users report submissions (planned)
 
 ## Recent Updates
 
@@ -173,6 +176,7 @@ After initial setup, the first registered user will need to be granted admin pri
 - User verification system with blue checkmarks
 - Report inappropriate content
 - View related apps by tags
+- Receive real-time notifications for votes, comments, ratings, follows, and bookmarks
 
 ### For Judges
 
@@ -199,6 +203,7 @@ After initial setup, the first registered user will need to be granted admin pri
 - **Email Integration**: Configure Resend integration for notifications (in development)
 - **ConvexBox Management**: Control platform-wide notification banners with custom styling
 - **Image Gallery Management**: Manage multiple images for submissions with admin controls
+- **Admin Notifications**: Receive real-time notifications when users report submissions with direct links to reported content
 
 ## Contributing
 

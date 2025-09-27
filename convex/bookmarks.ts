@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, internalQuery } from "./_generated/server";
 import { Id, Doc } from "./_generated/dataModel";
 import { requireAuth } from "./utils"; // Helper to check authentication
+import { internal } from "./_generated/api";
 
 // --- MUTATIONS ---
 
@@ -20,7 +21,9 @@ export const addOrRemoveBookmark = mutation({
     // Check if the bookmark already exists
     const existingBookmark = await ctx.db
       .query("bookmarks")
-      .withIndex("by_user_story", (q) => q.eq("userId", user._id).eq("storyId", args.storyId))
+      .withIndex("by_user_story", (q) =>
+        q.eq("userId", user._id).eq("storyId", args.storyId),
+      )
       .unique();
 
     if (existingBookmark) {
@@ -33,6 +36,19 @@ export const addOrRemoveBookmark = mutation({
         userId: user._id,
         storyId: args.storyId,
       });
+
+      // Get story details to create notification for story owner
+      const story = await ctx.db.get(args.storyId);
+      if (story && story.userId && story.userId !== user._id) {
+        // Create alert for story owner (non-blocking)
+        await ctx.scheduler.runAfter(0, internal.alerts.createAlert, {
+          recipientUserId: story.userId,
+          actorUserId: user._id,
+          type: "bookmark",
+          storyId: args.storyId,
+        });
+      }
+
       return { success: true, action: "added" };
     }
   },
@@ -53,7 +69,9 @@ export const isStoryBookmarked = query({
 
     const bookmark = await ctx.db
       .query("bookmarks")
-      .withIndex("by_user_story", (q) => q.eq("userId", user._id).eq("storyId", args.storyId))
+      .withIndex("by_user_story", (q) =>
+        q.eq("userId", user._id).eq("storyId", args.storyId),
+      )
       .unique();
 
     return !!bookmark;
@@ -124,11 +142,16 @@ export const getUserBookmarksWithStoryDetails = query({
           storyAuthorUsername: authorUsername, // Use fetched author username
           storyScreenshotUrl: storyScreenshotUrl, // Use fetched screenshot URL
         };
-      })
+      }),
     );
     // Filter out any nulls that resulted from a story not being found
-    return bookmarksWithDetails.filter((b) => b !== null && b.storyTitle) as Array<
-      Doc<"bookmarks"> & { storyTitle: string; storySlug: string /* other fields */ }
+    return bookmarksWithDetails.filter(
+      (b) => b !== null && b.storyTitle,
+    ) as Array<
+      Doc<"bookmarks"> & {
+        storyTitle: string;
+        storySlug: string /* other fields */;
+      }
     >;
   },
 });

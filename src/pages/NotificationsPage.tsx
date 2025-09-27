@@ -9,7 +9,14 @@ import { formatDistanceToNow } from "date-fns";
 type AlertType = {
   _id: Id<"alerts">;
   _creationTime: number;
-  type: "vote" | "comment" | "rating" | "follow" | "judged";
+  type:
+    | "vote"
+    | "comment"
+    | "rating"
+    | "follow"
+    | "judged"
+    | "bookmark"
+    | "report";
   isRead: boolean;
   actorUserId?: Id<"users">;
   storyId?: Id<"stories">;
@@ -91,7 +98,7 @@ export function NotificationsPage() {
             </div>
           ) : (
             <div className="divide-y divide-[#F4F0ED]">
-              {alerts.map((alert) => (
+              {alerts.map((alert: AlertType) => (
                 <NotificationItem key={alert._id} alert={alert} />
               ))}
             </div>
@@ -128,6 +135,10 @@ function NotificationItem({ alert }: NotificationItemProps) {
         return "started following you";
       case "judged":
         return "Your app has been judged";
+      case "bookmark":
+        return "bookmarked your app";
+      case "report":
+        return "reported a submission";
       default:
         return "interacted with your content";
     }

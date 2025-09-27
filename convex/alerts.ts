@@ -1,4 +1,11 @@
-import { query, mutation, internalMutation } from "./_generated/server";
+import {
+  query,
+  mutation,
+  internalMutation,
+  internalQuery,
+  QueryCtx,
+  MutationCtx,
+} from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { requireAuth } from "./utils";
@@ -17,6 +24,8 @@ export const listRecentForDropdown = query({
         v.literal("rating"),
         v.literal("follow"),
         v.literal("judged"),
+        v.literal("bookmark"),
+        v.literal("report"),
       ),
       isRead: v.boolean(),
       readAt: v.optional(v.number()),
@@ -54,6 +63,8 @@ export const listForPage = query({
         v.literal("rating"),
         v.literal("follow"),
         v.literal("judged"),
+        v.literal("bookmark"),
+        v.literal("report"),
       ),
       isRead: v.boolean(),
       readAt: v.optional(v.number()),
@@ -133,6 +144,8 @@ export const createAlert = internalMutation({
       v.literal("rating"),
       v.literal("follow"),
       v.literal("judged"),
+      v.literal("bookmark"),
+      v.literal("report"),
     ),
     storyId: v.optional(v.id("stories")),
     commentId: v.optional(v.id("comments")),
@@ -154,6 +167,61 @@ export const createAlert = internalMutation({
       ratingValue: args.ratingValue,
       isRead: false,
     });
+
+    return null;
+  },
+});
+
+// Function to get admin user IDs from the current context
+// This can be called from mutations where we have access to auth context
+export async function getAdminUserIds(
+  ctx: QueryCtx | MutationCtx,
+): Promise<Array<Id<"users">>> {
+  const allAdminIds: Array<Id<"users">> = [];
+
+  // Check for users with admin role in database (backward compatibility)
+  const dbAdminUsers = await ctx.db
+    .query("users")
+    .filter((q) =>
+      q.or(q.eq(q.field("role"), "admin"), q.eq(q.field("role"), "manager")),
+    )
+    .collect();
+
+  const dbAdminIds = dbAdminUsers.map((user) => user._id);
+  allAdminIds.push(...dbAdminIds);
+
+  // For now, we'll rely on the database role field since we can't easily query all users' Clerk roles
+  // In the future with adminroles.prd, we'll need a different approach
+  // TODO: When implementing adminroles.prd, we'll need to store admin user IDs in a separate table
+  // or use a different method to identify all admin users
+
+  console.log(
+    `Found ${allAdminIds.length} admin/manager users for notifications:`,
+    allAdminIds,
+  );
+  return allAdminIds;
+}
+
+// Internal function to create report notifications for all admin/manager users
+export const createReportNotifications = internalMutation({
+  args: {
+    reporterUserId: v.id("users"),
+    storyId: v.id("stories"),
+    reportId: v.id("reports"),
+    adminUserIds: v.array(v.id("users")), // Pass admin user IDs from calling context
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Create notification for each admin/manager user
+    for (const adminUserId of args.adminUserIds) {
+      await ctx.db.insert("alerts", {
+        recipientUserId: adminUserId,
+        actorUserId: args.reporterUserId,
+        type: "report",
+        storyId: args.storyId,
+        isRead: false,
+      });
+    }
 
     return null;
   },

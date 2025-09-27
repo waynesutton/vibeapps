@@ -312,6 +312,48 @@ You were mentioned in a [comment|judge note] on: [StoryTitle]
 - Skip if user is currently online (optional heuristic)
 - Rate limit: Max 10 mention emails per day per user (distinct from 30/day mention creation quota in mentions.md)
 
+### 7. Admin Report Notifications
+
+**Purpose**: Notify admin and manager users when a submission is reported by users
+
+**Trigger**: When a user reports a submission via "Report this Submission" on StoryDetail.tsx
+
+**Recipients**: All users with admin or manager role in the system
+
+**Content Structure**:
+
+```
+Subject: New Report: [StoryTitle]
+
+Hey [AdminName],
+
+A submission has been reported and requires review:
+
+Story: [StoryTitle]
+Reported by: [ReporterName]
+Reason: [ReportReason]
+
+[Review Report in Admin Dashboard]
+
+- The VibeApps Team
+```
+
+**Conditions**:
+
+- Send immediately when report is created
+- Only send to users with admin or manager role
+- Include link to admin dashboard report management
+- Rate limit: No limit for admin notifications (critical for moderation)
+
+**Email Type**: `admin_report_notification`
+
+**Implementation Notes**:
+
+- Uses the existing alerts notification system
+- Notifications appear in both header dropdown and notifications page for admins/managers
+- Email integration will be added when Resend email system is implemented
+- Future: When adminroles.prd is implemented, will check Clerk JWT claims for roles instead of database role field
+
 ## Database Schema Updates
 
 ### New Tables Required
@@ -345,6 +387,7 @@ export default defineSchema({
       v.literal("weekly_digest"),
       v.literal("mention_notification"),
       v.literal("admin_broadcast"),
+      v.literal("admin_report_notification"),
     ),
     recipientEmail: v.string(),
     sentAt: v.number(),

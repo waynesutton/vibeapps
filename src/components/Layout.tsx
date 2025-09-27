@@ -785,6 +785,10 @@ function DropdownNotificationItem({ alert }: { alert: any }) {
         return "started following you";
       case "judged":
         return "Your app has been judged";
+      case "bookmark":
+        return "bookmarked your app";
+      case "report":
+        return "reported a submission";
       default:
         return "interacted with your content";
     }

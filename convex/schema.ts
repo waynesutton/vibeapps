@@ -419,6 +419,8 @@ export default defineSchema({
       v.literal("rating"),
       v.literal("follow"),
       v.literal("judged"),
+      v.literal("bookmark"),
+      v.literal("report"),
     ),
     storyId: v.optional(v.id("stories")), // Related story for vote, comment, rating, judged alerts
     commentId: v.optional(v.id("comments")), // Specific comment for comment alerts

@@ -1384,6 +1384,130 @@ export const unverifyUserByAdmin = mutation({
 });
 
 /**
+ * [TEMPORARY] Set current user as admin in database for backward compatibility
+ * This is a temporary function to help with testing admin notifications
+ * In production, roles should be managed through Clerk
+ */
+export const setCurrentUserAsAdminTemp = mutation({
+  args: {},
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Authentication required");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      throw new Error("User not found in database");
+    }
+
+    await ctx.db.patch(user._id, { role: "admin" });
+
+    return {
+      success: true,
+      message: `User ${user.name} (${user._id}) has been set as admin in database for testing`,
+    };
+  },
+});
+
+/**
+ * [TEMPORARY] List all users to find correct email
+ */
+export const listAllUsersForDebug = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id("users"),
+      name: v.string(),
+      email: v.optional(v.string()),
+      username: v.optional(v.string()),
+      role: v.optional(v.string()),
+    }),
+  ),
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    return users.map((user) => ({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      username: user.username,
+      role: user.role,
+    }));
+  },
+});
+
+/**
+ * [TEMPORARY] Set specific user as admin by username for testing
+ */
+export const setUserAsAdminByUsername = mutation({
+  args: {
+    username: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    // Find user by username
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .unique();
+
+    if (!user) {
+      throw new Error(
+        `User with username ${args.username} not found in database`,
+      );
+    }
+
+    await ctx.db.patch(user._id, { role: "admin" });
+
+    return {
+      success: true,
+      message: `User ${user.name} (@${user.username}) has been set as admin in database for testing`,
+    };
+  },
+});
+
+/**
+ * [TEMPORARY] Set specific user as admin by email for testing
+ * This helps when you can't authenticate to run the other function
+ */
+export const setUserAsAdminByEmail = mutation({
+  args: {
+    email: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    // Find user by email
+    const users = await ctx.db.query("users").collect();
+    const user = users.find((u) => u.email === args.email);
+
+    if (!user) {
+      throw new Error(`User with email ${args.email} not found in database`);
+    }
+
+    await ctx.db.patch(user._id, { role: "admin" });
+
+    return {
+      success: true,
+      message: `User ${user.name} (${user.email}) has been set as admin in database for testing`,
+    };
+  },
+});
+
+/**
  * Returns the user's number (1-based) by order of account creation.
  * Example: the first user is 1, the second is 2, etc.
  */

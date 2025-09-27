@@ -20,7 +20,7 @@
 - `files.MD`: This file - comprehensive codebase documentation
 - `TASK.MD`: Project task and feature requirements
 - `mentions.md`: @Mentions system PRD and implementation documentation
-- `addresend.md`: Resend email integration PRD and requirements
+- `addresend.md`: Resend email integration PRD and requirements (includes admin report notification emails)
 - `metadataforsubs.md`: Server-side metadata generation PRD for social sharing
 - `inboxforapp.md`: Inbox messaging system PRD (planned feature)
 - `following-plan.MD`: User following system implementation plan
@@ -56,11 +56,12 @@
 - `convex/stories.ts`: App submission functions (create, update, approve, search) with multi-image support
 - `convex/comments.ts`: Comment system queries and mutations with @mentions integration and validation
 - `convex/votes.ts`: Voting system for app submissions
-- `convex/bookmarks.ts`: User bookmarking system functions with improved interface
+- `convex/bookmarks.ts`: User bookmarking system functions with improved interface and notification creation
 - `convex/storyRatings.ts`: 1-5 star rating system for apps
 - `convex/follows.ts`: User following system functions with real-time updates
 - `convex/tags.ts`: Tag management and categorization system with enhanced dropdown search support
-- `convex/reports.ts`: User reporting system for content moderation
+- `convex/reports.ts`: User reporting system for content moderation with admin notification creation
+- `convex/alerts.ts`: Comprehensive notification system for votes, comments, ratings, follows, bookmarks, and admin reports
 
 ### Admin & Moderation
 
@@ -188,6 +189,7 @@
 - `src/pages/JudgingGroupPage.tsx`: Judge interface for scoring submissions
 - `src/pages/JudgingInterfacePage.tsx`: Individual submission judging interface with @mention autocomplete in notes
 - `src/pages/PublicJudgingResultsPage.tsx`: Public judging results page
+- `src/pages/NotificationsPage.tsx`: User notifications page with comprehensive alert system for all interaction types
 - `src/pages/NotFoundPage.tsx`: 404 error page
 - `src/pages/NavTestPage.tsx`: Navigation testing page
 

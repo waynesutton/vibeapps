@@ -17,6 +17,10 @@ import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id, Doc } from "../../../convex/_generated/dataModel";
 
+// Default tag color constants used across UI and when clearing values
+const DEFAULT_TAG_BG = "#F4F0ED";
+const DEFAULT_TAG_TEXT = "#525252";
+
 // Interface matching the updated Convex schema for tags
 // Use string | null for colors locally to represent clearing, but handle conversion for mutation
 interface EditableTag
@@ -893,7 +897,7 @@ export function TagManagement() {
                       <input
                         type="color"
                         id={`bg-color-${tag._id}`}
-                        value={tag.backgroundColor || "#ffffff"} // Default to white for picker
+                        value={tag.backgroundColor || DEFAULT_TAG_BG} // Default to app's tag background
                         onChange={(e) =>
                           handleFieldChange(
                             tag._id,
@@ -920,7 +924,11 @@ export function TagManagement() {
                       />
                       <button
                         onClick={() =>
-                          handleFieldChange(tag._id, "backgroundColor", null)
+                          handleFieldChange(
+                            tag._id,
+                            "backgroundColor",
+                            DEFAULT_TAG_BG,
+                          )
                         }
                         className="text-xs text-gray-500 hover:text-black"
                         disabled={isProcessing}
@@ -938,7 +946,7 @@ export function TagManagement() {
                       <input
                         type="color"
                         id={`text-color-${tag._id}`}
-                        value={tag.textColor || "#000000"} // Default to black for picker
+                        value={tag.textColor || DEFAULT_TAG_TEXT} // Default to app's tag text color
                         onChange={(e) =>
                           handleFieldChange(
                             tag._id,
@@ -965,7 +973,11 @@ export function TagManagement() {
                       />
                       <button
                         onClick={() =>
-                          handleFieldChange(tag._id, "textColor", null)
+                          handleFieldChange(
+                            tag._id,
+                            "textColor",
+                            DEFAULT_TAG_TEXT,
+                          )
                         }
                         className="text-xs text-gray-500 hover:text-black"
                         disabled={isProcessing}
