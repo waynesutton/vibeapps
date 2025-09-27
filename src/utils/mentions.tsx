@@ -19,7 +19,7 @@ export function renderTextWithMentions(text: string): React.ReactNode {
         <Link
           key={index}
           to={`/${username}`}
-          className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+          className="text-black hover:underline font-medium"
           title={`View ${username}'s profile`}
         >
           {part}

@@ -118,6 +118,8 @@ export function ContentModeration() {
   const [teamMembers, setTeamMembers] = useState<
     Array<{ name: string; email: string }>
   >([]);
+  const [confirmDeleteCommentId, setConfirmDeleteCommentId] =
+    useState<Id<"comments"> | null>(null);
 
   const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
 
@@ -281,8 +283,7 @@ export function ContentModeration() {
           showComment({ commentId });
           break;
         case "delete":
-          if (window.confirm("Delete comment? This cannot be undone."))
-            deleteComment({ commentId });
+          setConfirmDeleteCommentId(commentId);
           break;
       }
     }
@@ -1839,6 +1840,35 @@ export function ContentModeration() {
           </div>
         )}
       </div>
+
+      {/* Delete Comment Confirmation Modal */}
+      {confirmDeleteCommentId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 border border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Delete comment
+            </h3>
+            <p className="text-sm text-gray-600">This cannot be undone.</p>
+            <div className="flex justify-end gap-2 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setConfirmDeleteCommentId(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-[#292929] text-white hover:bg-[#525252]"
+                onClick={async () => {
+                  await deleteComment({ commentId: confirmDeleteCommentId });
+                  setConfirmDeleteCommentId(null);
+                }}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

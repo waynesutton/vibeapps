@@ -51,7 +51,8 @@ const VerifiedBadge = () => (
     viewBox="0 0 20 20"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    className="inline-block ml-2">
+    className="inline-block ml-2"
+  >
     <path
       d="M10 0L12.0451 2.8885L15.7063 1.90983L16.6957 5.57107L20 6.90983L18.0902 9.79508L20 12.6803L16.6957 14.0191L15.7063 17.6803L12.0451 16.7016L10 19.5902L7.95492 16.7016L4.29366 17.6803L3.30423 14.0191L0 12.6803L1.90983 9.79508L0 6.90983L3.30423 5.57107L4.29366 1.90983L7.95492 2.8885L10 0Z"
       fill="#3B82F6"
@@ -128,7 +129,9 @@ export default function UserProfilePage() {
 
   // Effect to manage global view mode based on path
   useEffect(() => {
-    const isSettingsPath = location.pathname.toLowerCase().startsWith("/user-settings");
+    const isSettingsPath = location.pathname
+      .toLowerCase()
+      .startsWith("/user-settings");
 
     // Define known view mode classes. Adjust these to match your application's actual classes.
     const viewModeClasses = [
@@ -163,7 +166,7 @@ export default function UserProfilePage() {
 
   const profileData = useQuery(
     api.users.getUserProfileByUsername,
-    username && !username.startsWith("user-settings") ? { username } : "skip"
+    username && !username.startsWith("user-settings") ? { username } : "skip",
   );
 
   // Corrected useEffect for logging Profile User (Convex user object)
@@ -180,18 +183,20 @@ export default function UserProfilePage() {
   // Queries for followers and following lists
   const followersData = useQuery(
     api.follows.getFollowers,
-    profileData?.user?._id ? { userId: profileData.user._id } : "skip"
+    profileData?.user?._id ? { userId: profileData.user._id } : "skip",
   );
   const followingData = useQuery(
     api.follows.getFollowing,
-    profileData?.user?._id ? { userId: profileData.user._id } : "skip"
+    profileData?.user?._id ? { userId: profileData.user._id } : "skip",
   );
 
   const unvoteStoryMutation = useMutation(api.stories.voteStory);
   const deleteOwnStoryMutation = useMutation(api.stories.deleteOwnStory);
   const deleteOwnCommentMutation = useMutation(api.comments.deleteOwnComment);
   const deleteOwnRatingMutation = useMutation(api.storyRatings.deleteOwnRating);
-  const addOrRemoveBookmarkMutation = useMutation(api.bookmarks.addOrRemoveBookmark);
+  const addOrRemoveBookmarkMutation = useMutation(
+    api.bookmarks.addOrRemoveBookmark,
+  );
 
   const generateUploadUrl = useAction(api.users.generateUploadUrl);
   const setUserProfileImage = useMutation(api.users.setUserProfileImage);
@@ -200,23 +205,27 @@ export default function UserProfilePage() {
 
   const userBookmarksCount = useQuery(
     api.bookmarks.countUserBookmarks,
-    isClerkLoaded && authUser && username !== "user-settings" ? {} : "skip"
+    isClerkLoaded && authUser && username !== "user-settings" ? {} : "skip",
   );
   const userBookmarksWithDetails = useQuery(
     api.bookmarks.getUserBookmarksWithStoryDetails,
-    isClerkLoaded && authUser && username !== "user-settings" ? {} : "skip"
+    isClerkLoaded && authUser && username !== "user-settings" ? {} : "skip",
   );
 
   // Add user number query
   const userNumber = useQuery(
     api.users.getUserNumber,
-    profileData?.user?._id ? { userId: profileData.user._id } : "skip"
+    profileData?.user?._id ? { userId: profileData.user._id } : "skip",
   );
 
   const [isEditing, setIsEditing] = useState(false);
   const [newUsername, setNewUsername] = useState("");
-  const [newProfileImageFile, setNewProfileImageFile] = useState<File | null>(null);
-  const [newProfileImagePreview, setNewProfileImagePreview] = useState<string | null>(null);
+  const [newProfileImageFile, setNewProfileImageFile] = useState<File | null>(
+    null,
+  );
+  const [newProfileImagePreview, setNewProfileImagePreview] = useState<
+    string | null
+  >(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [newName, setNewName] = useState("");
@@ -272,15 +281,28 @@ export default function UserProfilePage() {
     // ensuring the content is visible after a mini-dashboard click or direct tab click.
     if (
       tabContentAreaRef.current &&
-      ["votes", "ratings", "comments", "bookmarks", "followers", "following"].includes(activeTab)
+      [
+        "votes",
+        "ratings",
+        "comments",
+        "bookmarks",
+        "followers",
+        "following",
+      ].includes(activeTab)
     ) {
-      tabContentAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      tabContentAreaRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
     }
   }, [activeTab]);
 
   const handleMiniDashboardClick = (targetTabOrSection: string) => {
     if (targetTabOrSection === "submissions") {
-      submissionsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      submissionsSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
     } else {
       // Set the active tab, the useEffect above will handle scrolling.
       setActiveTab(targetTabOrSection);
@@ -296,7 +318,8 @@ export default function UserProfilePage() {
       <div className="max-w-5xl mx-auto p-4 sm:p-6 bg-white rounded-lg shadow min-h-screen">
         <button
           onClick={() => navigate(-1)}
-          className="text-sm text-[#545454] hover:text-[#525252] inline-block mb-6 bg-transparent border-none cursor-pointer p-0">
+          className="text-sm text-[#545454] hover:text-[#525252] inline-block mb-6 bg-transparent border-none cursor-pointer p-0"
+        >
           ← Back to previous page
         </button>{" "}
         {/* Set path to the base path where UserProfile is mounted */}
@@ -317,7 +340,11 @@ export default function UserProfilePage() {
 
   if (isRedirecting) return <p className="text-center p-8">Loading...</p>;
   if (!username)
-    return <p className="text-center p-8 text-red-600">Error: Username not found in URL.</p>;
+    return (
+      <p className="text-center p-8 text-red-600">
+        Error: Username not found in URL.
+      </p>
+    );
   if (profileData === null) {
     return <NotFoundPage />;
   }
@@ -337,9 +364,19 @@ export default function UserProfilePage() {
   // For user-settings, profileData might be undefined, but that path returns <UserProfile> which doesn't use profileData directly.
 
   // Fallback if somehow profileData is not an object for a page that needs it (excluding user-settings)
-  if (!profileData && !(username && username.toLowerCase().startsWith("user-settings"))) {
-    console.error("UserProfilePage: profileData is unexpectedly not loaded for", username);
-    return <ErrorDisplay message={`Profile data could not be loaded for ${username}.`} />;
+  if (
+    !profileData &&
+    !(username && username.toLowerCase().startsWith("user-settings"))
+  ) {
+    console.error(
+      "UserProfilePage: profileData is unexpectedly not loaded for",
+      username,
+    );
+    return (
+      <ErrorDisplay
+        message={`Profile data could not be loaded for ${username}.`}
+      />
+    );
   }
 
   // Destructure AFTER all checks ensure profileData is the loaded object for the current path
@@ -366,18 +403,27 @@ export default function UserProfilePage() {
 
   // Correct calculation for isOwnProfile, using the reliably loadedProfileUser
   const isOwnProfile =
-    !!authUser && !!loadedProfileUser && authUser.id === loadedProfileUser.clerkId;
+    !!authUser &&
+    !!loadedProfileUser &&
+    authUser.id === loadedProfileUser.clerkId;
 
   // If we are on a specific user's profile page (not user-settings) and loadedProfileUser is null (due to fallback from destructuring)
   // it implies an issue not caught by earlier checks, or profileData was an empty object without a 'user' field.
-  if (!(username && username.toLowerCase().startsWith("user-settings")) && !loadedProfileUser) {
+  if (
+    !(username && username.toLowerCase().startsWith("user-settings")) &&
+    !loadedProfileUser
+  ) {
     console.error(
       "UserProfilePage: loadedProfileUser is null for",
       username,
       "profileData was:",
-      profileData
+      profileData,
     );
-    return <ErrorDisplay message={`User details could not be loaded for ${username}.`} />;
+    return (
+      <ErrorDisplay
+        message={`User details could not be loaded for ${username}.`}
+      />
+    );
   }
 
   const handleEditToggle = () => {
@@ -404,7 +450,8 @@ export default function UserProfilePage() {
     if (file) {
       setNewProfileImageFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => setNewProfileImagePreview(reader.result as string);
+      reader.onloadend = () =>
+        setNewProfileImagePreview(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
@@ -466,7 +513,8 @@ export default function UserProfilePage() {
           body: newProfileImageFile,
         });
         const { storageId } = await result.json();
-        if (!storageId) throw new Error("Failed to get storageId from image upload.");
+        if (!storageId)
+          throw new Error("Failed to get storageId from image upload.");
         await setUserProfileImage({ storageId });
         detailsChanged = true;
       }
@@ -479,7 +527,9 @@ export default function UserProfilePage() {
       }
     } catch (error: any) {
       console.error("Failed to save profile:", error);
-      setEditError(error.data?.message || error.message || "Failed to save profile.");
+      setEditError(
+        error.data?.message || error.message || "Failed to save profile.",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -500,7 +550,11 @@ export default function UserProfilePage() {
     } catch (error: any) {
       // Explicitly type error
       console.error("Follow/Unfollow failed:", error);
-      setActionError(error.data?.message || error.message || "Failed to update follow status.");
+      setActionError(
+        error.data?.message ||
+          error.message ||
+          "Failed to update follow status.",
+      );
     } finally {
       setIsLoadingFollowAction(false);
     }
@@ -516,7 +570,8 @@ export default function UserProfilePage() {
     size?: string;
   }) => (
     <div
-      className={`rounded-full bg-gray-300 flex items-center justify-center text-gray-500 text-4xl font-bold border-2 border-gray-400 ${size}`}>
+      className={`rounded-full bg-gray-300 flex items-center justify-center text-gray-500 text-4xl font-bold border-2 border-gray-400 ${size}`}
+    >
       {name ? name.charAt(0).toUpperCase() : "U"}
     </div>
   );
@@ -528,9 +583,15 @@ export default function UserProfilePage() {
     actionFn: () => Promise<void>,
     successMsg: string,
     errorMsg: string,
-    itemContext?: any
+    itemContext?: any,
   ) => {
-    setDialogState({ isOpen: false, title: "", description: "", onConfirm: () => {}, itemContext });
+    setDialogState({
+      isOpen: false,
+      title: "",
+      description: "",
+      onConfirm: () => {},
+      itemContext,
+    });
     actionFn()
       .then(() => {
         // Success: Optionally show a toast/notification here later
@@ -542,7 +603,7 @@ export default function UserProfilePage() {
           errorMsg +
             (error.data?.message || error.message
               ? `: ${error.data?.message || error.message}`
-              : ".")
+              : "."),
         );
       });
   };
@@ -560,7 +621,7 @@ export default function UserProfilePage() {
             await unvoteStoryMutation({ storyId });
           },
           "Vote removed.",
-          "Failed to remove vote."
+          "Failed to remove vote.",
         ),
     });
   };
@@ -579,7 +640,7 @@ export default function UserProfilePage() {
             await deleteOwnStoryMutation({ storyId });
           },
           "Submission deleted.",
-          "Failed to delete submission."
+          "Failed to delete submission.",
         ),
     });
   };
@@ -597,7 +658,7 @@ export default function UserProfilePage() {
             await deleteOwnCommentMutation({ commentId });
           },
           "Comment deleted.",
-          "Failed to delete comment."
+          "Failed to delete comment.",
         ),
     });
   };
@@ -606,7 +667,8 @@ export default function UserProfilePage() {
     setDialogState({
       isOpen: true,
       title: "Delete Rating?",
-      description: "Are you sure you want to delete your rating for this story?",
+      description:
+        "Are you sure you want to delete your rating for this story?",
       confirmText: "Delete Rating",
       confirmVariant: "destructive",
       onConfirm: () =>
@@ -615,7 +677,7 @@ export default function UserProfilePage() {
             await deleteOwnRatingMutation({ storyRatingId: ratingId });
           },
           "Rating deleted.",
-          "Failed to delete rating."
+          "Failed to delete rating.",
         ),
     });
   };
@@ -624,7 +686,8 @@ export default function UserProfilePage() {
     setDialogState({
       isOpen: true,
       title: "Remove Bookmark?",
-      description: "Are you sure you want to remove this story from your bookmarks?",
+      description:
+        "Are you sure you want to remove this story from your bookmarks?",
       confirmText: "Remove",
       confirmVariant: "destructive",
       onConfirm: () =>
@@ -633,7 +696,7 @@ export default function UserProfilePage() {
             await addOrRemoveBookmarkMutation({ storyId });
           },
           "Bookmark removed.",
-          "Failed to remove bookmark."
+          "Failed to remove bookmark.",
         ),
     });
   };
@@ -652,7 +715,7 @@ export default function UserProfilePage() {
             navigate("/", { replace: true });
           },
           "Signed out successfully.",
-          "Failed to sign out."
+          "Failed to sign out.",
         ),
     });
   };
@@ -663,7 +726,9 @@ export default function UserProfilePage() {
       title: "Delete Account?",
       description: (
         <>
-          <p className="mb-2">Are you sure you want to permanently delete your account?</p>
+          <p className="mb-2">
+            Are you sure you want to permanently delete your account?
+          </p>
           <p className="font-semibold text-red-600">
             This action cannot be undone and all your data will be lost.
           </p>
@@ -682,7 +747,7 @@ export default function UserProfilePage() {
             navigate("/", { replace: true });
           },
           "Account deleted.",
-          "Failed to delete account."
+          "Failed to delete account.",
         ),
     });
   };
@@ -691,20 +756,27 @@ export default function UserProfilePage() {
     <div className="max-w-4xl mx-auto p-4 sm:p-6 from-slate-50 to-gray-100 min-h-screen">
       <header
         className="mb-4 p-6 bg-[#ffffff] rounded-lg border border-gray-200"
-        style={{ fontFamily: "Inter, sans-serif" }}>
+        style={{ fontFamily: "Inter, sans-serif" }}
+      >
         <div className="flex flex-col sm:flex-row items-center sm:items-start">
           {/* Profile Image Section */}
-          <div className="relative mb-4 sm:mb-0 sm:mr-6 w-24 h-24">
+          <div className="relative mb-4 sm:mb-0 sm:mr-6  rounded-full w-24 h-24 overflow-hidden">
             {isEditing ? (
-              <button onClick={triggerFileEdit} className="relative group w-24 h-24 rounded-full">
+              <button
+                onClick={triggerFileEdit}
+                className="relative group w-24 h-24 rounded-full overflow-hidden"
+              >
                 {newProfileImagePreview ? (
                   <img
                     src={newProfileImagePreview}
                     alt="Profile preview"
-                    className="w-24 h-24 rounded-full object-cover border-4 border-gray-300 group-hover:opacity-75 transition-opacity"
+                    className="w-full h-full object-cover border-4 border-gray-300 group-hover:opacity-75 transition-opacity"
                   />
                 ) : (
-                  <ProfileImagePlaceholder name={loadedProfileUser?.name} size="w-24 h-24" />
+                  <ProfileImagePlaceholder
+                    name={loadedProfileUser?.name}
+                    size="w-24 h-24"
+                  />
                 )}
                 <div className="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                   <Camera className="w-8 h-8 text-white" />
@@ -721,10 +793,13 @@ export default function UserProfilePage() {
               <img
                 src={currentImageUrl}
                 alt={`${loadedProfileUser?.name || "User"}'s profile`}
-                className="w-24  rounded-full object-cover border-2 border-gray-300"
+                className="rounded-full h-19 object-cover border-2 border-gray-300"
               />
             ) : (
-              <ProfileImagePlaceholder name={loadedProfileUser?.name} size="w-24 h-24" />
+              <ProfileImagePlaceholder
+                name={loadedProfileUser?.name}
+                size="w-24 h-24"
+              />
             )}
           </div>
 
@@ -762,14 +837,22 @@ export default function UserProfilePage() {
               <div className="flex items-baseline mb-1">
                 <h1
                   className="text-lg font-normal text-[#292929] mr-2"
-                  style={{ fontFamily: "Inter, sans-serif" }}>
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
                   {loadedProfileUser?.name || "Anonymous User"}
-                  {!isEditing && loadedProfileUser?.isVerified && <VerifiedBadge />}
+                  {!isEditing && loadedProfileUser?.isVerified && (
+                    <VerifiedBadge />
+                  )}
                 </h1>
-                <p className="text-lg text-gray-600" style={{ fontFamily: "Inter, sans-serif" }}>
+                <p
+                  className="text-lg text-gray-600"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
                   {/* @{loadedProfileUser?.username || "N/A"}{" "} */}
                   {typeof userNumber === "number" && (
-                    <span className="ml-0 text-xs text-gray-400">User #{userNumber}</span>
+                    <span className="ml-0 text-xs text-gray-400">
+                      User #{userNumber}
+                    </span>
                   )}
                 </p>
               </div>
@@ -790,13 +873,15 @@ export default function UserProfilePage() {
               ) : loadedProfileUser?.bio ? (
                 <p
                   className="text-sm text-gray-700 w-full"
-                  style={{ fontFamily: "Inter, sans-serif" }}>
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
                   {loadedProfileUser.bio}
                 </p>
               ) : (
                 <p
                   className="text-sm text-gray-400 italic w-full"
-                  style={{ fontFamily: "Inter, sans-serif" }}>
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
                   No bio yet.
                 </p>
               )}
@@ -847,7 +932,8 @@ export default function UserProfilePage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-gray-500 hover:text-[#292929]"
-                      title="Website">
+                      title="Website"
+                    >
                       Website
                     </a>
                   )}
@@ -857,7 +943,8 @@ export default function UserProfilePage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-gray-500 hover:text-[#292929]"
-                      title="Twitter">
+                      title="Twitter"
+                    >
                       Twitter
                     </a>
                   )}
@@ -867,7 +954,8 @@ export default function UserProfilePage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-gray-500 hover:text-[#292929]"
-                      title="Bluesky">
+                      title="Bluesky"
+                    >
                       Bluesky
                     </a>
                   )}
@@ -877,7 +965,8 @@ export default function UserProfilePage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-gray-500 hover:text-[#292929]"
-                      title="LinkedIn">
+                      title="LinkedIn"
+                    >
                       LinkedIn
                     </a>
                   )}
@@ -897,7 +986,8 @@ export default function UserProfilePage() {
                         ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
                         : "bg-[#292929] text-white hover:bg-gray-700"
                     }`}
-                  style={{ fontFamily: "Inter, sans-serif" }}>
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
                   {isLoadingFollowAction ? (
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                   ) : isFollowedByCurrentUser ? (
@@ -918,7 +1008,8 @@ export default function UserProfilePage() {
               <button
                 onClick={handleEditToggle}
                 className="mt-2 px-6 py-2 rounded-md bg-[#292929] border border-[#D8E1EC] text-[#ffffff] rounded-md text-sm font-medium hover:bg-[#F2F0ED] hover:text-[#292929] flex items-center justify-center sm:justify-start"
-                style={{ fontFamily: "Inter, sans-serif" }}>
+                style={{ fontFamily: "Inter, sans-serif" }}
+              >
                 <Edit3 className="w-4 h-4 mr-2 text-md" /> Edit my profile
               </button>
             )}
@@ -930,7 +1021,8 @@ export default function UserProfilePage() {
             {editError && (
               <p
                 className="text-sm text-red-500 w-full sm:w-auto text-center sm:text-left"
-                style={{ fontFamily: "Inter, sans-serif" }}>
+                style={{ fontFamily: "Inter, sans-serif" }}
+              >
                 {editError}
               </p>
             )}
@@ -938,7 +1030,8 @@ export default function UserProfilePage() {
               onClick={handleEditToggle} // This is cancel
               disabled={isSaving}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors flex items-center justify-center"
-              style={{ fontFamily: "Inter, sans-serif" }}>
+              style={{ fontFamily: "Inter, sans-serif" }}
+            >
               <XCircle className="w-4 h-4 mr-2" /> Cancel
             </button>
             <button
@@ -954,8 +1047,10 @@ export default function UserProfilePage() {
                   newLinkedin === (loadedProfileUser?.linkedin || ""))
               }
               className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors flex items-center justify-center disabled:opacity-50"
-              style={{ fontFamily: "Inter, sans-serif" }}>
-              <Save className="w-4 h-4 mr-2" /> {isSaving ? "Saving..." : "Save Changes"}
+              style={{ fontFamily: "Inter, sans-serif" }}
+            >
+              <Save className="w-4 h-4 mr-2" />{" "}
+              {isSaving ? "Saving..." : "Save Changes"}
             </button>
           </div>
         )}
@@ -964,17 +1059,21 @@ export default function UserProfilePage() {
       {/* Mini Dashboard Section */}
       <section
         className="mb-4 p-4 rounded-md border border-gray-200"
-        style={{ fontFamily: "Inter, sans-serif" }}>
+        style={{ fontFamily: "Inter, sans-serif" }}
+      >
         <h2 className="text-lg font-normal text-[#292929] mb-4 pb-2 border-b border-gray-300">
           My Vibes
           {loadedProfileUser?._creationTime && (
             <span className="ml-2 text-xs text-gray-400">
               Joined Vibe Apps{" "}
-              {new Date(loadedProfileUser._creationTime).toLocaleDateString("en-US", {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              })}
+              {new Date(loadedProfileUser._creationTime).toLocaleDateString(
+                "en-US",
+                {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                },
+              )}
             </span>
           )}
         </h2>
@@ -983,9 +1082,12 @@ export default function UserProfilePage() {
           <button
             onClick={() => handleMiniDashboardClick("submissions")}
             aria-label={`View ${loadedProfileUser?.name || "user"}'s submissions`}
-            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]">
+            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]"
+          >
             <BookOpen className="w-6 h-6 mb-1 text-gray-600" />
-            <span className="text-xl font-bold text-[#292929]">{stories.length}</span>
+            <span className="text-xl font-bold text-[#292929]">
+              {stories.length}
+            </span>
             <span className="text-xs text-gray-500 mt-0.5">Submissions</span>
           </button>
 
@@ -993,9 +1095,12 @@ export default function UserProfilePage() {
           <button
             onClick={() => handleMiniDashboardClick("votes")}
             aria-label={`View ${loadedProfileUser?.name || "user"}'s votes`}
-            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]">
+            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]"
+          >
             <ThumbsUp className="w-6 h-6 mb-1 text-gray-600" />
-            <span className="text-xl font-bold text-[#292929]">{votes.length}</span>
+            <span className="text-xl font-bold text-[#292929]">
+              {votes.length}
+            </span>
             <span className="text-xs text-gray-500 mt-0.5">Votes</span>
           </button>
 
@@ -1003,9 +1108,12 @@ export default function UserProfilePage() {
           <button
             onClick={() => handleMiniDashboardClick("ratings")}
             aria-label={`View ratings given by ${loadedProfileUser?.name || "user"}`}
-            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]">
+            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]"
+          >
             <Star className="w-6 h-6 mb-1 text-gray-600" />
-            <span className="text-xl font-bold text-[#292929]">{ratings.length}</span>
+            <span className="text-xl font-bold text-[#292929]">
+              {ratings.length}
+            </span>
             <span className="text-xs text-gray-500 mt-0.5">Ratings</span>
           </button>
 
@@ -1013,9 +1121,12 @@ export default function UserProfilePage() {
           <button
             onClick={() => handleMiniDashboardClick("comments")}
             aria-label={`View comments made by ${loadedProfileUser?.name || "user"}`}
-            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]">
+            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]"
+          >
             <MessageCircle className="w-6 h-6 mb-1 text-gray-600" />
-            <span className="text-xl font-bold text-[#292929]">{comments.length}</span>
+            <span className="text-xl font-bold text-[#292929]">
+              {comments.length}
+            </span>
             <span className="text-xs text-gray-500 mt-0.5">Comments</span>
           </button>
 
@@ -1024,9 +1135,12 @@ export default function UserProfilePage() {
             <button
               onClick={() => handleMiniDashboardClick("bookmarks")}
               aria-label={`View your bookmarks`}
-              className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]">
+              className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]"
+            >
               <Bookmark className="w-6 h-6 mb-1 text-gray-600" />
-              <span className="text-xl font-bold text-[#292929]">{userBookmarksCount ?? 0}</span>
+              <span className="text-xl font-bold text-[#292929]">
+                {userBookmarksCount ?? 0}
+              </span>
               <span className="text-xs text-gray-500 mt-0.5">Bookmarks</span>
             </button>
           )}
@@ -1035,9 +1149,12 @@ export default function UserProfilePage() {
           <button
             onClick={() => handleMiniDashboardClick("followers")}
             aria-label={`View followers of ${loadedProfileUser?.name || "user"}`}
-            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]">
+            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]"
+          >
             <Users className="w-6 h-6 mb-1 text-gray-600" />
-            <span className="text-xl font-bold text-[#292929]">{followersCount ?? 0}</span>
+            <span className="text-xl font-bold text-[#292929]">
+              {followersCount ?? 0}
+            </span>
             <span className="text-xs text-gray-500 mt-0.5">Followers</span>
           </button>
 
@@ -1045,9 +1162,12 @@ export default function UserProfilePage() {
           <button
             onClick={() => handleMiniDashboardClick("following")}
             aria-label={`View users followed by ${loadedProfileUser?.name || "user"}`}
-            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]">
+            className="flex flex-col items-center p-2 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-16 md:w-20 flex-shrink-0 h-20 justify-center hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929]"
+          >
             <UserPlus className="w-6 h-6 mb-1 text-gray-600" />
-            <span className="text-xl font-bold text-[#292929]">{followingCount ?? 0}</span>
+            <span className="text-xl font-bold text-[#292929]">
+              {followingCount ?? 0}
+            </span>
             <span className="text-xs text-gray-500 mt-0.5">Following</span>
           </button>
 
@@ -1066,28 +1186,34 @@ export default function UserProfilePage() {
       <section
         ref={submissionsSectionRef}
         id="submissions"
-        className="mb-6 p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
+        className="mb-6 p-4 bg-[#F3F4F6] rounded-md border border-gray-200"
+      >
         <h2 className="text-lg font-normal text-[#292929] mb-4 pb-2 border-b border-gray-300">
           Submissions
         </h2>
-        {stories.length === 0 && <p className="text-gray-500 italic">No submissions yet.</p>}
+        {stories.length === 0 && (
+          <p className="text-gray-500 italic">No submissions yet.</p>
+        )}
         {stories.length > 0 && (
           <ul className="space-y-4">
             {stories.map((story: StoryInProfile) => (
               <li
                 key={story._id}
-                className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow">
+                className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
+              >
                 <div className="flex-grow mr-4">
                   <Link
                     to={`/s/${story.slug}`}
-                    className="text-lg font-semibold text-[#292929] hover:underline">
+                    className="text-lg font-semibold text-[#292929] hover:underline"
+                  >
                     {story.title}
                   </Link>
                   <p className="text-sm text-gray-600 whitespace-normal break-words">
                     {story.description}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Submitted by: {story.authorName || story.authorUsername || "Anonymous"}
+                    Submitted by:{" "}
+                    {story.authorName || story.authorUsername || "Anonymous"}
                     {story.authorIsVerified && <VerifiedBadge />}
                   </p>
                 </div>
@@ -1095,12 +1221,14 @@ export default function UserProfilePage() {
                   <div className="flex items-center gap-2">
                     <Link
                       to={`/s/${story.slug}?edit=true`}
-                      className="text-sm text-blue-500 hover:text-blue-700 hover:bg-blue-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0">
+                      className="text-sm text-blue-500 hover:text-blue-700 hover:bg-blue-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
+                    >
                       <Edit3 className="w-4 h-4" /> Edit
                     </Link>
                     <button
                       onClick={() => handleDeleteStory(story._id)}
-                      className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0">
+                      className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
+                    >
                       <Trash2 className="w-4 h-4" /> Delete
                     </button>
                   </div>
@@ -1121,7 +1249,8 @@ export default function UserProfilePage() {
               activeTab === "votes"
                 ? "border-b-2 border-[#292929] text-[#292929]"
                 : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}>
+            }`}
+          >
             Votes ({votes?.length ?? 0})
           </button>
           <button
@@ -1130,7 +1259,8 @@ export default function UserProfilePage() {
               activeTab === "ratings"
                 ? "border-b-2 border-[#292929] text-[#292929]"
                 : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}>
+            }`}
+          >
             Ratings Given ({ratings?.length ?? 0})
           </button>
           <button
@@ -1139,7 +1269,8 @@ export default function UserProfilePage() {
               activeTab === "comments"
                 ? "border-b-2 border-[#292929] text-[#292929]"
                 : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}>
+            }`}
+          >
             Comments ({comments?.length ?? 0})
           </button>
           {isOwnProfile && (
@@ -1150,9 +1281,12 @@ export default function UserProfilePage() {
                   ? "border-b-2 border-[#292929] text-[#292929]"
                   : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
-              title="Bookmarks are private">
+              title="Bookmarks are private"
+            >
               <BookKey className="w-4 h-4 mr-1" />
-              {isOwnProfile ? `Bookmarks (${userBookmarksCount ?? 0})` : "Bookmarks"}
+              {isOwnProfile
+                ? `Bookmarks (${userBookmarksCount ?? 0})`
+                : "Bookmarks"}
             </button>
           )}
           {/* Followers Tab Button */}
@@ -1162,7 +1296,8 @@ export default function UserProfilePage() {
               activeTab === "followers"
                 ? "border-b-2 border-[#292929] text-[#292929]"
                 : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}>
+            }`}
+          >
             <Users className="w-4 h-4 mr-1" /> Followers ({followersCount ?? 0})
           </button>
           {/* Following Tab Button */}
@@ -1172,39 +1307,52 @@ export default function UserProfilePage() {
               activeTab === "following"
                 ? "border-b-2 border-[#292929] text-[#292929]"
                 : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}>
+            }`}
+          >
             <Users className="w-4 h-4 mr-1" /> Following ({followingCount ?? 0})
           </button>
         </div>
 
         {/* Conditionally Rendered Content */}
-        <div ref={tabContentAreaRef} className="focus:outline-none" tabIndex={-1}>
+        <div
+          ref={tabContentAreaRef}
+          className="focus:outline-none"
+          tabIndex={-1}
+        >
           {activeTab === "votes" && (
             <section
               id="tab-section-votes"
-              className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
-              {votes.length === 0 && <p className="text-gray-500 italic">No votes yet.</p>}
+              className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200"
+            >
+              {votes.length === 0 && (
+                <p className="text-gray-500 italic">No votes yet.</p>
+              )}
               {votes.length > 0 && (
                 <ul className="space-y-4">
                   {votes.map((vote: VoteInProfile) => (
                     <li
                       key={vote._id}
-                      className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow">
+                      className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
+                    >
                       <div className="flex-grow mr-4">
                         <Link
                           to={`/s/${vote.storySlug}`}
-                          className="text-lg font-semibold text-[#292929] hover:underline">
+                          className="text-lg font-semibold text-[#292929] hover:underline"
+                        >
                           {vote.storyTitle || "View Story"}
                         </Link>
                         <p className="text-xs text-gray-400">
-                          Voted on: {new Date(vote._creationTime).toLocaleDateString()}
+                          Voted on:{" "}
+                          {new Date(vote._creationTime).toLocaleDateString()}
                         </p>
                       </div>
                       {isOwnProfile && (
                         <button
                           onClick={() => handleUnvote(vote.storyId)}
-                          className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0">
-                          <ThumbsUp className="w-4 h-4 transform rotate-180" /> Unvote
+                          className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
+                        >
+                          <ThumbsUp className="w-4 h-4 transform rotate-180" />{" "}
+                          Unvote
                         </button>
                       )}
                     </li>
@@ -1217,7 +1365,8 @@ export default function UserProfilePage() {
           {activeTab === "ratings" && (
             <section
               id="tab-section-ratings"
-              className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
+              className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200"
+            >
               {ratings.length === 0 && (
                 <p className="text-gray-500 italic">No ratings given yet.</p>
               )}
@@ -1226,11 +1375,13 @@ export default function UserProfilePage() {
                   {ratings.map((rating: RatingInProfile) => (
                     <li
                       key={rating._id}
-                      className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow">
+                      className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
+                    >
                       <div className="flex-grow mr-4">
                         <Link
                           to={`/s/${rating.storySlug}`}
-                          className="text-lg font-semibold text-[#292929] hover:underline">
+                          className="text-lg font-semibold text-[#292929] hover:underline"
+                        >
                           {rating.storyTitle || "View Story"}
                         </Link>
                         <p className="text-sm text-yellow-500 flex items-center">
@@ -1238,7 +1389,10 @@ export default function UserProfilePage() {
                           {Array(rating.value)
                             .fill(null)
                             .map((_, i) => (
-                              <Star key={i} className="w-4 h-4 fill-current text-yellow-400" />
+                              <Star
+                                key={i}
+                                className="w-4 h-4 fill-current text-yellow-400"
+                              />
                             ))}
                           {Array(5 - rating.value)
                             .fill(null)
@@ -1249,14 +1403,19 @@ export default function UserProfilePage() {
                               />
                             ))}
                           <span className="ml-2 text-xs text-gray-400">
-                            ({new Date(rating._creationTime).toLocaleDateString()})
+                            (
+                            {new Date(
+                              rating._creationTime,
+                            ).toLocaleDateString()}
+                            )
                           </span>
                         </p>
                       </div>
                       {isOwnProfile && (
                         <button
                           onClick={() => handleDeleteRating(rating._id)}
-                          className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0">
+                          className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
+                        >
                           <Trash2 className="w-4 h-4" /> Delete
                         </button>
                       )}
@@ -1270,30 +1429,39 @@ export default function UserProfilePage() {
           {activeTab === "comments" && (
             <section
               id="tab-section-comments"
-              className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
-              {comments.length === 0 && <p className="text-gray-500 italic">No comments yet.</p>}
+              className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200"
+            >
+              {comments.length === 0 && (
+                <p className="text-gray-500 italic">No comments yet.</p>
+              )}
               {comments.length > 0 && (
                 <ul className="space-y-4">
                   {comments.map((comment: CommentInProfile) => (
                     <li
                       key={comment._id}
-                      className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow">
+                      className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
+                    >
                       <div className="flex-grow mr-4">
-                        <p className="text-gray-700 mb-1 whitespace-pre-wrap">{comment.content}</p>
+                        <p className="text-gray-700 mb-1 whitespace-pre-wrap">
+                          {comment.content}
+                        </p>
                         <p className="text-xs text-gray-400">
                           Commented on{" "}
                           <Link
                             to={`/s/${comment.storySlug}#comments`}
-                            className="text-[#292929] hover:underline">
+                            className="text-[#292929] hover:underline"
+                          >
                             {comment.storyTitle || "story"}
                           </Link>{" "}
-                          - {new Date(comment._creationTime).toLocaleDateString()}
+                          -{" "}
+                          {new Date(comment._creationTime).toLocaleDateString()}
                         </p>
                       </div>
                       {isOwnProfile && (
                         <button
                           onClick={() => handleDeleteComment(comment._id)}
-                          className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0">
+                          className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
+                        >
                           <Trash2 className="w-4 h-4" /> Delete
                         </button>
                       )}
@@ -1307,43 +1475,56 @@ export default function UserProfilePage() {
           {activeTab === "bookmarks" && (
             <section
               id="tab-section-bookmarks"
-              className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
-              {(!userBookmarksWithDetails || userBookmarksWithDetails.length === 0) && (
+              className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200"
+            >
+              {(!userBookmarksWithDetails ||
+                userBookmarksWithDetails.length === 0) && (
                 <p className="text-gray-500 italic">No bookmarks yet.</p>
               )}
-              {userBookmarksWithDetails && userBookmarksWithDetails.length > 0 && (
-                <ul className="space-y-4">
-                  {userBookmarksWithDetails.map((bookmark: BookmarkedStoryItem) => (
-                    <li
-                      key={bookmark._id}
-                      className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow">
-                      <div className="flex-grow mr-4">
-                        <Link
-                          to={`/s/${bookmark.storySlug}`}
-                          className="text-lg font-semibold text-[#292929] hover:underline">
-                          {bookmark.storyTitle || "View Story"}
-                        </Link>
-                        {bookmark.storyDescription && (
-                          <p className="text-sm text-gray-600 whitespace-normal break-words mt-1">
-                            {bookmark.storyDescription}
-                          </p>
-                        )}
-                        <p className="text-xs text-gray-400 mt-1">
-                          Bookmarked on: {new Date(bookmark._creationTime).toLocaleDateString()}
-                        </p>
-                      </div>
-                      {isOwnProfile && (
-                        <button
-                          onClick={() => handleRemoveBookmark(bookmark.storyId)}
-                          className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
-                          title="Remove bookmark">
-                          <BookmarkMinus className="w-4 h-4" /> Remove
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
+              {userBookmarksWithDetails &&
+                userBookmarksWithDetails.length > 0 && (
+                  <ul className="space-y-4">
+                    {userBookmarksWithDetails.map(
+                      (bookmark: BookmarkedStoryItem) => (
+                        <li
+                          key={bookmark._id}
+                          className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
+                        >
+                          <div className="flex-grow mr-4">
+                            <Link
+                              to={`/s/${bookmark.storySlug}`}
+                              className="text-lg font-semibold text-[#292929] hover:underline"
+                            >
+                              {bookmark.storyTitle || "View Story"}
+                            </Link>
+                            {bookmark.storyDescription && (
+                              <p className="text-sm text-gray-600 whitespace-normal break-words mt-1">
+                                {bookmark.storyDescription}
+                              </p>
+                            )}
+                            <p className="text-xs text-gray-400 mt-1">
+                              Bookmarked on:{" "}
+                              {new Date(
+                                bookmark._creationTime,
+                              ).toLocaleDateString()}
+                            </p>
+                          </div>
+                          {isOwnProfile && (
+                            <button
+                              onClick={() =>
+                                handleRemoveBookmark(bookmark.storyId)
+                              }
+                              className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
+                              title="Remove bookmark"
+                            >
+                              <BookmarkMinus className="w-4 h-4" /> Remove
+                            </button>
+                          )}
+                        </li>
+                      ),
+                    )}
+                  </ul>
+                )}
             </section>
           )}
 
@@ -1351,7 +1532,8 @@ export default function UserProfilePage() {
           {activeTab === "followers" && (
             <section
               id="tab-section-followers"
-              className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
+              className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200"
+            >
               {followersData === undefined && (
                 <p className="text-center p-8">Loading followers...</p>
               )}
@@ -1364,10 +1546,12 @@ export default function UserProfilePage() {
                     follower ? (
                       <li
                         key={follower._id}
-                        className="p-3 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-between transition-shadow hover:shadow-sm">
+                        className="p-3 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-between transition-shadow hover:shadow-sm"
+                      >
                         <Link
                           to={`/${follower.username}`}
-                          className="flex items-center flex-grow mr-3">
+                          className="flex items-center flex-grow mr-3"
+                        >
                           {follower.imageUrl ? (
                             <img
                               src={follower.imageUrl}
@@ -1375,19 +1559,24 @@ export default function UserProfilePage() {
                               className="w-10 h-10 rounded-full mr-3 object-cover border border-gray-200"
                             />
                           ) : (
-                            <ProfileImagePlaceholder name={follower.name} size="w-10 h-10" />
+                            <ProfileImagePlaceholder
+                              name={follower.name}
+                              size="w-10 h-10"
+                            />
                           )}
                           <div>
                             <span className="text-sm font-semibold text-[#292929] hover:underline">
                               {follower.name || "Anonymous User"}
                             </span>
-                            <p className="text-xs  text-gray-500">@{follower.username || "N/A"}</p>
+                            <p className="text-xs  text-gray-500">
+                              @{follower.username || "N/A"}
+                            </p>
                           </div>
                         </Link>
                         {/* Optional: Add follow/unfollow button for logged-in user viewing this list */}
                         {/* This requires checking if authUser.id is follower._id and if authUser is following this follower */}
                       </li>
-                    ) : null
+                    ) : null,
                   )}
                 </ul>
               )}
@@ -1398,44 +1587,53 @@ export default function UserProfilePage() {
           {activeTab === "following" && (
             <section
               id="tab-section-following"
-              className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200">
+              className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200"
+            >
               {followingData === undefined && (
                 <p className="text-center p-8">Loading following...</p>
               )}
               {followingData && followingData.length === 0 && (
-                <p className="text-gray-500 italic">Not following anyone yet.</p>
+                <p className="text-gray-500 italic">
+                  Not following anyone yet.
+                </p>
               )}
               {followingData && followingData.length > 0 && (
                 <ul className="space-y-3">
-                  {followingData.map((followedUser: FollowUserListItem | null) =>
-                    followedUser ? (
-                      <li
-                        key={followedUser._id}
-                        className="p-3 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-between transition-shadow hover:shadow-sm">
-                        <Link
-                          to={`/${followedUser.username}`}
-                          className="flex items-center flex-grow mr-3">
-                          {followedUser.imageUrl ? (
-                            <img
-                              src={followedUser.imageUrl}
-                              alt={followedUser.name ?? "User"}
-                              className="w-10 h-10 rounded-full mr-3 object-cover border border-gray-200"
-                            />
-                          ) : (
-                            <ProfileImagePlaceholder name={followedUser.name} size="w-10 h-10" />
-                          )}
-                          <div>
-                            <span className="text-sm p-1 font-semibold text-[#292929] hover:underline">
-                              {followedUser.name || "Anonymous User"}
-                            </span>
-                            <p className="text-xs  p-1 text-gray-500">
-                              @{followedUser.username || "N/A"}
-                            </p>
-                          </div>
-                        </Link>
-                        {/* Optional: Add follow/unfollow button for logged-in user viewing this list */}
-                      </li>
-                    ) : null
+                  {followingData.map(
+                    (followedUser: FollowUserListItem | null) =>
+                      followedUser ? (
+                        <li
+                          key={followedUser._id}
+                          className="p-3 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-between transition-shadow hover:shadow-sm"
+                        >
+                          <Link
+                            to={`/${followedUser.username}`}
+                            className="flex items-center flex-grow mr-3"
+                          >
+                            {followedUser.imageUrl ? (
+                              <img
+                                src={followedUser.imageUrl}
+                                alt={followedUser.name ?? "User"}
+                                className="w-10 h-10 rounded-full mr-3 object-cover border border-gray-200"
+                              />
+                            ) : (
+                              <ProfileImagePlaceholder
+                                name={followedUser.name}
+                                size="w-10 h-10"
+                              />
+                            )}
+                            <div>
+                              <span className="text-sm p-1 font-semibold text-[#292929] hover:underline">
+                                {followedUser.name || "Anonymous User"}
+                              </span>
+                              <p className="text-xs  p-1 text-gray-500">
+                                @{followedUser.username || "N/A"}
+                              </p>
+                            </div>
+                          </Link>
+                          {/* Optional: Add follow/unfollow button for logged-in user viewing this list */}
+                        </li>
+                      ) : null,
                   )}
                 </ul>
               )}
@@ -1449,7 +1647,8 @@ export default function UserProfilePage() {
         <section
           id="manage-profile"
           className="mb-4 p-6 bg-[#ffffff] rounded-lg border border-gray-200"
-          style={{ fontFamily: "Inter, sans-serif" }}>
+          style={{ fontFamily: "Inter, sans-serif" }}
+        >
           <h2 className="text-lg font-normal text-[#292929] mb-6 pb-3 border-b border-gray-300">
             Manage Profile & Account
           </h2>
@@ -1457,24 +1656,32 @@ export default function UserProfilePage() {
             {/* Column 1: Profile Settings and General Account Management */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-base font-normal text-[#292929] mb-2">Profile Settings</h3>
+                <h3 className="text-base font-normal text-[#292929] mb-2">
+                  Profile Settings
+                </h3>
                 <button
                   onClick={() => {
                     if (!isEditing) handleEditToggle();
                     window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
-                  className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors disabled:opacity-50 flex items-center">
-                  <Edit3 className="w-4 h-4 inline-block mr-2" /> Edit Profile Details
+                  className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors disabled:opacity-50 flex items-center"
+                >
+                  <Edit3 className="w-4 h-4 inline-block mr-2" /> Edit Profile
+                  Details
                 </button>
               </div>
 
               <div>
-                <h3 className="text-base font-normal text-[#292929] mb-2">Account Management</h3>
+                <h3 className="text-base font-normal text-[#292929] mb-2">
+                  Account Management
+                </h3>
                 <Link
                   to="/user-settings"
-                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors flex items-center">
-                  <Settings className="w-4 h-4 inline-block mr-2" /> Account Settings (Change
-                  profile photo, Password, Delete account, etc.)
+                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors flex items-center"
+                >
+                  <Settings className="w-4 h-4 inline-block mr-2" /> Account
+                  Settings (Change profile photo, Password, Delete account,
+                  etc.)
                 </Link>
               </div>
             </div>
@@ -1482,10 +1689,13 @@ export default function UserProfilePage() {
             {/* Column 2: Account Actions (Sign Out, Delete Account) */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-base font-normal text-[#292929] mb-2">Account Actions</h3>
+                <h3 className="text-base font-normal text-[#292929] mb-2">
+                  Account Actions
+                </h3>
                 <button
                   onClick={handleSignOut} // Updated to new handler
-                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors flex items-center">
+                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors flex items-center"
+                >
                   <LogOut className="w-4 h-4 inline-block mr-2" /> Sign Out
                 </button>
               </div>
@@ -1497,7 +1707,8 @@ export default function UserProfilePage() {
             </div>
           )}
           <p className="mt-6 text-xs text-gray-500">
-            For more advanced settings, you can also visit your main account page.
+            For more advanced settings, you can also visit your main account
+            page.
           </p>
         </section>
       )}
