@@ -1,4 +1,9 @@
-import { query, mutation } from "./_generated/server";
+import {
+  query,
+  mutation,
+  internalQuery,
+  internalMutation,
+} from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { requireAdminRole } from "./users"; // Import requireAdminRole
@@ -184,5 +189,130 @@ export const update = mutation({
       throw new Error("Settings not initialized. Cannot update.");
     }
     await ctx.db.patch(settings._id, args);
+  },
+});
+
+/**
+ * Get a boolean value from appSettings table (public query for admin dashboard)
+ */
+export const getBoolean = query({
+  args: { key: v.string() },
+  returns: v.union(v.null(), v.boolean()),
+  handler: async (ctx, args) => {
+    // Only allow admins to access app settings
+    await requireAdminRole(ctx);
+
+    const row = await ctx.db
+      .query("appSettings")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+    return row?.valueBoolean ?? null;
+  },
+});
+
+/**
+ * Internal version of getBoolean for use in actions
+ */
+export const getBooleanInternal = internalQuery({
+  args: { key: v.string() },
+  returns: v.union(v.null(), v.boolean()),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("appSettings")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+    return row?.valueBoolean ?? null;
+  },
+});
+
+/**
+ * Set a boolean value in appSettings table
+ */
+export const setBoolean = internalMutation({
+  args: { key: v.string(), value: v.boolean() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("appSettings")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+    if (existing) {
+      await ctx.db.patch(existing._id, { valueBoolean: args.value });
+    } else {
+      await ctx.db.insert("appSettings", {
+        key: args.key,
+        valueBoolean: args.value,
+      });
+    }
+    return null;
+  },
+});
+
+/**
+ * Get a string value from appSettings table
+ */
+export const getString = internalQuery({
+  args: { key: v.string() },
+  returns: v.union(v.null(), v.string()),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("appSettings")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+    return row?.valueString ?? null;
+  },
+});
+
+/**
+ * Set a string value in appSettings table
+ */
+export const setString = internalMutation({
+  args: { key: v.string(), value: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("appSettings")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+    if (existing) {
+      await ctx.db.patch(existing._id, { valueString: args.value });
+    } else {
+      await ctx.db.insert("appSettings", {
+        key: args.key,
+        valueString: args.value,
+      });
+    }
+    return null;
+  },
+});
+
+/**
+ * Admin mutation to toggle global email sending
+ */
+export const toggleEmails = mutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    await requireAdminRole(ctx);
+
+    const existing = await ctx.db
+      .query("appSettings")
+      .withIndex("by_key", (q) => q.eq("key", "emailsEnabled"))
+      .unique();
+
+    const currentValue = existing?.valueBoolean ?? true; // Default to enabled
+    const newValue = !currentValue;
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { valueBoolean: newValue });
+    } else {
+      await ctx.db.insert("appSettings", {
+        key: "emailsEnabled",
+        valueBoolean: newValue,
+      });
+    }
+
+    console.log(`Admin toggled emails: ${newValue ? "enabled" : "disabled"}`);
+    return null;
   },
 });

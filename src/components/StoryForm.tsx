@@ -863,9 +863,8 @@ export function StoryForm() {
                         ? tag.textColor || "#292929"
                         : "#545454",
                       borderColor: selectedTagIds.includes(tag._id)
-                        ? tag.backgroundColor
-                          ? "transparent"
-                          : "#D5D3D0"
+                        ? tag.borderColor ||
+                          (tag.backgroundColor ? "transparent" : "#D5D3D0")
                         : "#D5D3D0",
                     }}
                   >

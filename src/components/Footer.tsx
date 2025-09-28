@@ -1,13 +1,10 @@
 import React from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { SignInButton, useAuth, useClerk } from "@clerk/clerk-react";
-import { dark } from "@clerk/themes";
+import { Link } from "react-router-dom";
 
 export function Footer() {
   const [showAboutModal, setShowAboutModal] = React.useState(false);
-  const { isSignedIn } = useAuth();
-  const { signOut } = useClerk();
 
   return (
     <footer className="mt-12">
@@ -23,6 +20,9 @@ export function Footer() {
           >
             About
           </button>
+          <Link to="/leaderboard" className="hover:text-[#525252]">
+            Leaderboard
+          </Link>
           {/* <a href="#" target="_blank" rel="noopener noreferrer" className="hover:text-[#525252]">
             Submit
           </a> */}
@@ -71,8 +71,8 @@ export function Footer() {
               <p>Vibe Apps – The place to share and discover new apps.</p>
 
               <p>
-                Vibe Apps is a real-time feed of apps. It's where you go to show
-                off what you've built, and see what others are building.{" "}
+                Welcome to VibeApps, the community where you go to show off what
+                you've built, and see what others are building.{" "}
                 <a
                   href="https://convex.dev?utm_source=vibeapps-dev"
                   target="_blank"
@@ -85,7 +85,7 @@ export function Footer() {
               </p>
               <ul>
                 <li>Submit your app</li>
-                <li>Browse and vote on what's trending</li>
+                <li>Browse and vote(vibe) on what's news</li>
                 <li>Leave feedback or get inspired</li>
               </ul>
               <p>

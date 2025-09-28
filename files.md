@@ -20,7 +20,7 @@
 - `files.MD`: This file - comprehensive codebase documentation
 - `TASK.MD`: Project task and feature requirements
 - `mentions.md`: @Mentions system PRD and implementation documentation
-- `addresend.md`: Resend email integration PRD and requirements (includes admin report notification emails)
+- `addresend.md`: Resend email integration PRD and requirements (daily admin/user digests, weekly digest, @mentions emails, unsubscribe, admin broadcast, alerts cross-ref)
 - `metadataforsubs.md`: Server-side metadata generation PRD for social sharing
 - `inboxforapp.md`: Inbox messaging system PRD (planned feature)
 - `following-plan.MD`: User following system implementation plan
@@ -48,7 +48,7 @@
 ### Authentication & User Management
 
 - `convex/clerk.ts`: Clerk authentication integration with Convex
-- `convex/users.ts`: User management functions (queries, mutations, admin functions, mention search)
+- `convex/users.ts`: User management functions (queries, mutations, admin functions, mention search, recent vibers discovery)
 - `convex/mentions.ts`: @Mentions system core utilities (extract, resolve, record, quota enforcement)
 
 ### Core App Features
@@ -62,6 +62,7 @@
 - `convex/tags.ts`: Tag management and categorization system with enhanced dropdown search support
 - `convex/reports.ts`: User reporting system for content moderation with admin notification creation
 - `convex/alerts.ts`: Comprehensive notification system for votes, comments, ratings, follows, bookmarks, and admin reports
+  - Includes helper `getAdminUserIds` and `createReportNotifications` for admin/manager report alerts
 
 ### Admin & Moderation
 
@@ -84,12 +85,28 @@
 - `convex/judges.ts`: Judge registration, session management, and progress tracking with status updates
 - `convex/judgeScores.ts`: Score submission, calculation, and results with CSV export and weighted scoring
 
+### Email System (Resend Integration) ✅ FULLY IMPLEMENTED
+
+- `convex/emails/templates.ts`: Email templates for all email types (admin, welcome, engagement, weekly, mentions)
+- `convex/emails/resend.ts`: Core email sending with Resend API, logging, and global kill switch
+- `convex/emails/daily.ts`: Daily metrics calculation and user engagement processing with fixed validators
+- `convex/emails/weekly.ts`: Weekly digest computation and sending functionality
+- `convex/emails/welcome.ts`: Welcome email integration for new user onboarding
+- `convex/emails/queries.ts`: V8 runtime queries for email data (separated from Node.js actions)
+- `convex/emails/helpers.ts`: Helper queries for email processing and data fetching
+- `convex/emails/broadcast.ts`: Admin broadcast email system with user search and batch processing
+- `convex/sendEmails.ts`: Convex Resend Component wrapper with subject prefix and from address enforcement
+- `convex/emailSettings.ts`: User email preferences management with unsubscribe functionality
+- `convex/testDailyEmail.ts`: Admin testing functions for daily/weekly email triggers
+- `convex/crons.ts`: Email cron jobs (daily admin, engagement processing, weekly digest)
+
 ### Utilities & Configuration
 
 - `convex/utils.ts`: Shared utility functions for backend operations
 - `convex/validators.ts`: Input validation schemas for functions
 - `convex/convexBoxConfig.ts`: Configuration for ConvexBox notification system
-- `convex/http.ts`: HTTP actions for handling external requests
+- `convex/http.ts`: HTTP actions for handling external requests and Resend webhook handler
+- `convex/settings.ts`: Global app settings including email kill switch and admin controls
 
 ## Frontend (src Directory)
 
@@ -128,16 +145,18 @@
 - `src/components/SearchResults.tsx`: Search results display component
 - `src/components/WeeklyLeaderboard.tsx`: Top users and trending content
 - `src/components/TopCategoriesOfWeek.tsx`: Trending categories and tags
+- `src/components/RecentVibers.tsx`: Recent user avatars sidebar with ProfileHoverCard integration
 
 ### Admin Dashboard Components
 
-- `src/components/admin/AdminDashboard.tsx`: Main admin dashboard overview with comprehensive navigation
+- `src/components/admin/AdminDashboard.tsx`: Main admin dashboard overview with comprehensive navigation including Email Management tab
 - `src/components/admin/ContentModeration.tsx`: Content approval/rejection interface with image management
 - `src/components/admin/UserModeration.tsx`: User management, verification, and ban/pause functionality
 - `src/components/admin/TagManagement.tsx`: Tag creation and customization with colors, emojis, and ordering
 - `src/components/admin/Settings.tsx`: Site-wide settings configuration with view mode controls
 - `src/components/admin/NumbersView.tsx`: Analytics and metrics dashboard with detailed tracking
 - `src/components/admin/ReportManagement.tsx`: User report review and resolution with status tracking
+- `src/components/admin/EmailManagement.tsx`: Complete email system management with global toggle, broadcast emails, user search, and testing tools
 - `src/components/admin/SubmitFormFieldManagement.tsx`: Manage fields for a specific submit form
 - `src/components/admin/CreateSubmitFormModal.tsx`: Modal to create new submit forms
 - `src/components/admin/EditSubmitFormModal.tsx`: Modal to edit existing submit forms
@@ -184,7 +203,7 @@
 - `src/pages/SignUpPage.tsx`: User registration page
 - `src/pages/SignOutPage.tsx`: User sign-out confirmation
 - `src/pages/SetUsernamePage.tsx`: Username setup for new users
-- `src/pages/UserProfilePage.tsx`: User profile display and management
+- `src/pages/UserProfilePage.tsx`: User profile display and management with email preferences and unsubscribe functionality
 - `src/pages/TagPage.tsx`: Tag-specific app listings
 - `src/pages/JudgingGroupPage.tsx`: Judge interface for scoring submissions
 - `src/pages/JudgingInterfacePage.tsx`: Individual submission judging interface with @mention autocomplete in notes

@@ -75,7 +75,7 @@ export function TagPage() {
     const baseStyle = {
       backgroundColor: tag.backgroundColor || "#F4F0ED",
       color: tag.textColor || "#525252",
-      border: `1px solid ${tag.backgroundColor ? "transparent" : "#D5D3D0"}`,
+      border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "#D5D3D0")}`,
     };
 
     return (
@@ -113,7 +113,9 @@ export function TagPage() {
           {getTagDisplay()}
         </div>
         <p className="text-[#545454]">
-          {totalCount === undefined ? "Loading..." : `${totalCount || 0} ${totalCount === 1 ? "app" : "apps"} found`}
+          {totalCount === undefined
+            ? "Loading..."
+            : `${totalCount || 0} ${totalCount === 1 ? "app" : "apps"} found`}
         </p>
       </div>
 

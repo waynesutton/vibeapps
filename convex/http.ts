@@ -1,6 +1,7 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { resend } from "./sendEmails";
 
 const http = httpRouter();
 
@@ -190,7 +191,35 @@ http.route({
   }),
 });
 
-export default http;
+// Resend webhook handler for email events (updates emailLogs via V8 mutation)
+http.route({
+  path: "/resend-webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    const payload = await req.json();
+    try {
+      const { type, data } = payload ?? {};
+      if (type && data?.message_id) {
+        const normalized = type.split(".")[1];
+        if (
+          normalized === "delivered" ||
+          normalized === "bounced" ||
+          normalized === "complained"
+        ) {
+          await ctx.runMutation(internal.emails.queries.updateEmailLogStatus, {
+            resendMessageId: data.message_id,
+            status: normalized,
+            metadata: data,
+          });
+        }
+      }
+      return new Response("ok", { status: 200 });
+    } catch (e) {
+      console.error("Resend webhook error", e);
+      return new Response("error", { status: 200 }); // ack to avoid retries
+    }
+  }),
+});
 
 http.route({
   path: "/llms.txt",
@@ -208,3 +237,128 @@ http.route({
     });
   }),
 });
+
+// Unsubscribe endpoint for email links
+http.route({
+  path: "/api/unsubscribe",
+  method: "GET",
+  handler: httpAction(async (ctx, req) => {
+    const url = new URL(req.url);
+    const token = url.searchParams.get("token");
+
+    if (!token) {
+      return new Response(
+        `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Invalid Unsubscribe Link</title>
+            <style>
+              body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; text-align: center; }
+              .error { color: #d32f2f; }
+            </style>
+          </head>
+          <body>
+            <h1 class="error">Invalid Unsubscribe Link</h1>
+            <p>The unsubscribe link is missing required information. Please contact support if you continue to receive unwanted emails.</p>
+            <a href="https://vibeapps.dev">Return to VibeApps</a>
+          </body>
+        </html>
+      `,
+        {
+          status: 400,
+          headers: { "Content-Type": "text/html" },
+        },
+      );
+    }
+
+    try {
+      const result = await ctx.runMutation(
+        internal.emails.unsubscribe.handleUnsubscribeToken,
+        {
+          token,
+        },
+      );
+
+      if (result.success) {
+        return new Response(
+          `
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Successfully Unsubscribed</title>
+              <style>
+                body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; text-align: center; }
+                .success { color: #2e7d32; }
+                .button { display: inline-block; background: #292929; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 20px 0; }
+              </style>
+            </head>
+            <body>
+              <h1 class="success">Successfully Unsubscribed</h1>
+              <p>You have been unsubscribed from VibeApps emails. You will no longer receive email notifications.</p>
+              <p>You can manage your email preferences anytime from your profile page.</p>
+              <a href="https://vibeapps.dev" class="button">Return to VibeApps</a>
+            </body>
+          </html>
+        `,
+          {
+            status: 200,
+            headers: { "Content-Type": "text/html" },
+          },
+        );
+      } else {
+        return new Response(
+          `
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Unsubscribe Link Expired</title>
+              <style>
+                body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; text-align: center; }
+                .warning { color: #f57c00; }
+                .button { display: inline-block; background: #292929; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 20px 0; }
+              </style>
+            </head>
+            <body>
+              <h1 class="warning">Unsubscribe Link Expired</h1>
+              <p>This unsubscribe link has expired or has already been used. You can manage your email preferences from your profile page.</p>
+              <a href="https://vibeapps.dev" class="button">Go to VibeApps</a>
+            </body>
+          </html>
+        `,
+          {
+            status: 400,
+            headers: { "Content-Type": "text/html" },
+          },
+        );
+      }
+    } catch (error) {
+      console.error("Unsubscribe error:", error);
+      return new Response(
+        `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Unsubscribe Error</title>
+            <style>
+              body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; text-align: center; }
+              .error { color: #d32f2f; }
+            </style>
+          </head>
+          <body>
+            <h1 class="error">Unsubscribe Error</h1>
+            <p>There was an error processing your unsubscribe request. Please contact support.</p>
+            <a href="https://vibeapps.dev">Return to VibeApps</a>
+          </body>
+        </html>
+      `,
+        {
+          status: 500,
+          headers: { "Content-Type": "text/html" },
+        },
+      );
+    }
+  }),
+});
+
+export default http;

@@ -33,6 +33,7 @@ import {
 import { UserSyncer } from "./UserSyncer";
 import { WeeklyLeaderboard } from "./WeeklyLeaderboard";
 import { TopCategoriesOfWeek } from "./TopCategoriesOfWeek";
+import { RecentVibers } from "./RecentVibers";
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
 import { ProfileHoverCard } from "./ui/ProfileHoverCard";
 import { formatDistanceToNow } from "date-fns";
@@ -703,7 +704,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                             style={{
                               backgroundColor: tag.backgroundColor || "#F9FAFB", // Default to gray-50
                               color: tag.textColor || "#374151", // Default to gray-700
-                              border: `1px solid ${tag.backgroundColor ? "transparent" : "#D1D5DB"}`, // Tailwind gray-300
+                              border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "#D1D5DB")}`, // Use borderColor or fallback
                             }}
                             title={`View all apps tagged with ${tag.name}`}
                           >
@@ -743,6 +744,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                   selectedTagId={selectedTagId}
                   setSelectedTagId={setSelectedTagId}
                 />
+                <RecentVibers />
               </aside>
             )}
           </div>

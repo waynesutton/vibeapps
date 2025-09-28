@@ -65,6 +65,7 @@ export const getBySlug = query({
       isHidden: v.optional(v.boolean()),
       backgroundColor: v.optional(v.string()),
       textColor: v.optional(v.string()),
+      borderColor: v.optional(v.string()),
       emoji: v.optional(v.string()),
       iconUrl: v.optional(v.string()),
       order: v.optional(v.number()),
@@ -139,6 +140,7 @@ export const create = mutation({
     isHidden: v.optional(v.boolean()), // Optional: defaults to false
     backgroundColor: v.optional(v.union(v.string(), v.null())), // Allow null for clearing
     textColor: v.optional(v.union(v.string(), v.null())), // Allow null for clearing
+    borderColor: v.optional(v.union(v.string(), v.null())), // Allow null for clearing
     emoji: v.optional(v.union(v.string(), v.null())), // Allow null for clearing
     iconUrl: v.optional(v.union(v.string(), v.null())), // Accept iconUrl (for legacy, but not used)
     iconStorageId: v.optional(v.id("_storage")), // Accept storageId for uploaded icon
@@ -185,6 +187,7 @@ export const create = mutation({
       isHidden: args.isHidden ?? false,
       backgroundColor: args.backgroundColor ?? undefined,
       textColor: args.textColor ?? undefined,
+      borderColor: args.borderColor ?? undefined,
       emoji: args.emoji ?? undefined,
       iconUrl: iconUrl,
       order: args.order,
@@ -203,6 +206,7 @@ export const update = mutation({
     isHidden: v.optional(v.boolean()),
     backgroundColor: v.optional(v.union(v.string(), v.null())),
     textColor: v.optional(v.union(v.string(), v.null())),
+    borderColor: v.optional(v.union(v.string(), v.null())),
     emoji: v.optional(v.union(v.string(), v.null())),
     iconUrl: v.optional(v.union(v.string(), v.null())),
     iconStorageId: v.optional(v.id("_storage")), // Accept storageId for uploaded icon
@@ -257,6 +261,9 @@ export const update = mutation({
     if (rest.textColor !== undefined)
       updateData.textColor =
         rest.textColor === null ? undefined : rest.textColor;
+    if (rest.borderColor !== undefined)
+      updateData.borderColor =
+        rest.borderColor === null ? undefined : rest.borderColor;
     if (rest.emoji !== undefined)
       updateData.emoji = rest.emoji === null ? undefined : rest.emoji;
     if (rest.iconUrl !== undefined)

@@ -28,8 +28,10 @@ export function ProfileHoverCard({
 }: ProfileHoverCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [showCard, setShowCard] = useState(false);
+  const [cardPosition, setCardPosition] = useState<"left" | "right">("left");
   const timeoutRef = useRef<NodeJS.Timeout>();
   const cardRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Query user data for hover card - only run when hovering
   const userData = useQuery(
@@ -37,9 +39,27 @@ export function ProfileHoverCard({
     isHovered && username ? { username } : "skip",
   );
 
+  // Calculate optimal position for the hover card
+  const calculatePosition = () => {
+    if (!containerRef.current) return;
+
+    const container = containerRef.current;
+    const rect = container.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const cardWidth = 320; // w-80 = 320px
+
+    // Check if card would overflow on the right
+    if (rect.left + cardWidth > viewportWidth - 20) {
+      setCardPosition("right");
+    } else {
+      setCardPosition("left");
+    }
+  };
+
   // Handle mouse enter with delay
   const handleMouseEnter = () => {
     setIsHovered(true);
+    calculatePosition();
     timeoutRef.current = setTimeout(() => {
       setShowCard(true);
     }, 500); // 500ms delay before showing card
@@ -54,14 +74,23 @@ export function ProfileHoverCard({
     setShowCard(false);
   };
 
-  // Cleanup timeout on unmount
+  // Cleanup timeout on unmount and handle window resize
   useEffect(() => {
+    const handleResize = () => {
+      if (showCard) {
+        calculatePosition();
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
+      window.removeEventListener("resize", handleResize);
     };
-  }, []);
+  }, [showCard]);
 
   // Don't render hover card if no username provided
   if (!username) {
@@ -70,6 +99,7 @@ export function ProfileHoverCard({
 
   return (
     <div
+      ref={containerRef}
       className="relative inline-block"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -79,11 +109,9 @@ export function ProfileHoverCard({
       {showCard && userData && (
         <div
           ref={cardRef}
-          className="absolute z-50 w-80 bg-white rounded-lg shadow-lg border border-[#D8E1EC] p-4 mt-2 left-0"
-          style={{
-            transform: "translateY(0)",
-            animation: "fadeIn 0.2s ease-out",
-          }}
+          className={`absolute z-50 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-lg border border-[#D8E1EC] p-4 mt-2 animate-fade-in ${
+            cardPosition === "left" ? "left-0" : "right-0"
+          }`}
           onMouseEnter={() => setShowCard(true)}
           onMouseLeave={handleMouseLeave}
         >
@@ -208,19 +236,6 @@ export function ProfileHoverCard({
           </div>
         </div>
       )}
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   );
 }

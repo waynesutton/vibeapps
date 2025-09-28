@@ -51,8 +51,12 @@ Brief description of the feature and its purpose.
 - [x] add notification section like product hunt that works with sending emails too, move notiction dot and background from page
 
 ## In Progress Tasks
+
 - [ ] clerk roles for hackathon organizers to see judges section in admin dashboard only
+- [ ] update alrts if admin pins or adds a message to their app
+- [ ] fix links for weekly emails
 - [ ] setup resend for emails for notifications on post
+  - [ ] update templates.ts
 - [ ] add option to turn off email notifications on user profiles
 
 ## Bugs

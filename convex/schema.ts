@@ -110,6 +110,7 @@ export default defineSchema({
     isHidden: v.optional(v.boolean()),
     backgroundColor: v.optional(v.string()),
     textColor: v.optional(v.string()),
+    borderColor: v.optional(v.string()),
     emoji: v.optional(v.string()),
     iconUrl: v.optional(v.string()),
     order: v.optional(v.number()),
@@ -431,4 +432,129 @@ export default defineSchema({
   })
     .index("by_recipient", ["recipientUserId"]) // Paginate and order by _creationTime desc
     .index("by_recipient_and_isRead", ["recipientUserId", "isRead"]), // Efficient unread checks
+
+  // Email preferences per user (for Resend integration)
+  emailSettings: defineTable({
+    userId: v.id("users"),
+    // Master kill switch for this user
+    unsubscribedAt: v.optional(v.number()),
+    // Granular controls
+    dailyEngagementEmails: v.optional(v.boolean()),
+    messageNotifications: v.optional(v.boolean()),
+    marketingEmails: v.optional(v.boolean()),
+    weeklyDigestEmails: v.optional(v.boolean()),
+    mentionNotifications: v.optional(v.boolean()),
+    timezone: v.optional(v.string()),
+  }).index("by_user", ["userId"]),
+
+  // Track email sends to prevent duplicates and for analytics
+  emailLogs: defineTable({
+    userId: v.optional(v.id("users")), // Optional for admin emails
+    emailType: v.union(
+      v.literal("daily_admin"),
+      v.literal("daily_engagement"),
+      v.literal("welcome"),
+      v.literal("message_notification"),
+      v.literal("weekly_digest"),
+      v.literal("mention_notification"),
+      v.literal("admin_broadcast"),
+      v.literal("admin_report_notification"),
+    ),
+    recipientEmail: v.string(),
+    sentAt: v.number(),
+    resendMessageId: v.optional(v.string()), // Store Resend message ID
+    status: v.union(
+      v.literal("sent"),
+      v.literal("failed"),
+      v.literal("delivered"),
+      v.literal("bounced"),
+      v.literal("complained"),
+    ),
+    metadata: v.optional(v.any()), // Store email-specific data
+  })
+    .index("by_user_type_date", ["userId", "emailType", "sentAt"])
+    .index("by_type_date", ["emailType", "sentAt"])
+    .index("by_resend_id", ["resendMessageId"]),
+
+  // Track daily engagement for users (for email content)
+  dailyEngagementSummary: defineTable({
+    userId: v.id("users"),
+    date: v.string(), // YYYY-MM-DD format
+    votesReceived: v.number(),
+    ratingsReceived: v.number(),
+    commentsReceived: v.number(),
+    bookmarksReceived: v.number(),
+    totalEngagement: v.number(),
+    storyEngagements: v.array(
+      v.object({
+        storyId: v.id("stories"),
+        storyTitle: v.string(),
+        storySlug: v.optional(v.string()),
+        votes: v.number(),
+        ratings: v.number(),
+        comments: v.number(),
+        bookmarks: v.number(),
+      }),
+    ),
+  })
+    .index("by_user_date", ["userId", "date"])
+    .index("by_date", ["date"]),
+
+  // Daily platform metrics snapshot
+  dailyMetrics: defineTable({
+    date: v.string(), // YYYY-MM-DD format
+    newSubmissions: v.number(),
+    newUsers: v.number(),
+    totalUsers: v.number(),
+    dailyVotes: v.number(),
+    dailyComments: v.number(),
+    dailyRatings: v.number(),
+    dailyBookmarks: v.number(),
+    dailyFollows: v.number(),
+    activeUsers: v.number(), // Users who logged in that day
+    pendingReports: v.number(),
+    resolvedReports: v.number(),
+  }).index("by_date", ["date"]),
+
+  // Unsubscribe tokens for one-click unsubscribe links
+  emailUnsubscribeTokens: defineTable({
+    userId: v.id("users"),
+    token: v.string(), // signed token
+    purpose: v.union(
+      v.literal("all"),
+      v.literal("daily_engagement"),
+      v.literal("weekly_digest"),
+      v.literal("marketing"),
+    ),
+    expiresAt: v.number(),
+    consumedAt: v.optional(v.number()),
+  })
+    .index("by_token", ["token"])
+    .index("by_user", ["userId"]),
+
+  // Admin broadcast campaigns
+  broadcastEmails: defineTable({
+    createdBy: v.id("users"),
+    subject: v.string(),
+    html: v.string(),
+    filter: v.optional(v.object({})), // optional targeting; keep simple in v1
+    status: v.union(
+      v.literal("draft"),
+      v.literal("queued"),
+      v.literal("sending"),
+      v.literal("completed"),
+      v.literal("cancelled"),
+    ),
+    totalRecipients: v.optional(v.number()),
+    sentCount: v.optional(v.number()),
+    cancelledAt: v.optional(v.number()),
+  }).index("by_status", ["status"]),
+
+  // App/site settings (global flags)
+  appSettings: defineTable({
+    key: v.string(), // e.g., "emailsEnabled"
+    valueBoolean: v.optional(v.boolean()),
+    valueString: v.optional(v.string()),
+    valueNumber: v.optional(v.number()),
+  }).index("by_key", ["key"]),
 });

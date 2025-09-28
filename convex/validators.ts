@@ -67,6 +67,7 @@ export const storyWithDetailsValidator = v.object({
   authorName: v.optional(v.string()),
   authorUsername: v.optional(v.string()),
   authorImageUrl: v.optional(v.string()),
+  authorEmail: v.optional(v.string()),
   authorIsVerified: v.optional(v.boolean()),
   tags: v.array(tagDocValidator), // Array of full tag objects
   screenshotUrl: v.union(v.string(), v.null()), // URL for the screenshot

@@ -14,6 +14,7 @@ import { UserModeration } from "./UserModeration";
 import { FormFieldManagement } from "./FormFieldManagement";
 import { Judging } from "./Judging";
 import { SubmitFormManagement } from "./SubmitFormManagement";
+import { EmailManagement } from "./EmailManagement";
 // FormResults is typically viewed via a specific form, not as a main tab.
 // Consider removing it from the main tabs if it doesn't show an overview.
 
@@ -25,6 +26,7 @@ type MainAdminTab =
   | "judging"
   | "numbers"
   | "users"
+  | "emails"
   | "settings";
 
 // Define sub-tabs
@@ -116,6 +118,7 @@ export function AdminDashboard() {
               { value: "judging", label: "Judging" },
               { value: "numbers", label: "Numbers" },
               { value: "users", label: "User Moderation" },
+              { value: "emails", label: "Email Management" },
               { value: "settings", label: "Settings" },
             ] as { value: MainAdminTab; label: string }[]
           ).map((tab) => (
@@ -216,6 +219,10 @@ export function AdminDashboard() {
               <ReportManagement />
             </Tabs.Content>
           </Tabs.Root>
+        </Tabs.Content>
+
+        <Tabs.Content value="emails" className="focus:outline-none">
+          <EmailManagement />
         </Tabs.Content>
 
         <Tabs.Content value="settings" className="focus:outline-none">

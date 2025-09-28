@@ -169,6 +169,25 @@ export default function UserProfilePage() {
     username && !username.startsWith("user-settings") ? { username } : "skip",
   );
 
+  // Candidate check for own profile to drive private queries
+  const profileUserClerkId = (profileData as any)?.user?.clerkId as
+    | string
+    | undefined;
+  const isOwnProfileCandidate =
+    !!isClerkLoaded && !!authUser && !!profileUserClerkId
+      ? authUser.id === profileUserClerkId
+      : false;
+
+  // Email settings for the authenticated current user (only if own profile)
+  const emailSettingsData = useQuery(
+    api.emailSettings.getEmailSettings,
+    isOwnProfileCandidate ? {} : "skip",
+  );
+  const updateEmailSettingsMutation = useMutation(
+    api.emailSettings.updateEmailSettings,
+  );
+  const unsubscribeAllMutation = useMutation(api.emailSettings.unsubscribeAll);
+
   // Corrected useEffect for logging Profile User (Convex user object)
   useEffect(() => {
     if (profileData?.user) {
@@ -238,6 +257,7 @@ export default function UserProfilePage() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isLoadingFollowAction, setIsLoadingFollowAction] = useState(false);
+  const [isEmailUpdating, setIsEmailUpdating] = useState(false);
 
   // State for confirmation dialogs
   const [dialogState, setDialogState] = useState<{
@@ -752,6 +772,35 @@ export default function UserProfilePage() {
     });
   };
 
+  const handleUnsubscribeAllEmails = async () => {
+    try {
+      setIsEmailUpdating(true);
+      await unsubscribeAllMutation({});
+    } catch (e) {
+      console.error("Unsubscribe failed", e);
+      setActionError("Failed to update email preferences.");
+    } finally {
+      setIsEmailUpdating(false);
+    }
+  };
+
+  const handleResubscribeAllEmails = async () => {
+    try {
+      setIsEmailUpdating(true);
+      await updateEmailSettingsMutation({
+        dailyEngagementEmails: true,
+        messageNotifications: true,
+        weeklyDigestEmails: true,
+        mentionNotifications: true,
+      });
+    } catch (e) {
+      console.error("Resubscribe failed", e);
+      setActionError("Failed to update email preferences.");
+    } finally {
+      setIsEmailUpdating(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 from-slate-50 to-gray-100 min-h-screen">
       <header
@@ -764,13 +813,13 @@ export default function UserProfilePage() {
             {isEditing ? (
               <button
                 onClick={triggerFileEdit}
-                className="relative group w-24 h-24 rounded-full overflow-hidden"
+                className="relative group rounded-full overflow-hidden"
               >
                 {newProfileImagePreview ? (
                   <img
                     src={newProfileImagePreview}
                     alt="Profile preview"
-                    className="w-full h-full object-cover border-4 border-gray-300 group-hover:opacity-75 transition-opacity"
+                    className="w-full h-full object-cover border-4 border-gray-300 group-hover:opacity-75 w-24 h-24 overflow-hidden rounded-full transition-opacity"
                   />
                 ) : (
                   <ProfileImagePlaceholder
@@ -778,7 +827,7 @@ export default function UserProfilePage() {
                     size="w-24 h-24"
                   />
                 )}
-                <div className="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                <div className="absolute inset-0 rounded-full bg-black w-auto h-19 bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                   <Camera className="w-8 h-8 text-white" />
                 </div>
                 <input
@@ -790,7 +839,7 @@ export default function UserProfilePage() {
                 />
               </button>
             ) : currentImageUrl ? (
-              <img
+            <img
                 src={currentImageUrl}
                 alt={`${loadedProfileUser?.name || "User"}'s profile`}
                 className="rounded-full h-19 object-cover border-2 border-gray-300"
@@ -1701,6 +1750,105 @@ export default function UserProfilePage() {
                   Settings (Change profile photo, Password, Delete account,
                   etc.)
                 </Link>
+                {/* Email Preferences */}
+                <div className="mt-4 p-4 bg-white border border-gray-200 rounded-md">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h4 className="text-sm font-medium text-[#292929]">
+                        Email Preferences
+                      </h4>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Manage your email notifications.
+                      </p>
+                    </div>
+                    <Mail className="w-4 h-4 text-gray-400" />
+                  </div>
+
+                  {emailSettingsData === undefined ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400"></div>
+                      <span className="text-xs text-gray-500">
+                        Loading preferences...
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                        <div className="flex-1">
+                          <p className="text-sm text-[#292929]">
+                            {emailSettingsData &&
+                            (emailSettingsData as any).unsubscribedAt
+                              ? "Currently unsubscribed from all emails"
+                              : "Receiving email notifications"}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {emailSettingsData &&
+                            (emailSettingsData as any).unsubscribedAt
+                              ? "You won't receive any email notifications"
+                              : "Daily updates and weekly digests"}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (
+                              emailSettingsData &&
+                              (emailSettingsData as any).unsubscribedAt
+                            ) {
+                              setDialogState({
+                                isOpen: true,
+                                title: "Resubscribe to Emails",
+                                description:
+                                  "You'll start receiving email notifications for daily updates, mentions, and weekly digests.",
+                                confirmText: "Resubscribe",
+                                confirmVariant: "default",
+                                onConfirm: () =>
+                                  confirmAndExecute(
+                                    handleResubscribeAllEmails,
+                                    "Resubscribed to emails.",
+                                    "Failed to resubscribe to emails.",
+                                  ),
+                              });
+                            } else {
+                              setDialogState({
+                                isOpen: true,
+                                title: "Unsubscribe from All Emails",
+                                description:
+                                  "You'll stop receiving all email notifications. In-app alerts will still appear when you're using the app.",
+                                confirmText: "Unsubscribe",
+                                confirmVariant: "destructive",
+                                onConfirm: () =>
+                                  confirmAndExecute(
+                                    handleUnsubscribeAllEmails,
+                                    "Unsubscribed from all emails.",
+                                    "Failed to unsubscribe from emails.",
+                                  ),
+                              });
+                            }
+                          }}
+                          disabled={isEmailUpdating}
+                          className={`px-3 py-1 text-xs font-medium rounded-md transition-colors disabled:opacity-50 ${
+                            emailSettingsData &&
+                            (emailSettingsData as any).unsubscribedAt
+                              ? "bg-[#292929] text-white hover:bg-gray-700"
+                              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          }`}
+                        >
+                          {isEmailUpdating ? (
+                            <div className="flex items-center gap-1">
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+                              <span>Updating...</span>
+                            </div>
+                          ) : emailSettingsData &&
+                            (emailSettingsData as any).unsubscribedAt ? (
+                            "Resubscribe"
+                          ) : (
+                            "Unsubscribe"
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

@@ -7,6 +7,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### Recent Vibers Sidebar Component ✅ COMPLETED
+
+**Added - User Discovery Feature**
+
+- **Recent Vibers Component**: New sidebar section displaying 25 most recently joined users as circular profile avatars
+- **Backend Query**: `getRecentVibers` function in `convex/users.ts` with proper filtering for banned users and username requirements
+- **ProfileHoverCard Integration**: Seamless hover functionality showing user details with 500ms delay
+- **Grid Layout**: 5x5 responsive grid with loading states and empty state handling
+- **User Navigation**: Direct profile linking via username routes
+- **Visual Design**: Consistent styling with existing sidebar components, verified badges, and smooth hover transitions
+- **Accessibility**: Proper alt text, keyboard navigation, and screen reader support
+
+### Enhanced ProfileHoverCard Support ✅ COMPLETED
+
+**Added - Comment @Mentions Hover Cards**
+
+- **@Mentions Integration**: All @username mentions in comments now display ProfileHoverCard on hover
+- **Enhanced Mentions Utility**: Updated `renderTextWithMentions` function in `src/utils/mentions.tsx` to wrap mention links with ProfileHoverCard
+- **Consistent UX**: Users can now hover over any @mention in comments to see profile details, bio, social links, and verification status
+- **Smart Positioning**: ProfileHoverCard automatically adjusts position to prevent overflow on screen edges
+
+### Resend Email Infrastructure Implementation ✅ COMPLETED
+
+**Added - Production Ready Email System**
+
+- **Complete Email Infrastructure**: Production-ready Resend integration using Convex Resend Component with `testMode: false`
+- **Email Templates**: `convex/emails/templates.ts` with admin reports, welcome, engagement, weekly digest, and mention templates
+- **Core Email Sending**: `convex/emails/resend.ts` with logging, global kill switch, and proper error handling
+- **Daily Processing**: `convex/emails/daily.ts` for metrics calculation and user engagement processing with fixed validators
+- **Weekly Digest**: `convex/emails/weekly.ts` for "Most Vibes This Week" computation and sending
+- **Welcome Integration**: `convex/emails/welcome.ts` for new user onboarding emails
+- **Email Database**: Complete schema with `emailLogs`, `dailyEngagementSummary`, `dailyMetrics`, `emailUnsubscribeTokens`, `broadcastEmails`, `appSettings`
+- **Automated Cron Jobs**: Daily admin reports (9 AM PST), engagement processing (5:30 PM PST), user emails (6 PM PST), weekly digest (Monday 9 AM PST)
+- **Webhook Handler**: `/resend-webhook` endpoint for email delivery tracking and status updates
+- **Email Preferences UI**: Complete user profile integration with unsubscribe/resubscribe modal confirmations
+- **Admin Controls**: Global email toggle, broadcast system with user search, and test email functionality
+- **Force Logout System**: Admin can force all users to re-login to sync missing email addresses from Clerk
+- **Email Testing**: Admin test buttons for daily/weekly emails and individual email sending
+
+**Technical Fixes Applied**
+
+- **Validator Errors**: Fixed `storeDailyMetrics` validator to include `date` field and proper field mapping
+- **Resend Configuration**: Disabled test mode (`testMode: false`) to send to real email addresses
+- **Function Separation**: Split Node.js actions from V8 queries/mutations across proper files
+- **Type Safety**: Fixed all TypeScript errors with proper validators and return types
+- **Email Extraction**: Fixed Clerk identity email extraction to prioritize `identity.email` over `identity.emailAddress`
+- **User Search**: Fixed broadcast email user search with proper email filtering and debugging tools
+- **Template Literal**: Fixed syntax errors in admin UI template literals
+
+**Modified Files**
+
+- `convex/schema.ts`: Added all email-related tables with proper indexes and validators
+- `convex/sendEmails.ts`: Enforced subject prefix and from address, disabled test mode
+- `convex/settings.ts`: Added public/internal queries for admin controls and global kill switch
+- `convex/users.ts`: Integrated welcome email triggers and email sync debugging
+- `convex/crons.ts`: Added all email cron jobs with proper scheduling
+- `convex/http.ts`: Added Resend webhook handler with proper routing
+- `src/pages/UserProfilePage.tsx`: Added email preferences with modern modal UI
+- `src/components/admin/EmailManagement.tsx`: Complete admin email management interface
+- `addresend.md`: Updated to reflect completed implementation status
+
+### Resend Email PRD Alignment and Mentions Fanout (Docs)
+
+**Added**
+
+- `addresend.md`: Chronological plan, schemas, cron specs for daily admin report, daily user engagement digest, weekly “Most Vibes,” unsubscribe tokens, admin broadcast, global kill-switch
+- @Mentions email notifications PRD aligned with `mentions.md` (comments and judging notes), distinct quotas (30/day creation vs 10/day email fanout)
+- Alerts cross-reference: admin report notification email type `admin_report_notification` documented
+
+**Modified**
+
+- `README.md`: Email integration section updated to reflect Resend PRD and mentions emails
+- `files.MD`: Synced descriptions for `addresend.md`, `alerts.ts`, and `http.ts` unsubscribe endpoint outline
+
+**Notes**
+
+- No runtime code changes in this entry; documentation only to prepare for Resend integration
+
 ### Admin Report Notifications System
 
 **Added**

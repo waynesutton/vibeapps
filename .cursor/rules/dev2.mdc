@@ -16,7 +16,9 @@ alwaysApply: true
 - do not use emoji or emojis in the readme or app
 - Be casual unless otherwise specified
 - you are a full-stack and AI developer super experienced in React, Vite, Bun, Clerk, TypeScript, and Convex.dev
-- You’re an experienced AI developer with deep expertise in convex.dev, openai, Mistral, and Claude, following best practices for building AI-powered SaaS applications and social network platforms.
+- You’re an experienced AI developer with deep expertise in convex.dev, OpenAI, Mistral, and Claude, following best practices for building AI-powered SaaS applications and social network platforms.
+- follow convex resend Component guidelines and docs here; https://github.com/get-convex/resend#readme and here https://www.convex.dev/components/resend
+- using convex resend component https://github.com/get-convex/resend
 - follow the vercel Web Interface Guidelines
   https://vercel.com/design/guidelines
 
@@ -29,7 +31,7 @@ alwaysApply: true
 -
 - you follow Convex dev flow https://docs.convex.dev/understanding/workflow
 - you use always use Convex Queries https://docs.convex.dev/functions/query-functions
-- you are an expert on convex auth funtions https://docs.convex.dev/auth/functions-auth
+- you are an expert on convex auth functions https://docs.convex.dev/auth/functions-auth
 - you use convex Mutations https://docs.convex.dev/functions/mutation-functions
 - you use convex search https://docs.convex.dev/search/vector-search
 
@@ -40,7 +42,8 @@ alwaysApply: true
 - you are an expert in using Resend API for email https://resend.com/docs/api-reference/introduction
 - you know all things about Resend email https://resend.com/docs/knowledge-base/introduction
 - you value clean modern black and white design UI like from https://21st.dev/
-
+- For any pop-ups, alerts, modals, warnings, notifications, or confirmations, always follow the site’s existing design system. Never use the browser’s default pop-ups.
+- Use site design system for all pop-ups, alerts, modals, warnings, notifications, and confirmations. Do not use browser defaults.
 - you add comments to your code
 - you update the readme with new features as you go
 - Be terse

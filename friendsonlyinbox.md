@@ -2,17 +2,18 @@
 
 ## Overview
 
-This PRD defines one to one direct messages that unlock only when two users follow each other. The feature mirrors the feel of Twitter mutual follows messaging, scoped to the existing VibeApps stack with Clerk auth, Convex backend, alerts notifications, and planned Resend daily emails.
+This PRD defines one to one direct messages with mutual follow restrictions. The inbox is always visible to authenticated users, but messaging is only enabled between users who follow each other. The feature mirrors the feel of Twitter mutual follows messaging, scoped to the existing VibeApps stack with Clerk auth, Convex backend, alerts notifications, and planned Resend daily emails.
 
 ## Why this matters
 
-Mutual follow is a clear consent gate that reduces spam. It keeps messages relevant and expected while reusing existing follow and alert primitives already in the codebase.
+Mutual follow is a clear consent gate that reduces spam. It keeps messages relevant and expected while reusing existing follow and alert primitives already in the codebase. The always-visible inbox creates discoverability while maintaining privacy through mutual follow requirements.
 
 ## Scope
 
 - One to one messages only
+- Inbox icon always visible on all user profiles
 - Message button shows only when both sides follow each other
-- Inbox entry point visible on profile near Follow or Message
+- Messaging functionality restricted to mutual follows
 - Alerts fire on each new incoming message for the recipient
 - Alerts link to the inbox conversation
 - Daily email rollup includes message notifications after Resend integration
@@ -30,37 +31,23 @@ Mutual follow is a clear consent gate that reduces spam. It keeps messages relev
 
 ## User stories
 
+- As a logged in user I see an Inbox icon on all user profiles including my own
 - As a logged in user I see a Message button on a profile only if we follow each other
 - As a logged in user I can click Message to open or create a private conversation with that user
+- As a logged in user I can click the Inbox icon to view my conversations
 - As a recipient I get a new alert when someone sends me a message
 - As a recipient I can click the alert and land in my inbox on that conversation
-- As a user I can open my inbox from my profile to browse conversation threads with people who have messaged me
+- As a user I can open my inbox to browse conversation threads with people who have messaged me
 
 ## UI changes
 
 Profile page `UserProfilePage.tsx` header actions
 
+- Show Inbox icon on all user profiles (always visible when authenticated)
 - Show Message button when mutual follow is true for viewer and profile owner
-- Place an Inbox button next to the Follow or Message button that routes to `/inbox`
+- Place Inbox icon next to the Follow or Message button that routes to `/inbox`
 
-Inbox page
-
-- New route `/inbox`
-- Left column shows conversations sorted by latest activity time
-- Right pane shows selected conversation messages with a simple composer
-- Mobile stacks into a single column with a conversation list then thread view
-
-Message reporting
-
-- In the thread view, each message bubble has an overflow menu with Report
-- Report opens a modal to select or enter a reason, then submits
-
-Notifications
-
-- Alerts entry created on each new message for the recipient
-- Alerts item links to `/inbox?c=<conversationId>`
-
-## Data model
+## Data model (Step 1)
 
 Tables are purpose built for direct messages with two participants only. Use a normalized pair to avoid array equality issues and to index correctly.
 
@@ -142,7 +129,7 @@ dmConversationId: v.optional(v.id("dmConversations")),
 dmMessageId: v.optional(v.id("dmMessages")),
 ```
 
-## Convex server functions
+## Convex server functions (Step 2)
 
 Mutual follow check `convex/follows.ts`
 
@@ -408,7 +395,52 @@ export const markConversationRead = mutation({
 });
 ```
 
-## Authorization and privacy
+## UI implementation (Step 3)
+
+Profile page `UserProfilePage.tsx` header actions
+
+- Show Inbox icon on all user profiles (always visible when authenticated)
+- Show Message button when mutual follow is true for viewer and profile owner
+- Place Inbox icon next to the Follow or Message button that routes to `/inbox`
+
+### UserProfilePage.tsx Implementation Details
+
+The profile header should be updated to include:
+
+1. **Inbox Icon (Always Visible)**
+   - Import `Mail` or `MessageSquare` icon from lucide-react
+   - Add inbox button after the Follow/Message button section
+   - Route to `/inbox` when clicked
+   - Show for all authenticated users regardless of mutual follow status
+
+2. **Message Button (Conditional)**
+   - Only show when `isMutualFollow` query returns true
+   - Use existing `api.follows.isMutualFollow` query
+   - Place before the Inbox icon in the button group
+
+3. **Button Layout**
+   - For own profile: [Edit Profile] [Inbox]
+   - For other profiles (mutual follow): [Follow/Unfollow] [Message] [Inbox]
+   - For other profiles (no mutual follow): [Follow/Unfollow] [Inbox]
+
+Inbox page
+
+- New route `/inbox`
+- Left column shows conversations sorted by latest activity time
+- Right pane shows selected conversation messages with a simple composer
+- Mobile stacks into a single column with a conversation list then thread view
+
+Message reporting
+
+- In the thread view, each message bubble has an overflow menu with Report
+- Report opens a modal to select or enter a reason, then submits
+
+Notifications
+
+- Alerts entry created on each new message for the recipient
+- Alerts item links to `/inbox?c=<conversationId>`
+
+## Authorization and privacy (Step 4)
 
 - Only allow upsertConversation when mutual follow is true
 - Only allow sendMessage for participants in the conversation
@@ -418,7 +450,7 @@ export const markConversationRead = mutation({
 - No server function returns messages or conversations for non participants
 - Use Convex reactivity on queries so message lists and conversations auto sync
 
-## Notifications and daily emails
+## Notifications and daily emails (Step 5)
 
 Runtime notifications
 
@@ -436,20 +468,33 @@ Admin emails
 - Include DM report counts in the daily admin email (pending, reviewed)
 - Optional immediate email to admins on each DM report using existing email pipeline
 
-## Rate limits and abuse control
+## Rate limits and abuse control (Step 6)
 
 - Limit sendMessage to fifty messages per hour per conversation
 - Future setting to mute a conversation or block a user
 - Limit `reportMessage` submissions to ten per day per reporter
 
-## Rollout plan
+## Rollout plan (Step 7)
 
-- Add schema and types
-- Add server functions and unit tests
-- Gate the Message button on mutual follow
-- Ship inbox route and basic UI
-- Add alert type message and wire the notification link to the inbox
+### Phase 1: Backend Foundation
+
+- Add schema and types to `convex/schema.ts`
+- Add server functions in `convex/dm.ts` and update `convex/follows.ts`
+- Add alert type message to `convex/alerts.ts`
+- Unit test all server functions
+
+### Phase 2: UI Implementation
+
+- Add Inbox icon to all user profiles in `UserProfilePage.tsx` (always visible when authenticated)
+- Gate the Message button on mutual follow in `UserProfilePage.tsx`
+- Ship inbox route `/inbox` and basic UI components
+- Wire the notification link to the inbox
+
+### Phase 3: Integration
+
 - Hook message events into daily email when Resend integration lands
+- Add rate limiting and abuse controls
+- Performance optimization and testing
 
 ## Success metrics
 

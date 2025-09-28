@@ -1,4 +1,15 @@
-# Resend Email Integration PRD - VibeApps
+# Resend Email Integration PRD VibeApps ✅ FULLY IMPLEMENTED
+
+**Status**: Production ready email system with all features working and critical bugs fixed
+
+## Domains and environments
+
+- Primary app domain: `vibeapps.dev`
+- Email sending subdomain: `updates.vibeapps.dev` (from: `alerts@updates.vibeapps.dev`)
+- Local development UI: `http://localhost:5173/`
+- Convex development and production have distinct Clerk webhook secrets and Resend keys (already configured).
+
+All subjects are prefixed: `VibeApps Updates: <topic>`.
 
 ## Overview
 
@@ -9,7 +20,7 @@ This document outlines the implementation of Resend email integration for VibeAp
 1. Environment & Dependencies
    - Create Resend account and set `RESEND_API_KEY`.
    - Confirm Convex deployment environment variables are set (Convex URL, Clerk webhook secret).
-   - use the Convex Resend Component.
+   - Use the Convex Resend Component (@convex-dev/resend) per `https://github.com/get-convex/resend`, including event webhooks.
 
 2. Schema & Settings
    - Add `emailSettings` (with `weeklyDigestEmails`), `emailLogs`, `dailyEngagementSummary`, `dailyMetrics`.
@@ -21,7 +32,8 @@ This document outlines the implementation of Resend email integration for VibeAp
    - Standardize footer: settings link + one‑click unsubscribe link.
 
 4. Core Email Sender
-   - Implement `convex/emails/resend.ts` action to send emails.
+   - Use Convex Resend Component wrapper in `convex/sendEmails.ts` and route `/resend-webhook` in `convex/http.ts` for event intake.
+   - Enforce from `VibeApps Updates <alerts@updates.vibeapps.dev>` and subject prefix `VibeApps Updates:` via helper.
    - Read global `emailsEnabled` kill‑switch before sending. Log results in `emailLogs`.
 
 5. Unsubscribe
@@ -60,7 +72,7 @@ This document outlines the implementation of Resend email integration for VibeAp
 
 ### Existing Infrastructure
 
-- **Domain**: vibeapps.dev hosted on Netlify
+- **Domain**: vibeapps.dev hosted on Netlify; email subdomain updates.vibeapps.dev
 - **Database**: Convex.dev with real-time reactivity
 - **Authentication**: Clerk Auth with webhook sync to Convex
 - **Admin System**: Comprehensive admin dashboard with metrics tracking
@@ -192,7 +204,7 @@ Top submissions this week (by vibes):
 2) [App Title] — 98 vibes
 3) [App Title] — 77 vibes
 
-[View Full Leaderboard]
+[View Weekly Leaderboard] (links to LeaderboardPage.tsx)
 ```
 
 **Notes**:
@@ -200,6 +212,7 @@ Top submissions this week (by vibes):
 - Calculated over rolling 7-day window (Mon 00:00:00 to Sun 23:59:59 PST).
 - Ties broken by recent activity, then creation time.
 - Respect `appSettings.emailsEnabled` and per-user `emailSettings.weeklyDigestEmails`.
+- Links to weekly leaderboard page (LeaderboardPage.tsx) showing weekly rankings.
 
 ### 4. Welcome Onboarding Email
 
@@ -276,41 +289,39 @@ Manage your notification preferences: [Settings Link]
 - Don't send if user is currently online/active
 - Rate limit: Max 5 message notification emails per day per user
 
-### 6. @Mention Notifications (Comments & Judging Notes)
+### 6. @Mention Notifications (Daily Digest Approach)
 
-**Purpose**: Notify users when they are mentioned with `@username` in:
+**Purpose**: Notify users of @username mentions in daily engagement emails instead of individual emails to reduce noise
 
-- Public comments on stories/apps
-- Judge notes thread within the judging interface
+**Integration**: Mentions are included in daily engagement emails alongside other user activity
 
-**Trigger**:
-
-- On create of a comment or judge note containing `@handle` tokens
-
-**Recipients**: Users whose username is mentioned, if they have mention notifications enabled
-
-**Content Structure**:
+**Content Structure** (within daily engagement email):
 
 ```
-Subject: You were mentioned by [AuthorName]
+You were mentioned 3 times today:
 
-Hey [UserName],
+• John Doe mentioned you in a comment on "My Awesome App"
+  "Hey @username, great work on this project..."
 
-You were mentioned in a [comment|judge note] on: [StoryTitle]
+• Jane Smith mentioned you in a judge note on "Cool Tool"
+  "I think @username would love this feature..."
 
-"[excerpt of content around the @mention]"
-
-[View Thread]
-
-- The VibeApps Team
+[View all 3 mentions →] (links to notifications page)
 ```
 
-**Conditions**:
+**Rate Limiting**:
 
-- Skip if the mentioned user is the author of the message
-- Skip if user has `mentionNotifications` set to false
-- Skip if user is currently online (optional heuristic)
-- Rate limit: Max 10 mention emails per day per user (distinct from 30/day mention creation quota in mentions.md)
+- Maximum 10 mentions shown per daily email
+- Link to notifications page if more than 10 mentions
+- Users can disable mention notifications via `emailSettings.mentionNotifications`
+- Mentions are aggregated daily, not sent individually
+
+**Benefits**:
+
+- Reduces email noise for active users
+- Consolidates all daily activity in one email
+- Maintains mention functionality without overwhelming users
+- Links to notifications page for full mention history
 
 ### 7. Admin Report Notifications
 
@@ -354,12 +365,31 @@ Reason: [ReportReason]
 - Email integration will be added when Resend email system is implemented
 - Future: When adminroles.prd is implemented, will check Clerk JWT claims for roles instead of database role field
 
+Integration Hook (outline):
+
+```typescript
+// In convex/reports.ts after creating a report and generating alerts via alerts.createReportNotifications
+await ctx.scheduler.runAfter(
+  0,
+  internal.emails.notifications.sendAdminReportEmail,
+  {
+    storyId: args.storyId,
+    reportId: newReportId,
+  },
+);
+
+// internal.emails.notifications.sendAdminReportEmail should:
+// - fetch admin user ids via internal.alerts.getAdminUserIds or a settings source
+// - render the template (subject/html) and call resend action per recipient
+// - log each send to emailLogs as admin_report_notification
+```
+
 ## Database Schema Updates
 
 ### New Tables Required
 
 ```typescript
-// convex/schema.ts additions
+// convex/schema.ts additions (current)
 
 export default defineSchema({
   // ... existing tables ...
@@ -367,13 +397,13 @@ export default defineSchema({
   // Email notification preferences for users
   emailSettings: defineTable({
     userId: v.id("users"),
-    dailyEngagementEmails: v.boolean(), // Default: true
-    messageNotifications: v.boolean(), // Default: true
-    marketingEmails: v.boolean(), // Default: false
-    weeklyDigestEmails: v.boolean(), // Default: true
-    mentionNotifications: v.boolean(), // Default: true
-    timezone: v.optional(v.string()), // User's timezone, default PST
-    unsubscribedAt: v.optional(v.number()), // Timestamp if unsubscribed
+    unsubscribedAt: v.optional(v.number()),
+    dailyEngagementEmails: v.optional(v.boolean()),
+    messageNotifications: v.optional(v.boolean()),
+    marketingEmails: v.optional(v.boolean()),
+    weeklyDigestEmails: v.optional(v.boolean()),
+    mentionNotifications: v.optional(v.boolean()),
+    timezone: v.optional(v.string()),
   }).index("by_user", ["userId"]),
 
   // Track daily email sends to prevent duplicates
@@ -546,60 +576,9 @@ convex/
 
 ### Core Functions Overview
 
-#### `convex/emails/resend.ts`
+#### Convex Resend Component usage
 
-```typescript
-"use node";
-import { Resend } from "resend";
-import { internalAction } from "../_generated/server";
-import { v } from "convex/values";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-export const sendEmail = internalAction({
-  args: {
-    to: v.string(),
-    subject: v.string(),
-    html: v.string(),
-    from: v.optional(v.string()),
-    replyTo: v.optional(v.string()),
-  },
-  returns: v.object({
-    success: v.boolean(),
-    messageId: v.optional(v.string()),
-    error: v.optional(v.string()),
-  }),
-  handler: async (ctx, args) => {
-    try {
-      // Global kill switch: skip sending if disabled
-      const emailsEnabled = await ctx.runQuery(internal.settings.getBoolean, {
-        key: "emailsEnabled",
-      });
-      if (emailsEnabled === false) {
-        return { success: true, messageId: undefined };
-      }
-
-      const { data, error } = await resend.emails.send({
-        from: args.from || "VibeApps <noreply@vibeapps.dev>",
-        to: [args.to],
-        subject: args.subject,
-        html: args.html,
-        replyTo: args.replyTo || "hello@vibeapps.dev",
-      });
-
-      if (error) {
-        console.error("Resend error:", error);
-        return { success: false, error: error.message };
-      }
-
-      return { success: true, messageId: data?.id };
-    } catch (err: any) {
-      console.error("Email send error:", err);
-      return { success: false, error: err.message };
-    }
-  },
-});
-```
+We use the official component wrapper in `convex/sendEmails.ts` and mount the webhook at `/resend-webhook` in `convex/http.ts`.
 
 > Note: `internal.settings.getBoolean` should be defined alongside existing settings utilities to read `appSettings` by key.
 
@@ -1616,8 +1595,8 @@ Required environment variables for Netlify deployment:
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxx
 
 # Email Configuration
-RESEND_FROM_DOMAIN=vibeapps.dev
-ADMIN_EMAIL=admin@vibeapps.dev
+RESEND_FROM_DOMAIN=updates.vibeapps.dev
+ADMIN_EMAIL=alerts@updates.vibeapps.dev
 
 # Existing Convex/Clerk vars
 VITE_CONVEX_URL=https://xxx.convex.cloud
@@ -1631,8 +1610,13 @@ CLERK_WEBHOOK_SECRET=whsec_xxx
 - **Brand Colors**: #292929 (primary), #f9f9f9 (surface light), #ffffff (background)
 - **Typography**: Arial, sans-serif for cross-client compatibility
 - **Layout**: Maximum 600px width for mobile compatibility
+- **Logo**: VibeApps logo (android-chrome-512x512.png) at top left of all emails, 48x48px, linking to homepage
 - **CTA Buttons**: Consistent styling with #292929 background
-- **Footer**: Standard unsubscribe and settings links
+- **Footer**: Standard unsubscribe and settings links plus comprehensive contact/social footer with:
+  - Contact link to GitHub issues (https://github.com/waynesutton/vibeapps/issues)
+  - Social media links (Twitter: @convex_dev, LinkedIn: convex-dev)
+  - Open source project information
+  - Legal address: Convex 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA
 - **Icons/Emojis**: Do not use emojis to keep consistent with app and deliverability
 
 ### Content Guidelines
@@ -1643,50 +1627,77 @@ CLERK_WEBHOOK_SECRET=whsec_xxx
 - **CTAs**: Clear, actionable next steps
 - **Value**: Always provide clear value to the recipient
 - **Accessibility**: Sufficient contrast, descriptive link text, no image-only CTAs
+- **Links**: All story links use proper slugs (/s/{slug}), user profile links use usernames (/{username})
+- **Graceful Fallbacks**: Links handle logged-out users by redirecting to sign-in page with return URL
+- **Unsubscribe**: All emails include List-Unsubscribe headers and one-click unsubscribe functionality
+- **Footer**: Standardized footer with contact links, social media, open source info, and legal information
+- **Mention Rate Limiting**: Daily engagement emails include maximum 10 mentions to prevent spam
 
-## Implementation Timeline
+## Implementation Timeline ✅ COMPLETED
 
-### Phase 1: Foundation (Week 1)
+### Phase 1: Foundation ✅ COMPLETED
 
-- [ ] Set up Resend account and API integration
-- [ ] Implement basic email templates and sending functions
-- [ ] Create email settings schema and management
-- [ ] Set up environment variables and configuration
+- [x] Set up Resend account and API integration
+- [x] Implement basic email templates and sending functions
+- [x] Create email settings schema and management
+- [x] Set up environment variables and configuration
 
-### Phase 2: Admin Emails (Week 2)
+### Phase 2: Admin Emails ✅ COMPLETED
 
-- [ ] Implement daily metrics calculation
-- [ ] Create admin email template and sending logic
-- [ ] Set up cron job for daily admin emails
-- [ ] Test admin email delivery and content
+- [x] Implement daily metrics calculation
+- [x] Create admin email template and sending logic
+- [x] Set up cron job for daily admin emails
+- [x] Test admin email delivery and content
 
-### Phase 3: Welcome Emails (Week 3)
+### Phase 3: Welcome Emails ✅ COMPLETED
 
-- [ ] Integrate welcome email with user signup flow
-- [ ] Test welcome email triggering via Clerk webhook
-- [ ] Implement email tracking and logging
-- [ ] Create unsubscribe mechanism
+- [x] Integrate welcome email with user signup flow
+- [x] Test welcome email triggering via Clerk webhook
+- [x] Implement email tracking and logging
+- [x] Create unsubscribe mechanism
 
-### Phase 4: User Engagement Emails (Week 4)
+### Phase 4: User Engagement Emails ✅ COMPLETED
 
-- [ ] Implement daily engagement calculation
-- [ ] Create user engagement email templates
-- [ ] Set up cron jobs for engagement processing and emails
-- [ ] Test engagement email delivery and personalization
+- [x] Implement daily engagement calculation
+- [x] Create user engagement email templates
+- [x] Set up cron jobs for engagement processing and emails
+- [x] Test engagement email delivery and personalization
 
-### Phase 5: Message Notifications (Week 5)
+### Phase 5: Admin & Testing Features ✅ COMPLETED
 
-- [ ] Prepare message notification infrastructure
-- [ ] Integrate with planned messaging system
-- [ ] Implement rate limiting and user preferences
-- [ ] Test message notification flow
+- [x] Admin broadcast email system with user search
+- [x] Global email kill switch functionality
+- [x] Force logout system for email sync
+- [x] Test email functionality for admins
+- [x] Email preferences UI in user profile
 
-### Phase 6: Polish & Optimization (Week 6)
+### Phase 6: Polish & Optimization ✅ COMPLETED
 
-- [ ] Email deliverability optimization
-- [ ] Performance monitoring and error handling
-- [ ] User settings UI in profile/settings pages
-- [ ] Comprehensive testing and bug fixes
+- [x] Email deliverability optimization (disabled test mode)
+- [x] Performance monitoring and error handling
+- [x] User settings UI in profile/settings pages
+- [x] Comprehensive testing and bug fixes
+- [x] Fixed all TypeScript and validator errors
+- [x] Production deployment ready
+
+### Phase 7: Template Enhancement & UX ✅ COMPLETED
+
+- [x] Added VibeApps logo to all email templates (48x48px, top-left, linked to homepage)
+- [x] Fixed all email links to use proper story slugs and user profile URLs
+- [x] Enhanced manage preferences links to handle logged-out users gracefully
+- [x] Added comprehensive footer with contact, social, and legal information
+- [x] Updated weekly digest to reference "Weekly Leaderboard" instead of "Full Leaderboard"
+- [x] Implemented List-Unsubscribe headers for email client compliance
+- [x] Fixed vibes count accuracy in all email templates
+- [x] Enhanced broadcast email system with proper template integration
+
+### Phase 8: Critical Bug Fixes ✅ COMPLETED
+
+- [x] Fixed Resend headers format issue (converted from object to array format)
+- [x] Updated schema to include `storySlug` field in `dailyEngagementSummary` table
+- [x] Resolved ArgumentValidationError for List-Unsubscribe headers
+- [x] Fixed schema validation errors for daily engagement processing
+- [x] Ensured all email functions work with proper Convex Resend component integration
 
 ## Success Metrics
 
@@ -1721,12 +1732,36 @@ CLERK_WEBHOOK_SECRET=whsec_xxx
 - **Reputation**: Monitor sending reputation and feedback loops
 - **List Hygiene**: Automatic removal of bounced emails
 
+### Critical Fixes Applied
+
+**Headers Format Issue (September 2025)**:
+
+- **Problem**: Resend component expected headers as array format, but code was passing object format
+- **Error**: `ArgumentValidationError: Value does not match validator. Path: .headers`
+- **Solution**: Updated `convex/emails/resend.ts` to use array format:
+  ```typescript
+  emailData.headers = [
+    {
+      name: "List-Unsubscribe",
+      value: `<https://vibeapps.dev/api/unsubscribe?token=${token}>`,
+    },
+    { name: "List-Unsubscribe-Post", value: "List-Unsubscribe=One-Click" },
+  ];
+  ```
+
+**Schema Validation Error**:
+
+- **Problem**: `dailyEngagementSummary` table missing `storySlug` field in schema
+- **Error**: `Object contains extra field storySlug that is not in the validator`
+- **Solution**: Updated schema to include `storySlug: v.optional(v.string())` in `storyEngagements` array
+
 ### Rate Limiting
 
 - **Resend Limits**: Respect Resend API rate limits (100 emails/second)
 - **User Limits**: Max 1 engagement email per user per day
 - **Admin Limits**: Max 1 admin email per day
 - **Message Limits**: Max 5 message notifications per user per day
+- **Mention Limits**: Max 10 mentions per daily engagement email (prevents spam)
 - **Broadcast Batching**: Use batches of 500 recipients with backoff respecting Resend limits
 
 ### Error Handling
@@ -1780,3 +1815,4 @@ This comprehensive email integration will enhance user engagement, provide valua
 - React Email + Resend: https://react.email/docs/integrations/resend
 - React Email v4: https://resend.com/blog/react-email-4
 - Resend Dashboard Emails Intro: https://resend.com/docs/dashboard/emails/introduction
+- https://github.com/get-convex/resend

@@ -322,6 +322,9 @@ export const add = mutation({
             contentExcerpt,
             date,
           });
+
+          // Note: Mention notifications are now sent via daily engagement emails
+          // instead of individual emails to reduce noise
         }
       }
     } catch (error) {

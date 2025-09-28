@@ -49,6 +49,7 @@ export type StoryWithDetails = Doc<"stories"> & {
   authorUsername?: string;
   authorImageUrl?: string;
   authorEmail?: string;
+  authorIsVerified?: boolean;
   averageRating: number;
   votesCount: number;
 };

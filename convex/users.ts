@@ -44,9 +44,27 @@ export const ensureUser = mutation({
     // const publicMetadata = identity.publicMetadata as { role?: string } | undefined;
     // const clerkRole = publicMetadata?.role;
 
+    // Debug: Log the entire identity object to see available fields (remove this after debugging)
+    // console.log("DEBUG: Full identity object:", JSON.stringify(identity, null, 2));
+    // console.log("DEBUG: Available identity keys:", Object.keys(identity));
+
     let clerkEmail: string | undefined = undefined;
-    if (typeof identity.emailAddress === "string") {
+
+    // Try multiple possible email field names (identity.email is the correct one based on debug logs)
+    if (typeof identity.email === "string") {
+      clerkEmail = identity.email;
+      // console.log("DEBUG: Got email from identity.email:", clerkEmail);
+    } else if (typeof identity.emailAddress === "string") {
       clerkEmail = identity.emailAddress;
+      // console.log("DEBUG: Got email from identity.emailAddress:", clerkEmail);
+    } else if (
+      typeof (identity as any).primaryEmailAddress?.emailAddress === "string"
+    ) {
+      clerkEmail = (identity as any).primaryEmailAddress.emailAddress;
+      // console.log("DEBUG: Got email from identity.primaryEmailAddress.emailAddress:", clerkEmail);
+    } else {
+      console.log("DEBUG: No email found in identity object");
+      console.log("DEBUG: Available identity fields:", Object.keys(identity));
     }
 
     let candidateUsername: string | null = null;
@@ -120,6 +138,15 @@ export const ensureUser = mutation({
       // No change to username if existingUser.username is not null and candidateUsername is null
       // or if candidateUsername is same as existingUser.username
 
+      // Always check and update email if it's missing or different
+      if (clerkEmail && clerkEmail !== existingUser.email) {
+        updates.email = clerkEmail;
+        changed = true;
+        console.log(
+          `Updating email for existing user ${existingUser.name}: ${clerkEmail}`,
+        );
+      }
+
       if (changed) {
         await ctx.db.patch(existingUser._id, updates);
       }
@@ -159,6 +186,16 @@ export const ensureUser = mutation({
       username: usernameForDbInsert,
       imageUrl: clerkImageUrl,
     });
+
+    // Schedule welcome email for new user
+    if (clerkEmail) {
+      await ctx.scheduler.runAfter(
+        5000, // 5 second delay to ensure user setup is complete
+        internal.emails.welcome.sendWelcomeEmail,
+        { userId },
+      );
+    }
+
     return userId;
   },
 });
@@ -916,7 +953,7 @@ export const syncUserFromClerkWebhook = internalMutation({
     } else {
       // New user, insert them
       console.log(`Webhook: Creating new user ${args.clerkId}`);
-      return await ctx.db.insert("users", {
+      const newUserId = await ctx.db.insert("users", {
         clerkId: args.clerkId,
         name: nameToStore,
         email: args.email, // This might be undefined if not found
@@ -925,6 +962,17 @@ export const syncUserFromClerkWebhook = internalMutation({
         role: userRole, // Store the role from publicMetadata
         // Initialize other fields your 'users' table requires
       });
+
+      // Schedule welcome email for new user created via webhook
+      if (args.email) {
+        await ctx.scheduler.runAfter(
+          10000, // 10 second delay for webhook-created users
+          internal.emails.welcome.sendWelcomeEmail,
+          { userId: newUserId },
+        );
+      }
+
+      return newUserId;
     }
   },
 });
@@ -1562,6 +1610,166 @@ export const setUserAsAdminByEmail = mutation({
 });
 
 /**
+ * [TEMPORARY] Fix missing email addresses for existing users
+ * This function will try to update the current user's email and provide debug info
+ */
+export const fixMissingEmails = mutation({
+  args: {},
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+    updatedUsers: v.number(),
+    debugInfo: v.object({
+      currentUserHasEmail: v.boolean(),
+      totalUsersWithoutEmail: v.number(),
+      identityEmailFound: v.boolean(),
+      identityEmail: v.optional(v.string()),
+    }),
+  }),
+  handler: async (ctx) => {
+    // Only allow authenticated users to run this
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Authentication required");
+    }
+
+    // Get current user
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!currentUser) {
+      throw new Error("Current user not found");
+    }
+
+    // Get all users without email addresses
+    const usersWithoutEmail = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("email"), undefined))
+      .collect();
+
+    console.log(
+      `Found ${usersWithoutEmail.length} users without email addresses`,
+    );
+
+    let updatedCount = 0;
+    const clerkEmail = await extractEmailFromIdentity(identity);
+
+    console.log(`Current user email in DB: ${currentUser.email}`);
+    console.log(`Email extracted from identity: ${clerkEmail}`);
+
+    // Try to update current user's email if missing or different
+    if (clerkEmail && clerkEmail !== currentUser.email) {
+      await ctx.db.patch(currentUser._id, { email: clerkEmail });
+      updatedCount++;
+      console.log(
+        `Updated email for current user ${currentUser.name}: ${clerkEmail}`,
+      );
+    }
+
+    return {
+      success: true,
+      message: `Updated ${updatedCount} users. Found ${usersWithoutEmail.length} users without emails. Check console for debug info.`,
+      updatedUsers: updatedCount,
+      debugInfo: {
+        currentUserHasEmail: !!currentUser.email,
+        totalUsersWithoutEmail: usersWithoutEmail.length,
+        identityEmailFound: !!clerkEmail,
+        identityEmail: clerkEmail,
+      },
+    };
+  },
+});
+
+// Helper function to extract email from identity
+async function extractEmailFromIdentity(
+  identity: any,
+): Promise<string | undefined> {
+  // Try multiple possible email field names (identity.email is the correct one based on debug logs)
+  if (typeof identity.email === "string") {
+    return identity.email;
+  } else if (typeof identity.emailAddress === "string") {
+    return identity.emailAddress;
+  } else if (typeof identity.primaryEmailAddress?.emailAddress === "string") {
+    return identity.primaryEmailAddress.emailAddress;
+  }
+  return undefined;
+}
+
+/**
+ * [TEMPORARY] Force refresh current user data from Clerk
+ * This calls ensureUser to trigger the email sync process
+ */
+export const forceRefreshCurrentUser = mutation({
+  args: {},
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+    userEmail: v.optional(v.string()),
+  }),
+  handler: async (ctx) => {
+    try {
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) {
+        throw new Error("Authentication required");
+      }
+
+      // Get current user
+      const currentUser = await ctx.db
+        .query("users")
+        .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+        .unique();
+
+      if (!currentUser) {
+        throw new Error("Current user not found");
+      }
+
+      // Extract email from identity
+      const clerkEmail = await extractEmailFromIdentity(identity);
+      console.log(
+        `Force refresh - Current user email in DB: ${currentUser.email}`,
+      );
+      console.log(
+        `Force refresh - Email extracted from identity: ${clerkEmail}`,
+      );
+
+      // Update email if found and different
+      if (clerkEmail && clerkEmail !== currentUser.email) {
+        await ctx.db.patch(currentUser._id, { email: clerkEmail });
+        console.log(
+          `Force refresh - Updated email for user ${currentUser.name}: ${clerkEmail}`,
+        );
+
+        return {
+          success: true,
+          message: `User email updated successfully: ${clerkEmail}`,
+          userEmail: clerkEmail,
+        };
+      } else if (currentUser.email) {
+        return {
+          success: true,
+          message: `User already has email: ${currentUser.email}`,
+          userEmail: currentUser.email,
+        };
+      } else {
+        return {
+          success: false,
+          message: `No email found in Clerk identity. Check console logs for debug info.`,
+          userEmail: undefined,
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to refresh user: ${error instanceof Error ? error.message : "Unknown error"}`,
+        userEmail: undefined,
+      };
+    }
+  },
+});
+
+/**
  * Returns the user's number (1-based) by order of account creation.
  * Example: the first user is 1, the second is 2, etc.
  */
@@ -1673,5 +1881,130 @@ export const searchUsersForMentions = query({
       }));
 
     return matches;
+  },
+});
+
+/**
+ * Get the most recent users who have been active on the platform for the Recent Vibers sidebar
+ * Includes users who have recently joined, commented, rated, voted, or submitted stories
+ */
+export const getRecentVibers = query({
+  args: { limit: v.number() },
+  returns: v.array(
+    v.object({
+      _id: v.id("users"),
+      _creationTime: v.number(),
+      name: v.string(),
+      username: v.optional(v.string()),
+      imageUrl: v.optional(v.string()),
+      isVerified: v.optional(v.boolean()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    // Get recent activity from multiple sources
+    const recentActivityLimit = Math.min(args.limit * 3, 100); // Get more to ensure diversity
+
+    // 1. Recent user joins
+    const recentJoins = await ctx.db
+      .query("users")
+      .order("desc")
+      .filter((q) => q.neq(q.field("isBanned"), true))
+      .filter((q) => q.neq(q.field("username"), undefined))
+      .take(recentActivityLimit);
+
+    // 2. Recent comments
+    const recentComments = await ctx.db
+      .query("comments")
+      .order("desc")
+      .filter((q) => q.eq(q.field("status"), "approved"))
+      .filter((q) => q.neq(q.field("isHidden"), true))
+      .take(recentActivityLimit);
+
+    // 3. Recent ratings
+    const recentRatings = await ctx.db
+      .query("storyRatings")
+      .order("desc")
+      .take(recentActivityLimit);
+
+    // 4. Recent votes
+    const recentVotes = await ctx.db
+      .query("votes")
+      .order("desc")
+      .take(recentActivityLimit);
+
+    // 5. Recent story submissions
+    const recentSubmissions = await ctx.db
+      .query("stories")
+      .order("desc")
+      .filter((q) => q.neq(q.field("userId"), undefined))
+      .take(recentActivityLimit);
+
+    // Create a map to track unique users with their most recent activity
+    const userActivityMap = new Map<
+      Id<"users">,
+      { userId: Id<"users">; timestamp: number; activityType: string }
+    >();
+
+    // Process each activity type
+    const activities = [
+      ...recentJoins.map((user) => ({
+        userId: user._id,
+        timestamp: user._creationTime,
+        activityType: "join",
+      })),
+      ...recentComments.map((comment) => ({
+        userId: comment.userId,
+        timestamp: comment._creationTime,
+        activityType: "comment",
+      })),
+      ...recentRatings.map((rating) => ({
+        userId: rating.userId,
+        timestamp: rating._creationTime,
+        activityType: "rating",
+      })),
+      ...recentVotes.map((vote) => ({
+        userId: vote.userId,
+        timestamp: vote._creationTime,
+        activityType: "vote",
+      })),
+      ...recentSubmissions
+        .filter((story) => story.userId)
+        .map((story) => ({
+          userId: story.userId!,
+          timestamp: story._creationTime,
+          activityType: "submission",
+        })),
+    ];
+
+    // Keep only the most recent activity per user
+    for (const activity of activities) {
+      const existing = userActivityMap.get(activity.userId);
+      if (!existing || activity.timestamp > existing.timestamp) {
+        userActivityMap.set(activity.userId, activity);
+      }
+    }
+
+    // Sort by most recent activity timestamp
+    const sortedActivities = Array.from(userActivityMap.values())
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, args.limit);
+
+    // Fetch user details for the most active users
+    const recentActiveUsers = [];
+    for (const activity of sortedActivities) {
+      const user = await ctx.db.get(activity.userId);
+      if (user && !user.isBanned && user.username) {
+        recentActiveUsers.push({
+          _id: user._id,
+          _creationTime: user._creationTime,
+          name: user.name,
+          username: user.username,
+          imageUrl: user.imageUrl,
+          isVerified: user.isVerified,
+        });
+      }
+    }
+
+    return recentActiveUsers;
   },
 });

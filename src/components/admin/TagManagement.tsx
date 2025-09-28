@@ -20,6 +20,7 @@ import { Id, Doc } from "../../../convex/_generated/dataModel";
 // Default tag color constants used across UI and when clearing values
 const DEFAULT_TAG_BG = "#F4F0ED";
 const DEFAULT_TAG_TEXT = "#525252";
+const DEFAULT_TAG_BORDER = "#D5D3D0";
 
 // Interface matching the updated Convex schema for tags
 // Use string | null for colors locally to represent clearing, but handle conversion for mutation
@@ -28,6 +29,7 @@ interface EditableTag
     Doc<"tags">,
     | "backgroundColor"
     | "textColor"
+    | "borderColor"
     | "emoji"
     | "iconUrl"
     | "order"
@@ -41,6 +43,7 @@ interface EditableTag
   isHidden?: boolean;
   backgroundColor?: string | null;
   textColor?: string | null;
+  borderColor?: string | null;
   emoji?: string | undefined; // Corrected type
   iconUrl?: string | undefined; // Corrected type
   iconFile?: File | null; // New: for local file handling before upload
@@ -104,6 +107,7 @@ export function TagManagement() {
               ...tag,
               backgroundColor: tag.backgroundColor ?? undefined,
               textColor: tag.textColor ?? undefined,
+              borderColor: tag.borderColor ?? undefined,
               emoji: tag.emoji ?? undefined,
               iconUrl: tag.iconUrl ?? undefined,
               iconFile: null,
@@ -282,6 +286,7 @@ export function TagManagement() {
       isHidden: false, // Default
       backgroundColor: null,
       textColor: null,
+      borderColor: null,
       emoji: undefined, // Corrected type
       iconUrl: undefined, // Corrected type
       iconFile: null,
@@ -497,6 +502,7 @@ export function TagManagement() {
             isHidden: tag.isHidden ?? false,
             backgroundColor: tag.backgroundColor ?? undefined,
             textColor: tag.textColor ?? undefined,
+            borderColor: tag.borderColor ?? undefined,
             emoji: tag.emoji ?? undefined,
             iconUrl: tag.iconUrl ?? undefined,
             order: tag.order,
@@ -518,6 +524,7 @@ export function TagManagement() {
             isHidden: tag.isHidden,
             backgroundColor: tag.backgroundColor ?? undefined,
             textColor: tag.textColor ?? undefined,
+            borderColor: tag.borderColor ?? undefined,
             emoji: tag.emoji ?? undefined,
             iconUrl: tag.iconUrl ?? undefined,
             clearIcon:
@@ -755,7 +762,7 @@ export function TagManagement() {
                           style={{
                             backgroundColor: tag.backgroundColor || "#F4F0ED", // Default BG
                             color: tag.textColor || "#525252", // Default Text
-                            border: `1px solid ${tag.backgroundColor ? "transparent" : "#D5D3D0"}`,
+                            border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "#D5D3D0")}`,
                           }}
                           title={tag.name} // Show full name on hover if truncated
                         >
@@ -977,6 +984,55 @@ export function TagManagement() {
                             tag._id,
                             "textColor",
                             DEFAULT_TAG_TEXT,
+                          )
+                        }
+                        className="text-xs text-gray-500 hover:text-black"
+                        disabled={isProcessing}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <label
+                        htmlFor={`border-color-${tag._id}`}
+                        className="text-xs font-medium text-gray-600 w-20 flex-shrink-0"
+                      >
+                        Border Color:
+                      </label>
+                      <input
+                        type="color"
+                        id={`border-color-${tag._id}`}
+                        value={tag.borderColor || DEFAULT_TAG_BORDER} // Default to app's tag border color
+                        onChange={(e) =>
+                          handleFieldChange(
+                            tag._id,
+                            "borderColor",
+                            e.target.value,
+                          )
+                        }
+                        className="h-6 w-10 border border-gray-300 rounded cursor-pointer p-0.5 bg-clip-content"
+                        disabled={isProcessing}
+                      />
+                      <input
+                        type="text"
+                        value={tag.borderColor || ""}
+                        placeholder="#rrggbb"
+                        onChange={(e) =>
+                          handleFieldChange(
+                            tag._id,
+                            "borderColor",
+                            e.target.value || null,
+                          )
+                        } // Set to null if empty
+                        className="px-2 py-1 text-xs border border-gray-300 rounded w-20"
+                        disabled={isProcessing}
+                      />
+                      <button
+                        onClick={() =>
+                          handleFieldChange(
+                            tag._id,
+                            "borderColor",
+                            DEFAULT_TAG_BORDER,
                           )
                         }
                         className="text-xs text-gray-500 hover:text-black"

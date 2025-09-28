@@ -1,9 +1,10 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { ProfileHoverCard } from "../components/ui/ProfileHoverCard";
 
 /**
- * Utility function to render text with @username mentions as clickable links
- * Converts @username tokens to links pointing to user profiles
+ * Utility function to render text with @username mentions as clickable links with ProfileHoverCard support
+ * Converts @username tokens to links pointing to user profiles with hover cards
  */
 export function renderTextWithMentions(text: string): React.ReactNode {
   if (!text) return text;
@@ -16,14 +17,15 @@ export function renderTextWithMentions(text: string): React.ReactNode {
     if (part.startsWith("@")) {
       const username = part.slice(1); // Remove the @ symbol
       return (
-        <Link
-          key={index}
-          to={`/${username}`}
-          className="text-black hover:underline font-medium"
-          title={`View ${username}'s profile`}
-        >
-          {part}
-        </Link>
+        <ProfileHoverCard key={index} username={username}>
+          <Link
+            to={`/${username}`}
+            className="text-black hover:underline font-medium"
+            title={`View ${username}'s profile`}
+          >
+            {part}
+          </Link>
+        </ProfileHoverCard>
       );
     }
 

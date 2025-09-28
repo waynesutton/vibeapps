@@ -1073,9 +1073,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                             style={{
                               backgroundColor: tag.backgroundColor || "#F4F0ED",
                               color: tag.textColor || "#525252",
-                              border: tag.backgroundColor
-                                ? "none"
-                                : `1px solid #D5D3D0`,
+                              border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "#D5D3D0")}`,
                             }}
                             title={`View all apps tagged with ${tag.name}`}
                           >

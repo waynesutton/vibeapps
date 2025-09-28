@@ -121,11 +121,14 @@
 - Unknown handles are ignored and not counted
 - If the parent content is deleted later we will retain mention rows for audit they can be pruned by a future cleanup job
 
-8. Future email integration hooks
+8. Email integration ✅ FULLY IMPLEMENTED
 
-- The `mentions.by_target_and_date` index supports a nightly rollup job that groups mentions by `targetUserId` and `date` for the daily emails in `addresend.md`
-- Each `mentions` row contains an excerpt for inclusion in the email template and references to `storyId` and `groupId` for link building
-- When the email system is added we will introduce an `emailLogs` link or status field in a separate action no change is needed to this PRD
+- **Daily digest approach**: Mentions are included in daily engagement emails to reduce noise and improve user experience
+- **Rate limiting**: Users receive a maximum of 10 mentions per daily email, with a link to view all mentions on the notifications page
+- **Production ready**: The `mentions.by_target_and_date` index is used to fetch daily mentions for each user in the email system
+- **Email preferences**: Users can disable mention notifications via `emailSettings.mentionNotifications` or unsubscribe from all daily emails
+- **Template integration**: Mentions appear in the daily engagement email template with author names, story titles, and content excerpts
+- **Link generation**: Mentions in emails link back to the notifications page for full mention history
 
 9. Metrics and admin visibility
 
