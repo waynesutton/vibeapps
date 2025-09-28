@@ -125,10 +125,20 @@ export const sendWeeklyDigest = internalAction({
 
       if (alreadySent) continue;
 
+      // Generate unsubscribe token for this user
+      const unsubscribeToken = await ctx.runMutation(
+        internal.emails.linkHelpers.generateUnsubscribeToken,
+        {
+          userId: user._id,
+          purpose: "weekly_digest",
+        },
+      );
+
       // Generate weekly digest email
       const emailTemplate = await ctx.runQuery(
         internal.emails.templates.generateWeeklyDigest,
         {
+          userId: user._id,
           userName: user.name || "VibeApps User",
           userUsername: user.username,
           topApps: topApps.map((app: any) => ({
@@ -137,6 +147,7 @@ export const sendWeeklyDigest = internalAction({
             title: app.title,
             vibes: app.vibes,
           })),
+          unsubscribeToken,
         },
       );
 
@@ -147,6 +158,7 @@ export const sendWeeklyDigest = internalAction({
         html: emailTemplate.html,
         emailType: "weekly_digest",
         userId: user._id,
+        unsubscribeToken,
         metadata: {
           weekStart: weekStartDate,
           topAppsCount: topApps.length,

@@ -740,11 +740,11 @@ export function Layout({ children }: { children?: ReactNode }) {
             {showSidebar && (
               <aside className="lg:w-1/4 space-y-6">
                 <WeeklyLeaderboard />
+                <RecentVibers />
                 <TopCategoriesOfWeek
                   selectedTagId={selectedTagId}
                   setSelectedTagId={setSelectedTagId}
                 />
-                <RecentVibers />
               </aside>
             )}
           </div>

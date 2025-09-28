@@ -423,15 +423,6 @@ export const sendDailyAdminEmail = internalAction({
       { date: yesterday },
     );
 
-    // Generate email template
-    const emailTemplate = await ctx.runQuery(
-      internal.emails.templates.generateDailyAdminEmail,
-      {
-        metrics,
-        previousMetrics,
-      },
-    );
-
     // Get admin users (users with admin role)
     const adminUsers = await ctx.runQuery(
       internal.emails.helpers.getAdminUsers,
@@ -442,12 +433,35 @@ export const sendDailyAdminEmail = internalAction({
     for (const admin of adminUsers) {
       if (!admin.email) continue;
 
+      // Generate unsubscribe token for this admin
+      const unsubscribeToken = await ctx.runMutation(
+        internal.emails.linkHelpers.generateUnsubscribeToken,
+        {
+          userId: admin._id,
+          purpose: "all",
+        },
+      );
+
+      // Generate personalized email template for this admin
+      const personalizedEmailTemplate = await ctx.runQuery(
+        internal.emails.templates.generateDailyAdminEmail,
+        {
+          userId: admin._id,
+          userName: admin.name,
+          userUsername: admin.username,
+          metrics,
+          previousMetrics,
+          unsubscribeToken,
+        },
+      );
+
       await ctx.runAction(internal.emails.resend.sendEmail, {
         to: admin.email,
-        subject: emailTemplate.subject,
-        html: emailTemplate.html,
+        subject: personalizedEmailTemplate.subject,
+        html: personalizedEmailTemplate.html,
         emailType: "daily_admin",
         userId: admin._id,
+        unsubscribeToken,
         metadata: { date: today },
       });
     }
@@ -536,11 +550,22 @@ export const sendDailyUserEmails = internalAction({
       // Skip if no engagement and no mentions
       if (!userEngagement && mentions.length === 0) continue;
 
+      // Generate unsubscribe token for this user
+      const unsubscribeToken = await ctx.runMutation(
+        internal.emails.linkHelpers.generateUnsubscribeToken,
+        {
+          userId: userId as any,
+          purpose: "daily_engagement",
+        },
+      );
+
       // Generate engagement email with mentions
       const emailTemplate = await ctx.runQuery(
         internal.emails.templates.generateEngagementEmail,
         {
+          userId: userId as any,
           userName: user.name || "there",
+          userUsername: user.username,
           engagementSummary: userEngagement
             ? {
                 totalEngagement: userEngagement.totalEngagement,
@@ -551,6 +576,7 @@ export const sendDailyUserEmails = internalAction({
                 storyEngagements: [],
               },
           mentions: mentions.length > 0 ? mentions : undefined,
+          unsubscribeToken,
         },
       );
 
@@ -561,6 +587,7 @@ export const sendDailyUserEmails = internalAction({
         html: emailTemplate.html,
         emailType: "daily_engagement",
         userId: user._id,
+        unsubscribeToken,
         metadata: {
           date: today,
           totalEngagement: userEngagement?.totalEngagement || 0,

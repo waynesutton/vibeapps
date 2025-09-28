@@ -33,6 +33,15 @@ export const sendWelcomeEmail = internalAction({
       return null;
     }
 
+    // Generate unsubscribe token for this user
+    const unsubscribeToken = await ctx.runMutation(
+      internal.emails.linkHelpers.generateUnsubscribeToken,
+      {
+        userId: args.userId,
+        purpose: "all",
+      },
+    );
+
     // Generate welcome email template
     const emailTemplate = await ctx.runQuery(
       internal.emails.templates.generateWelcomeEmail,
@@ -41,6 +50,7 @@ export const sendWelcomeEmail = internalAction({
         userName: user.name || "New User",
         userEmail: user.email,
         userUsername: user.username,
+        unsubscribeToken,
       },
     );
 
@@ -51,6 +61,7 @@ export const sendWelcomeEmail = internalAction({
       html: emailTemplate.html,
       emailType: "welcome",
       userId: args.userId,
+      unsubscribeToken,
       metadata: {
         signupDate: new Date().toISOString(),
       },
