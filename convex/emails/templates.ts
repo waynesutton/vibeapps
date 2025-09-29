@@ -247,6 +247,15 @@ export const generateEngagementEmail = internalQuery({
         }),
       ),
     ),
+    replies: v.optional(
+      v.array(
+        v.object({
+          replierName: v.string(),
+          storyTitle: v.string(),
+          contentExcerpt: v.string(),
+        }),
+      ),
+    ),
     unsubscribeToken: v.optional(v.string()),
   },
   returns: v.object({
@@ -331,6 +340,29 @@ export const generateEngagementEmail = internalQuery({
     `
         : "";
 
+    const repliesSection =
+      args.replies && args.replies.length > 0
+        ? `
+      <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 10px 0;">
+        <h3 style="margin-top: 0; color: #292929;">You received ${args.replies.length} repl${args.replies.length !== 1 ? "ies" : "y"} today:</h3>
+        <ul style="list-style: none; padding: 0;">
+          ${args.replies
+            .slice(0, 10)
+            .map(
+              (reply) => `
+            <li style="margin: 8px 0; padding: 8px; background: #ffffff; border-radius: 4px;">
+              <strong>${reply.replierName}</strong> replied on "${reply.storyTitle}"
+              <br><em style="color: #666; font-size: 12px;">"${reply.contentExcerpt.slice(0, 100)}${reply.contentExcerpt.length > 100 ? "..." : ""}"</em>
+            </li>
+          `,
+            )
+            .join("")}
+        </ul>
+        ${args.replies.length > 10 ? `<p style="text-align: center; margin: 10px 0;"><a href="https://vibeapps.dev/notifications" style="color: #292929;">View all ${args.replies.length} replies →</a></p>` : ""}
+      </div>
+    `
+        : "";
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -354,6 +386,8 @@ export const generateEngagementEmail = internalQuery({
             ${submissionsSection}
             
             ${mentionsSection}
+            
+            ${repliesSection}
 
             <div style="text-align: center; margin: 30px 0;">
               <a href="https://vibeapps.dev/${args.userUsername || "profile"}" style="background: #292929; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">View Your Profile</a>

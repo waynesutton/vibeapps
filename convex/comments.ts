@@ -291,6 +291,24 @@ export const add = mutation({
       });
     }
 
+    // If this is a reply to another comment, alert the original comment author (non-blocking)
+    if (args.parentId) {
+      const parentComment = await ctx.db.get(args.parentId);
+      if (
+        parentComment &&
+        parentComment.userId &&
+        parentComment.userId !== userId
+      ) {
+        await ctx.scheduler.runAfter(0, internal.alerts.createAlert, {
+          recipientUserId: parentComment.userId,
+          actorUserId: userId,
+          type: "reply",
+          storyId: args.storyId,
+          commentId: commentId,
+        });
+      }
+    }
+
     // Process mentions in comment content (non-blocking)
     try {
       // Extract @username handles from content
@@ -323,8 +341,18 @@ export const add = mutation({
             date,
           });
 
-          // Note: Mention notifications are now sent via daily engagement emails
-          // instead of individual emails to reduce noise
+          // Create alerts for mentioned users (non-blocking)
+          for (const target of resolvedTargets) {
+            if (target.userId !== userId) {
+              await ctx.scheduler.runAfter(0, internal.alerts.createAlert, {
+                recipientUserId: target.userId,
+                actorUserId: userId,
+                type: "mention",
+                storyId: args.storyId,
+                commentId: commentId,
+              });
+            }
+          }
         }
       }
     } catch (error) {

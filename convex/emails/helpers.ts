@@ -80,6 +80,63 @@ export const getDailyMentions = internalQuery({
 });
 
 /**
+ * Get daily replies to a user's comments
+ */
+export const getDailyReplies = internalQuery({
+  args: { userId: v.id("users"), date: v.string() },
+  returns: v.array(v.any()),
+  handler: async (ctx, args) => {
+    const date = new Date(args.date);
+    const startOfDay = new Date(date.setHours(0, 0, 0, 0)).getTime();
+    const endOfDay = new Date(date.setHours(23, 59, 59, 999)).getTime();
+
+    // Find comments authored by the user
+    const myComments = await ctx.db
+      .query("comments")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+    const myCommentIds = new Set(myComments.map((c) => c._id));
+
+    if (myCommentIds.size === 0) return [];
+
+    // Find replies to those comments created today
+    const replies = await ctx.db
+      .query("comments")
+      .filter(
+        (q) =>
+          q.neq(q.field("parentId"), undefined) &&
+          q.gte(q.field("_creationTime"), startOfDay) &&
+          q.lte(q.field("_creationTime"), endOfDay),
+      )
+      .collect();
+
+    const todaysRepliesToMe = replies.filter(
+      (r) => r.parentId && myCommentIds.has(r.parentId),
+    );
+
+    const withDetails = [] as Array<{
+      replierName: string;
+      storyTitle: string;
+      contentExcerpt: string;
+    }>;
+
+    for (const reply of todaysRepliesToMe) {
+      const replier = await ctx.db.get(reply.userId);
+      const story = await ctx.db.get(reply.storyId);
+      if (replier && story) {
+        withDetails.push({
+          replierName: replier.name || "Someone",
+          storyTitle: story.title,
+          contentExcerpt: reply.content.slice(0, 200),
+        });
+      }
+    }
+
+    return withDetails;
+  },
+});
+
+/**
  * Get user email settings
  */
 export const getUserEmailSettings = internalQuery({

@@ -12,6 +12,8 @@ type AlertType = {
   type:
     | "vote"
     | "comment"
+    | "reply"
+    | "mention"
     | "rating"
     | "follow"
     | "judged"
@@ -130,6 +132,10 @@ function NotificationItem({ alert }: NotificationItemProps) {
         return "vibed your app";
       case "comment":
         return "commented on your app";
+      case "reply":
+        return "replied to your comment";
+      case "mention":
+        return "mentioned you in a comment";
       case "rating":
         return `rated your app ${alert.ratingValue} stars`;
       case "follow":

@@ -547,8 +547,15 @@ export const sendDailyUserEmails = internalAction({
         { userId: userId as any, date: today },
       );
 
-      // Skip if no engagement and no mentions
-      if (!userEngagement && mentions.length === 0) continue;
+      // Get replies to this user's comments
+      const replies = await ctx.runQuery(
+        internal.emails.helpers.getDailyReplies,
+        { userId: userId as any, date: today },
+      );
+
+      // Skip if no engagement, no mentions, and no replies
+      if (!userEngagement && mentions.length === 0 && replies.length === 0)
+        continue;
 
       // Generate unsubscribe token for this user
       const unsubscribeToken = await ctx.runMutation(
@@ -576,6 +583,7 @@ export const sendDailyUserEmails = internalAction({
                 storyEngagements: [],
               },
           mentions: mentions.length > 0 ? mentions : undefined,
+          replies: replies.length > 0 ? replies : undefined,
           unsubscribeToken,
         },
       );
@@ -592,6 +600,7 @@ export const sendDailyUserEmails = internalAction({
           date: today,
           totalEngagement: userEngagement?.totalEngagement || 0,
           mentionsCount: mentions.length,
+          repliesCount: replies.length,
         },
       });
     }

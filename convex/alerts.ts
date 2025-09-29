@@ -21,6 +21,8 @@ export const listRecentForDropdown = query({
       type: v.union(
         v.literal("vote"),
         v.literal("comment"),
+        v.literal("reply"),
+        v.literal("mention"),
         v.literal("rating"),
         v.literal("follow"),
         v.literal("judged"),
@@ -61,6 +63,8 @@ export const listForPage = query({
       type: v.union(
         v.literal("vote"),
         v.literal("comment"),
+        v.literal("reply"),
+        v.literal("mention"),
         v.literal("rating"),
         v.literal("follow"),
         v.literal("judged"),
@@ -143,6 +147,8 @@ export const createAlert = internalMutation({
     type: v.union(
       v.literal("vote"),
       v.literal("comment"),
+      v.literal("reply"),
+      v.literal("mention"),
       v.literal("rating"),
       v.literal("follow"),
       v.literal("judged"),

@@ -417,6 +417,8 @@ export default defineSchema({
     type: v.union(
       v.literal("vote"),
       v.literal("comment"),
+      v.literal("reply"),
+      v.literal("mention"),
       v.literal("rating"),
       v.literal("follow"),
       v.literal("judged"),
