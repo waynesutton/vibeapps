@@ -839,7 +839,7 @@ export default function UserProfilePage() {
                 />
               </button>
             ) : currentImageUrl ? (
-            <img
+              <img
                 src={currentImageUrl}
                 alt={`${loadedProfileUser?.name || "User"}'s profile`}
                 className="rounded-full h-19 object-cover border-2 border-gray-300"
@@ -1309,10 +1309,10 @@ export default function UserProfilePage() {
       {/* Tab Navigation and Content Area */}
       <div className="mb-20">
         {/* Tab Buttons */}
-        <div className="flex border-b border-gray-300 mb-4">
+        <div className="flex flex-col gap-2 md:flex-row md:flex-wrap border-b border-gray-300 mb-4">
           <button
             onClick={() => setActiveTab("votes")}
-            className={`py-2 px-4 text-sm font-medium focus:outline-none ${
+            className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none ${
               activeTab === "votes"
                 ? "border-b-2 border-[#292929] text-[#292929]"
                 : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -1322,7 +1322,7 @@ export default function UserProfilePage() {
           </button>
           <button
             onClick={() => setActiveTab("ratings")}
-            className={`py-2 px-4 text-sm font-medium focus:outline-none ${
+            className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none ${
               activeTab === "ratings"
                 ? "border-b-2 border-[#292929] text-[#292929]"
                 : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -1332,7 +1332,7 @@ export default function UserProfilePage() {
           </button>
           <button
             onClick={() => setActiveTab("comments")}
-            className={`py-2 px-4 text-sm font-medium focus:outline-none ${
+            className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none ${
               activeTab === "comments"
                 ? "border-b-2 border-[#292929] text-[#292929]"
                 : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -1343,7 +1343,7 @@ export default function UserProfilePage() {
           {isOwnProfile && (
             <button
               onClick={() => setActiveTab("bookmarks")}
-              className={`py-2 px-4 text-sm font-medium focus:outline-none flex items-center ${
+              className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none flex items-center ${
                 activeTab === "bookmarks"
                   ? "border-b-2 border-[#292929] text-[#292929]"
                   : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -1359,7 +1359,7 @@ export default function UserProfilePage() {
           {/* Followers Tab Button */}
           <button
             onClick={() => setActiveTab("followers")}
-            className={`py-2 px-4 text-sm font-medium focus:outline-none flex items-center ${
+            className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none flex items-center ${
               activeTab === "followers"
                 ? "border-b-2 border-[#292929] text-[#292929]"
                 : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -1370,7 +1370,7 @@ export default function UserProfilePage() {
           {/* Following Tab Button */}
           <button
             onClick={() => setActiveTab("following")}
-            className={`py-2 px-4 text-sm font-medium focus:outline-none flex items-center ${
+            className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none flex items-center ${
               activeTab === "following"
                 ? "border-b-2 border-[#292929] text-[#292929]"
                 : "text-gray-500 hover:text-gray-700 hover:border-gray-300"

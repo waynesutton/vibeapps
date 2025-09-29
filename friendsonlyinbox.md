@@ -17,6 +17,7 @@ Mutual follow is a clear consent gate that reduces spam. It keeps messages relev
 - Alerts fire on each new incoming message for the recipient
 - Alerts link to the inbox conversation
 - Daily email rollup includes message notifications after Resend integration
+- Immediate email notification is sent on each new message using Resend per addresend.md. Daily rollup still includes message summaries
 - No group messages
 - No file uploads in v1
 - Real-time sync via Convex queries; no client-only messages
@@ -36,6 +37,7 @@ Mutual follow is a clear consent gate that reduces spam. It keeps messages relev
 - As a logged in user I can click Message to open or create a private conversation with that user
 - As a logged in user I can click the Inbox icon to view my conversations
 - As a recipient I get a new alert when someone sends me a message
+- As a recipient I receive an email immediately when I get a new message if my settings allow it
 - As a recipient I can click the alert and land in my inbox on that conversation
 - As a user I can open my inbox to browse conversation threads with people who have messaged me
 
@@ -456,6 +458,33 @@ Runtime notifications
 
 - On sendMessage create an alert of type message for the recipient
 - Alerts are visible in the existing notifications list and page
+
+Immediate email notifications (Resend)
+
+- Send an email immediately to the recipient when a new message is received
+- Use the Resend integration defined in addresend.md (component, templates, headers, unsubscribe)
+- Respect `emailSettings.messageNotifications` (skip if set to false)
+- Skip sending if the recipient is currently active online when that signal is available
+- Enforce rate limit of five message notification emails per recipient per day via `emailLogs`
+- Subject and body follow the template in addresend.md: "New message from [SenderName] on VibeApps" with a 150 character preview and CTA links
+- Include List-Unsubscribe headers and footer links as defined in addresend.md
+- Respect global kill switch `appSettings.emailsEnabled`
+
+Integration hook in `convex/dm.ts` (non-blocking):
+
+```ts
+// After inserting the dmMessages row and updating conversation metadata
+await ctx.scheduler.runAfter(
+  0,
+  internal.emails.notifications.sendMessageNotification,
+  {
+    recipientId,
+    senderId: user._id,
+    messagePreview: args.content.substring(0, 150),
+    conversationId: convo._id,
+  },
+);
+```
 
 Daily emails
 
