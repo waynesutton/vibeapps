@@ -242,3 +242,22 @@
 
 - `index.html`: Main HTML template for the SPA
 - Various TypeScript path configurations for different environments
+
+## What's needed (pointers)
+
+- Clerk organizer role access to judges section:
+  - Backend: `convex/auth.ts`, `convex/auth.config.js`, role checks in admin queries
+  - Frontend: gating in `src/components/admin/Judging.tsx`, `src/components/admin/AdminDashboard.tsx`
+- App pin alerts by admins:
+  - Backend: extend `convex/alerts.ts`, possibly `convex/stories.ts` for pin state
+  - Frontend: display in `src/pages/NotificationsPage.tsx` and related components
+- Weekly email links fix:
+  - Backend: `convex/emails/weekly.ts`, templates in `convex/emails/templates.ts`
+- Inbox and inbox email:
+  - Backend: new tables/functions (see `inboxforapp.md`), add send in `convex/emails/*`
+  - Frontend: new components under `src/components/inbox/`
+- Post notification emails via Resend:
+  - Backend: update `convex/emails/templates.ts`, integrate in `convex/alerts.ts`
+- Profile email notification toggle:
+  - Backend: `convex/emailSettings.ts`
+  - Frontend: `src/pages/UserProfilePage.tsx`

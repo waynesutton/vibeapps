@@ -1,6 +1,6 @@
 # VibeApps
 
-A modern social network platform for app creators to showcase their projects, built with React, TypeScript, Convex, and Clerk Auth.
+The community where you go to show off what you've built, and see what others are building. Built with React, TypeScript, Convex, and Clerk Auth.
 
 ## Features
 
@@ -91,6 +91,15 @@ A modern social network platform for app creators to showcase their projects, bu
 - Judging: Public results dashboard and viewer (`PublicJudgingResultsDashboard`, `PublicResultsViewer`)
 - ConvexBox: Settings UI (`ConvexBoxSettingsForm`) and config in `convex/convexBoxConfig.ts`
 - User sync: Clerk ↔ Convex synchronization component (`UserSyncer`)
+
+## What's needed
+
+- Clerk roles for hackathon organizers to access judges section only in admin
+- Alerts when an admin pins or posts a message to their own app
+- Fix links used in weekly digest emails
+- Inbox feature with email notifications
+- Post notification emails via Resend (update `convex/emails/templates.ts`)
+- User toggle to turn off email notifications in profile
 
 ## Tech Stack
 

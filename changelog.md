@@ -436,6 +436,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Planned
+
+- Clerk roles for hackathon organizers to access judges section only in admin
+- Alerts when an admin pins or posts a message to their own app
+- Fix links used in weekly digest emails
+- Inbox feature with email notifications
+- Post notification emails via Resend (update `convex/emails/templates.ts`)
+- User toggle to turn off email notifications in profile
+
 ### Added
 
 - **Follow/Following Feature**: Implemented a comprehensive follow and following system.
