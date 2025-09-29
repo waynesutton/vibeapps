@@ -1,6 +1,10 @@
 import { components, internal } from "./_generated/api";
 import { Resend } from "@convex-dev/resend";
-import { internalMutation, mutation } from "./_generated/server";
+import {
+  internalMutation,
+  internalAction,
+  mutation,
+} from "./_generated/server";
 import { v } from "convex/values";
 import { requireAdminRole } from "./users";
 
@@ -79,6 +83,39 @@ export const sendTestEmailInternal = internalMutation({
       return {
         success: false,
         message: `Failed to send test email: ${error}`,
+      };
+    }
+  },
+});
+
+// Internal action to send emails (used by other internal functions)
+export const sendEmail = internalAction({
+  args: {
+    to: v.string(),
+    subject: v.string(),
+    html: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      await resend.sendEmail(ctx, {
+        from: "VibeApps Updates <alerts@updates.vibeapps.dev>",
+        to: args.to,
+        subject: withSubjectPrefix(args.subject),
+        html: args.html,
+      });
+
+      return {
+        success: true,
+        message: `Email sent successfully to ${args.to}`,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Failed to send email: ${error}`,
       };
     }
   },

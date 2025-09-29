@@ -137,6 +137,65 @@ export const getDailyReplies = internalQuery({
 });
 
 /**
+ * Get judge notes created today on the author's submissions
+ */
+export const getDailyJudgeNotesForAuthor = internalQuery({
+  args: { userId: v.id("users"), date: v.string() },
+  returns: v.array(v.any()),
+  handler: async (ctx, args) => {
+    // Resolve author's stories
+    const stories = await ctx.db
+      .query("stories")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    if (stories.length === 0) return [];
+
+    const storyIdSet = new Set(stories.map((s) => s._id));
+
+    // Day bounds
+    const date = new Date(args.date);
+    const startOfDay = new Date(date.setHours(0, 0, 0, 0)).getTime();
+    const endOfDay = new Date(date.setHours(23, 59, 59, 999)).getTime();
+
+    // Find submission notes on these stories created today
+    // Note: submissionNotes doesn't have a by_storyId index, so we filter in memory after collect
+    const allNotesToday = await ctx.db
+      .query("submissionNotes")
+      .filter(
+        (q) =>
+          q.gte(q.field("_creationTime"), startOfDay) &&
+          q.lte(q.field("_creationTime"), endOfDay),
+      )
+      .collect();
+
+    const notesForAuthorStories = allNotesToday.filter((n) =>
+      storyIdSet.has(n.storyId),
+    );
+
+    if (notesForAuthorStories.length === 0) return [];
+
+    const results: Array<{
+      judgeName: string;
+      storyTitle: string;
+      contentExcerpt: string;
+    }> = [];
+    for (const note of notesForAuthorStories) {
+      const judge = await ctx.db.get(note.judgeId);
+      const story = await ctx.db.get(note.storyId);
+      if (!story) continue;
+      results.push({
+        judgeName: judge?.name || "Judge",
+        storyTitle: story.title,
+        contentExcerpt: String(note.content || "").slice(0, 200),
+      });
+    }
+
+    return results;
+  },
+});
+
+/**
  * Get user email settings
  */
 export const getUserEmailSettings = internalQuery({

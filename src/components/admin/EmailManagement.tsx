@@ -11,6 +11,9 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import AlertDialog from "../ui/AlertDialog";
+import MessageDialog from "../ui/MessageDialog";
+import PromptDialog from "../ui/PromptDialog";
 
 export function EmailManagement() {
   const [emailToggling, setEmailToggling] = useState(false);
@@ -29,6 +32,45 @@ export function EmailManagement() {
     Array<{ _id: string; name?: string; email: string }>
   >([]);
   const [sendToAll, setSendToAll] = useState(true);
+
+  // Dialog states
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: React.ReactNode;
+    onConfirm: () => void;
+    confirmText?: string;
+    variant?: "default" | "destructive";
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
+    onConfirm: () => {},
+  });
+
+  const [messageDialog, setMessageDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: React.ReactNode;
+    variant?: "info" | "success" | "warning" | "error";
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+  });
+
+  const [promptDialog, setPromptDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    description?: string;
+    placeholder?: string;
+    defaultValue?: string;
+    onConfirm: (value: string) => void;
+  }>({
+    isOpen: false,
+    title: "",
+    onConfirm: () => {},
+  });
 
   // Email settings queries and mutations
   const emailsEnabled = useQuery(api.settings.getBoolean, {
@@ -455,23 +497,39 @@ Are you sure you want to proceed?`)
               </button>
 
               <button
-                onClick={async () => {
-                  const email = prompt(
-                    "Send test email to:",
-                    "wayne@convex.dev",
-                  );
-                  if (email) {
-                    try {
-                      const result = await sendTestEmailMutation({ to: email });
-                      alert(
-                        `${result.success ? "✅" : "❌"} ${result.message}`,
-                      );
-                    } catch (error) {
-                      alert(
-                        `❌ Error: ${error instanceof Error ? error.message : "Failed to send test email"}`,
-                      );
-                    }
-                  }
+                onClick={() => {
+                  setPromptDialog({
+                    isOpen: true,
+                    title: "Send Test Email",
+                    description:
+                      "Enter the email address to send a test email to:",
+                    placeholder: "email@example.com",
+                    defaultValue: "wayne@convex.dev",
+                    onConfirm: async (email) => {
+                      if (email.trim()) {
+                        try {
+                          const result = await sendTestEmailMutation({
+                            to: email.trim(),
+                          });
+                          setMessageDialog({
+                            isOpen: true,
+                            title: result.success
+                              ? "Email Sent"
+                              : "Email Failed",
+                            message: result.message,
+                            variant: result.success ? "success" : "error",
+                          });
+                        } catch (error) {
+                          setMessageDialog({
+                            isOpen: true,
+                            title: "Email Failed",
+                            message: `Error: ${error instanceof Error ? error.message : "Failed to send test email"}`,
+                            variant: "error",
+                          });
+                        }
+                      }
+                    },
+                  });
                 }}
                 className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
               >
@@ -479,19 +537,32 @@ Are you sure you want to proceed?`)
               </button>
 
               <button
-                onClick={async () => {
-                  if (confirm("Send test daily admin email now?")) {
-                    try {
-                      const result = await testDailyAdminEmailMutation({});
-                      alert(
-                        `${result.success ? "✅" : "❌"} ${result.message}`,
-                      );
-                    } catch (error) {
-                      alert(
-                        `❌ Error: ${error instanceof Error ? error.message : "Failed to send daily admin email"}`,
-                      );
-                    }
-                  }
+                onClick={() => {
+                  setConfirmDialog({
+                    isOpen: true,
+                    title: "Send Test Daily Admin Email",
+                    description:
+                      "This will send a test daily admin email to all admin users. Are you sure?",
+                    confirmText: "Send Email",
+                    onConfirm: async () => {
+                      try {
+                        const result = await testDailyAdminEmailMutation({});
+                        setMessageDialog({
+                          isOpen: true,
+                          title: result.success ? "Email Sent" : "Email Failed",
+                          message: result.message,
+                          variant: result.success ? "success" : "error",
+                        });
+                      } catch (error) {
+                        setMessageDialog({
+                          isOpen: true,
+                          title: "Email Failed",
+                          message: `Error: ${error instanceof Error ? error.message : "Failed to send daily admin email"}`,
+                          variant: "error",
+                        });
+                      }
+                    },
+                  });
                 }}
                 className="px-3 py-1 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700"
               >
@@ -807,6 +878,35 @@ Are you sure you want to proceed?`)
           </div>
         </div>
       </div>
+
+      {/* Dialog Components */}
+      <AlertDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        confirmButtonText={confirmDialog.confirmText}
+        confirmButtonVariant={confirmDialog.variant}
+      />
+
+      <MessageDialog
+        isOpen={messageDialog.isOpen}
+        onClose={() => setMessageDialog({ ...messageDialog, isOpen: false })}
+        title={messageDialog.title}
+        message={messageDialog.message}
+        variant={messageDialog.variant}
+      />
+
+      <PromptDialog
+        isOpen={promptDialog.isOpen}
+        onClose={() => setPromptDialog({ ...promptDialog, isOpen: false })}
+        onConfirm={promptDialog.onConfirm}
+        title={promptDialog.title}
+        description={promptDialog.description}
+        placeholder={promptDialog.placeholder}
+        defaultValue={promptDialog.defaultValue}
+      />
     </div>
   );
 }

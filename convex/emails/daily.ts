@@ -553,7 +553,7 @@ export const sendDailyUserEmails = internalAction({
         { userId: userId as any, date: today },
       );
 
-      // Skip if no engagement, no mentions, and no replies
+      // Skip if no engagement, no mentions, no replies
       if (!userEngagement && mentions.length === 0 && replies.length === 0)
         continue;
 
@@ -566,7 +566,39 @@ export const sendDailyUserEmails = internalAction({
         },
       );
 
-      // Generate engagement email with mentions
+      // Build pin/admin message sections for this user from alerts today
+      const startOfDay = new Date(today + "T00:00:00Z").getTime();
+      const endOfDay = new Date(today + "T23:59:59Z").getTime();
+
+      const todaysAlerts = await ctx.runQuery(internal.alerts.getUserAlerts, {
+        userId: user._id,
+        startTime: startOfDay,
+        endTime: endOfDay,
+      });
+
+      const pinnedStoryIds = todaysAlerts
+        .filter((a: any) => a.type === "pinned" && a.storyId)
+        .map((a: any) => a.storyId as any);
+      const adminMsgStoryIds = todaysAlerts
+        .filter((a: any) => a.type === "admin_message" && a.storyId)
+        .map((a: any) => a.storyId as any);
+
+      const pinnedStories: Array<{ storyTitle: string }> = [];
+      for (const sid of pinnedStoryIds) {
+        const s = await ctx.runQuery(internal.stories.getStoryById, {
+          storyId: sid,
+        });
+        if (s) pinnedStories.push({ storyTitle: s.title });
+      }
+      const adminMessages: Array<{ storyTitle: string }> = [];
+      for (const sid of adminMsgStoryIds) {
+        const s = await ctx.runQuery(internal.stories.getStoryById, {
+          storyId: sid,
+        });
+        if (s) adminMessages.push({ storyTitle: s.title });
+      }
+
+      // Generate engagement email with mentions and admin actions
       const emailTemplate = await ctx.runQuery(
         internal.emails.templates.generateEngagementEmail,
         {
@@ -584,6 +616,8 @@ export const sendDailyUserEmails = internalAction({
               },
           mentions: mentions.length > 0 ? mentions : undefined,
           replies: replies.length > 0 ? replies : undefined,
+          pinnedStories: pinnedStories.length > 0 ? pinnedStories : undefined,
+          adminMessages: adminMessages.length > 0 ? adminMessages : undefined,
           unsubscribeToken,
         },
       );

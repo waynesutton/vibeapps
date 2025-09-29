@@ -19,7 +19,9 @@ type AlertType = {
     | "judged"
     | "bookmark"
     | "report"
-    | "verified";
+    | "verified"
+    | "pinned"
+    | "admin_message";
   isRead: boolean;
   actorUserId?: Id<"users">;
   storyId?: Id<"stories">;
@@ -135,7 +137,9 @@ function NotificationItem({ alert }: NotificationItemProps) {
       case "reply":
         return "replied to your comment";
       case "mention":
-        return "mentioned you in a comment";
+        return alert.commentId
+          ? "mentioned you in a comment"
+          : "mentioned you in judge collaboration notes";
       case "rating":
         return `rated your app ${alert.ratingValue} stars`;
       case "follow":
@@ -148,6 +152,10 @@ function NotificationItem({ alert }: NotificationItemProps) {
         return "reported a submission";
       case "verified":
         return "verified your account";
+      case "pinned":
+        return "Your post has been featured";
+      case "admin_message":
+        return "Your post has a custom message from admin";
       default:
         return "interacted with your content";
     }
@@ -200,11 +208,6 @@ function NotificationItem({ alert }: NotificationItemProps) {
                 <path
                   fillRule="evenodd"
                   d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  Someone
-                  interacted
-                  with
-                  your
-                  content
                   clipRule="evenodd"
                 />
               </svg>

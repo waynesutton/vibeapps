@@ -777,6 +777,20 @@ export const addSubmissionNote = mutation({
               contentExcerpt,
               date,
             });
+
+            // Create alerts for mentioned users (non-blocking)
+            for (const target of resolvedTargets) {
+              if (target.userId !== judge.userId) {
+                await ctx.scheduler.runAfter(0, internal.alerts.createAlert, {
+                  recipientUserId: target.userId,
+                  actorUserId: judge.userId,
+                  type: "mention",
+                  storyId: args.storyId,
+                });
+              }
+            }
+
+            // Mentions will be included in daily digest emails instead of immediate notifications
           }
         }
       } catch (error) {

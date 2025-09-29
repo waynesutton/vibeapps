@@ -645,37 +645,65 @@ export function StoryForm() {
               </div>
             )}
           </div>
-          {/* Dynamic Form Fields */}
-          {formFields?.map((field) => (
-            <div key={field.key}>
-              <label
-                htmlFor={field.key}
-                className="block text-sm font-medium text-[#525252] mb-1"
-              >
-                {field.label}
-              </label>
-              {field.description && (
-                <div className="text-sm text-[#545454] mb-2">
-                  {field.description}
-                </div>
-              )}
-              <input
-                type={field.fieldType}
-                id={field.key}
-                placeholder={field.placeholder}
-                value={dynamicFormData[field.key] || ""}
-                onChange={(e) =>
-                  setDynamicFormData((prev) => ({
-                    ...prev,
-                    [field.key]: e.target.value,
-                  }))
-                }
-                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
-                required={field.key === "githubUrl" ? false : field.isRequired}
-                disabled={isSubmitting}
-              />
+          {/* GitHub URL Field - Always Shown */}
+          <div>
+            <label
+              htmlFor="githubUrl"
+              className="block text-sm font-medium text-[#525252] mb-1"
+            >
+              GitHub Repo URL (Optional)
+            </label>
+            <div className="text-sm text-[#545454] mb-2">
+              GitHub repository URL for your project
             </div>
-          ))}
+            <input
+              type="url"
+              id="githubUrl"
+              placeholder="https://github.com/username/repository"
+              value={dynamicFormData.githubUrl || ""}
+              onChange={(e) =>
+                setDynamicFormData((prev) => ({
+                  ...prev,
+                  githubUrl: e.target.value,
+                }))
+              }
+              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              disabled={isSubmitting}
+            />
+          </div>
+          {/* Dynamic Form Fields */}
+          {formFields
+            ?.filter((field) => field.key !== "githubUrl")
+            .map((field) => (
+              <div key={field.key}>
+                <label
+                  htmlFor={field.key}
+                  className="block text-sm font-medium text-[#525252] mb-1"
+                >
+                  {field.label}
+                </label>
+                {field.description && (
+                  <div className="text-sm text-[#545454] mb-2">
+                    {field.description}
+                  </div>
+                )}
+                <input
+                  type={field.fieldType}
+                  id={field.key}
+                  placeholder={field.placeholder}
+                  value={dynamicFormData[field.key] || ""}
+                  onChange={(e) =>
+                    setDynamicFormData((prev) => ({
+                      ...prev,
+                      [field.key]: e.target.value,
+                    }))
+                  }
+                  className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                  required={field.isRequired}
+                  disabled={isSubmitting}
+                />
+              </div>
+            ))}
           {formFields === undefined && (
             <div className="text-sm text-gray-500">Loading form fields...</div>
           )}

@@ -8,6 +8,7 @@ import {
 } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 import { requireAuth } from "./utils";
 
 // Get the 5 most recent alerts for dropdown
@@ -29,6 +30,8 @@ export const listRecentForDropdown = query({
         v.literal("bookmark"),
         v.literal("report"),
         v.literal("verified"),
+        v.literal("pinned"),
+        v.literal("admin_message"),
       ),
       isRead: v.boolean(),
       readAt: v.optional(v.number()),
@@ -71,6 +74,8 @@ export const listForPage = query({
         v.literal("bookmark"),
         v.literal("report"),
         v.literal("verified"),
+        v.literal("pinned"),
+        v.literal("admin_message"),
       ),
       isRead: v.boolean(),
       readAt: v.optional(v.number()),
@@ -155,6 +160,8 @@ export const createAlert = internalMutation({
       v.literal("bookmark"),
       v.literal("report"),
       v.literal("verified"),
+      v.literal("pinned"),
+      v.literal("admin_message"),
     ),
     storyId: v.optional(v.id("stories")),
     commentId: v.optional(v.id("comments")),
@@ -178,6 +185,29 @@ export const createAlert = internalMutation({
     });
 
     return null;
+  },
+});
+
+// Internal query to get alerts for a user within a time range
+export const getUserAlerts = internalQuery({
+  args: {
+    userId: v.id("users"),
+    startTime: v.number(),
+    endTime: v.number(),
+  },
+  returns: v.array(v.any()),
+  handler: async (ctx, args) => {
+    const alerts = await ctx.db
+      .query("alerts")
+      .withIndex("by_recipient", (q) => q.eq("recipientUserId", args.userId))
+      .filter(
+        (q) =>
+          q.gte(q.field("_creationTime"), args.startTime) &&
+          q.lte(q.field("_creationTime"), args.endTime),
+      )
+      .collect();
+
+    return alerts;
   },
 });
 
@@ -231,6 +261,18 @@ export const createReportNotifications = internalMutation({
         isRead: false,
       });
     }
+
+    // Send immediate email notifications to admins/managers (non-blocking)
+    await ctx.scheduler.runAfter(
+      0,
+      internal.emails.reports.sendReportNotificationEmails,
+      {
+        reporterUserId: args.reporterUserId,
+        storyId: args.storyId,
+        reportId: args.reportId,
+        adminUserIds: args.adminUserIds,
+      },
+    );
 
     return null;
   },

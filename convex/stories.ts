@@ -1064,6 +1064,22 @@ export const updateStoryCustomMessage = mutation({
     await ctx.db.patch(args.storyId, {
       customMessage: args.customMessage || undefined, // Store empty string as undefined
     });
+
+    // Notify author about admin custom message (non-blocking)
+    const story = await ctx.db.get(args.storyId);
+    if (
+      story &&
+      story.userId &&
+      args.customMessage &&
+      args.customMessage.trim().length > 0
+    ) {
+      await ctx.scheduler.runAfter(0, internal.alerts.createAlert, {
+        recipientUserId: story.userId,
+        actorUserId: undefined,
+        type: "admin_message",
+        storyId: args.storyId,
+      });
+    }
     return { success: true };
   },
 });
@@ -1080,6 +1096,16 @@ export const toggleStoryPinStatus = mutation({
     await ctx.db.patch(args.storyId, {
       isPinned: !story.isPinned,
     });
+
+    // Notify author about pin status (non-blocking)
+    if (story.userId) {
+      await ctx.scheduler.runAfter(0, internal.alerts.createAlert, {
+        recipientUserId: story.userId,
+        actorUserId: undefined,
+        type: "pinned",
+        storyId: args.storyId,
+      });
+    }
     return { success: true, newPinStatus: !story.isPinned };
   },
 });
@@ -2018,6 +2044,36 @@ export const getById = query({
     const story = await ctx.db.get(args.id);
 
     if (!story || story.isHidden || story.status !== "approved") {
+      return null;
+    }
+
+    return {
+      _id: story._id,
+      title: story.title,
+      slug: story.slug,
+      url: story.url,
+    };
+  },
+});
+
+/**
+ * Internal query to get basic story information by ID (for actions)
+ */
+export const getStoryById = internalQuery({
+  args: { storyId: v.id("stories") },
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("stories"),
+      title: v.string(),
+      slug: v.string(),
+      url: v.string(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const story = await ctx.db.get(args.storyId);
+
+    if (!story) {
       return null;
     }
 

@@ -918,6 +918,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
         {/* Project Links & Tags Sidebar */}
         {(story.url ||
           story.videoUrl ||
+          story.githubUrl ||
           enabledFormFields?.some(
             (field) => (story as any)[field.storyPropertyName],
           ) ||
@@ -958,93 +959,111 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   </div>
                 )}
 
+                {/* GitHub Link - Always shown if available */}
+                {story.githubUrl && story.githubUrl.trim() && (
+                  <div className="flex items-center gap-2">
+                    <Github className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                    <a
+                      href={story.githubUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                      title={story.githubUrl}
+                    >
+                      GitHub Repository
+                    </a>
+                  </div>
+                )}
+
                 {/* Dynamic Form Fields */}
-                {enabledFormFields?.map((field) => {
-                  const fieldValue = (story as any)[field.storyPropertyName];
-                  if (!fieldValue) return null;
+                {enabledFormFields
+                  ?.filter((field) => field.key !== "githubUrl")
+                  .map((field) => {
+                    const fieldValue = (story as any)[field.storyPropertyName];
+                    if (!fieldValue) return null;
 
-                  // Get appropriate icon based on field key or type
-                  const getIcon = () => {
-                    if (field.key.toLowerCase().includes("github")) {
-                      return (
-                        <Github className="w-4 h-4 text-[#545454] flex-shrink-0" />
-                      );
-                    } else if (field.key.toLowerCase().includes("linkedin")) {
-                      return (
-                        <Linkedin className="w-4 h-4 text-[#545454] flex-shrink-0" />
-                      );
-                    } else if (
-                      field.key.toLowerCase().includes("twitter") ||
-                      field.key.toLowerCase().includes("x")
-                    ) {
-                      return (
-                        <Twitter className="w-4 h-4 text-[#545454] flex-shrink-0" />
-                      );
-                    } else if (field.key.toLowerCase().includes("chef")) {
-                      return (
-                        <span className="w-4 h-4 text-[#545454] flex-shrink-0">
-                          🍲
-                        </span>
-                      );
-                    } else if (field.fieldType === "url") {
-                      return (
-                        <Link2 className="w-4 h-4 text-[#545454] flex-shrink-0" />
-                      );
-                    } else if (field.fieldType === "email") {
-                      return (
-                        <span className="w-4 h-4 text-[#545454] flex-shrink-0">
-                          ✉️
-                        </span>
-                      );
-                    } else {
-                      return (
-                        <span className="w-4 h-4 text-[#545454] flex-shrink-0">
-                          🔗
-                        </span>
-                      );
-                    }
-                  };
+                    // Get appropriate icon based on field key or type
+                    const getIcon = () => {
+                      if (field.key.toLowerCase().includes("github")) {
+                        return (
+                          <Github className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                        );
+                      } else if (field.key.toLowerCase().includes("linkedin")) {
+                        return (
+                          <Linkedin className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                        );
+                      } else if (
+                        field.key.toLowerCase().includes("twitter") ||
+                        field.key.toLowerCase().includes("x")
+                      ) {
+                        return (
+                          <Twitter className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                        );
+                      } else if (field.key.toLowerCase().includes("chef")) {
+                        return (
+                          <span className="w-4 h-4 text-[#545454] flex-shrink-0">
+                            🍲
+                          </span>
+                        );
+                      } else if (field.fieldType === "url") {
+                        return (
+                          <Link2 className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                        );
+                      } else if (field.fieldType === "email") {
+                        return (
+                          <span className="w-4 h-4 text-[#545454] flex-shrink-0">
+                            ✉️
+                          </span>
+                        );
+                      } else {
+                        return (
+                          <span className="w-4 h-4 text-[#545454] flex-shrink-0">
+                            🔗
+                          </span>
+                        );
+                      }
+                    };
 
-                  // Get display label
-                  const getDisplayLabel = () => {
-                    // Remove "(Optional)" and other common suffixes for cleaner display
-                    return field.label
-                      .replace(/\s*\(Optional\).*$/i, "")
-                      .trim();
-                  };
+                    // Get display label
+                    const getDisplayLabel = () => {
+                      // Remove "(Optional)" and other common suffixes for cleaner display
+                      return field.label
+                        .replace(/\s*\(Optional\).*$/i, "")
+                        .trim();
+                    };
 
-                  return (
-                    <div key={field._id} className="flex items-center gap-2">
-                      {getIcon()}
-                      {field.fieldType === "url" ? (
-                        <a
-                          href={fieldValue}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
-                          title={fieldValue}
-                        >
-                          {getDisplayLabel()}
-                        </a>
-                      ) : field.fieldType === "email" ? (
-                        <a
-                          href={`mailto:${fieldValue}`}
-                          className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
-                          title={fieldValue}
-                        >
-                          {getDisplayLabel()}
-                        </a>
-                      ) : (
-                        <span
-                          className="text-sm text-[#525252] truncate"
-                          title={fieldValue}
-                        >
-                          {getDisplayLabel()}: {fieldValue}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
+                    return (
+                      <div key={field._id} className="flex items-center gap-2">
+                        {getIcon()}
+                        {field.fieldType === "url" ? (
+                          <a
+                            href={fieldValue}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                            title={fieldValue}
+                          >
+                            {getDisplayLabel()}
+                          </a>
+                        ) : field.fieldType === "email" ? (
+                          <a
+                            href={`mailto:${fieldValue}`}
+                            className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                            title={fieldValue}
+                          >
+                            {getDisplayLabel()}
+                          </a>
+                        ) : (
+                          <span
+                            className="text-sm text-[#525252] truncate"
+                            title={fieldValue}
+                          >
+                            {getDisplayLabel()}: {fieldValue}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
 
                 {/* Tags */}
                 {story.tags && story.tags.length > 0 && (

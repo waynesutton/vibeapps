@@ -4,6 +4,7 @@ import { internal } from "../_generated/api";
 
 /**
  * Send mention notification emails to mentioned users
+ * @deprecated - Mentions are now included in daily digest emails instead of immediate notifications
  */
 export const sendMentionNotifications = internalAction({
   args: {

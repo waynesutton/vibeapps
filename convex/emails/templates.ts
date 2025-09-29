@@ -256,6 +256,20 @@ export const generateEngagementEmail = internalQuery({
         }),
       ),
     ),
+    pinnedStories: v.optional(
+      v.array(
+        v.object({
+          storyTitle: v.string(),
+        }),
+      ),
+    ),
+    adminMessages: v.optional(
+      v.array(
+        v.object({
+          storyTitle: v.string(),
+        }),
+      ),
+    ),
     unsubscribeToken: v.optional(v.string()),
   },
   returns: v.object({
@@ -363,6 +377,34 @@ export const generateEngagementEmail = internalQuery({
     `
         : "";
 
+    const pinnedSection =
+      args.pinnedStories && args.pinnedStories.length > 0
+        ? `
+      <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 10px 0;">
+        <h3 style="margin-top: 0; color: #292929;">Your post has been featured</h3>
+        <ul style="list-style: none; padding: 0;">
+          ${args.pinnedStories
+            .map((p) => `<li style=\"margin: 6px 0;\">• ${p.storyTitle}</li>`)
+            .join("")}
+        </ul>
+      </div>
+    `
+        : "";
+
+    const adminMessageSection =
+      args.adminMessages && args.adminMessages.length > 0
+        ? `
+      <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 10px 0;">
+        <h3 style="margin-top: 0; color: #292929;">Your post has a custom message from admin</h3>
+        <ul style="list-style: none; padding: 0;">
+          ${args.adminMessages
+            .map((m) => `<li style=\"margin: 6px 0;\">• ${m.storyTitle}</li>`)
+            .join("")}
+        </ul>
+      </div>
+    `
+        : "";
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -388,6 +430,10 @@ export const generateEngagementEmail = internalQuery({
             ${mentionsSection}
             
             ${repliesSection}
+
+            ${pinnedSection}
+
+            ${adminMessageSection}
 
             <div style="text-align: center; margin: 30px 0;">
               <a href="https://vibeapps.dev/${args.userUsername || "profile"}" style="background: #292929; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">View Your Profile</a>
@@ -639,5 +685,100 @@ export const generateMentionEmail = internalQuery({
     `;
 
     return { subject, html };
+  },
+});
+
+/**
+ * Generate report notification email for admins/managers
+ */
+export const generateReportNotificationEmail = internalQuery({
+  args: {
+    adminName: v.string(),
+    reporterName: v.string(),
+    storyTitle: v.string(),
+    storyUrl: v.string(),
+    reportReason: v.string(),
+    dashboardUrl: v.string(),
+  },
+  returns: v.string(),
+  handler: async (ctx, args) => {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Report - VibeApps</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; color: #334155;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+        
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 32px 24px; text-align: center;">
+            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">⚠️ New Report Submitted</h1>
+            <p style="margin: 8px 0 0 0; color: #fecaca; font-size: 14px;">Requires immediate attention</p>
+        </div>
+
+        <!-- Content -->
+        <div style="padding: 32px 24px;">
+            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #475569;">
+                Hello \${args.adminName},
+            </p>
+            
+            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #475569;">
+                A new report has been submitted and needs your review.
+            </p>
+
+            <!-- Report Details Card -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 24px 0;">
+                <h3 style="margin: 0 0 16px 0; color: #1e293b; font-size: 16px; font-weight: 600;">Report Details</h3>
+                
+                <div style="margin-bottom: 12px;">
+                    <strong style="color: #475569;">Story:</strong>
+                    <div style="margin-top: 4px;">
+                        <a href="\${args.storyUrl}" style="color: #2563eb; text-decoration: none; font-weight: 500; word-break: break-word;">
+                            \${args.storyTitle}
+                        </a>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 12px;">
+                    <strong style="color: #475569;">Reported by:</strong> \${args.reporterName}
+                </div>
+                
+                <div>
+                    <strong style="color: #475569;">Reason:</strong>
+                    <div style="margin-top: 4px; background-color: #ffffff; padding: 12px; border-radius: 6px; border-left: 4px solid #dc2626;">
+                        \${args.reportReason}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Button -->
+            <div style="text-align: center; margin: 32px 0;">
+                <a href="\${args.dashboardUrl}" 
+                   style="display: inline-block; background-color: #292929; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 16px;">
+                    Review in Admin Dashboard
+                </a>
+            </div>
+
+            <p style="margin: 24px 0 0 0; font-size: 14px; line-height: 1.6; color: #64748b;">
+                Please review this report promptly to maintain community standards.
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="margin: 0 0 8px 0; font-size: 14px; color: #64748b;">
+                VibeApps Moderation Team
+            </p>
+            <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                This is an automated notification for admins and managers only.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+    `.trim();
   },
 });

@@ -27,6 +27,7 @@ import type * as emails_helpers from "../emails/helpers.js";
 import type * as emails_linkHelpers from "../emails/linkHelpers.js";
 import type * as emails_mentions from "../emails/mentions.js";
 import type * as emails_queries from "../emails/queries.js";
+import type * as emails_reports from "../emails/reports.js";
 import type * as emails_resend from "../emails/resend.js";
 import type * as emails_templates from "../emails/templates.js";
 import type * as emails_unsubscribe from "../emails/unsubscribe.js";
@@ -91,6 +92,7 @@ declare const fullApi: ApiFromModules<{
   "emails/linkHelpers": typeof emails_linkHelpers;
   "emails/mentions": typeof emails_mentions;
   "emails/queries": typeof emails_queries;
+  "emails/reports": typeof emails_reports;
   "emails/resend": typeof emails_resend;
   "emails/templates": typeof emails_templates;
   "emails/unsubscribe": typeof emails_unsubscribe;
