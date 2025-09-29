@@ -213,6 +213,8 @@
 - **Profile URL format**: Fixed mention email templates to use correct `/${username}` URLs
 - **Template parameters**: Added missing `userId` and `userUsername` parameters to mention email template
 - **URL consistency**: Ensured all email profile links match the app's URL structure
+- **Username setup flow**: Fixed fallback logic to redirect users without usernames to `/set-username` instead of sign-in
+- **New user experience**: Welcome and mention emails now properly guide new users through username setup process
 
 ### How It Works
 

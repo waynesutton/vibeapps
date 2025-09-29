@@ -1706,6 +1706,11 @@ CLERK_WEBHOOK_SECRET=whsec_xxx
 - [x] Updated email template conditions to check `userUsername` instead of `userId`
 - [x] Fixed mention email template to include missing `userId` and `userUsername` parameters
 - [x] Ensured all email functions pass `userUsername` parameter correctly to templates
+- [x] **Username Setup Flow Fix**: Fixed fallback logic for users without usernames
+  - **Problem**: New users receive emails before setting up usernames, causing broken profile links
+  - **Solution**: Updated email template logic to redirect to `/set-username` for authenticated users without usernames
+  - **Logic**: `userUsername ? /username : userId ? /set-username : /sign-in`
+  - **Impact**: Welcome emails and other notifications now properly guide new users through username setup
 
 ## Success Metrics
 
