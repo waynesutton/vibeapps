@@ -1,9 +1,8 @@
 import React from "react";
 // import * as Dialog from "@radix-ui/react-dialog"; // Dialog removed
 import { Id } from "../../convex/_generated/dataModel";
-import { useAuth, useUser } from "@clerk/clerk-react";
+import { useUser } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom"; // Added
-import { Link } from "react-router-dom";
 import { toast } from "sonner"; // Corrected import for toast
 import { MentionTextarea } from "./ui/MentionTextarea";
 
@@ -15,7 +14,7 @@ interface CommentFormProps {
 export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
   const [content, setContent] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
-  const { isSignedIn, isLoaded: isClerkLoaded, user } = useUser(); // Get user for author info
+  const { isSignedIn, isLoaded: isClerkLoaded } = useUser(); // Get user for author info
   const navigate = useNavigate();
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -33,8 +32,8 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
     const trimmedContent = content.trim();
 
     // Validate character count instead of word count
-    if (trimmedContent.length < 50) {
-      setError("Comment must be at least 50 characters long.");
+    if (trimmedContent.length < 10) {
+      setError("Comment must be at least 10 characters long.");
       return;
     }
     // Clear any previous error
@@ -46,7 +45,7 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
   const handleContentChange = (value: string) => {
     setContent(value);
     // Clear error when user starts typing
-    if (error && value.trim().length >= 50) {
+    if (error && value.trim().length >= 10) {
       setError(null);
     }
   };
@@ -57,7 +56,7 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
   };
 
   const canSubmit = isClerkLoaded && isSignedIn;
-  const isContentValid = content.trim().length >= 50;
+  const isContentValid = content.trim().length >= 10;
 
   return (
     <>
@@ -67,7 +66,7 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
           onChange={handleContentChange}
           placeholder={
             canSubmit
-              ? "Write your comment... (Markdown supported, min. 50 characters, use @username to mention users)"
+              ? "Write your comment... (Markdown supported, min. 10 characters, use @username to mention users)"
               : "Sign in to write your comment..."
           }
           className={`min-h-[100px] ${
@@ -89,7 +88,7 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
             !canSubmit
               ? "Sign in to comment"
               : !isContentValid && content.trim()
-                ? "Comment must be at least 50 characters."
+                ? "Comment must be at least 10 characters."
                 : undefined
           }
         >

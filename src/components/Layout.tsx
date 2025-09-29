@@ -830,11 +830,13 @@ function DropdownNotificationItem({ alert }: { alert: any }) {
             ) : actorUser ? (
               <>
                 {actorUser.username ? (
-                  <ProfileHoverCard username={actorUser.username}>
-                    <span className="font-medium hover:underline cursor-pointer">
-                      {actorUser.name}
-                    </span>
-                  </ProfileHoverCard>
+                  <Link
+                    to={`/${actorUser.username}`}
+                    className="font-medium hover:underline cursor-pointer text-[#525252] hover:text-[#292929]"
+                    onClick={() => setShowAlertsDropdown(false)}
+                  >
+                    {actorUser.name}
+                  </Link>
                 ) : (
                   <span className="font-medium">{actorUser.name}</span>
                 )}{" "}

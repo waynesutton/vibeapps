@@ -1682,6 +1682,196 @@ export function StoryDetail({ story }: StoryDetailProps) {
           </form>
         </div>
       )}
+
+      {/* Mobile Project Links & Tags Section - Show above video demo on mobile */}
+      {!isEditing &&
+        (story.url ||
+          story.videoUrl ||
+          story.githubUrl ||
+          enabledFormFields?.some(
+            (field) => (story as any)[field.storyPropertyName],
+          ) ||
+          story.tags?.length > 0) && (
+          <div className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC] lg:hidden">
+            <h2 className="text-lg font-medium text-[#525252] mb-4">
+              Project Links & Tags
+            </h2>
+            <div className="space-y-3">
+              {story.url && (
+                <div className="flex items-center gap-2">
+                  <Link2 className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                  <a
+                    href={story.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                    title={story.url}
+                  >
+                    {story.url}
+                  </a>
+                </div>
+              )}
+
+              {story.videoUrl && story.videoUrl.trim() && (
+                <div className="flex items-center gap-2">
+                  <Play className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                  <a
+                    href={story.videoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                    title={story.videoUrl}
+                  >
+                    Video Demo
+                  </a>
+                </div>
+              )}
+
+              {/* GitHub Link - Always shown if available */}
+              {story.githubUrl && story.githubUrl.trim() && (
+                <div className="flex items-center gap-2">
+                  <Github className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                  <a
+                    href={story.githubUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                    title={story.githubUrl}
+                  >
+                    GitHub Repository
+                  </a>
+                </div>
+              )}
+
+              {/* Dynamic Form Fields */}
+              {enabledFormFields
+                ?.filter((field) => field.key !== "githubUrl")
+                .map((field) => {
+                  const fieldValue = (story as any)[field.storyPropertyName];
+                  if (!fieldValue) return null;
+
+                  // Get appropriate icon based on field key or type
+                  const getIcon = () => {
+                    if (field.key.toLowerCase().includes("github")) {
+                      return (
+                        <Github className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                      );
+                    } else if (field.key.toLowerCase().includes("linkedin")) {
+                      return (
+                        <Linkedin className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                      );
+                    } else if (
+                      field.key.toLowerCase().includes("twitter") ||
+                      field.key.toLowerCase().includes("x")
+                    ) {
+                      return (
+                        <Twitter className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                      );
+                    } else if (field.key.toLowerCase().includes("chef")) {
+                      return (
+                        <span className="w-4 h-4 text-[#545454] flex-shrink-0">
+                          🍲
+                        </span>
+                      );
+                    } else if (field.fieldType === "url") {
+                      return (
+                        <Link2 className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                      );
+                    } else if (field.fieldType === "email") {
+                      return (
+                        <span className="w-4 h-4 text-[#545454] flex-shrink-0">
+                          ✉️
+                        </span>
+                      );
+                    } else {
+                      return (
+                        <span className="w-4 h-4 text-[#545454] flex-shrink-0">
+                          🔗
+                        </span>
+                      );
+                    }
+                  };
+
+                  // Get display label
+                  const getDisplayLabel = () => {
+                    // Remove "(Optional)" and other common suffixes for cleaner display
+                    return field.label
+                      .replace(/\s*\(Optional\).*$/i, "")
+                      .trim();
+                  };
+
+                  return (
+                    <div key={field._id} className="flex items-center gap-2">
+                      {getIcon()}
+                      {field.fieldType === "url" ? (
+                        <a
+                          href={fieldValue}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                          title={fieldValue}
+                        >
+                          {getDisplayLabel()}
+                        </a>
+                      ) : field.fieldType === "email" ? (
+                        <a
+                          href={`mailto:${fieldValue}`}
+                          className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                          title={fieldValue}
+                        >
+                          {getDisplayLabel()}
+                        </a>
+                      ) : (
+                        <span
+                          className="text-sm text-[#525252] truncate"
+                          title={fieldValue}
+                        >
+                          {getDisplayLabel()}: {fieldValue}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+
+              {/* Tags */}
+              {story.tags && story.tags.length > 0 && (
+                <div className="flex gap-1.5 flex-wrap pt-3 border-t border-[#E5E5E5] mt-4">
+                  {(story.tags || []).map(
+                    (tag: Doc<"tags">) =>
+                      !tag.isHidden &&
+                      tag.name !== "resendhackathon" &&
+                      tag.name !== "ychackathon" && (
+                        <Link
+                          key={tag._id}
+                          to={`/tag/${tag.slug}`}
+                          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition-opacity hover:opacity-80"
+                          style={{
+                            backgroundColor: tag.backgroundColor || "#F4F0ED",
+                            color: tag.textColor || "#525252",
+                            border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "#D5D3D0")}`,
+                          }}
+                          title={`View all apps tagged with ${tag.name}`}
+                        >
+                          {tag.emoji && (
+                            <span className="mr-1">{tag.emoji}</span>
+                          )}
+                          {tag.iconUrl && !tag.emoji && (
+                            <img
+                              src={tag.iconUrl}
+                              alt=""
+                              className="w-3 h-3 mr-1 rounded-sm object-cover"
+                            />
+                          )}
+                          {tag.name}
+                        </Link>
+                      ),
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
       {/* Video demo start */}
       {story.videoUrl && story.videoUrl.trim() && (
         <div className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC]">

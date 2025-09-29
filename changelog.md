@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### Mobile UI Improvements ✅ COMPLETED
+
+**Enhanced Mobile Experience**
+
+- **Mobile Project Links & Tags**: Added dedicated mobile section for Project Links & Tags that appears above video demo on mobile devices while preserving desktop sidebar layout
+- **Comment Length Adjustment**: Reduced minimum comment character requirement from 50 to 10 characters for better user experience
+- **Mobile ProfileHoverCard**: Disabled ProfileHoverCard hover functionality in notifications dropdown on mobile devices to prevent UI conflicts
+- **Responsive Design**: Maintained desktop functionality while improving mobile usability across story detail pages
+
+## Previous Updates
+
 ### Recent Vibers Sidebar Component ✅ COMPLETED
 
 **Added - User Discovery Feature**
