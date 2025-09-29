@@ -1,5 +1,5 @@
 import React from "react";
-import ReactMarkdown from "react-markdown";
+import { Markdown } from "./Markdown";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -447,7 +447,7 @@ export function StoryForm() {
               htmlFor="longDescription"
               className="block text-sm font-medium text-[#525252] mb-1"
             >
-              Description (Markdown supported)
+              Description (Markdown and fenced `code` blocks supported)
             </label>
             <textarea
               id="longDescription"
@@ -467,19 +467,7 @@ export function StoryForm() {
               <div className="mt-2">
                 <div className="text-xs text-[#545454] mb-1">Preview</div>
                 <div className="prose prose-sm max-w-none text-[#525252] bg-gray-50 border border-[#D8E1EC] rounded-md p-3">
-                  <ReactMarkdown
-                    components={{
-                      a: ({ node, ...props }) => (
-                        <a
-                          {...props}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        />
-                      ),
-                    }}
-                  >
-                    {formData.longDescription}
-                  </ReactMarkdown>
+                  <Markdown>{formData.longDescription}</Markdown>
                 </div>
               </div>
             )}

@@ -42,7 +42,7 @@ alwaysApply: true
 - you are an expert in using Resend API for email https://resend.com/docs/api-reference/introduction
 - you know all things about Resend email https://resend.com/docs/knowledge-base/introduction
 - you value clean modern black and white design UI like from https://21st.dev/
-- For any pop-ups, alerts, modals, warnings, notifications, or confirmations, always follow the site’s existing design system. Never use the browser’s default pop-ups.
+- For any pop-ups, alerts, modals, warnings, notifications, or confirmations, or button confirmations, always follow the site’s existing design system. Never use the browser’s default pop-ups.
 - Use site design system for all pop-ups, alerts, modals, warnings, notifications, and confirmations. Do not use browser defaults.
 - you add comments to your code
 - you update the readme with new features as you go

@@ -31,6 +31,7 @@ import { Input } from "../components/ui/input";
 import { ImageGallery } from "../components/ImageGallery";
 import { renderTextWithMentions } from "../utils/mentions";
 import { MentionTextarea } from "../components/ui/MentionTextarea";
+import { Markdown } from "../components/Markdown";
 
 export default function JudgingInterfacePage() {
   const { slug } = useParams<{ slug: string }>();
@@ -714,9 +715,9 @@ export default function JudgingInterfacePage() {
                     <h4 className="font-medium text-gray-900 mb-2">
                       Detailed Description
                     </h4>
-                    <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">
-                      {currentSubmission.longDescription}
-                    </p>
+                    <div className="prose prose-sm max-w-none text-gray-700">
+                      <Markdown>{currentSubmission.longDescription}</Markdown>
+                    </div>
                   </div>
                 )}
 
