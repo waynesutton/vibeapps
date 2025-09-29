@@ -74,7 +74,9 @@ export const sendMentionNotifications = internalAction({
         const emailTemplate = await ctx.runQuery(
           internal.emails.templates.generateMentionEmail,
           {
+            userId: target.userId,
             userName: targetUser.name || "VibeApps User",
+            userUsername: targetUser.username,
             mentionAuthor: author.name || "Someone",
             storyTitle: story.title,
             contentExcerpt: args.rawText.slice(0, 200),

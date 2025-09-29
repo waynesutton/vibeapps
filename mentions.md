@@ -129,6 +129,7 @@
 - **Email preferences**: Users can disable mention notifications via `emailSettings.mentionNotifications` or unsubscribe from all daily emails
 - **Template integration**: Mentions appear in the daily engagement email template with author names, story titles, and content excerpts
 - **Link generation**: Mentions in emails link back to the notifications page for full mention history
+- **Profile URL fix**: Email templates now generate correct profile links using `/${username}` format instead of `/user/${userId}`
 
 9. Metrics and admin visibility
 
@@ -206,6 +207,12 @@
 - **Dropdown positioning**: Proper z-index and overflow handling
 - **Loading states**: Graceful handling when no users found
 - **Accessibility**: Keyboard navigation and proper focus management
+
+#### **Email Template Fixes** 📧
+
+- **Profile URL format**: Fixed mention email templates to use correct `/${username}` URLs
+- **Template parameters**: Added missing `userId` and `userUsername` parameters to mention email template
+- **URL consistency**: Ensured all email profile links match the app's URL structure
 
 ### How It Works
 

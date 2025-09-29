@@ -1699,6 +1699,14 @@ CLERK_WEBHOOK_SECRET=whsec_xxx
 - [x] Fixed schema validation errors for daily engagement processing
 - [x] Ensured all email functions work with proper Convex Resend component integration
 
+### Phase 9: Profile Link URL Fix ✅ COMPLETED
+
+- [x] Fixed email template profile links to use correct username-based URLs
+- [x] Changed from `/user/${userId}` format to `/${username}` format in all email templates
+- [x] Updated email template conditions to check `userUsername` instead of `userId`
+- [x] Fixed mention email template to include missing `userId` and `userUsername` parameters
+- [x] Ensured all email functions pass `userUsername` parameter correctly to templates
+
 ## Success Metrics
 
 ### Email Performance
@@ -1754,6 +1762,17 @@ CLERK_WEBHOOK_SECRET=whsec_xxx
 - **Problem**: `dailyEngagementSummary` table missing `storySlug` field in schema
 - **Error**: `Object contains extra field storySlug that is not in the validator`
 - **Solution**: Updated schema to include `storySlug: v.optional(v.string())` in `storyEngagements` array
+
+**Profile URL Format Issue (September 2025)**:
+
+- **Problem**: Email templates were generating incorrect profile URLs using userId instead of username
+- **Error**: Links like `https://vibeapps.dev/user/ks71bgz29jgvx28xsgjtdhx8b97rgbjj` instead of `https://vibeapps.dev/someusername`
+- **Root Cause**: VibeApps uses `/${username}` URL format for profiles, not `/user/${userId}`
+- **Solution**: Updated all email templates in `convex/emails/templates.ts`:
+  - Changed URL construction from `https://vibeapps.dev/user/${args.userId}` to `https://vibeapps.dev/${args.userUsername}`
+  - Updated conditions to check `args.userUsername` instead of `args.userId`
+  - Fixed mention email template to pass missing `userUsername` parameter
+  - Verified all email functions correctly pass `userUsername` to templates
 
 ### Rate Limiting
 
