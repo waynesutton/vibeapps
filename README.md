@@ -43,6 +43,7 @@ The community where you go to show off what you've built, and see what others ar
 - **ConvexBox**: Dismissible notification system for announcements with custom styling
 - **Image Management**: Admin can manage additional images for submissions
 - **Admin Notifications**: Real-time notifications for admins and managers when users report submissions
+- **Admin Alert Emails**: Immediate email notifications to admins for all content reports with detailed context and action links
 
 ### Custom Forms & Data Collection
 
@@ -75,6 +76,7 @@ The community where you go to show off what you've built, and see what others ar
 - **Welcome Emails**: Automated onboarding emails for new user signups via Clerk webhooks
 - **@Mentions Integration**: Mentions included in daily digest emails (rate-limited to reduce noise)
 - **Admin Broadcast System**: Admin can send emails to all users or selected users with search functionality
+- **Admin Alert Emails**: Immediate email notifications for content reports with professional templates and admin action links
 - **Email Preferences**: Users can manage email preferences and unsubscribe from their profile page
 - **Global Kill Switch**: Admin toggle to disable all email sending (`appSettings.emailsEnabled`)
 - **Webhook Integration**: Resend webhook handler for email delivery tracking and status updates
@@ -94,11 +96,11 @@ The community where you go to show off what you've built, and see what others ar
 
 ## What's needed
 
+- **Inbox Messaging System** ✅ PRD COMPLETED: Text-only direct messages with @mentions, rate limiting, edit/delete functionality, and admin reporting integration (see `inboxforapp.md`)
+- **Admin Alert Emails** ✅ PRD COMPLETED: Immediate email notifications for all content reports with professional templates and admin dashboard integration (see `adminalerrtemails.md`)
 - Clerk roles for hackathon organizers to access judges section only in admin
 - Alerts when an admin pins or posts a message to their own app
 - Fix links used in weekly digest emails
-- Inbox feature with email notifications
-- Post notification emails via Resend (update `convex/emails/templates.ts`)
 - User toggle to turn off email notifications in profile
 
 ## Tech Stack

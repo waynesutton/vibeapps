@@ -21,8 +21,9 @@
 - `TASK.MD`: Project task and feature requirements
 - `mentions.md`: @Mentions system PRD and implementation documentation
 - `addresend.md`: Resend email integration PRD and requirements (daily admin/user digests, weekly digest, @mentions emails, unsubscribe, admin broadcast, alerts cross-ref)
+- `adminalerrtemails.md`: Admin alert email system PRD for immediate report notifications and moderation alerts
 - `metadataforsubs.md`: Server-side metadata generation PRD for social sharing
-- `inboxforapp.md`: Inbox messaging system PRD (planned feature)
+- `inboxforapp.md`: Inbox messaging system PRD with text-only messages, @mentions, rate limiting, edit/delete, and admin integration
 - `following-plan.MD`: User following system implementation plan
 - `judgingsetup.md`: Judging system setup and configuration guide
 - `clerk-admin-fix.MD`: Clerk authentication admin setup documentation
@@ -60,9 +61,9 @@
 - `convex/storyRatings.ts`: 1-5 star rating system for apps
 - `convex/follows.ts`: User following system functions with real-time updates
 - `convex/tags.ts`: Tag management and categorization system with enhanced dropdown search support
-- `convex/reports.ts`: User reporting system for content moderation with admin notification creation
-- `convex/alerts.ts`: Comprehensive notification system for votes, comments, ratings, follows, bookmarks, and admin reports
-  - Includes helper `getAdminUserIds` and `createReportNotifications` for admin/manager report alerts
+- `convex/reports.ts`: User reporting system for content moderation with admin notification creation and immediate email alerts
+- `convex/alerts.ts`: Comprehensive notification system for votes, comments, ratings, follows, bookmarks, admin reports, and future message notifications
+  - Includes helper `getAdminUserIds` and `createReportNotifications` for admin/manager report alerts with email integration
 
 ### Admin & Moderation
 
@@ -87,11 +88,12 @@
 
 ### Email System (Resend Integration) ✅ FULLY IMPLEMENTED
 
-- `convex/emails/templates.ts`: Email templates for all email types (admin, welcome, engagement, weekly, mentions)
+- `convex/emails/templates.ts`: Email templates for all email types (admin, welcome, engagement, weekly, mentions, admin reports)
 - `convex/emails/resend.ts`: Core email sending with Resend API, logging, and global kill switch
 - `convex/emails/daily.ts`: Daily metrics calculation and user engagement processing with fixed validators
 - `convex/emails/weekly.ts`: Weekly digest computation and sending functionality
 - `convex/emails/welcome.ts`: Welcome email integration for new user onboarding
+- `convex/emails/reports.ts`: Admin report notification emails with immediate delivery for content moderation
 - `convex/emails/queries.ts`: V8 runtime queries for email data (separated from Node.js actions)
 - `convex/emails/helpers.ts`: Helper queries for email processing and data fetching
 - `convex/emails/broadcast.ts`: Admin broadcast email system with user search and batch processing
@@ -155,8 +157,8 @@
 - `src/components/admin/TagManagement.tsx`: Tag creation and customization with colors, emojis, and ordering
 - `src/components/admin/Settings.tsx`: Site-wide settings configuration with view mode controls
 - `src/components/admin/NumbersView.tsx`: Analytics and metrics dashboard with detailed tracking
-- `src/components/admin/ReportManagement.tsx`: User report review and resolution with status tracking
-- `src/components/admin/EmailManagement.tsx`: Complete email system management with global toggle, broadcast emails, user search, and testing tools
+- `src/components/admin/ReportManagement.tsx`: User report review and resolution with status tracking and email notification integration
+- `src/components/admin/EmailManagement.tsx`: Complete email system management with global toggle, broadcast emails, user search, testing tools, and admin alert configuration
 - `src/components/admin/SubmitFormFieldManagement.tsx`: Manage fields for a specific submit form
 - `src/components/admin/CreateSubmitFormModal.tsx`: Modal to create new submit forms
 - `src/components/admin/EditSubmitFormModal.tsx`: Modal to edit existing submit forms
@@ -245,6 +247,17 @@
 
 ## What's needed (pointers)
 
+- **Admin Alert Emails** ✅ PRD COMPLETED:
+  - Backend: `convex/emails/reports.ts` (partially implemented), enhance `convex/emails/templates.ts`
+  - Integration: `convex/reports.ts` already triggers admin emails via `createReportNotifications`
+  - See: `adminalerrtemails.md` for complete implementation guide
+
+- **Inbox Messaging System** ✅ PRD COMPLETED:
+  - Backend: new tables/functions (see `inboxforapp.md`), text-only messages with @mentions
+  - Frontend: new components under `src/components/messages/`
+  - Features: Rate limiting, edit/delete, admin reporting, email notifications
+  - See: `inboxforapp.md` for complete implementation guide
+
 - Clerk organizer role access to judges section:
   - Backend: `convex/auth.ts`, `convex/auth.config.js`, role checks in admin queries
   - Frontend: gating in `src/components/admin/Judging.tsx`, `src/components/admin/AdminDashboard.tsx`
@@ -253,11 +266,6 @@
   - Frontend: display in `src/pages/NotificationsPage.tsx` and related components
 - Weekly email links fix:
   - Backend: `convex/emails/weekly.ts`, templates in `convex/emails/templates.ts`
-- Inbox and inbox email:
-  - Backend: new tables/functions (see `inboxforapp.md`), add send in `convex/emails/*`
-  - Frontend: new components under `src/components/inbox/`
-- Post notification emails via Resend:
-  - Backend: update `convex/emails/templates.ts`, integrate in `convex/alerts.ts`
 - Profile email notification toggle:
   - Backend: `convex/emailSettings.ts`
   - Frontend: `src/pages/UserProfilePage.tsx`

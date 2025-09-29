@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### Admin Alert Email System & Inbox Messaging PRDs ✅ COMPLETED
+
+**Added - Comprehensive Admin Alert & Messaging System PRDs**
+
+- **Admin Alert Emails PRD**: Created `adminalerrtemails.md` with complete specification for immediate admin email notifications
+  - **Story Report Alerts**: Instant email notifications to all admin/manager users when content is reported
+  - **Message Report Integration**: Future-ready system for inbox message report notifications
+  - **User Report System**: Extensible framework for user-to-user reporting with admin alerts
+  - **Email Templates**: Professional HTML templates with VibeApps branding and actionable admin links
+  - **Integration Points**: Seamless integration with existing `convex/reports.ts` and alert system
+  - **Rate Limiting**: No rate limits for critical admin notifications to ensure immediate delivery
+  - **Resend Integration**: Built on existing email infrastructure with proper logging and tracking
+
+- **Enhanced Inbox Messaging PRD**: Updated `inboxforapp.md` with comprehensive messaging system specification
+  - **Text-Only Messages**: Simplified messaging with 2000 character limit (no file attachments)
+  - **@Username Mentions**: Full integration with existing mention system and autocomplete
+  - **Message Edit/Delete**: Users can edit messages within 24 hours and delete their own messages anytime
+  - **Rate Limiting**: Comprehensive spam prevention (10 new conversations per 30 min, 50 messages per hour)
+  - **Admin Integration**: Message reporting with immediate admin email notifications
+  - **Real-time Notifications**: Integration with existing notification system in header dropdown
+  - **Email Notifications**: Separate inbox email system (not part of daily digest emails)
+
+**Technical Implementation**
+
+- **Database Schema**: Complete schema design with rate limiting tables and message edit tracking
+- **Backend Functions**: Detailed function specifications with TypeScript validation
+- **Frontend Components**: Component architecture using existing UI patterns and MentionTextarea
+- **Admin Dashboard**: Message moderation panel integrated with existing admin interface
+- **Email System**: Leverages existing Resend infrastructure with new template types
+
+**Documentation Updates**
+
+- **files.MD**: Updated with new PRD files and enhanced feature descriptions
+- **Enhanced Descriptions**: Added admin alert email integration and inbox messaging capabilities
+- **Implementation Pointers**: Clear guidance for developers on where to implement new features
+
+## Previous Updates
+
 ### Mobile UI Improvements ✅ COMPLETED
 
 **Enhanced Mobile Experience**
