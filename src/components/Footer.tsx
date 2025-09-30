@@ -101,7 +101,37 @@ export function Footer() {
                   rel="noopener noreferrer"
                   className="hover:text-[#525252]"
                 >
-                  Vibe Apps is Open-Source on GitHub
+                  Vibe Apps is Open-Source on GitHub.
+                </a>
+              </p>
+              <p>
+                Built and maintained by{" "}
+                <a
+                  href="https://www.linkedin.com/in/waynesutton/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[#525252]"
+                >
+                  Wayne Sutton
+                </a>{" "}
+                <br />
+                Github:
+                <a
+                  href="https://github.com/waynesutton"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[#525252]"
+                >
+                  waynesutton
+                </a>{" "}
+                Twitter:
+                <a
+                  href="https://twitter.com/waynesutton"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[#525252]"
+                >
+                  @waynesutton
                 </a>
               </p>
             </div>

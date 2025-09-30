@@ -1,539 +1,195 @@
-# Friends only inbox PRD
+# Inbox Messaging System PRD
 
 ## Overview
 
-This PRD defines one to one direct messages with mutual follow restrictions. The inbox is always visible to authenticated users, but messaging is only enabled between users who follow each other. The feature mirrors the feel of Twitter mutual follows messaging, scoped to the existing VibeApps stack with Clerk auth, Convex backend, alerts notifications, and planned Resend daily emails.
+This PRD defines one to one direct messages with opt-in inbox control. The inbox icon is always visible on all user profiles next to the follow button. Each user controls whether their inbox is enabled or disabled via a toggle on their own profile. Messaging is available to anyone when the recipient's inbox is enabled, regardless of follow status. The feature integrates with existing VibeApps stack (Clerk auth, Convex backend, alerts, Resend emails) with comprehensive rate limiting and admin moderation.
 
 ## Why this matters
 
-Mutual follow is a clear consent gate that reduces spam. It keeps messages relevant and expected while reusing existing follow and alert primitives already in the codebase. The always-visible inbox creates discoverability while maintaining privacy through mutual follow requirements.
+User-controlled inbox availability creates a clear consent gate that reduces spam while remaining open and accessible. Users decide who can message them by toggling their inbox on or off. Rate limiting prevents abuse. Admin moderation handles reports without compromising user privacy. The always-visible inbox icon creates discoverability while maintaining user control.
 
 ## Scope
 
-- One to one messages only
-- Inbox icon always visible on all user profiles
-- Message button shows only when both sides follow each other
-- Messaging functionality restricted to mutual follows
-- Alerts fire on each new incoming message for the recipient
-- Alerts link to the inbox conversation
-- Daily email rollup includes message notifications after Resend integration
-- Immediate email notification is sent on each new message using Resend per addresend.md. Daily rollup still includes message summaries
-- No group messages
-- No file uploads in v1
-- Real-time sync via Convex queries; no client-only messages
+- One to one messages only with optional threading support
+- Inbox icon always visible on all user profiles next to follow button
+- Inbox toggle shows only on own profile (to the right of inbox icon)
+- Message button shows when recipient's inbox is enabled (regardless of follow status)
+- Visual states: grayed out icon for disabled inbox, black icon for enabled inbox
+- @mentions supported within inbox conversations
+- Rate limiting: messages per hour per recipient, messages per day site-wide (configurable in admin)
+- Admin moderation dashboard for reported messages and users
+- Admins cannot see messages unless reported
+- Users can report messages or users within inbox
+- Reports trigger immediate email to admins and managers
+- Alerts fire on new inbox messages for recipient
+- Alerts link to inbox conversation
+- Daily email rollup mentions inbox activity but never shows message content
+- No per-message or per-mention email notifications for inbox
+- Real-time sync via Convex queries
 - Only authenticated users can access their own conversations and messages
-
-## Existing building blocks
-
-- Follows table and indexes support fast direction checks
-- Alerts system supports user notifications and linking to detail views
-- User profiles and Follow button exist in `UserProfilePage.tsx`
-- Resend PRD covers message notification email types and limits
+- No group messages in v1
+- No file uploads in v1
 
 ## User stories
 
-- As a logged in user I see an Inbox icon on all user profiles including my own
-- As a logged in user I see a Message button on a profile only if we follow each other
-- As a logged in user I can click Message to open or create a private conversation with that user
-- As a logged in user I can click the Inbox icon to view my conversations
-- As a recipient I get a new alert when someone sends me a message
-- As a recipient I receive an email immediately when I get a new message if my settings allow it
-- As a recipient I can click the alert and land in my inbox on that conversation
-- As a user I can open my inbox to browse conversation threads with people who have messaged me
+### User Experience
 
-## UI changes
+- As a logged in user I see an Inbox icon on all user profiles including my own next to the follow button
+- As a logged in user I see an inbox toggle on my own profile (to the right of inbox icon) to enable or disable my inbox
+- As a logged in user viewing another profile, I see their inbox icon grayed out if disabled, black if enabled
+- As a logged in user I see a Message button on profiles where the user has their inbox enabled (regardless of follow status)
+- As a logged in user I can click Message to open or create a conversation with that user if their inbox is enabled
+- As a logged in user I can optionally reply to specific messages creating a thread
+- As a logged in user I can use @mentions within my inbox messages
+- As a logged in user I can report a message or user from within the inbox
+- As a logged in user I receive an alert when someone sends me a message
+- As a logged in user I see inbox activity mentioned in my daily engagement email (without message content shown)
+- As a logged in user I am rate limited to prevent spam (messages per hour per person, per day site-wide)
 
-Profile page `UserProfilePage.tsx` header actions
+### Admin Experience
 
-- Show Inbox icon on all user profiles (always visible when authenticated)
-- Show Message button when mutual follow is true for viewer and profile owner
-- Place Inbox icon next to the Follow or Message button that routes to `/inbox`
+- As an admin I can configure rate limits for messages (per hour per recipient, per day per user)
+- As an admin I can view the inbox moderation dashboard showing only reported messages and users
+- As an admin I cannot see user messages unless they have been reported
+- As an admin I receive an immediate email when a message or user is reported
+- As an admin I can review reports and take action (hide message, ban user, dismiss report)
 
-## Data model (Step 1)
+## Data model
 
-Tables are purpose built for direct messages with two participants only. Use a normalized pair to avoid array equality issues and to index correctly.
+All tables are defined in `convex/schema.ts` with proper indexes and validators. Key additions:
 
-New tables in `convex/schema.ts`
+- `dmConversations`: normalized pair structure (userAId, userBId)
+- `dmMessages`: with optional parentMessageId for threading
+- `dmReads`: track last read time per user per conversation
+- `dmReports`: message and user reports with status tracking
+- `dmRateLimits`: track hourly and daily message counts
+- `users.inboxEnabled`: boolean flag (default true)
+- `appSettings`: admin-configurable rate limits
+- `alerts`: new types "message" and "dm_report"
 
-```ts
-// Direct message conversations between two users
-dmConversations: defineTable({
-  userAId: v.id("users"), // lower lexical id of the two participants
-  userBId: v.id("users"), // higher lexical id of the two participants
-  lastMessageId: v.optional(v.id("dmMessages")),
-  lastActivityTime: v.number(),
-  isActive: v.boolean(),
-})
-  .index("by_pair", ["userAId", "userBId"]) // unique pair
-  .index("by_userA", ["userAId"]) // list user conversations
-  .index("by_userB", ["userBId"]),
+Full schema definitions provided in data model section of this PRD.
 
-// Messages within a conversation
-dmMessages: defineTable({
-  conversationId: v.id("dmConversations"),
-  senderId: v.id("users"),
-  content: v.string(),
-})
-  .index("by_conversation_time", ["conversationId", "_creationTime"]),
+## Convex server functions
 
-// Read state per user per conversation
-dmReads: defineTable({
-  conversationId: v.id("dmConversations"),
-  userId: v.id("users"),
-  lastReadTime: v.number(),
-  lastReadMessageId: v.optional(v.id("dmMessages")),
-})
-  .index("by_conversation_user", ["conversationId", "userId"])
-  .index("by_user", ["userId"]),
+### Core Messaging (`convex/dm.ts`)
+
+- `toggleInboxEnabled`: mutation for user to enable/disable inbox
+- `getInboxEnabled`: query to check user's inbox status
+- `checkRateLimit`: internal query for rate limit validation
+- `recordMessageSend`: internal mutation to track sends
+- `upsertConversation`: mutation to create or fetch conversation
+- `sendMessage`: mutation with threading and @mention support
+- `reportMessageOrUser`: mutation to report content
+- `listConversations`: query with unread counts
+- `listMessages`: paginated query with thread enrichment
+- `markConversationRead`: mutation to update read state
+
+### Admin Functions (`convex/admin/dm.ts`)
+
+- `listDmReports`: query for moderation dashboard
+- `updateReportStatus`: mutation to resolve reports
+- `hideReportedMessage`: mutation for content moderation
+- `updateDmRateLimits`: mutation to configure limits
+- `getDmRateLimits`: query for current settings
+
+## Email Integration (Resend)
+
+### Daily Engagement Email Update
+
+Add inbox activity section showing message count without content:
+
+```
+You received X new messages in your inbox. [View Inbox →]
 ```
 
-DM abuse reports in `convex/schema.ts`
-
-```ts
-dmReports: defineTable({
-  conversationId: v.id("dmConversations"),
-  messageId: v.id("dmMessages"),
-  reporterUserId: v.id("users"),
-  reportedUserId: v.id("users"),
-  reason: v.string(),
-  status: v.union(
-    v.literal("pending"),
-    v.literal("reviewed"),
-    v.literal("action_taken"),
-  ),
-})
-  .index("by_status", ["status"])
-  .index("by_conversation", ["conversationId"])
-  .index("by_reporter", ["reporterUserId"])
-  .index("by_reported", ["reportedUserId"]),
-```
-
-Alerts type update in `convex/alerts.ts`
-
-```ts
-type: v.union(
-  v.literal("vote"),
-  v.literal("comment"),
-  v.literal("rating"),
-  v.literal("follow"),
-  v.literal("judged"),
-  v.literal("bookmark"),
-  v.literal("report"),
-  v.literal("message"), // new
-  v.literal("dm_report"), // new for admin notifications on DM reports
-),
-```
-
-Optional DM alert linkage fields in `convex/alerts.ts`
-
-```ts
-dmConversationId: v.optional(v.id("dmConversations")),
-dmMessageId: v.optional(v.id("dmMessages")),
-```
-
-## Convex server functions (Step 2)
-
-Mutual follow check `convex/follows.ts`
-
-```ts
-export const isMutualFollow = query({
-  args: { otherUserId: v.id("users") },
-  returns: v.boolean(),
-  handler: async (ctx, args) => {
-    const { user } = await requireAuth(ctx);
-    if (!user) return false;
-
-    const aFollowsB = await ctx.db
-      .query("follows")
-      .withIndex("by_followerId_followingId", (q) =>
-        q.eq("followerId", user._id).eq("followingId", args.otherUserId),
-      )
-      .unique();
-
-    const bFollowsA = await ctx.db
-      .query("follows")
-      .withIndex("by_followerId_followingId", (q) =>
-        q.eq("followerId", args.otherUserId).eq("followingId", user._id),
-      )
-      .unique();
-
-    return !!aFollowsB && !!bFollowsA;
-  },
-});
-```
-
-Create or fetch conversation `convex/dm.ts`
-
-```ts
-export const upsertConversation = mutation({
-  args: { otherUserId: v.id("users") },
-  returns: v.id("dmConversations"),
-  handler: async (ctx, args) => {
-    const { user } = await requireAuth(ctx);
-    if (!user) throw new Error("Not authenticated");
-
-    // gate on mutual follow
-    const mutual = await ctx.runQuery(internal.follows.isMutualFollow, {
-      otherUserId: args.otherUserId,
-    });
-    if (!mutual) throw new Error("Messaging requires mutual follow");
-
-    const [aId, bId] =
-      String(user._id) < String(args.otherUserId)
-        ? [user._id, args.otherUserId]
-        : [args.otherUserId, user._id];
-
-    const existing = await ctx.db
-      .query("dmConversations")
-      .withIndex("by_pair", (q) => q.eq("userAId", aId).eq("userBId", bId))
-      .unique();
-    if (existing) return existing._id;
-
-    return await ctx.db.insert("dmConversations", {
-      userAId: aId,
-      userBId: bId,
-      lastActivityTime: Date.now(),
-      isActive: true,
-    });
-  },
-});
-```
-
-Send message `convex/dm.ts`
-
-```ts
-export const sendMessage = mutation({
-  args: { conversationId: v.id("dmConversations"), content: v.string() },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const { user } = await requireAuth(ctx);
-    if (!user) throw new Error("Not authenticated");
-
-    const convo = await ctx.db.get(args.conversationId);
-    if (!convo) throw new Error("Conversation not found");
-    const isParticipant =
-      user._id === convo.userAId || user._id === convo.userBId;
-    if (!isParticipant) throw new Error("Not a participant");
-
-    const msgId = await ctx.db.insert("dmMessages", {
-      conversationId: convo._id,
-      senderId: user._id,
-      content: args.content.trim(),
-    });
-
-    await ctx.db.patch(convo._id, {
-      lastMessageId: msgId,
-      lastActivityTime: Date.now(),
-    });
-
-    const recipientId =
-      user._id === convo.userAId ? convo.userBId : convo.userAId;
-
-    // alert for recipient
-    await ctx.scheduler.runAfter(0, internal.alerts.createAlert, {
-      recipientUserId: recipientId,
-      actorUserId: user._id,
-      type: "message",
-    });
-
-    return null;
-  },
-});
-```
-
-Report a message `convex/dm.ts`
-
-```ts
-export const reportMessage = mutation({
-  args: {
-    conversationId: v.id("dmConversations"),
-    messageId: v.id("dmMessages"),
-    reason: v.string(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const { user } = await requireAuth(ctx);
-    if (!user) throw new Error("Not authenticated");
-
-    const convo = await ctx.db.get(args.conversationId);
-    if (!convo) throw new Error("Conversation not found");
-    const isParticipant =
-      user._id === convo.userAId || user._id === convo.userBId;
-    if (!isParticipant) throw new Error("Not a participant");
-
-    const msg = await ctx.db.get(args.messageId);
-    if (!msg || msg.conversationId !== convo._id)
-      throw new Error("Message not in conversation");
-
-    const reportedUserId = msg.senderId;
-
-    await ctx.db.insert("dmReports", {
-      conversationId: convo._id,
-      messageId: msg._id,
-      reporterUserId: user._id,
-      reportedUserId,
-      reason: args.reason.slice(0, 500),
-      status: "pending",
-    });
-
-    // Notify admins
-    const adminUserIds = await getAdminUserIds(ctx);
-    for (const adminId of adminUserIds) {
-      await ctx.db.insert("alerts", {
-        recipientUserId: adminId,
-        actorUserId: user._id,
-        type: "dm_report",
-        dmConversationId: convo._id as any,
-        dmMessageId: msg._id as any,
-        isRead: false,
-      });
-    }
-
-    return null;
-  },
-});
-```
-
-List conversations for viewer `convex/dm.ts`
-
-```ts
-export const listConversations = query({
-  args: {},
-  returns: v.array(
-    v.object({
-      _id: v.id("dmConversations"),
-      otherUserId: v.id("users"),
-      lastActivityTime: v.number(),
-      lastMessagePreview: v.optional(v.string()),
-    }),
-  ),
-  handler: async (ctx) => {
-    const { user } = await requireAuth(ctx);
-    if (!user) return [];
-
-    const a = await ctx.db
-      .query("dmConversations")
-      .withIndex("by_userA", (q) => q.eq("userAId", user._id))
-      .collect();
-    const b = await ctx.db
-      .query("dmConversations")
-      .withIndex("by_userB", (q) => q.eq("userBId", user._id))
-      .collect();
-    const all = [...a, ...b];
-    // map to other user and preview content by lastMessageId
-    const result = [] as Array<any>;
-    for (const c of all) {
-      let preview: string | undefined;
-      if (c.lastMessageId) {
-        const m = await ctx.db.get(c.lastMessageId);
-        preview = m?.content;
-      }
-      result.push({
-        _id: c._id,
-        otherUserId: user._id === c.userAId ? c.userBId : c.userAId,
-        lastActivityTime: c.lastActivityTime,
-        lastMessagePreview: preview,
-      });
-    }
-    return result.sort((x, y) => y.lastActivityTime - x.lastActivityTime);
-  },
-});
-```
-
-List messages for a conversation `convex/dm.ts`
-
-```ts
-export const listMessages = query({
-  args: {
-    conversationId: v.id("dmConversations"),
-    limit: v.number(),
-    cursor: v.union(v.null(), v.string()),
-  },
-  handler: async (ctx, args) => {
-    const { user } = await requireAuth(ctx);
-    if (!user) return { page: [], isDone: true, continueCursor: null };
-    const convo = await ctx.db.get(args.conversationId);
-    if (!convo) return { page: [], isDone: true, continueCursor: null };
-    const isParticipant =
-      user._id === convo.userAId || user._id === convo.userBId;
-    if (!isParticipant) return { page: [], isDone: true, continueCursor: null };
-
-    return await ctx.db
-      .query("dmMessages")
-      .withIndex("by_conversation_time", (q) =>
-        q.eq("conversationId", args.conversationId),
-      )
-      .order("desc")
-      .paginate({ numItems: args.limit, cursor: args.cursor });
-  },
-});
-```
-
-Mark read `convex/dm.ts`
-
-```ts
-export const markConversationRead = mutation({
-  args: { conversationId: v.id("dmConversations") },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const { user } = await requireAuth(ctx);
-    if (!user) return null;
-    const now = Date.now();
-    const existing = await ctx.db
-      .query("dmReads")
-      .withIndex("by_conversation_user", (q) =>
-        q.eq("conversationId", args.conversationId).eq("userId", user._id),
-      )
-      .unique();
-    if (existing) await ctx.db.patch(existing._id, { lastReadTime: now });
-    else
-      await ctx.db.insert("dmReads", {
-        conversationId: args.conversationId,
-        userId: user._id,
-        lastReadTime: now,
-      });
-    return null;
-  },
-});
-```
-
-## UI implementation (Step 3)
-
-Profile page `UserProfilePage.tsx` header actions
-
-- Show Inbox icon on all user profiles (always visible when authenticated)
-- Show Message button when mutual follow is true for viewer and profile owner
-- Place Inbox icon next to the Follow or Message button that routes to `/inbox`
-
-### UserProfilePage.tsx Implementation Details
-
-The profile header should be updated to include:
-
-1. **Inbox Icon (Always Visible)**
-   - Import `Mail` or `MessageSquare` icon from lucide-react
-   - Add inbox button after the Follow/Message button section
-   - Route to `/inbox` when clicked
-   - Show for all authenticated users regardless of mutual follow status
-
-2. **Message Button (Conditional)**
-   - Only show when `isMutualFollow` query returns true
-   - Use existing `api.follows.isMutualFollow` query
-   - Place before the Inbox icon in the button group
-
-3. **Button Layout**
-   - For own profile: [Edit Profile] [Inbox]
-   - For other profiles (mutual follow): [Follow/Unfollow] [Message] [Inbox]
-   - For other profiles (no mutual follow): [Follow/Unfollow] [Inbox]
-
-Inbox page
-
-- New route `/inbox`
-- Left column shows conversations sorted by latest activity time
-- Right pane shows selected conversation messages with a simple composer
-- Mobile stacks into a single column with a conversation list then thread view
-
-Message reporting
-
-- In the thread view, each message bubble has an overflow menu with Report
-- Report opens a modal to select or enter a reason, then submits
-
-Notifications
-
-- Alerts entry created on each new message for the recipient
-- Alerts item links to `/inbox?c=<conversationId>`
-
-## Authorization and privacy (Step 4)
-
-- Only allow upsertConversation when mutual follow is true
-- Only allow sendMessage for participants in the conversation
-- Only list conversations for the current user
-- Only list messages for conversations where the viewer is a participant
-- All DM queries and mutations require authentication via `requireAuth`
-- No server function returns messages or conversations for non participants
-- Use Convex reactivity on queries so message lists and conversations auto sync
-
-## Notifications and daily emails (Step 5)
-
-Runtime notifications
-
-- On sendMessage create an alert of type message for the recipient
-- Alerts are visible in the existing notifications list and page
-
-Immediate email notifications (Resend)
-
-- Send an email immediately to the recipient when a new message is received
-- Use the Resend integration defined in addresend.md (component, templates, headers, unsubscribe)
-- Respect `emailSettings.messageNotifications` (skip if set to false)
-- Skip sending if the recipient is currently active online when that signal is available
-- Enforce rate limit of five message notification emails per recipient per day via `emailLogs`
-- Subject and body follow the template in addresend.md: "New message from [SenderName] on VibeApps" with a 150 character preview and CTA links
-- Include List-Unsubscribe headers and footer links as defined in addresend.md
-- Respect global kill switch `appSettings.emailsEnabled`
-
-Integration hook in `convex/dm.ts` (non-blocking):
-
-```ts
-// After inserting the dmMessages row and updating conversation metadata
-await ctx.scheduler.runAfter(
-  0,
-  internal.emails.notifications.sendMessageNotification,
-  {
-    recipientId,
-    senderId: user._id,
-    messagePreview: args.content.substring(0, 150),
-    conversationId: convo._id,
-  },
-);
-```
-
-Daily emails
-
-- Add message notifications into the daily engagement email as described in `addresend.md`
-- Respect `emailSettings.messageNotifications` preference
-- Rate limit to five message emails per recipient per day in the mailer layer
-
-Admin emails
-
-- Include DM report counts in the daily admin email (pending, reviewed)
-- Optional immediate email to admins on each DM report using existing email pipeline
-
-## Rate limits and abuse control (Step 6)
-
-- Limit sendMessage to fifty messages per hour per conversation
-- Future setting to mute a conversation or block a user
-- Limit `reportMessage` submissions to ten per day per reporter
-
-## Rollout plan (Step 7)
-
-### Phase 1: Backend Foundation
-
-- Add schema and types to `convex/schema.ts`
-- Add server functions in `convex/dm.ts` and update `convex/follows.ts`
-- Add alert type message to `convex/alerts.ts`
-- Unit test all server functions
-
-### Phase 2: UI Implementation
-
-- Add Inbox icon to all user profiles in `UserProfilePage.tsx` (always visible when authenticated)
-- Gate the Message button on mutual follow in `UserProfilePage.tsx`
-- Ship inbox route `/inbox` and basic UI components
-- Wire the notification link to the inbox
-
-### Phase 3: Integration
-
-- Hook message events into daily email when Resend integration lands
-- Add rate limiting and abuse controls
-- Performance optimization and testing
-
-## Success metrics
-
-- Percentage of mutual pairs that start a conversation
-- Unread message count over time trending down after alerts
-- Delivery of alerts and time to open the conversation
-
-## Out of scope
+### DM Report Email (Immediate)
+
+- Subject: "VibeApps Updates: New Inbox Report - [type] Reported"
+- Sent immediately to all admins and managers
+- Includes reporter, reported user, reason, message preview (if applicable)
+- Links to admin moderation dashboard
+- Email type: `dm_report_notification`
+
+No individual emails for:
+
+- Per-message notifications
+- @mentions within inbox
+
+## UI Implementation
+
+### UserProfilePage.tsx Updates
+
+- Add inbox icon next to follow button (always visible)
+- Show grayed out icon if inbox disabled, black if enabled
+- Add inbox toggle on own profile only (to right of icon)
+- Add Message button conditionally (only if recipient inbox enabled)
+- Remove mutual follow requirement
+
+### Inbox Page `/inbox`
+
+- Left: conversation list with unread counts
+- Right: message thread with composer
+- Threading: reply button creates parent-child relationship
+- @mention: autocomplete when typing @
+- Report: overflow menu on messages
+- Mobile: stack layout
+
+### Admin Dashboard `/admin/inbox-moderation`
+
+- List reported messages and users
+- Show report context and status
+- Action buttons: dismiss, hide message, ban user
+- No access to unreported messages
+
+## Authorization and Privacy
+
+- Only message when recipient inbox enabled
+- Rate limiting enforced server-side
+- Only participants can send/view messages
+- Admins cannot see unreported messages
+- All functions require authentication
+- Convex reactivity for real-time sync
+
+## Rate Limits
+
+Admin configurable via `appSettings`:
+
+- `dmHourlyLimitPerRecipient`: default 10 messages/hour per recipient
+- `dmDailyLimitGlobal`: default 100 messages/day site-wide
+
+Enforced before every message send with clear error messages.
+
+## Rollout Plan
+
+1. Backend Foundation: schema, server functions
+2. Rate Limiting & Settings: admin configuration
+3. UI Implementation: profile updates, inbox page
+4. Admin Moderation: dashboard and reporting
+5. Email Integration: daily digest, report emails
+6. Testing & Optimization: end-to-end validation
+
+## Success Metrics
+
+- Inbox enabled vs disabled rate
+- Messages per active user
+- Rate limit hit rate
+- Report resolution time
+- User satisfaction scores
+
+## Out of Scope
 
 - Group conversations
-- File uploads and images
-- Search across messages
-- Reactions and typing indicators
+- File uploads
+- Message search
+- Read receipts
+- Reactions
+- Message editing/deletion
+
+## Future Enhancements
+
+- Read receipts (opt-in)
+- Typing indicators
+- File attachments
+- Voice messages
+- Block user functionality
+- Conversation archiving
