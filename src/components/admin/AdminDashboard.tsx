@@ -15,6 +15,7 @@ import { FormFieldManagement } from "./FormFieldManagement";
 import { Judging } from "./Judging";
 import { SubmitFormManagement } from "./SubmitFormManagement";
 import { EmailManagement } from "./EmailManagement";
+import { UserReportManagement } from "./UserReportManagement";
 // FormResults is typically viewed via a specific form, not as a main tab.
 // Consider removing it from the main tabs if it doesn't show an overview.
 
@@ -206,7 +207,13 @@ export function AdminDashboard() {
                 value="reports"
                 className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-[#292929] data-[state=active]:border-b-2 data-[state=active]:border-[#292929] focus:outline-none focus:z-10 whitespace-nowrap"
               >
-                Reports
+                Content Reports
+              </Tabs.Trigger>
+              <Tabs.Trigger
+                value="user-reports"
+                className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-[#292929] data-[state=active]:border-b-2 data-[state=active]:border-[#292929] focus:outline-none focus:z-10 whitespace-nowrap"
+              >
+                User Reports
               </Tabs.Trigger>
             </Tabs.List>
             <Tabs.Content
@@ -217,6 +224,9 @@ export function AdminDashboard() {
             </Tabs.Content>
             <Tabs.Content value="reports" className="focus:outline-none">
               <ReportManagement />
+            </Tabs.Content>
+            <Tabs.Content value="user-reports" className="focus:outline-none">
+              <UserReportManagement />
             </Tabs.Content>
           </Tabs.Root>
         </Tabs.Content>

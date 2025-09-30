@@ -238,6 +238,22 @@ export default defineSchema({
     .index("by_storyId", ["storyId"])
     .index("by_status", ["status"]),
 
+  userReports: defineTable({
+    reportedUserId: v.id("users"), // User being reported
+    reporterUserId: v.id("users"), // User making the report
+    reason: v.string(), // Reason for the report
+    status: v.union(
+      v.literal("pending"),
+      v.literal("resolved_warned"),
+      v.literal("resolved_banned"),
+      v.literal("resolved_paused"),
+      v.literal("dismissed"),
+    ),
+  })
+    .index("by_reportedUserId", ["reportedUserId"])
+    .index("by_status", ["status"])
+    .index("by_reporterUserId", ["reporterUserId"]),
+
   bookmarks: defineTable({
     userId: v.id("users"),
     storyId: v.id("stories"),

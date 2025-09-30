@@ -53,6 +53,7 @@ Brief description of the feature and its purpose.
 ## In Progress Tasks
 
 - [ ] clerk roles for hackathon organizers to see judges section in admin dashboard only
+- [ ] report a user option on p
 - [ ] update alrts if admin pins or adds a message to their app
 - [ ] fix links for weekly emails
 - [ ] add inbox direct message and inbox email notifcation

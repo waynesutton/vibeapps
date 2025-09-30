@@ -30,12 +30,22 @@ import {
   BookKey,
   BookOpen,
   Award,
+  Flag,
 } from "lucide-react";
 import type { Story } from "../types"; // Import the Story type
 import AlertDialog from "../components/ui/AlertDialog"; // Corrected path
 import "@fontsource/inter/400.css";
 import "@fontsource/inter/500.css";
 import { NotFoundPage } from "./NotFoundPage"; // Added import for NotFoundPage
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 
 // Placeholder for loading and error states
 const Loading = () => <div className="text-center p-8"> </div>;
@@ -216,6 +226,7 @@ export default function UserProfilePage() {
   const addOrRemoveBookmarkMutation = useMutation(
     api.bookmarks.addOrRemoveBookmark,
   );
+  const createUserReportMutation = useMutation(api.reports.createUserReport);
 
   const generateUploadUrl = useAction(api.users.generateUploadUrl);
   const setUserProfileImage = useMutation(api.users.setUserProfileImage);
@@ -258,6 +269,14 @@ export default function UserProfilePage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [isLoadingFollowAction, setIsLoadingFollowAction] = useState(false);
   const [isEmailUpdating, setIsEmailUpdating] = useState(false);
+
+  // User report modal state
+  const [isReportUserModalOpen, setIsReportUserModalOpen] = useState(false);
+  const [reportUserReason, setReportUserReason] = useState("");
+  const [isReportingUser, setIsReportingUser] = useState(false);
+  const [reportUserModalError, setReportUserModalError] = useState<
+    string | null
+  >(null);
 
   // State for confirmation dialogs
   const [dialogState, setDialogState] = useState<{
@@ -799,6 +818,67 @@ export default function UserProfilePage() {
     } finally {
       setIsEmailUpdating(false);
     }
+  };
+
+  const handleOpenReportUserModal = () => {
+    setReportUserModalError(null);
+    setReportUserReason("");
+    setIsReportUserModalOpen(true);
+  };
+
+  const handleReportUserModalOpenChange = (open: boolean): void => {
+    setIsReportUserModalOpen(open);
+    if (!open) {
+      setReportUserModalError(null);
+    }
+  };
+
+  const handleReportUserSubmit = async () => {
+    if (!reportUserReason.trim()) {
+      setReportUserModalError("Please provide a reason for reporting.");
+      return;
+    }
+    if (!loadedProfileUser?._id) {
+      setReportUserModalError("User ID is missing, cannot submit report.");
+      return;
+    }
+
+    setIsReportingUser(true);
+    setReportUserModalError(null);
+    try {
+      await createUserReportMutation({
+        reportedUserId: loadedProfileUser._id,
+        reason: reportUserReason,
+      });
+      alert("User reported successfully. An admin will review it.");
+      setIsReportUserModalOpen(false);
+      setReportUserReason("");
+    } catch (error: any) {
+      console.error("Error reporting user:", error);
+      let userFriendlyMessage =
+        "You have already reported this user, and it is pending review.";
+      if (error.data) {
+        if (typeof error.data === "string") {
+          userFriendlyMessage = error.data;
+        } else if (
+          error.data.message &&
+          typeof error.data.message === "string"
+        ) {
+          userFriendlyMessage = error.data.message;
+        } else if (
+          error.message &&
+          typeof error.message === "string" &&
+          error.message.includes("Uncaught Error:")
+        ) {
+          const match = error.message.match(/Uncaught Error: (.*?) at handler/);
+          if (match && match[1]) {
+            userFriendlyMessage = match[1];
+          }
+        }
+      }
+      setReportUserModalError(userFriendlyMessage);
+    }
+    setIsReportingUser(false);
   };
 
   return (
@@ -1889,6 +1969,85 @@ export default function UserProfilePage() {
         confirmButtonText={dialogState.confirmText}
         confirmButtonVariant={dialogState.confirmVariant}
       />
+
+      {/* Report User Section - Only show for other users' profiles when signed in */}
+      {!isOwnProfile && isClerkLoaded && authUser && loadedProfileUser && (
+        <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between text-sm text-gray-600">
+          <div className="flex items-center gap-3">
+            <Flag className="w-4 h-4 text-gray-500 flex-shrink-0" />
+            <span className="font-medium text-gray-700">
+              Seen something inappropriate?
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            onClick={handleOpenReportUserModal}
+          >
+            Report this User
+          </Button>
+        </div>
+      )}
+
+      {/* Report User Modal */}
+      <Dialog
+        open={isReportUserModalOpen}
+        onOpenChange={handleReportUserModalOpenChange}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              Report: {loadedProfileUser?.name || "User"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <p className="text-sm text-gray-500">
+              Please provide a reason for reporting this user. Your report will
+              be reviewed by an administrator.
+            </p>
+            <Textarea
+              placeholder="Reason for reporting..."
+              value={reportUserReason}
+              onChange={(e) => {
+                setReportUserReason(e.target.value);
+                if (reportUserModalError && e.target.value.trim()) {
+                  setReportUserModalError(null);
+                }
+              }}
+              rows={4}
+              disabled={isReportingUser}
+            />
+          </div>
+          {reportUserModalError && (
+            <div className="mb-3 p-2 text-sm text-red-700 bg-red-100 border border-red-300 rounded-md">
+              {reportUserModalError}
+            </div>
+          )}
+          <DialogFooter className="sm:justify-start">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsReportUserModalOpen(false);
+                setReportUserModalError(null);
+              }}
+              disabled={isReportingUser}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleReportUserSubmit}
+              disabled={isReportingUser || !reportUserReason.trim()}
+              className="bg-[#292929] text-white hover:bg-[#525252] disabled:opacity-50 sm:ml-[10px]"
+              style={{ fontWeight: "normal" }}
+            >
+              {isReportingUser ? "Submitting..." : "Submit Report"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

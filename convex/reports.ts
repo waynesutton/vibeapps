@@ -236,3 +236,217 @@ export const deleteStoryAndAssociations = internalMutation({
     return true;
   },
 });
+
+/**
+ * Create a new report for a user.
+ */
+export const createUserReport = mutation({
+  args: {
+    reportedUserId: v.id("users"),
+    reason: v.string(),
+  },
+  returns: v.id("userReports"),
+  handler: async (ctx, args) => {
+    const { user } = await getAuthenticatedUserAndRole(ctx);
+    if (!user) {
+      throw new Error("User must be logged in to report a user.");
+    }
+
+    // Prevent self-reporting
+    if (user._id === args.reportedUserId) {
+      throw new Error("You cannot report yourself.");
+    }
+
+    // Check if user has already reported this user with a pending report
+    const existingReport = await ctx.db
+      .query("userReports")
+      .withIndex("by_reportedUserId", (q) =>
+        q.eq("reportedUserId", args.reportedUserId),
+      )
+      .filter((q) => q.eq(q.field("reporterUserId"), user._id))
+      .filter((q) => q.eq(q.field("status"), "pending"))
+      .first();
+
+    if (existingReport) {
+      throw new Error(
+        "You have already reported this user, and it is pending review.",
+      );
+    }
+
+    const reportedUser = await ctx.db.get(args.reportedUserId);
+    if (!reportedUser) {
+      throw new Error("User not found.");
+    }
+
+    const reportId = await ctx.db.insert("userReports", {
+      reportedUserId: args.reportedUserId,
+      reporterUserId: user._id,
+      reason: args.reason,
+      status: "pending",
+    });
+
+    // Get all admin and manager user IDs
+    const adminUserIds = await getAdminUserIds(ctx);
+
+    // Create notifications for all admin and manager users (non-blocking)
+    if (adminUserIds.length > 0) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.alerts.createUserReportNotifications,
+        {
+          reporterUserId: user._id,
+          reportedUserId: args.reportedUserId,
+          reportId: reportId,
+          adminUserIds: adminUserIds,
+        },
+      );
+    } else {
+      console.warn("No admin users found to notify about user report");
+    }
+
+    return reportId;
+  },
+});
+
+/**
+ * List all user reports for the admin dashboard.
+ * Includes reported user and reporter details.
+ */
+export type UserReportWithDetails = Doc<"userReports"> & {
+  reportedUser: Doc<"users"> | null;
+  reporter: Doc<"users"> | null;
+};
+
+export const listAllUserReportsAdmin = query({
+  args: {
+    filters: v.optional(
+      v.object({
+        status: v.optional(
+          v.union(
+            v.literal("pending"),
+            v.literal("resolved_warned"),
+            v.literal("resolved_banned"),
+            v.literal("resolved_paused"),
+            v.literal("dismissed"),
+          ),
+        ),
+      }),
+    ),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("userReports"),
+      _creationTime: v.number(),
+      reportedUserId: v.id("users"),
+      reporterUserId: v.id("users"),
+      reason: v.string(),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("resolved_warned"),
+        v.literal("resolved_banned"),
+        v.literal("resolved_paused"),
+        v.literal("dismissed"),
+      ),
+      reportedUser: v.union(
+        v.object({
+          _id: v.id("users"),
+          _creationTime: v.number(),
+          name: v.string(),
+          email: v.optional(v.string()),
+          username: v.optional(v.string()),
+          imageUrl: v.optional(v.string()),
+          isBanned: v.optional(v.boolean()),
+          isPaused: v.optional(v.boolean()),
+          isVerified: v.optional(v.boolean()),
+        }),
+        v.null(),
+      ),
+      reporter: v.union(
+        v.object({
+          _id: v.id("users"),
+          _creationTime: v.number(),
+          name: v.string(),
+          email: v.optional(v.string()),
+          username: v.optional(v.string()),
+          imageUrl: v.optional(v.string()),
+        }),
+        v.null(),
+      ),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
+
+    let reports;
+    if (args.filters?.status) {
+      reports = await ctx.db
+        .query("userReports")
+        .withIndex("by_status", (q) => q.eq("status", args.filters!.status!))
+        .order("desc")
+        .collect();
+    } else {
+      reports = await ctx.db.query("userReports").order("desc").collect();
+    }
+
+    const reportsWithDetails = [];
+    for (const report of reports) {
+      const reportedUser = await ctx.db.get(report.reportedUserId);
+      const reporter = await ctx.db.get(report.reporterUserId);
+      reportsWithDetails.push({
+        ...report,
+        reportedUser: reportedUser
+          ? {
+              _id: reportedUser._id,
+              _creationTime: reportedUser._creationTime,
+              name: reportedUser.name,
+              email: reportedUser.email,
+              username: reportedUser.username,
+              imageUrl: reportedUser.imageUrl,
+              isBanned: reportedUser.isBanned,
+              isPaused: reportedUser.isPaused,
+              isVerified: reportedUser.isVerified,
+            }
+          : null,
+        reporter: reporter
+          ? {
+              _id: reporter._id,
+              _creationTime: reporter._creationTime,
+              name: reporter.name,
+              email: reporter.email,
+              username: reporter.username,
+              imageUrl: reporter.imageUrl,
+            }
+          : null,
+      });
+    }
+    return reportsWithDetails;
+  },
+});
+
+/**
+ * Update the status of a user report by an admin.
+ */
+export const updateUserReportStatusByAdmin = mutation({
+  args: {
+    reportId: v.id("userReports"),
+    newStatus: v.union(
+      v.literal("pending"),
+      v.literal("resolved_warned"),
+      v.literal("resolved_banned"),
+      v.literal("resolved_paused"),
+      v.literal("dismissed"),
+    ),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
+
+    const report = await ctx.db.get(args.reportId);
+    if (!report) {
+      throw new Error("Report not found.");
+    }
+
+    await ctx.db.patch(args.reportId, { status: args.newStatus });
+    return null;
+  },
+});

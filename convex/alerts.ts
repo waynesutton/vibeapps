@@ -277,3 +277,30 @@ export const createReportNotifications = internalMutation({
     return null;
   },
 });
+
+// Internal function to create user report notifications for all admin/manager users
+export const createUserReportNotifications = internalMutation({
+  args: {
+    reporterUserId: v.id("users"),
+    reportedUserId: v.id("users"),
+    reportId: v.id("userReports"),
+    adminUserIds: v.array(v.id("users")),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Create notification for each admin/manager user
+    for (const adminUserId of args.adminUserIds) {
+      await ctx.db.insert("alerts", {
+        recipientUserId: adminUserId,
+        actorUserId: args.reporterUserId,
+        type: "report",
+        isRead: false,
+      });
+    }
+
+    // TODO: Send immediate email notifications to admins/managers
+    // Can be implemented similar to sendReportNotificationEmails
+
+    return null;
+  },
+});
