@@ -121,6 +121,23 @@ export function ContentModeration() {
   const [confirmDeleteCommentId, setConfirmDeleteCommentId] =
     useState<Id<"comments"> | null>(null);
 
+  // Bulk selection state (only for submissions)
+  const [selectedStoryIds, setSelectedStoryIds] = useState<Set<Id<"stories">>>(
+    new Set(),
+  );
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [bulkActionType, setBulkActionType] = useState<
+    "tag" | "removeTag" | "judging" | null
+  >(null);
+  const [bulkSelectedTagId, setBulkSelectedTagId] = useState<Id<"tags"> | null>(
+    null,
+  );
+  const [bulkRemoveTagId, setBulkRemoveTagId] = useState<Id<"tags"> | null>(
+    null,
+  );
+  const [bulkSelectedJudgingGroupId, setBulkSelectedJudgingGroupId] =
+    useState<Id<"judgingGroups"> | null>(null);
+
   const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
 
   const debouncedSetSearch = useCallback(
@@ -211,6 +228,7 @@ export function ContentModeration() {
   const updateCustomMessage = useMutation(api.stories.updateStoryCustomMessage);
   const togglePin = useMutation(api.stories.toggleStoryPinStatus);
   const addTagsToStory = useMutation(api.stories.addTagsToStory);
+  const removeTagsFromStory = useMutation(api.stories.removeTagsFromStory);
   const updateStoryAdmin = useMutation(api.stories.updateStoryAdmin);
 
   // Judging group queries and mutations
@@ -607,8 +625,134 @@ export function ContentModeration() {
       setSelectedTagIds([]);
       setTagSearchTerm("");
       setShowTagDropdown(false);
+      // Also clear bulk selections when switching away from submissions
+      setSelectedStoryIds(new Set());
+      setShowBulkActions(false);
+      setBulkActionType(null);
     }
   }, [activeItemType]);
+
+  // Update bulk actions visibility when selection changes
+  React.useEffect(() => {
+    setShowBulkActions(selectedStoryIds.size > 0);
+  }, [selectedStoryIds]);
+
+  // Bulk selection handlers
+  const toggleStorySelection = (storyId: Id<"stories">) => {
+    setSelectedStoryIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(storyId)) {
+        newSet.delete(storyId);
+      } else {
+        newSet.add(storyId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedStoryIds.size === itemsToRender.length) {
+      // Deselect all
+      setSelectedStoryIds(new Set());
+    } else {
+      // Select all visible stories
+      const allStoryIds = itemsToRender
+        .filter((item) => item.type === "story")
+        .map((item) => item._id as Id<"stories">);
+      setSelectedStoryIds(new Set(allStoryIds));
+    }
+  };
+
+  const clearSelections = () => {
+    setSelectedStoryIds(new Set());
+    setBulkActionType(null);
+    setBulkSelectedTagId(null);
+    setBulkRemoveTagId(null);
+    setBulkSelectedJudgingGroupId(null);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedStoryIds.size === 0) return;
+
+    if (
+      !window.confirm(
+        `Delete ${selectedStoryIds.size} submissions? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const deletePromises = Array.from(selectedStoryIds).map((storyId) =>
+        deleteStory({ storyId }),
+      );
+      await Promise.all(deletePromises);
+      toast.success(`Deleted ${selectedStoryIds.size} submissions`);
+      clearSelections();
+    } catch (error) {
+      console.error("Failed to delete submissions:", error);
+      toast.error("Failed to delete some submissions");
+    }
+  };
+
+  const handleBulkAddTag = async () => {
+    if (selectedStoryIds.size === 0 || !bulkSelectedTagId) return;
+
+    try {
+      const addTagPromises = Array.from(selectedStoryIds).map((storyId) =>
+        addTagsToStory({ storyId, tagIdsToAdd: [bulkSelectedTagId] }),
+      );
+      await Promise.all(addTagPromises);
+      toast.success(`Added tag to ${selectedStoryIds.size} submissions`);
+      clearSelections();
+      setBulkActionType(null);
+    } catch (error) {
+      console.error("Failed to add tags:", error);
+      toast.error("Failed to add tag to some submissions");
+    }
+  };
+
+  const handleBulkRemoveTag = async () => {
+    if (selectedStoryIds.size === 0 || !bulkRemoveTagId) return;
+
+    try {
+      const removeTagPromises = Array.from(selectedStoryIds).map((storyId) =>
+        removeTagsFromStory({ storyId, tagIdsToRemove: [bulkRemoveTagId] }),
+      );
+      await Promise.all(removeTagPromises);
+      toast.success(`Removed tag from ${selectedStoryIds.size} submissions`);
+      clearSelections();
+      setBulkActionType(null);
+    } catch (error) {
+      console.error("Failed to remove tags:", error);
+      toast.error("Failed to remove tag from some submissions");
+    }
+  };
+
+  const handleBulkAddToJudgingGroup = async () => {
+    if (selectedStoryIds.size === 0 || !bulkSelectedJudgingGroupId) return;
+
+    try {
+      const result = await addSubmissionsToJudgingGroup({
+        groupId: bulkSelectedJudgingGroupId,
+        storyIds: Array.from(selectedStoryIds),
+      });
+
+      toast.success(
+        `Added ${result.added} submissions to judging group${result.skipped > 0 ? ` (${result.skipped} already in group)` : ""}`,
+      );
+
+      if (result.errors.length > 0) {
+        console.error("Errors adding to judging group:", result.errors);
+      }
+
+      clearSelections();
+      setBulkActionType(null);
+    } catch (error) {
+      console.error("Failed to add to judging group:", error);
+      toast.error("Failed to add submissions to judging group");
+    }
+  };
 
   if (authIsLoading) {
     return <div className="p-4">Loading authentication...</div>;
@@ -618,13 +762,29 @@ export function ContentModeration() {
     // Commented out editing state logic
     const isEditing = item.type === "story" && editingMessageId === item._id;
     // const isEditing = false; // Temporarily set to false as editing is disabled
+    const isSelected =
+      item.type === "story" && selectedStoryIds.has(item._id as Id<"stories">);
 
     return (
       <div
         key={item._id}
-        className="border-b border-[#F4F0ED] py-4 last:border-b-0"
+        className={`border-b border-[#F4F0ED] py-4 last:border-b-0 transition-colors ${
+          isSelected ? "bg-blue-50" : ""
+        }`}
       >
         <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+          {/* Checkbox for bulk selection (only for submissions) */}
+          {item.type === "story" && activeItemType === "submissions" && (
+            <div className="flex-shrink-0 pt-1">
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={() => toggleStorySelection(item._id as Id<"stories">)}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+                aria-label="Select submission"
+              />
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               {item.type === "story" && item.isPinned && (
@@ -1750,6 +1910,207 @@ export function ContentModeration() {
           )}
         </div>
 
+        {/* Bulk Actions Bar */}
+        {activeItemType === "submissions" && showBulkActions && (
+          <div className="mb-6 p-4 bg-blue-50 rounded-lg border-2 border-blue-300">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-blue-900">
+                  {selectedStoryIds.size} submission
+                  {selectedStoryIds.size !== 1 ? "s" : ""} selected
+                </span>
+                <button
+                  onClick={clearSelections}
+                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                >
+                  Clear selection
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Bulk Add Tag */}
+                {bulkActionType === "tag" ? (
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={bulkSelectedTagId || ""}
+                      onValueChange={(value) =>
+                        setBulkSelectedTagId(value as Id<"tags">)
+                      }
+                    >
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Select tag..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableTags?.map((tag) => (
+                          <SelectItem key={tag._id} value={tag._id}>
+                            <div className="flex items-center gap-2">
+                              {tag.emoji && <span>{tag.emoji}</span>}
+                              {tag.iconUrl && !tag.emoji && (
+                                <img
+                                  src={tag.iconUrl}
+                                  alt=""
+                                  className="w-4 h-4 rounded-sm object-cover"
+                                />
+                              )}
+                              <span>{tag.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      onClick={handleBulkAddTag}
+                      disabled={!bulkSelectedTagId}
+                    >
+                      Apply
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setBulkActionType(null);
+                        setBulkSelectedTagId(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : bulkActionType === "removeTag" ? (
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={bulkRemoveTagId || ""}
+                      onValueChange={(value) =>
+                        setBulkRemoveTagId(value as Id<"tags">)
+                      }
+                    >
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Select tag to remove..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableTags?.map((tag) => (
+                          <SelectItem key={tag._id} value={tag._id}>
+                            <div className="flex items-center gap-2">
+                              {tag.emoji && <span>{tag.emoji}</span>}
+                              {tag.iconUrl && !tag.emoji && (
+                                <img
+                                  src={tag.iconUrl}
+                                  alt=""
+                                  className="w-4 h-4 rounded-sm object-cover"
+                                />
+                              )}
+                              <span>{tag.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      onClick={handleBulkRemoveTag}
+                      disabled={!bulkRemoveTagId}
+                    >
+                      Apply
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setBulkActionType(null);
+                        setBulkRemoveTagId(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : bulkActionType === "judging" ? (
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={bulkSelectedJudgingGroupId || ""}
+                      onValueChange={(value) =>
+                        setBulkSelectedJudgingGroupId(
+                          value as Id<"judgingGroups">,
+                        )
+                      }
+                    >
+                      <SelectTrigger className="w-56">
+                        <SelectValue placeholder="Select judging group..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {judgingGroups
+                          ?.filter((group) => group.isActive)
+                          .map((group) => (
+                            <SelectItem key={group._id} value={group._id}>
+                              <div className="flex items-center gap-2">
+                                <Scale className="w-4 h-4" />
+                                <span>{group.name}</span>
+                                <span className="text-xs text-gray-500">
+                                  ({group.submissionCount} submissions)
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      onClick={handleBulkAddToJudgingGroup}
+                      disabled={!bulkSelectedJudgingGroupId}
+                    >
+                      Apply
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setBulkActionType(null);
+                        setBulkSelectedJudgingGroupId(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setBulkActionType("tag")}
+                      className="bg-white"
+                    >
+                      <Tag className="w-4 h-4 mr-1" /> Add Tag
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setBulkActionType("removeTag")}
+                      className="bg-white"
+                    >
+                      <X className="w-4 h-4 mr-1" /> Remove Tag
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setBulkActionType("judging")}
+                      className="bg-white"
+                    >
+                      <Scale className="w-4 h-4 mr-1" /> Add to Judging
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleBulkDelete}
+                      className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" /> Delete Selected
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Selected Tags Display */}
         {activeItemType === "submissions" && selectedTagIds.length > 0 && (
           <div className="mb-6 p-4 bg-[#F2F4F7] rounded-lg border border-gray-200">
@@ -1826,8 +2187,30 @@ export function ContentModeration() {
 
         {!uiIsLoading && itemsToRender.length > 0 && (
           <div>
-            {" "}
-            {/* Removed redundant divide-y */}
+            {/* Select All Checkbox - Only for submissions */}
+            {activeItemType === "submissions" && itemsToRender.length > 0 && (
+              <div className="border-b border-[#F4F0ED] py-3 mb-2 bg-gray-50">
+                <label className="flex items-center gap-3 px-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={
+                      selectedStoryIds.size > 0 &&
+                      selectedStoryIds.size === itemsToRender.length
+                    }
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+                    aria-label="Select all submissions"
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    {selectedStoryIds.size === itemsToRender.length &&
+                    selectedStoryIds.size > 0
+                      ? "Deselect All"
+                      : "Select All"}{" "}
+                    ({itemsToRender.length} submissions)
+                  </span>
+                </label>
+              </div>
+            )}
             {itemsToRender.map((item) => renderItem(item))}
           </div>
         )}

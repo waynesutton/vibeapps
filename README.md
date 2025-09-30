@@ -44,6 +44,7 @@ The community where you go to show off what you've built, and see what others ar
 - **Image Management**: Admin can manage additional images for submissions
 - **Admin Notifications**: Real-time notifications for admins and managers when users report submissions
 - **Admin Alert Emails**: Immediate email notifications to admins for all content reports with detailed context and action links
+- **Profile Link Fix**: All email templates now use correct username-based URLs with proper fallback for new users without usernames
 
 ### Custom Forms & Data Collection
 

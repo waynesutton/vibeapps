@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### Bulk Selection & Actions for Content Moderation ✅ COMPLETED
+
+**Added - Bulk Operations for Submissions Management**
+
+- **Bulk Selection System**: Admins can now select multiple submissions at once for batch operations
+  - **Checkbox Selection**: Each submission has a checkbox for individual selection
+  - **Select All/Deselect All**: Quick toggle for all visible submissions on current page
+  - **Visual Feedback**: Selected items highlighted with blue background
+  - **Selection Counter**: Shows count of currently selected submissions
+
+- **Bulk Actions Bar**: Appears automatically when submissions are selected
+  - **Add Tag**: Apply a tag to all selected submissions at once
+  - **Remove Tag**: Remove a tag from all selected submissions at once (NEW)
+  - **Add to Judging Group**: Add multiple submissions to a judging group in one action
+  - **Delete Selected**: Bulk delete with confirmation dialog
+  - **Clear Selection**: Quick button to deselect all items
+
+- **Smart State Management**:
+  - Selections automatically clear when switching between Submissions and Comments tabs
+  - Selections clear after completing bulk actions
+  - Cancel buttons to exit action modes without applying changes
+  - Success toasts show number of affected items
+
+**Technical Implementation**
+
+- **Backend**: Added `removeTagsFromStory` mutation in `convex/stories.ts` for bulk tag removal
+- **Frontend**: Enhanced `ContentModeration.tsx` with:
+  - Set-based selection state for efficient tracking
+  - Separate action modes (tag, removeTag, judging)
+  - Promise.all for parallel bulk operations
+  - Toast notifications for user feedback
+- **UI/UX**: Maintains all existing individual actions, fully additive feature
+- **Performance**: Optimized bulk operations with parallel promise execution
+
+### Email Template Profile Link Fixes ✅ COMPLETED
+
+**Fixed - Email Profile URL Issues**
+
+- **Profile Link Format Fix**: Fixed all email templates to use correct username-based URLs instead of userId-based URLs
+  - **Problem**: Email templates were generating links like `/user/ks71bgz29jgvx28xsgjtdhx8b97rgbjj` instead of `/username`
+  - **Solution**: Updated all email templates in `convex/emails/templates.ts` to use `/${username}` format
+  - **Impact**: All email profile links now work correctly and match the app's URL structure
+
+- **Username Setup Flow Enhancement**: Fixed email fallback logic for new users without usernames
+  - **Problem**: New users receive welcome emails before completing username setup, causing broken profile links
+  - **Root Cause**: Users created via Clerk don't immediately have usernames set in Convex database
+  - **Solution**: Updated email template logic with three-tier fallback system:
+    - If user has username: `https://vibeapps.dev/username` (direct to profile)
+    - If user exists but no username: `https://vibeapps.dev/set-username` (setup flow)
+    - If no user data: Sign-in page with redirect
+  - **Welcome Email Enhancement**: Updated welcome email content to guide users through profile setup
+
+- **Mention Email Template Fix**: Fixed missing parameters in mention email template
+  - **Added**: `userId` and `userUsername` parameters to mention email template calls
+  - **Fixed**: Template parameter validation errors in mention notification system
+
+**Technical Implementation**
+
+- **Files Updated**: `convex/emails/templates.ts`, `convex/emails/mentions.ts`
+- **Logic Enhancement**: `userUsername ? /username : userId ? /set-username : /sign-in`
+- **Template Consistency**: All email templates now use consistent URL generation logic
+- **User Experience**: New users get properly guided through username setup process via email links
+
 ### Admin Alert Email System & Inbox Messaging PRDs ✅ COMPLETED
 
 **Added - Comprehensive Admin Alert & Messaging System PRDs**

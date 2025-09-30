@@ -1140,6 +1140,30 @@ export const addTagsToStory = mutation({
   },
 });
 
+// Admin mutation to remove tags from a story
+export const removeTagsFromStory = mutation({
+  args: {
+    storyId: v.id("stories"),
+    tagIdsToRemove: v.array(v.id("tags")),
+  },
+  handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
+    const story = await ctx.db.get(args.storyId);
+    if (!story) {
+      throw new Error("Story not found");
+    }
+
+    // Get current tags and filter out the ones to remove
+    const currentTagIds = story.tagIds || [];
+    const newTagIds = currentTagIds.filter(
+      (tagId) => !args.tagIdsToRemove.includes(tagId),
+    );
+
+    await ctx.db.patch(args.storyId, { tagIds: newTagIds });
+    return { success: true, removedTags: args.tagIdsToRemove.length };
+  },
+});
+
 // Mutation to allow a user to delete their own story
 export const deleteOwnStory = mutation({
   args: { storyId: v.id("stories") },

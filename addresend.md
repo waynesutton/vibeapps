@@ -1711,6 +1711,7 @@ CLERK_WEBHOOK_SECRET=whsec_xxx
   - **Solution**: Updated email template logic to redirect to `/set-username` for authenticated users without usernames
   - **Logic**: `userUsername ? /username : userId ? /set-username : /sign-in`
   - **Impact**: Welcome emails and other notifications now properly guide new users through username setup
+  - **Welcome Email Enhancement**: Updated welcome email to specifically guide users to complete profile setup with username selection
 
 ## Success Metrics
 
