@@ -912,6 +912,24 @@ export default function JudgingInterfacePage() {
                         );
                       }
 
+                      // Google Drive URL patterns
+                      const driveMatch = url.match(
+                        /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/,
+                      );
+                      if (driveMatch) {
+                        const fileId = driveMatch[1];
+                        return (
+                          <iframe
+                            src={`https://drive.google.com/file/d/${fileId}/preview`}
+                            className="w-full aspect-video rounded-md"
+                            allow="autoplay; fullscreen; picture-in-picture"
+                            allowFullScreen
+                            loading="lazy"
+                            title="Video Demo"
+                          />
+                        );
+                      }
+
                       // Check if it's a direct video file
                       const videoExtensions =
                         /\.(mp4|webm|ogg|mov|avi|mkv)(\?.*)?$/i;
