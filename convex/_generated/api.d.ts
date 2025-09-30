@@ -30,7 +30,6 @@ import type * as emails_queries from "../emails/queries.js";
 import type * as emails_reports from "../emails/reports.js";
 import type * as emails_resend from "../emails/resend.js";
 import type * as emails_templates from "../emails/templates.js";
-import type * as emails_testDailyEmail from "../emails/testDailyEmail.js";
 import type * as emails_unsubscribe from "../emails/unsubscribe.js";
 import type * as emails_weekly from "../emails/weekly.js";
 import type * as emails_welcome from "../emails/welcome.js";
@@ -96,7 +95,6 @@ declare const fullApi: ApiFromModules<{
   "emails/reports": typeof emails_reports;
   "emails/resend": typeof emails_resend;
   "emails/templates": typeof emails_templates;
-  "emails/testDailyEmail": typeof emails_testDailyEmail;
   "emails/unsubscribe": typeof emails_unsubscribe;
   "emails/weekly": typeof emails_weekly;
   "emails/welcome": typeof emails_welcome;
