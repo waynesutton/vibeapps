@@ -127,9 +127,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **New Feature**: Added detailed change log tracking for user submission edits
   - Always visible below the "Rate this app" section on story detail pages
+  - Shows original submission date/time at the top with clear separator
   - Shows all edits made by the submission owner with date and time in user's local timezone
   - Displays friendly message when no changes have been made yet
-  - Collapsible entries with most recent edit expanded by default
+  - Collapsible entries (closed by default) with clean toggle UI
   - Tracks text changes (title, tagline, description, name)
   - Tracks link changes (app URL, LinkedIn, Twitter/X, GitHub, etc.)
   - Tracks tag additions and removals

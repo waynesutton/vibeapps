@@ -2166,12 +2166,34 @@ export function StoryDetail({ story }: StoryDetailProps) {
           <h2 className="text-lg font-medium text-[#525252] mb-4">
             Change Log
           </h2>
+          
+          {/* Original Submission Date */}
+          <div className="mb-6 pb-4 border-b border-[#E5E5E5]">
+            <div className="flex items-center gap-2 text-sm text-[#545454]">
+              <span className="font-medium text-[#292929]">
+                Originally submitted:
+              </span>
+              <span>
+                {new Date(story._creationTime).toLocaleDateString(undefined, {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })}{" "}
+                at{" "}
+                {new Date(story._creationTime).toLocaleTimeString(undefined, {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            </div>
+          </div>
+
           {story.changeLog && story.changeLog.length > 0 ? (
             <div className="space-y-3">
               {story.changeLog
                 .slice()
                 .reverse()
-                .map((entry, index) => {
+                .map((entry: NonNullable<typeof story.changeLog>[number], index: number) => {
                   const isExpanded = expandedChangelogIndices.has(index);
                   const toggleExpanded = () => {
                     const newSet = new Set(expandedChangelogIndices);
@@ -2243,7 +2265,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                                   Text Changes
                                 </h4>
                                 <ul className="space-y-2">
-                                  {entry.textChanges.map((change, idx) => (
+                                  {entry.textChanges.map((change: { field: string; oldValue: string; newValue: string }, idx: number) => (
                                     <li key={idx} className="text-sm">
                                       <span className="font-medium text-[#292929]">
                                         {change.field}:
@@ -2270,7 +2292,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                                   Link Changes
                                 </h4>
                                 <ul className="space-y-2">
-                                  {entry.linkChanges.map((change, idx) => (
+                                  {entry.linkChanges.map((change: { field: string; oldValue?: string; newValue?: string }, idx: number) => (
                                     <li key={idx} className="text-sm">
                                       <span className="font-medium text-[#292929]">
                                         {change.field}:
