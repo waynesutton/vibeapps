@@ -21,7 +21,9 @@ type AlertType = {
     | "report"
     | "verified"
     | "pinned"
-    | "admin_message";
+    | "admin_message"
+    | "message"
+    | "dm_report";
   isRead: boolean;
   actorUserId?: Id<"users">;
   storyId?: Id<"stories">;
@@ -156,6 +158,10 @@ function NotificationItem({ alert }: NotificationItemProps) {
         return "Your post has been featured";
       case "admin_message":
         return "Your post has a custom message from admin";
+      case "message":
+        return "sent you a new message";
+      case "dm_report":
+        return "reported a message";
       default:
         return "interacted with your content";
     }

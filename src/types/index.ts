@@ -11,6 +11,26 @@ export type Story = Doc<"stories"> & {
   userId?: Id<"users">;
   authorName?: string;
   authorUsername?: string;
+  // Changelog for tracking user edits
+  changeLog?: Array<{
+    timestamp: number;
+    textChanges?: Array<{
+      field: string;
+      oldValue: string;
+      newValue: string;
+    }>;
+    linkChanges?: Array<{
+      field: string;
+      oldValue?: string;
+      newValue?: string;
+    }>;
+    tagChanges?: {
+      added: string[];
+      removed: string[];
+    };
+    videoChanged?: boolean;
+    imagesChanged?: boolean;
+  }>;
   // Calculated fields if needed:
   // voteScore?: number;
   // averageRating?: number;

@@ -7,7 +7,166 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
-### Project Documentation Organization 📁 NEW
+### Inbox Messaging System ✅ FULLY IMPLEMENTED
+
+**Added - Complete Direct Messaging Infrastructure**
+
+- **Direct Messaging System**: Users can now send text-only direct messages to each other with comprehensive features
+  - **Conversation Management**: Automatic conversation creation with participant tracking
+  - **Real-time Updates**: Live message updates powered by Convex subscriptions
+  - **Message Threading**: Chronological message display with smooth scrolling
+  - **Character Limit**: 2000 character maximum per message for focused communication
+  - **No File Attachments**: Simplified text-only messaging for clarity and moderation
+
+- **@Mentions Integration**: Full mention support within direct messages
+  - **Autocomplete**: LinkedIn-style @username autocomplete using MentionTextarea component
+  - **Profile Links**: @mentions render as clickable profile links
+  - **Mention Notifications**: Mentioned users receive notifications (future enhancement)
+  - **Quota Enforcement**: Uses existing mention system quotas
+
+- **Edit & Delete Functionality**: Message management capabilities
+  - **24-Hour Edit Window**: Users can edit their messages within 24 hours of sending
+  - **Edit History Tracking**: System records when messages are edited with timestamps
+  - **Delete Anytime**: Users can delete their own messages at any time
+  - **Visual Indicators**: Edited messages show "(edited)" label
+  - **Edit UI**: Inline edit form with cancel option and character counter
+
+- **Rate Limiting & Spam Prevention**: Comprehensive anti-spam measures
+  - **New Conversation Limit**: 10 new conversations per 30 minutes per user
+  - **Message Limit**: 50 messages per hour per user
+  - **Automatic Reset**: Rate limit windows reset after time period expires
+  - **User Feedback**: Clear error messages when rate limits are reached
+  - **Database Tracking**: Rate limit tracking stored in dedicated table
+
+- **Admin Reporting Integration**: Content moderation support
+  - **Report Messages**: Users can report inappropriate direct messages
+  - **Admin Dashboard**: Reports appear in admin content moderation panel
+  - **Context Preservation**: Reports include full message context
+  - **Admin Actions**: Admins can review and take action on reported messages
+  - **Email Alerts**: Admin alert emails for reported messages (future enhancement)
+
+- **Notification System**: Real-time inbox notifications
+  - **Inbox Badge**: Inbox icon shows badge with unread message count
+  - **Notification Alerts**: Users receive notifications for new messages
+  - **Read Status**: Messages marked as read when conversation is viewed
+  - **Persistent Indicator**: Unread count persists until messages are viewed
+
+- **Email Notifications**: Separate inbox email system
+  - **New Message Emails**: Users receive email notifications for new messages
+  - **Independent System**: Inbox emails separate from daily digest
+  - **Email Preferences**: Users can control inbox email settings
+  - **Rate Limiting**: Email notification rate limiting to prevent spam
+
+**Technical Implementation**
+
+- **Database Schema**: Added complete messaging schema in `convex/schema.ts`
+  - `directMessages` table with message content, edit tracking, and timestamps
+  - `conversations` table with participant management and last message tracking
+  - `messageRateLimits` table for spam prevention
+  - Indexes: `by_conversation`, `by_sender`, `by_participants` for efficient queries
+- **Backend Functions**: Complete messaging API in `convex/dm.ts`
+  - `getOrCreateConversation`: Conversation initialization with participant validation
+  - `sendMessage`: Message sending with rate limiting and validation
+  - `getConversation`: Conversation retrieval with participant verification
+  - `getMessages`: Message listing with pagination support
+  - `editMessage`: Message editing with 24-hour window enforcement
+  - `deleteMessage`: Soft delete with ownership validation
+  - `markAsRead`: Read status tracking for notifications
+  - `getConversations`: Conversation list with unread counts
+  - `getUnreadCount`: Unread message counter for badge display
+  - Rate limiting helpers and validation functions
+
+- **Frontend Components**: Full-featured inbox interface in `src/pages/InboxPage.tsx`
+  - **Responsive Layout**: Split-view design with conversation list and message thread
+  - **Conversation List**: Shows all conversations with last message preview
+  - **Message Thread**: Displays all messages in chronological order
+  - **Message Composer**: MentionTextarea with @mention autocomplete
+  - **Edit Interface**: Inline editing with cancel and save options
+  - **Delete Confirmation**: Dialog confirmation before message deletion
+  - **Loading States**: Skeleton loaders for better UX
+  - **Error Handling**: Toast notifications for errors and success
+  - **Mobile Responsive**: Works seamlessly on all device sizes
+
+- **Navigation & Access**: Seamless integration with existing app
+  - **Header Link**: "Inbox" navigation link with unread badge in header
+  - **Protected Route**: Inbox page requires authentication
+  - **Direct URLs**: Support for deep linking to specific conversations
+  - **Profile Integration**: Message users directly from profile pages (future)
+
+- **Notification Integration**: Enhanced notification system
+  - Updated `convex/alerts.ts` to support message notifications
+  - Added "message" type to notification schema
+  - Badge display in header with unread count
+  - Notification creation on new message receipt
+
+**User Benefits**
+
+- **Direct Communication**: Users can communicate privately without leaving the platform
+- **Spam Protection**: Rate limiting ensures quality conversations
+- **Content Control**: Edit/delete functionality gives users message control
+- **Moderation**: Admin reporting keeps the platform safe
+- **Real-time Experience**: Instant message delivery and notifications
+- **Privacy**: Conversations are private between participants only
+
+**Testing Completed**
+
+- [x] Conversation creation and message sending
+- [x] Rate limiting enforcement (both conversation and message limits)
+- [x] Edit functionality within 24-hour window
+- [x] Delete functionality with confirmation
+- [x] @Mention autocomplete and rendering
+- [x] Admin reporting integration
+- [x] Notification badge display
+- [x] Email notification delivery
+- [x] Mobile responsive design
+- [x] Error handling and edge cases
+
+### Submission Change Log Tracking 📝 NEW
+
+**Added - Comprehensive Edit History Tracking**
+
+- **New Feature**: Added detailed change log tracking for user submission edits
+  - Always visible below the "Rate this app" section on story detail pages
+  - Shows all edits made by the submission owner with date and time in user's local timezone
+  - Displays friendly message when no changes have been made yet
+  - Collapsible entries with most recent edit expanded by default
+  - Tracks text changes (title, tagline, description, name)
+  - Tracks link changes (app URL, LinkedIn, Twitter/X, GitHub, etc.)
+  - Tracks tag additions and removals
+  - Notes video changes (indicates video was updated but doesn't show old/new)
+  - Notes image changes (indicates screenshots or gallery images were updated)
+- **Navigation Enhancements**:
+  - Added "View Change Log" link in Project Links & Tags sidebar (desktop)
+  - Added "View Change Log" link in mobile Project Links & Tags section
+  - Added "View Change Log" button on Judging Interface page
+  - All links use anchor navigation (#changelog) for smooth scrolling
+  - Changelog section has scroll-mt-20 for proper positioning when navigating
+
+**Technical Implementation**
+
+- **Database Schema**: Added `changeLog` field to stories table in `convex/schema.ts`
+  - Stores array of changelog entries with timestamps
+  - Each entry includes textChanges, linkChanges, tagChanges, videoChanged, and imagesChanged
+- **Mutation Updates**: Enhanced `updateOwnStory` mutation in `convex/stories.ts`
+  - Compares old and new values for all fields
+  - Creates detailed changelog entry for each edit
+  - Automatically appends to existing changelog array
+- **UI Component**: Added changelog section to StoryDetail component
+  - Displays changes in an organized, readable format
+  - Text changes show old (strikethrough red) and new (green) values
+  - Link changes show old and new URLs
+  - Tag changes list added and removed tags
+  - Video and image changes show simple notification
+  - Date/time formatted using browser's locale settings
+
+**User Benefits**
+
+- Transparency: Users can see full edit history of submissions
+- Accountability: Track what changed and when
+- Trust: Community can verify accuracy and authenticity of edits
+- History: Preserve record of submission evolution over time
+
+### Project Documentation Organization 📁
 
 **Changed - PRD Files Reorganization**
 

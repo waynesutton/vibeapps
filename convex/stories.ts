@@ -467,6 +467,8 @@ export const getBySlug = query({
       teamName: storyWithDetails.teamName,
       teamMemberCount: storyWithDetails.teamMemberCount,
       teamMembers: storyWithDetails.teamMembers,
+      // Changelog for edit tracking
+      changeLog: storyWithDetails.changeLog,
       // Mapped fields
       authorName: storyWithDetails.authorName,
       authorUsername: storyWithDetails.authorUsername,
@@ -1282,6 +1284,141 @@ export const updateOwnStory = mutation({
       );
     }
 
+    // Track changes for changelog
+    const textChanges: Array<{
+      field: string;
+      oldValue: string;
+      newValue: string;
+    }> = [];
+    const linkChanges: Array<{
+      field: string;
+      oldValue?: string;
+      newValue?: string;
+    }> = [];
+    let videoChanged = false;
+    let imagesChanged = false;
+
+    // Track text changes
+    if (args.title !== undefined && args.title !== story.title) {
+      textChanges.push({
+        field: "Title",
+        oldValue: story.title,
+        newValue: args.title,
+      });
+    }
+    if (
+      args.description !== undefined &&
+      args.description !== story.description
+    ) {
+      textChanges.push({
+        field: "Tagline",
+        oldValue: story.description,
+        newValue: args.description,
+      });
+    }
+    if (
+      args.longDescription !== undefined &&
+      args.longDescription !== (story.longDescription || "")
+    ) {
+      textChanges.push({
+        field: "Description",
+        oldValue: story.longDescription || "",
+        newValue: args.longDescription,
+      });
+    }
+    if (
+      args.submitterName !== undefined &&
+      args.submitterName !== (story.submitterName || "")
+    ) {
+      textChanges.push({
+        field: "Your Name",
+        oldValue: story.submitterName || "",
+        newValue: args.submitterName,
+      });
+    }
+
+    // Track link changes
+    if (args.url !== undefined && args.url !== story.url) {
+      linkChanges.push({
+        field: "App Website Link",
+        oldValue: story.url,
+        newValue: args.url,
+      });
+    }
+    if (
+      args.linkedinUrl !== undefined &&
+      args.linkedinUrl !== (story.linkedinUrl || "")
+    ) {
+      linkChanges.push({
+        field: "LinkedIn URL",
+        oldValue: story.linkedinUrl || undefined,
+        newValue: args.linkedinUrl || undefined,
+      });
+    }
+    if (
+      args.twitterUrl !== undefined &&
+      args.twitterUrl !== (story.twitterUrl || "")
+    ) {
+      linkChanges.push({
+        field: "Twitter/X URL",
+        oldValue: story.twitterUrl || undefined,
+        newValue: args.twitterUrl || undefined,
+      });
+    }
+    if (
+      args.githubUrl !== undefined &&
+      args.githubUrl !== (story.githubUrl || "")
+    ) {
+      linkChanges.push({
+        field: "GitHub URL",
+        oldValue: story.githubUrl || undefined,
+        newValue: args.githubUrl || undefined,
+      });
+    }
+    if (
+      args.chefShowUrl !== undefined &&
+      args.chefShowUrl !== (story.chefShowUrl || "")
+    ) {
+      linkChanges.push({
+        field: "Chef Show URL",
+        oldValue: story.chefShowUrl || undefined,
+        newValue: args.chefShowUrl || undefined,
+      });
+    }
+    if (
+      args.chefAppUrl !== undefined &&
+      args.chefAppUrl !== (story.chefAppUrl || "")
+    ) {
+      linkChanges.push({
+        field: "Chef App URL",
+        oldValue: story.chefAppUrl || undefined,
+        newValue: args.chefAppUrl || undefined,
+      });
+    }
+
+    // Track video changes
+    if (
+      args.videoUrl !== undefined &&
+      args.videoUrl !== (story.videoUrl || "")
+    ) {
+      videoChanged = true;
+    }
+
+    // Track image changes
+    if (
+      args.screenshotId !== undefined &&
+      args.screenshotId !== story.screenshotId
+    ) {
+      imagesChanged = true;
+    }
+    if (
+      args.additionalImageIds !== undefined &&
+      JSON.stringify(args.additionalImageIds) !==
+        JSON.stringify(story.additionalImageIds || [])
+    ) {
+      imagesChanged = true;
+    }
+
     // Handle new tags if provided
     let finalTagIds = args.tagIds;
     if (args.newTagNames && args.newTagNames.length > 0) {
@@ -1305,6 +1442,31 @@ export const updateOwnStory = mutation({
 
       if (finalTagIds.length === 0) {
         throw new Error("At least one valid tag is required.");
+      }
+    }
+
+    // Track tag changes
+    let tagChanges: { added: string[]; removed: string[] } | undefined =
+      undefined;
+    if (finalTagIds !== undefined) {
+      const oldTagIds = story.tagIds || [];
+      const addedTagIds = finalTagIds.filter((id) => !oldTagIds.includes(id));
+      const removedTagIds = oldTagIds.filter((id) => !finalTagIds.includes(id));
+
+      if (addedTagIds.length > 0 || removedTagIds.length > 0) {
+        const addedTags = await Promise.all(
+          addedTagIds.map(async (id) => {
+            const tag = await ctx.db.get(id);
+            return tag?.name || "Unknown Tag";
+          }),
+        );
+        const removedTags = await Promise.all(
+          removedTagIds.map(async (id) => {
+            const tag = await ctx.db.get(id);
+            return tag?.name || "Unknown Tag";
+          }),
+        );
+        tagChanges = { added: addedTags, removed: removedTags };
       }
     }
 
@@ -1345,6 +1507,27 @@ export const updateOwnStory = mutation({
     if (args.title && args.title !== story.title) {
       const newSlug = await generateUniqueSlug(ctx, args.title);
       updateData.slug = newSlug;
+    }
+
+    // Add changelog entry if there are changes
+    if (
+      textChanges.length > 0 ||
+      linkChanges.length > 0 ||
+      tagChanges ||
+      videoChanged ||
+      imagesChanged
+    ) {
+      const changeLogEntry = {
+        timestamp: Date.now(),
+        ...(textChanges.length > 0 && { textChanges }),
+        ...(linkChanges.length > 0 && { linkChanges }),
+        ...(tagChanges && { tagChanges }),
+        ...(videoChanged && { videoChanged: true }),
+        ...(imagesChanged && { imagesChanged: true }),
+      };
+
+      const existingChangeLog = story.changeLog || [];
+      updateData.changeLog = [...existingChangeLog, changeLogEntry];
     }
 
     await ctx.db.patch(args.storyId, updateData);

@@ -63,6 +63,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `convex/clerk.ts`: Clerk authentication integration with Convex
 - `convex/users.ts`: User management functions (queries, mutations, admin functions, mention search, recent vibers discovery)
 - `convex/mentions.ts`: @Mentions system core utilities (extract, resolve, record, quota enforcement)
+- `convex/dm.ts`: Direct messaging system with conversations, messages, @mentions, edit/delete, rate limiting, and admin reporting integration
 
 ### Core App Features
 
@@ -223,6 +224,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/pages/JudgingInterfacePage.tsx`: Individual submission judging interface with @mention autocomplete in notes
 - `src/pages/PublicJudgingResultsPage.tsx`: Public judging results page
 - `src/pages/NotificationsPage.tsx`: User notifications page with comprehensive alert system for all interaction types
+- `src/pages/InboxPage.tsx`: Direct messaging inbox with conversation view, message threads, @mentions, edit/delete, and real-time updates
 - `src/pages/NotFoundPage.tsx`: 404 error page
 - `src/pages/NavTestPage.tsx`: Navigation testing page
 
@@ -259,25 +261,9 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 ## What's needed (pointers)
 
-- **Admin Alert Emails** ✅ PRD COMPLETED:
-  - Backend: `convex/emails/reports.ts` (partially implemented), enhance `convex/emails/templates.ts`
-  - Integration: `convex/reports.ts` already triggers admin emails via `createReportNotifications`
-  - See: `prds/adminalerrtemails.md` for complete implementation guide
-
-- **Inbox Messaging System** ✅ PRD COMPLETED:
-  - Backend: new tables/functions (see `prds/friendsonlyinbox.md`), text-only messages with @mentions
-  - Frontend: new components under `src/components/messages/`
-  - Features: Rate limiting, edit/delete, admin reporting, email notifications
-  - See: `prds/friendsonlyinbox.md` for complete implementation guide
-
 - Clerk organizer role access to judges section:
   - Backend: `convex/auth.ts`, `convex/auth.config.js`, role checks in admin queries
   - Frontend: gating in `src/components/admin/Judging.tsx`, `src/components/admin/AdminDashboard.tsx`
-- App pin alerts by admins:
-  - Backend: extend `convex/alerts.ts`, possibly `convex/stories.ts` for pin state
-  - Frontend: display in `src/pages/NotificationsPage.tsx` and related components
-- Weekly email links fix:
-  - Backend: `convex/emails/weekly.ts`, templates in `convex/emails/templates.ts`
-- Profile email notification toggle:
-  - Backend: `convex/emailSettings.ts`
-  - Frontend: `src/pages/UserProfilePage.tsx`
+- Admin moderation to make app post by approval only:
+  - Backend: `convex/stories.ts`, add auto-approval toggle in `convex/settings.ts`
+  - Frontend: `src/components/admin/Settings.tsx` to add toggle control

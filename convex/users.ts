@@ -292,6 +292,7 @@ export const getMyUserDocument = query({
       bluesky: v.optional(v.string()),
       linkedin: v.optional(v.string()),
       isVerified: v.optional(v.boolean()),
+      inboxEnabled: v.optional(v.boolean()),
       // add other fields from your users table if any
     }),
   ),

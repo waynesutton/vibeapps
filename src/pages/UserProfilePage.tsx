@@ -31,6 +31,8 @@ import {
   BookOpen,
   Award,
   Flag,
+  Inbox,
+  Send,
 } from "lucide-react";
 import type { Story } from "../types"; // Import the Story type
 import AlertDialog from "../components/ui/AlertDialog"; // Corrected path
@@ -219,6 +221,23 @@ export default function UserProfilePage() {
     profileData?.user?._id ? { userId: profileData.user._id } : "skip",
   );
 
+  // Inbox queries and mutations
+  const recipientInboxEnabled = useQuery(
+    api.dm.getInboxEnabled,
+    profileData?.user?._id && !isOwnProfileCandidate
+      ? { userId: profileData.user._id }
+      : "skip",
+  );
+  // Get own inbox status for toggle display
+  const ownInboxEnabled = useQuery(
+    api.dm.getInboxEnabled,
+    profileData?.user?._id && isOwnProfileCandidate
+      ? { userId: profileData.user._id }
+      : "skip",
+  );
+  const toggleInboxMutation = useMutation(api.dm.toggleInboxEnabled);
+  const upsertConversationMutation = useMutation(api.dm.upsertConversation);
+
   const unvoteStoryMutation = useMutation(api.stories.voteStory);
   const deleteOwnStoryMutation = useMutation(api.stories.deleteOwnStory);
   const deleteOwnCommentMutation = useMutation(api.comments.deleteOwnComment);
@@ -277,6 +296,10 @@ export default function UserProfilePage() {
   const [reportUserModalError, setReportUserModalError] = useState<
     string | null
   >(null);
+
+  // Inbox state
+  const [isTogglingInbox, setIsTogglingInbox] = useState(false);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
 
   // State for confirmation dialogs
   const [dialogState, setDialogState] = useState<{
@@ -596,6 +619,40 @@ export default function UserProfilePage() {
       );
     } finally {
       setIsLoadingFollowAction(false);
+    }
+  };
+
+  // Handle inbox toggle (own profile only)
+  const handleInboxToggle = async () => {
+    if (!isOwnProfile) return;
+    setIsTogglingInbox(true);
+    try {
+      const result = await toggleInboxMutation({});
+      const newState = result.inboxEnabled ? "enabled" : "disabled";
+      alert(`Inbox ${newState}`);
+    } catch (error: any) {
+      console.error("Inbox toggle failed:", error);
+      alert(error.message || "Failed to toggle inbox");
+    } finally {
+      setIsTogglingInbox(false);
+    }
+  };
+
+  // Handle message button click
+  const handleSendMessage = async () => {
+    if (!loadedProfileUser || !authUser || isOwnProfile) return;
+    setIsSendingMessage(true);
+    try {
+      const conversationId = await upsertConversationMutation({
+        otherUserId: loadedProfileUser._id,
+      });
+      // Navigate to inbox with this conversation open
+      navigate(`/inbox?conversation=${conversationId}`);
+    } catch (error: any) {
+      console.error("Failed to create conversation:", error);
+      alert(error.message || "Failed to start conversation");
+    } finally {
+      setIsSendingMessage(false);
     }
   };
 
@@ -1103,9 +1160,10 @@ export default function UserProfilePage() {
               )}
             </div>
 
-            {/* FOLLOW BUTTON - Placed after social links and before Edit Profile button for non-own profiles */}
+            {/* FOLLOW BUTTON & INBOX CONTROLS - Placed after social links and before Edit Profile button for non-own profiles */}
             {!isOwnProfile && authUser && loadedProfileUser && !isEditing && (
-              <div className="mt-3">
+              <div className="mt-3 flex items-center gap-2">
+                {/* Follow Button */}
                 <button
                   onClick={handleFollowToggle}
                   disabled={isLoadingFollowAction}
@@ -1130,6 +1188,82 @@ export default function UserProfilePage() {
                       ? "Unfollow"
                       : "Follow"}
                 </button>
+
+                {/* Inbox Button - Always visible, grayed out if inbox disabled */}
+                <button
+                  onClick={
+                    recipientInboxEnabled !== false
+                      ? handleSendMessage
+                      : undefined
+                  }
+                  disabled={recipientInboxEnabled === false || isSendingMessage}
+                  className={`px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center transition-colors ${
+                    recipientInboxEnabled === false
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-[#292929] text-white hover:bg-gray-700"
+                  }`}
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                  title={
+                    recipientInboxEnabled === false
+                      ? "This user's inbox is disabled"
+                      : "Send a message"
+                  }
+                >
+                  {isSendingMessage ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  ) : (
+                    <Inbox className="w-4 h-4 mr-2" />
+                  )}
+                  {isSendingMessage ? "Sending..." : "Message"}
+                </button>
+              </div>
+            )}
+
+            {/* INBOX BUTTON & TOGGLE - Only on own profile */}
+            {isOwnProfile && !isEditing && (
+              <div className="mt-3 flex flex-col gap-2">
+                {/* Go to Inbox Button */}
+                <button
+                  onClick={() => navigate("/inbox")}
+                  className="px-6 py-2 rounded-md bg-[#292929] border border-[#D8E1EC] text-[#ffffff] text-sm font-medium hover:bg-[#F2F0ED] hover:text-[#292929] flex items-center justify-center sm:justify-start"
+                  style={{ fontFamily: "Inter, sans-serif", width: "170px" }}
+                >
+                  <Inbox className="w-4 h-4 mr-2 text-md" />
+                  Go to Inbox
+                </button>
+
+                {/* Inbox Toggle Controls */}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span>Inbox Status:</span>
+                  </div>
+
+                  {/* Toggle Button */}
+                  <button
+                    onClick={handleInboxToggle}
+                    disabled={isTogglingInbox}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      ownInboxEnabled !== false ? "bg-[#292929]" : "bg-gray-300"
+                    }`}
+                    aria-label="Toggle inbox"
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        ownInboxEnabled !== false
+                          ? "translate-x-6"
+                          : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+
+                  <span className="text-sm text-gray-600">
+                    {isTogglingInbox
+                      ? "Updating..."
+                      : ownInboxEnabled !== false
+                        ? "Enabled"
+                        : "Disabled"}
+                  </span>
+                </div>
               </div>
             )}
 

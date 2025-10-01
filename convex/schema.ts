@@ -17,6 +17,7 @@ export default defineSchema({
     isBanned: v.optional(v.boolean()), // New field for banning users
     isPaused: v.optional(v.boolean()), // New field for pausing users
     isVerified: v.optional(v.boolean()), // New field for verifying users
+    inboxEnabled: v.optional(v.boolean()), // Inbox messaging toggle (default true)
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_username", ["username"]), // Index for fetching by username
@@ -61,6 +62,40 @@ export default defineSchema({
         v.object({
           name: v.string(),
           email: v.string(),
+        }),
+      ),
+    ),
+    // Changelog tracking for user edits
+    changeLog: v.optional(
+      v.array(
+        v.object({
+          timestamp: v.number(),
+          textChanges: v.optional(
+            v.array(
+              v.object({
+                field: v.string(),
+                oldValue: v.string(),
+                newValue: v.string(),
+              }),
+            ),
+          ),
+          linkChanges: v.optional(
+            v.array(
+              v.object({
+                field: v.string(),
+                oldValue: v.optional(v.string()),
+                newValue: v.optional(v.string()),
+              }),
+            ),
+          ),
+          tagChanges: v.optional(
+            v.object({
+              added: v.array(v.string()),
+              removed: v.array(v.string()),
+            }),
+          ),
+          videoChanged: v.optional(v.boolean()),
+          imagesChanged: v.optional(v.boolean()),
         }),
       ),
     ),
@@ -443,6 +478,8 @@ export default defineSchema({
       v.literal("verified"),
       v.literal("pinned"),
       v.literal("admin_message"),
+      v.literal("message"), // Direct message alert
+      v.literal("dm_report"), // DM report alert for admins
     ),
     storyId: v.optional(v.id("stories")), // Related story for vote, comment, rating, judged alerts
     commentId: v.optional(v.id("comments")), // Specific comment for comment alerts
@@ -578,4 +615,79 @@ export default defineSchema({
     valueString: v.optional(v.string()),
     valueNumber: v.optional(v.number()),
   }).index("by_key", ["key"]),
+
+  // Direct message conversations between users
+  dmConversations: defineTable({
+    userAId: v.id("users"),
+    userBId: v.id("users"),
+    lastMessageId: v.optional(v.id("dmMessages")),
+    lastActivityTime: v.number(),
+  })
+    .index("by_userA_userB", ["userAId", "userBId"])
+    .index("by_userA_activity", ["userAId", "lastActivityTime"])
+    .index("by_userB_activity", ["userBId", "lastActivityTime"]),
+
+  // Individual messages within conversations
+  dmMessages: defineTable({
+    conversationId: v.id("dmConversations"),
+    senderId: v.id("users"),
+    content: v.string(), // Max 2000 characters
+    parentMessageId: v.optional(v.id("dmMessages")), // For threading
+    deletedBy: v.optional(v.array(v.id("users"))), // Track which users deleted this message
+  })
+    .index("by_conversation", ["conversationId"])
+    .index("by_parent", ["parentMessageId"]),
+
+  // Track deleted conversations per user (soft delete)
+  dmDeletedConversations: defineTable({
+    conversationId: v.id("dmConversations"),
+    userId: v.id("users"),
+  })
+    .index("by_conversation_user", ["conversationId", "userId"])
+    .index("by_user", ["userId"]),
+
+  // Track read status per user per conversation
+  dmReads: defineTable({
+    conversationId: v.id("dmConversations"),
+    userId: v.id("users"),
+    lastReadTime: v.number(),
+  })
+    .index("by_conversation_user", ["conversationId", "userId"])
+    .index("by_user", ["userId"]),
+
+  // Reports for messages and users
+  dmReports: defineTable({
+    reporterId: v.id("users"),
+    reportedUserId: v.id("users"),
+    messageId: v.optional(v.id("dmMessages")),
+    conversationId: v.id("dmConversations"),
+    reason: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("reviewed"),
+      v.literal("action_taken"),
+    ),
+    adminNotes: v.optional(v.string()),
+  })
+    .index("by_status", ["status"])
+    .index("by_reporter", ["reporterId"])
+    .index("by_reported_user", ["reportedUserId"]),
+
+  // Rate limiting tracking
+  dmRateLimits: defineTable({
+    userId: v.id("users"),
+    recipientId: v.optional(v.id("users")), // For per-recipient limits
+    windowStart: v.number(),
+    messageCount: v.number(),
+    limitType: v.union(
+      v.literal("hourly_per_recipient"),
+      v.literal("daily_global"),
+    ),
+  })
+    .index("by_user_type_window", ["userId", "limitType", "windowStart"])
+    .index("by_user_recipient_window", [
+      "userId",
+      "recipientId",
+      "windowStart",
+    ]),
 });

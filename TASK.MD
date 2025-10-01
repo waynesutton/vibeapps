@@ -55,11 +55,14 @@ Brief description of the feature and its purpose.
 - [x] update alert's if admin pins or adds a message to their app
 - [x] setup resend for emails for notifications on post
 - [x] add option to turn off email notifications on user profiles
+- [x] add reporting users or post email option to admin from adminalerrtemails.md
+- [x] add changelog tracking on story detail page that shows all user edits with date/time in user's timezone
+- [x] always show changelog section with anchor links from sidebar and judging page
+- [x] add inbox direct message and inbox email notification from friendsonlyinbox.md
+- [x] test inbox direct message and inbox email notification from friendsonlyinbox.md
+- [x] change notifications for inbox to be inbox check in
 
 ## In Progress Tasks
-
-- [ ] add reporting users or post email option to admin from adminalerrtemails.md
-- [ ] add inbox direct message and inbox email notification from friendsonlyinbox.md
 
 ## Future Tasks - Roadmap
 

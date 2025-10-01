@@ -266,6 +266,10 @@ export function StoryDetail({ story }: StoryDetailProps) {
   const [showAuthDialog, setShowAuthDialog] = React.useState(false);
   const [authDialogAction, setAuthDialogAction] = React.useState("");
 
+  // Changelog expand state (all closed by default)
+  const [expandedChangelogIndices, setExpandedChangelogIndices] =
+    React.useState<Set<number>>(new Set());
+
   // Fetch related stories
   const relatedStories = useQuery(
     api.stories.getRelatedStoriesByTags,
@@ -1102,6 +1106,28 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 )}
               </div>
             </div>
+            {/* Changelog Link */}
+            <div className="mt-4 pt-3 border-t border-[#E5E5E5]">
+              <a
+                href="#changelog"
+                className="flex items-center gap-2 text-sm text-[#525252] hover:text-[#292929] hover:underline"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                View Change Log
+              </a>
+            </div>
             <Link
               to="/"
               className="text-[#545454] hover:text-[#525252] inline-block mb-6 text-sm mt-[1.5625rem]"
@@ -1868,6 +1894,29 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   )}
                 </div>
               )}
+
+              {/* Changelog Link */}
+              <div className="pt-3 border-t border-[#E5E5E5] mt-4">
+                <a
+                  href="#changelog"
+                  className="flex items-center gap-2 text-sm text-[#525252] hover:text-[#292929] hover:underline"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  View Change Log
+                </a>
+              </div>
             </div>
           </div>
         )}
@@ -2105,6 +2154,213 @@ export function StoryDetail({ story }: StoryDetailProps) {
           <p className="text-sm text-[#545454]">
             Your rating helps others discover great apps.
           </p>
+        </div>
+      )}
+
+      {/* Changelog Section */}
+      {!isEditing && (
+        <div
+          id="changelog"
+          className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC] scroll-mt-20"
+        >
+          <h2 className="text-lg font-medium text-[#525252] mb-4">
+            Change Log
+          </h2>
+          {story.changeLog && story.changeLog.length > 0 ? (
+            <div className="space-y-3">
+              {story.changeLog
+                .slice()
+                .reverse()
+                .map((entry, index) => {
+                  const isExpanded = expandedChangelogIndices.has(index);
+                  const toggleExpanded = () => {
+                    const newSet = new Set(expandedChangelogIndices);
+                    if (isExpanded) {
+                      newSet.delete(index);
+                    } else {
+                      newSet.add(index);
+                    }
+                    setExpandedChangelogIndices(newSet);
+                  };
+
+                  const changeDate = new Date(entry.timestamp);
+                  const formattedDate = changeDate.toLocaleDateString(
+                    undefined,
+                    {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    },
+                  );
+                  const formattedTime = changeDate.toLocaleTimeString(
+                    undefined,
+                    {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    },
+                  );
+
+                  const hasChanges =
+                    (entry.textChanges && entry.textChanges.length > 0) ||
+                    (entry.linkChanges && entry.linkChanges.length > 0) ||
+                    entry.tagChanges ||
+                    entry.videoChanged ||
+                    entry.imagesChanged;
+
+                  if (!hasChanges) return null;
+
+                  return (
+                    <div
+                      key={index}
+                      className="border border-[#E5E5E5] rounded-md overflow-hidden"
+                    >
+                      <button
+                        onClick={toggleExpanded}
+                        className="w-full px-4 py-3 bg-[#F9F9F9] hover:bg-[#F4F0ED] transition-colors flex items-center justify-between text-left"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`transform transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                          >
+                            ▶
+                          </span>
+                          <span className="text-sm font-medium text-[#525252]">
+                            {formattedDate} at {formattedTime}
+                          </span>
+                        </div>
+                        <span className="text-xs text-[#787672]">
+                          {isExpanded ? "Hide changes" : "Show changes"}
+                        </span>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="p-4 space-y-4">
+                          {/* Text Changes */}
+                          {entry.textChanges &&
+                            entry.textChanges.length > 0 && (
+                              <div>
+                                <h4 className="text-sm font-medium text-[#525252] mb-2">
+                                  Text Changes
+                                </h4>
+                                <ul className="space-y-2">
+                                  {entry.textChanges.map((change, idx) => (
+                                    <li key={idx} className="text-sm">
+                                      <span className="font-medium text-[#292929]">
+                                        {change.field}:
+                                      </span>
+                                      <div className="ml-4 mt-1">
+                                        <div className="text-red-600 line-through">
+                                          {change.oldValue || "(empty)"}
+                                        </div>
+                                        <div className="text-green-600">
+                                          {change.newValue || "(empty)"}
+                                        </div>
+                                      </div>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                          {/* Link Changes */}
+                          {entry.linkChanges &&
+                            entry.linkChanges.length > 0 && (
+                              <div>
+                                <h4 className="text-sm font-medium text-[#525252] mb-2">
+                                  Link Changes
+                                </h4>
+                                <ul className="space-y-2">
+                                  {entry.linkChanges.map((change, idx) => (
+                                    <li key={idx} className="text-sm">
+                                      <span className="font-medium text-[#292929]">
+                                        {change.field}:
+                                      </span>
+                                      <div className="ml-4 mt-1 break-all">
+                                        {change.oldValue && (
+                                          <div className="text-red-600 line-through">
+                                            {change.oldValue}
+                                          </div>
+                                        )}
+                                        {change.newValue && (
+                                          <div className="text-green-600">
+                                            {change.newValue}
+                                          </div>
+                                        )}
+                                        {!change.oldValue &&
+                                          !change.newValue && (
+                                            <div className="text-[#787672]">
+                                              (removed)
+                                            </div>
+                                          )}
+                                      </div>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                          {/* Tag Changes */}
+                          {entry.tagChanges &&
+                            (entry.tagChanges.added.length > 0 ||
+                              entry.tagChanges.removed.length > 0) && (
+                              <div>
+                                <h4 className="text-sm font-medium text-[#525252] mb-2">
+                                  Tag Changes
+                                </h4>
+                                <div className="space-y-1">
+                                  {entry.tagChanges.added.length > 0 && (
+                                    <div className="text-sm">
+                                      <span className="text-green-600 font-medium">
+                                        Added:
+                                      </span>{" "}
+                                      {entry.tagChanges.added.join(", ")}
+                                    </div>
+                                  )}
+                                  {entry.tagChanges.removed.length > 0 && (
+                                    <div className="text-sm">
+                                      <span className="text-red-600 font-medium">
+                                        Removed:
+                                      </span>{" "}
+                                      {entry.tagChanges.removed.join(", ")}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                          {/* Video Changed */}
+                          {entry.videoChanged && (
+                            <div className="text-sm text-[#545454]">
+                              <span className="font-medium text-[#292929]">
+                                Video:
+                              </span>{" "}
+                              Video demo was updated
+                            </div>
+                          )}
+
+                          {/* Images Changed */}
+                          {entry.imagesChanged && (
+                            <div className="text-sm text-[#545454]">
+                              <span className="font-medium text-[#292929]">
+                                Images:
+                              </span>{" "}
+                              Screenshots or gallery images were updated
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <p className="text-sm">
+                No changes have been made to this submission yet. All future
+                edits will be tracked and displayed here.
+              </p>
+            </div>
+          )}
         </div>
       )}
 

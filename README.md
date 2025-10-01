@@ -30,7 +30,8 @@ The community where you go to show off what you've built, and see what others ar
 - **Top Categories**: Weekly trending categories and tags
 - **Related Apps**: Show 3 related products by tags below comments
 - **User Reports**: Report inappropriate content with admin review system
-- **Notification System**: Real-time notifications for votes, comments, ratings, follows, bookmarks, and admin reports
+- **Notification System**: Real-time notifications for votes, comments, ratings, follows, bookmarks, admin reports, and inbox messages
+- **Inbox Messaging**: Text-only direct messages with @mentions, edit/delete functionality, rate limiting, and admin reporting integration
 
 ### Admin & Moderation
 
@@ -87,6 +88,15 @@ The community where you go to show off what you've built, and see what others ar
 
 ## Recent Updates
 
+- **Inbox Messaging System** ✅ FULLY IMPLEMENTED:
+  - Text-only direct messages with @mentions integration
+  - Edit/delete functionality (24-hour edit window)
+  - Rate limiting (10 new conversations per 30 min, 50 messages per hour)
+  - Admin reporting integration with content moderation
+  - Real-time inbox notifications with inbox check indicator
+  - Email notifications for new messages (separate from daily digest)
+  - Backend: `convex/dm.ts` with comprehensive message management
+  - Frontend: `src/pages/InboxPage.tsx` with conversation view
 - Submit Forms system expanded:
   - Admin create/edit modals for submit forms (`CreateSubmitFormModal`, `EditSubmitFormModal`)
   - Field-level management for submit forms (`SubmitFormFieldManagement`)
@@ -97,12 +107,8 @@ The community where you go to show off what you've built, and see what others ar
 
 ## What's needed
 
-- **Inbox Messaging System** ✅ PRD COMPLETED: Text-only direct messages with @mentions, rate limiting, edit/delete functionality, and admin reporting integration (see `prds/friendsonlyinbox.md`)
-- **Admin Alert Emails** ✅ PRD COMPLETED: Immediate email notifications for all content reports with professional templates and admin dashboard integration (see `prds/adminalerrtemails.md`)
 - Clerk roles for hackathon organizers to access judges section only in admin
-- Alerts when an admin pins or posts a message to their own app
-- Fix links used in weekly digest emails
-- User toggle to turn off email notifications in profile
+- Admin moderation to make app post by approval only
 
 ## Tech Stack
 

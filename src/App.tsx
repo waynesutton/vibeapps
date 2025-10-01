@@ -44,6 +44,7 @@ import JudgingInterfacePage from "./pages/JudgingInterfacePage";
 import PublicJudgingResultsPage from "./pages/PublicJudgingResultsPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { LeaderboardPage } from "./pages/LeaderboardPage";
+import InboxPage from "./pages/InboxPage";
 
 function HomePage() {
   const { viewMode, selectedTagId, sortPeriod } = useLayoutContext();
@@ -168,6 +169,7 @@ function App() {
           <Route path="/results/:slug" element={<PublicResultsViewer />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/inbox" element={<InboxPage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/judging/:slug" element={<JudgingGroupPage />} />
           <Route

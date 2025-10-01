@@ -1919,6 +1919,18 @@ CLERK_WEBHOOK_SECRET=whsec_xxx
   - **Consistency**: All email templates now use the same intelligent fallback pattern for email preference management
   - **Documentation**: Updated PRD with comprehensive explanation of the smart link pattern
 
+### Phase 10: Production Email Fix ✅ COMPLETED
+
+- [x] **Critical Admin Email Bypass**: Fixed admin report emails not sending in production
+  - **Problem**: Admin report notification emails were being blocked by global email kill switch in production
+  - **Root Cause**: Global `emailsEnabled` setting was respecting the toggle for ALL email types including critical admin alerts
+  - **Solution**: Implemented bypass logic for critical admin notification types in `convex/emails/resend.ts`
+  - **Critical Email Types**: `admin_report_notification`, `admin_user_report_notification`, `dm_report_notification`
+  - **Logic**: These email types now bypass the global toggle and always send regardless of `emailsEnabled` setting
+  - **Safety**: Non-critical emails (welcome, daily engagement, weekly digest) still respect the global toggle
+  - **Impact**: Admin moderation emails for user reports and story reports now work correctly in production
+  - **Logging**: Added console log to indicate when critical emails bypass the global toggle for debugging
+
 ## Success Metrics
 
 ### Email Performance

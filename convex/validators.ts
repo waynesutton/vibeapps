@@ -58,6 +58,40 @@ export const baseStoryValidator = {
       }),
     ),
   ),
+  // Changelog tracking for user edits
+  changeLog: v.optional(
+    v.array(
+      v.object({
+        timestamp: v.number(),
+        textChanges: v.optional(
+          v.array(
+            v.object({
+              field: v.string(),
+              oldValue: v.string(),
+              newValue: v.string(),
+            }),
+          ),
+        ),
+        linkChanges: v.optional(
+          v.array(
+            v.object({
+              field: v.string(),
+              oldValue: v.optional(v.string()),
+              newValue: v.optional(v.string()),
+            }),
+          ),
+        ),
+        tagChanges: v.optional(
+          v.object({
+            added: v.array(v.string()),
+            removed: v.array(v.string()),
+          }),
+        ),
+        videoChanged: v.optional(v.boolean()),
+        imagesChanged: v.optional(v.boolean()),
+      }),
+    ),
+  ),
 };
 
 // Validator for StoryWithDetails - includes author and tag details
@@ -172,6 +206,26 @@ export type StoryWithDetailsPublic = {
   teamMembers?: Array<{
     name: string;
     email: string;
+  }>;
+  // Changelog tracking for user edits
+  changeLog?: Array<{
+    timestamp: number;
+    textChanges?: Array<{
+      field: string;
+      oldValue: string;
+      newValue: string;
+    }>;
+    linkChanges?: Array<{
+      field: string;
+      oldValue?: string;
+      newValue?: string;
+    }>;
+    tagChanges?: {
+      added: string[];
+      removed: string[];
+    };
+    videoChanged?: boolean;
+    imagesChanged?: boolean;
   }>;
   // Joined data
   authorName?: string;
