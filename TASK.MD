@@ -66,6 +66,7 @@ Brief description of the feature and its purpose.
 
 ## Future Tasks - Roadmap
 
+- edit submissions add tags
 - [ ] clerk roles for hackathon organizers to see judges section in admin dashboard only from friendsonlyinbox.md
 
 ## TBD Future task

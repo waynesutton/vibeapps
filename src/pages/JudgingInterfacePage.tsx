@@ -825,33 +825,54 @@ export default function JudgingInterfacePage() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-4 flex-wrap">
-                  <Link
-                    to={`/s/${currentSubmission.slug}`}
-                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Visit Submission
-                  </Link>
-                  <Link
-                    to={`/s/${currentSubmission.slug}#changelog`}
-                    className="inline-flex items-center px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm"
-                  >
-                    <svg
-                      className="w-4 h-4 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                <div className="space-y-3">
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <Link
+                      to={`/s/${currentSubmission.slug}`}
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    View Change Log
-                  </Link>
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Visit Submission
+                    </Link>
+                    <Link
+                      to={`/s/${currentSubmission.slug}#changelog`}
+                      className="inline-flex items-center px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm"
+                    >
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      View Change Log
+                    </Link>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    <span className="font-medium text-gray-700">
+                      Originally submitted:
+                    </span>{" "}
+                    {new Date(
+                      currentSubmission._creationTime,
+                    ).toLocaleDateString(undefined, {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}{" "}
+                    at{" "}
+                    {new Date(
+                      currentSubmission._creationTime,
+                    ).toLocaleTimeString(undefined, {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
