@@ -7,6 +7,91 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### Email Testing Improvements 🧪 NEW
+
+**Added - Clear Email Logs for Testing**
+
+- **New Feature**: Added ability to clear today's email logs for testing purposes
+  - New mutation: `clearTodaysEmailLogs` in `convex/testDailyEmail.ts`
+  - Allows clearing all email logs or specific email type logs from today
+  - Enables re-testing of daily/weekly emails without waiting for the next day
+  - Admin-only access with proper authorization checks
+- **UI Enhancement**: Added "Clear Today's Email Logs" button in Email Management dashboard
+  - Located in the "Test Emails" section
+  - Shows confirmation dialog before clearing logs
+  - Displays count of cleared logs on success
+  - Orange button design to distinguish from test buttons
+
+**Production vs Development Behavior**
+
+- **Production**: Email system works automatically with no manual intervention
+  - Date-based duplicate prevention resets at midnight PST automatically
+  - Users receive daily/weekly emails without manual log clearing
+  - Cron jobs run on schedule (9 AM, 6 PM PST) without conflicts
+  - System self-manages duplicate prevention
+- **Development**: Clear logs utility enables multiple tests per day
+  - Admins can test emails repeatedly during development
+  - Only affects today's logs - historical data preserved
+  - Optional email type filtering for targeted testing
+  - Helps debug email issues without waiting 24 hours
+
+### Email System Debugging & Fixes ✅ COMPLETED
+
+**Fixed - Weekly Digest & Daily User Engagement Emails**
+
+- **Root Cause Analysis**: Identified why weekly digest and daily user engagement emails weren't sending
+  - **Weekly Digest Issue**: Function was returning early if no apps had vibes, sending NO emails to anyone
+  - **Daily User Emails Issue**: Lacked visibility into processing status and data generation
+  - **Test Functions Issue**: 5-second delay was insufficient for processing completion
+- **Comprehensive Logging Added**:
+  - Weekly digest now logs: app count, user count, emails sent, emails skipped
+  - Daily engagement now logs: engagement summaries found, mentions found, unique users to process, processing progress
+  - Processing function now logs: stories found, authors processed, summaries created
+  - All email sending functions now report final counts
+- **Fixed Weekly Digest Logic**:
+  - Removed early return when no apps have vibes - emails now sent regardless
+  - Added detailed console logging at every stage
+  - Added counters for emails sent vs skipped
+  - Better visibility into why emails might be skipped
+- **Enhanced Daily User Engagement**:
+  - Added comprehensive logging for debugging
+  - Better tracking of processing pipeline
+  - Clear visibility into data generation
+  - Improved skip reason tracking
+- **Improved Test Functions**:
+  - Increased delay from 5 seconds to 30 seconds for daily user email test
+  - Added helpful messages directing admins to check Convex logs
+  - Better error handling and user feedback
+- **Removed "Online/Active" Restrictions**:
+  - Removed all references to not sending emails if user is "currently online/active"
+  - Updated PRD documentation (`addresend.md`) to clarify emails are sent regardless of activity status
+  - Ensures all eligible users receive their emails without activity-based filtering
+
+**Technical Implementation**
+
+- **Files Modified**:
+  - `convex/emails/weekly.ts`: Added logging, removed early return, added counters
+  - `convex/emails/daily.ts`: Added comprehensive logging throughout processing and sending
+  - `convex/testDailyEmail.ts`: Improved test reliability with longer delays and better messaging
+  - `addresend.md`: Removed online/active check references, clarified email sending behavior
+- **Logging Strategy**: All email functions now log at key decision points:
+  - Data fetching (how many records found)
+  - User processing (how many users to email)
+  - Skip reasons (why emails were skipped)
+  - Final results (emails sent vs skipped)
+- **No Linter Errors**: All changes verified with no TypeScript or linting issues
+
+**Testing Instructions**
+
+1. Check Convex logs when cron jobs run or when using admin test buttons
+2. Look for log messages like:
+   - "Weekly digest: Found X apps with vibes"
+   - "Daily user emails: Found X engagement summaries"
+   - "Processing engagement for X unique authors"
+   - "Created X engagement summaries"
+   - "Weekly digest complete: X emails sent, Y skipped"
+   - "Daily user emails complete: X emails sent, Y skipped"
+
 ### Bulk Selection & Actions for Content Moderation ✅ COMPLETED
 
 **Added - Bulk Operations for Submissions Management**

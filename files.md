@@ -99,7 +99,7 @@
 - `convex/emails/broadcast.ts`: Admin broadcast email system with user search and batch processing
 - `convex/sendEmails.ts`: Convex Resend Component wrapper with subject prefix and from address enforcement
 - `convex/emailSettings.ts`: User email preferences management with unsubscribe functionality
-- `convex/testDailyEmail.ts`: Admin testing functions for daily/weekly email triggers
+- `convex/testDailyEmail.ts`: Admin testing functions for daily/weekly email triggers with clear logs utility
 - `convex/crons.ts`: Email cron jobs (daily admin, engagement processing, weekly digest)
 
 ### Utilities & Configuration

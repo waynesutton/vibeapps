@@ -1,6 +1,6 @@
 # Resend Email Integration PRD VibeApps ✅ FULLY IMPLEMENTED
 
-**Status**: Production ready email system with all features working and critical bugs fixed
+**Status**: Production ready email system with all features working, critical bugs fixed, and comprehensive debugging capabilities
 
 ## Domains and environments
 
@@ -13,7 +13,200 @@ All subjects are prefixed: `VibeApps Updates: <topic>`.
 
 ## Overview
 
-This document outlines the implementation of Resend email integration for VibeApps, providing automated email notifications for admin reporting, user engagement, onboarding, and messaging. The system will leverage Convex.dev's real-time capabilities with Resend's email API to deliver timely, relevant communications to users and administrators.
+This document outlines the implementation of Resend email integration for VibeApps, providing automated email notifications for admin reporting, user engagement, onboarding, and messaging. The system leverages Convex.dev's real-time capabilities with Resend's email API to deliver timely, relevant communications to users and administrators.
+
+## System Behavior & Duplicate Prevention
+
+### Automatic Daily Reset
+
+The email system uses **date-based duplicate prevention** that automatically resets at midnight PST each day:
+
+- **Daily Emails**: Users receive at most one daily engagement email per calendar day
+- **Weekly Emails**: Users receive at most one weekly digest per week
+- **Automatic Reset**: The system checks if an email was sent "today" using midnight-to-midnight PST boundaries
+- **Production Ready**: No manual intervention required - emails send correctly every day after midnight PST
+
+### How Duplicate Prevention Works
+
+```typescript
+// The system checks for emails sent TODAY using date boundaries
+const today = new Date();
+const startOfDay = new Date(today.setHours(0, 0, 0, 0)).getTime();
+const endOfDay = new Date(today.setHours(23, 59, 59, 999)).getTime();
+
+// Only emails sent between these timestamps count as "already sent today"
+const alreadySent = await ctx.db
+  .query("emailLogs")
+  .filter(
+    (q) =>
+      q.gte(q.field("sentAt"), startOfDay) &&
+      q.lte(q.field("sentAt"), endOfDay),
+  );
+```
+
+**Key Points**:
+
+- At 12:00:01 AM PST, all "already sent today" checks return false
+- Users who received emails yesterday can receive new emails today
+- No manual log clearing needed in production
+- Cron jobs run automatically without conflicts
+
+### Comprehensive Logging System
+
+All email functions include detailed logging for debugging and monitoring:
+
+**Weekly Digest Logs**:
+
+- App count with vibes found
+- Total users to process
+- Emails sent vs skipped with reasons
+- Final completion status
+
+**Daily User Engagement Logs**:
+
+- Engagement summaries found
+- Mentions found
+- Unique users to process
+- Per-user skip reasons (unsubscribed, already sent, no engagement)
+- Final sent/skipped counts
+
+**Processing Logs**:
+
+- Stories found per day
+- Authors processed
+- Engagement summaries created
+- Users with engagement data
+
+### Testing & Development Utilities
+
+**Clear Today's Email Logs** (`convex/testDailyEmail.ts`):
+
+- Admin-only mutation `clearTodaysEmailLogs`
+- Clears email logs from today for re-testing
+- Optional email type filtering (daily_engagement, weekly_digest, etc.)
+- Accessible via Admin Dashboard → Emails → "Clear Today's Email Logs" button
+- Returns count of logs cleared
+
+**Why This Matters**:
+
+- Admins can test emails multiple times per day during development
+- Production systems never need this - automatic reset handles everything
+- Safe for testing - only affects current day, doesn't touch historical logs
+
+## User Email Preferences & Testing
+
+### User-Facing Email Preferences UI
+
+**Location**: User Profile Page → "Manage Profile & Account" → "Email Preferences" card
+
+**Features**:
+
+- **Visual Status Display**: Shows current subscription status
+  - "Receiving email notifications" when subscribed
+  - "Currently unsubscribed from all emails" when unsubscribed
+- **One-Click Toggle**: Single button switches between subscribed/unsubscribed
+  - "Unsubscribe" button when currently subscribed
+  - "Resubscribe" button when currently unsubscribed
+- **Confirmation Dialogs**: All changes require user confirmation
+- **Immediate Effect**: Changes apply instantly without page refresh
+
+**Technical Implementation**:
+
+- Location: `src/pages/UserProfilePage.tsx`
+- Mutations: `api.emailSettings.unsubscribeAll` and `api.emailSettings.updateEmailSettings`
+- State Management: Real-time updates via Convex reactivity
+- Only visible on user's own profile (not visible when viewing other profiles)
+
+### Testing Email Preferences (Step-by-Step)
+
+#### Test Unsubscribe Flow:
+
+1. **Navigate to Profile**:
+   - Sign in to your account
+   - Go to your user profile page
+   - Scroll to "Manage Profile & Account" section
+   - Locate "Email Preferences" card
+
+2. **Unsubscribe**:
+   - Click "Unsubscribe" button
+   - Confirm action in dialog
+   - Verify UI updates to show "Currently unsubscribed from all emails"
+   - Button changes to "Resubscribe"
+
+3. **Verify in Database** (Convex Dashboard):
+   - Open `emailSettings` table
+   - Find your user's record
+   - Confirm `unsubscribedAt` has a timestamp
+   - All email flags should be `false`
+
+4. **Test Email Blocking**:
+   - Go to Admin Dashboard → Emails
+   - Click "Clear Today's Email Logs"
+   - Send test emails (Daily/Weekly)
+   - Check Convex logs: should see "Skipped: Unsubscribed"
+   - **No emails should be sent**
+
+#### Test Resubscribe Flow:
+
+1. **Resubscribe**:
+   - Click "Resubscribe" button
+   - Confirm action in dialog
+   - Verify UI updates to show "Receiving email notifications"
+   - Button changes back to "Unsubscribe"
+
+2. **Verify in Database**:
+   - Check `emailSettings` table
+   - Confirm `unsubscribedAt` is cleared/undefined
+   - All email flags should be `true`
+
+3. **Test Email Delivery**:
+   - Clear today's email logs again
+   - Send test emails
+   - Check Convex logs: should see "Sending email to [your name]"
+   - **Emails should be delivered to your inbox**
+
+### Production Behavior
+
+**Automatic Operation**:
+
+- Users can unsubscribe/resubscribe at any time
+- Changes take effect immediately for future emails
+- No admin intervention required
+- System respects user preferences across all email types:
+  - Daily engagement emails
+  - Weekly digest emails
+  - Mention notifications
+  - Message notifications
+  - Admin broadcast emails
+
+**Email Blocking Logic**:
+
+```typescript
+// System checks unsubscribedAt before sending ANY email
+if (emailSettings?.unsubscribedAt) {
+  console.log("Skipped: User has unsubscribed from all emails");
+  continue; // Email NOT sent
+}
+```
+
+**Safety Features**:
+
+- Confirmation dialogs prevent accidental changes
+- Unsubscribe is reversible (users can resubscribe anytime)
+- Preference changes logged for audit trail
+- Clear visual feedback on current status
+
+## Email Types
+
+VibeApps sends the following types of emails:
+
+1. **Daily Admin Status Email** (line 106) - Daily platform metrics and health report for administrators
+2. **Daily User Engagement Email** (line 141) - Personalized activity summary for users with recent engagement
+3. **Weekly Digest: Most Vibes This Week** (line 189) - Weekly leaderboard of top submissions by vibes
+4. **Welcome Onboarding Email** (line 217) - New user welcome and platform introduction
+5. **Inbox Message Notifications** (line 261) - Direct message notifications for users
+6. **@Mention Notifications** (line 292) - Daily digest of @username mentions in comments and judge notes
+7. **Admin Report Notifications** (line 326) - Immediate alerts when submissions are reported
 
 ## Chronological Implementation Plan
 
@@ -140,15 +333,14 @@ Platform Health:
 
 ### 2. Daily User Engagement Email
 
-**Purpose**: Notify users when their content receives engagement while they're active
+**Purpose**: Notify users when their content receives engagement
 
 **Frequency**: Once daily at 6:00 PM user's timezone (defaulting to PST)
 
 **Recipients**: Users who:
 
 - Have submitted apps to the platform
-- Were logged in within the last 24 hours
-- Received at least one engagement (vote, rating, comment, bookmark) on their content
+- Received at least one engagement (vote, rating, comment, bookmark) on their content OR received mentions/replies
 
 **Content Structure**:
 
@@ -181,10 +373,10 @@ Keep building amazing things!
 
 **Conditions**:
 
-- Only send if user was active (logged in) in last 24 hours
-- Only send if they received any engagement OR gained new followers OR accounts they follow posted new submissions
+- Only send if they received any engagement OR mentions OR replies to their comments
 - Group all events for the user into a single daily email
 - Include unsubscribe link and a link to notification settings
+- Emails are sent regardless of user activity status
 
 ### 3. Weekly Digest: Most Vibes This Week
 
@@ -213,6 +405,7 @@ Top submissions this week (by vibes):
 - Ties broken by recent activity, then creation time.
 - Respect `appSettings.emailsEnabled` and per-user `emailSettings.weeklyDigestEmails`.
 - Links to weekly leaderboard page (LeaderboardPage.tsx) showing weekly rankings.
+- Emails are sent regardless of user activity status.
 
 ### 4. Welcome Onboarding Email
 
@@ -286,8 +479,8 @@ Manage your notification preferences: [Settings Link]
 **Conditions**:
 
 - Only send if user has message email notifications enabled
-- Don't send if user is currently online/active
 - Rate limit: Max 5 message notification emails per day per user
+- Emails are sent regardless of user activity status
 
 ### 6. @Mention Notifications (Daily Digest Approach)
 
@@ -315,6 +508,7 @@ You were mentioned 3 times today:
 - Link to notifications page if more than 10 mentions
 - Users can disable mention notifications via `emailSettings.mentionNotifications`
 - Mentions are aggregated daily, not sent individually
+- Emails are sent regardless of user activity status
 
 **Benefits**:
 

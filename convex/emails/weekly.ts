@@ -91,16 +91,22 @@ export const sendWeeklyDigest = internalAction({
       },
     );
 
-    if (topApps.length === 0) {
-      console.log("No apps with vibes this week, skipping weekly digest");
-      return null;
-    }
+    console.log(
+      `Weekly digest: Found ${topApps.length} apps with vibes from ${weekStart.toISOString()} to ${weekEnd.toISOString()}`,
+    );
 
     // Get all users who haven't unsubscribed from weekly digest
     const users = await ctx.runQuery(internal.emails.weekly.getAllUsers, {});
+    console.log(`Weekly digest: Found ${users.length} total users`);
+
+    let emailsSent = 0;
+    let emailsSkipped = 0;
 
     for (const user of users) {
-      if (!user.email) continue;
+      if (!user.email) {
+        emailsSkipped++;
+        continue;
+      }
 
       // Check user's email preferences via internal query
       const emailSettings = await ctx.runQuery(
@@ -113,6 +119,7 @@ export const sendWeeklyDigest = internalAction({
         emailSettings?.unsubscribedAt ||
         emailSettings?.weeklyDigestEmails === false
       ) {
+        emailsSkipped++;
         continue;
       }
 
@@ -123,7 +130,10 @@ export const sendWeeklyDigest = internalAction({
         { userId: user._id, weekStartMs: weekStart.getTime() },
       );
 
-      if (alreadySent) continue;
+      if (alreadySent) {
+        emailsSkipped++;
+        continue;
+      }
 
       // Generate unsubscribe token for this user
       const unsubscribeToken = await ctx.runMutation(
@@ -164,8 +174,13 @@ export const sendWeeklyDigest = internalAction({
           topAppsCount: topApps.length,
         },
       });
+
+      emailsSent++;
     }
 
+    console.log(
+      `Weekly digest complete: ${emailsSent} emails sent, ${emailsSkipped} skipped`,
+    );
     return null;
   },
 });

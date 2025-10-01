@@ -4,6 +4,34 @@
 
 This document outlines the comprehensive admin alert email system for VibeApps, building on the existing Resend email infrastructure to provide immediate email notifications to administrators and managers when users report content or when critical moderation events occur.
 
+## Email System Integration
+
+This admin alert system leverages the fully implemented email infrastructure documented in `addresend.md`:
+
+**Duplicate Prevention**:
+
+- Uses date-based duplicate prevention (automatic reset at midnight PST)
+- Admins won't receive duplicate notifications for the same report
+- No manual intervention required - system handles duplicates automatically
+
+**Comprehensive Logging**:
+
+- All admin alert emails logged with detailed metadata
+- Tracking includes: report ID, story ID, reporter ID, reason
+- Convex logs show send status, recipient count, and any errors
+
+**Testing & Development**:
+
+- Admin test utility `clearTodaysEmailLogs` available for development
+- Accessible via Admin Dashboard → Emails → "Clear Today's Email Logs"
+- Safe for testing - only affects current day's logs
+
+**Production Ready**:
+
+- Automatic daily reset means emails work correctly in production
+- No need to manually clear logs or reset states
+- System self-manages duplicate prevention
+
 ## Current System Analysis
 
 ### Existing Alert Infrastructure

@@ -205,11 +205,14 @@ export const processUserEngagement = internalAction({
   args: { date: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
+    console.log(`Processing user engagement for date: ${args.date}`);
+
     // Use internal query to get story authors
     const storyAuthors = await ctx.runQuery(
       internal.emails.daily.getStoryAuthors,
       {},
     );
+    console.log(`Found ${storyAuthors.length} stories with authors`);
 
     // Process engagement for each user via internal mutation
     await ctx.runMutation(internal.emails.daily.processEngagementForAllUsers, {
@@ -217,6 +220,7 @@ export const processUserEngagement = internalAction({
       storyAuthors,
     });
 
+    console.log(`Engagement processing complete for ${args.date}`);
     return null;
   },
 });
@@ -245,6 +249,11 @@ export const processEngagementForAllUsers = internalMutation({
     const uniqueAuthorIds = [
       ...new Set(args.storyAuthors.map((s) => s.userId)),
     ];
+    console.log(
+      `Processing engagement for ${uniqueAuthorIds.length} unique authors`,
+    );
+
+    let usersWithEngagement = 0;
 
     for (const userId of uniqueAuthorIds) {
       if (!userId) continue;
@@ -331,9 +340,13 @@ export const processEngagementForAllUsers = internalMutation({
           totalEngagement,
           storyEngagements,
         });
+        usersWithEngagement++;
       }
     }
 
+    console.log(
+      `Created ${usersWithEngagement} engagement summaries for ${args.date}`,
+    );
     return null;
   },
 });
@@ -478,17 +491,24 @@ export const sendDailyUserEmails = internalAction({
   returns: v.null(),
   handler: async (ctx) => {
     const today = new Date().toISOString().split("T")[0];
+    console.log(`Daily user emails: Starting for date ${today}`);
 
     // Get all users who had engagement today
     const engagementSummaries = await ctx.runQuery(
       internal.emails.helpers.getEngagementSummariesByDate,
       { date: today },
     );
+    console.log(
+      `Daily user emails: Found ${engagementSummaries.length} engagement summaries`,
+    );
 
     // Get all users who were mentioned today (for users without engagement)
     const allMentionedUsers = await ctx.runQuery(
       internal.emails.daily.getUsersWithMentionsToday,
       { date: today },
+    );
+    console.log(
+      `Daily user emails: Found ${allMentionedUsers.length} users with mentions`,
     );
 
     // Combine users with engagement and users with mentions
@@ -504,12 +524,23 @@ export const sendDailyUserEmails = internalAction({
       usersToEmail.add(userId);
     }
 
+    console.log(
+      `Daily user emails: ${usersToEmail.size} unique users to process`,
+    );
+
+    let emailsSent = 0;
+    let emailsSkipped = 0;
+
     for (const userId of usersToEmail) {
       const user = await ctx.runQuery(
         internal.emails.queries.getUserWithEmail,
         { userId: userId as any },
       );
-      if (!user) continue;
+      if (!user) {
+        console.log(`Skipped user ${userId}: No user or no email address`);
+        emailsSkipped++;
+        continue;
+      }
 
       // Check email preferences
       const emailSettings = await ctx.runQuery(
@@ -522,6 +553,10 @@ export const sendDailyUserEmails = internalAction({
         emailSettings?.unsubscribedAt ||
         emailSettings?.dailyEngagementEmails === false
       ) {
+        console.log(
+          `Skipped user ${user.name || userId}: Unsubscribed or disabled engagement emails`,
+        );
+        emailsSkipped++;
         continue;
       }
 
@@ -534,7 +569,11 @@ export const sendDailyUserEmails = internalAction({
         },
       );
 
-      if (alreadySent) continue;
+      if (alreadySent) {
+        console.log(`Skipped user ${user.name || userId}: Already sent today`);
+        emailsSkipped++;
+        continue;
+      }
 
       // Get engagement summary for this user
       const userEngagement = engagementSummaries.find(
@@ -553,9 +592,22 @@ export const sendDailyUserEmails = internalAction({
         { userId: userId as any, date: today },
       );
 
+      console.log(
+        `User ${user.name || userId} data: engagement=${!!userEngagement}, mentions=${mentions.length}, replies=${replies.length}`,
+      );
+
       // Skip if no engagement, no mentions, no replies
-      if (!userEngagement && mentions.length === 0 && replies.length === 0)
+      if (!userEngagement && mentions.length === 0 && replies.length === 0) {
+        console.log(
+          `Skipped user ${user.name || userId}: No engagement, mentions, or replies`,
+        );
+        emailsSkipped++;
         continue;
+      }
+
+      console.log(
+        `Sending email to ${user.name || userId}: ${userEngagement ? "engagement" : ""}${mentions.length > 0 ? " mentions" : ""}${replies.length > 0 ? " replies" : ""}`,
+      );
 
       // Generate unsubscribe token for this user
       const unsubscribeToken = await ctx.runMutation(
@@ -637,8 +689,13 @@ export const sendDailyUserEmails = internalAction({
           repliesCount: replies.length,
         },
       });
+
+      emailsSent++;
     }
 
+    console.log(
+      `Daily user emails complete: ${emailsSent} emails sent, ${emailsSkipped} skipped`,
+    );
     return null;
   },
 });

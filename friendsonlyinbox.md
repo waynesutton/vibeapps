@@ -226,6 +226,14 @@ You received X new messages in your inbox. [View Inbox →]
 - Includes reporter, reported user, reason, message preview (if applicable)
 - Links to admin moderation dashboard
 - Email type: `dm_report_notification`
+- Uses same duplicate prevention as other admin emails
+
+**Email System Integration**:
+
+- Leverages existing Resend email infrastructure from `addresend.md`
+- Benefits from comprehensive logging system for debugging
+- Uses date-based duplicate prevention (automatic daily reset at midnight PST)
+- Admin test utilities available via `clearTodaysEmailLogs` mutation
 
 No individual emails for:
 

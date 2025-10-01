@@ -101,6 +101,9 @@ export function EmailManagement() {
   const testWelcomeEmailMutation = useMutation(
     api.testWelcomeEmail.testWelcomeEmail,
   );
+  const clearTodaysEmailLogsMutation = useMutation(
+    api.testDailyEmail.clearTodaysEmailLogs,
+  );
 
   // Search for users
   const searchResults = useQuery(
@@ -327,32 +330,6 @@ export function EmailManagement() {
                 sync emails when users authenticate.
               </p>
             </div>
-
-            <details className="mb-3">
-              <summary className="text-sm font-medium text-green-900 cursor-pointer hover:text-green-700">
-                View All Users ({debugUsers.length} total)
-              </summary>
-              <div className="mt-2 max-h-32 overflow-y-auto bg-white p-2 rounded border">
-                {debugUsers.map((user) => (
-                  <div
-                    key={user._id}
-                    className="text-xs py-1 flex items-center gap-2"
-                  >
-                    <span
-                      className={
-                        user.hasEmail ? "text-green-600" : "text-orange-600"
-                      }
-                    >
-                      {user.hasEmail ? "✅" : "⚠️"}
-                    </span>
-                    <span className="font-medium">{user.name}</span>
-                    <span className="text-gray-500">
-                      ({user.email || "needs to log in again"})
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </details>
 
             <div className="flex gap-2 flex-wrap">
               <button
@@ -627,6 +604,30 @@ Are you sure you want to proceed?`)
                 className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
               >
                 👋 Test Welcome Email
+              </button>
+
+              <button
+                onClick={async () => {
+                  if (
+                    confirm(
+                      "Clear today's email logs? This will allow you to re-test daily/weekly emails that were already sent today.",
+                    )
+                  ) {
+                    try {
+                      const result = await clearTodaysEmailLogsMutation({});
+                      alert(
+                        `${result.success ? "✅" : "❌"} ${result.message} (${result.deletedCount} logs cleared)`,
+                      );
+                    } catch (error) {
+                      alert(
+                        `❌ Error: ${error instanceof Error ? error.message : "Failed to clear email logs"}`,
+                      );
+                    }
+                  }
+                }}
+                className="px-3 py-1 bg-orange-600 text-white text-xs rounded hover:bg-orange-700"
+              >
+                🧹 Clear Today's Email Logs
               </button>
             </div>
           </div>
