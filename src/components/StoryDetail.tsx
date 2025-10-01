@@ -461,7 +461,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
     setReportModalError(null);
     try {
       await createReportMutation({ storyId: story._id, reason: reportReason });
-      toast.success("Story reported successfully. An admin will review it.");
+      alert("Story reported successfully. An admin will review it.");
       setIsReportModalOpen(false);
       setReportReason("");
     } catch (error: any) {

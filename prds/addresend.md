@@ -1826,6 +1826,12 @@ CLERK_WEBHOOK_SECRET=whsec_xxx
 - **Unsubscribe**: All emails include List-Unsubscribe headers and one-click unsubscribe functionality
 - **Footer**: Standardized footer with contact links, social media, open source info, and legal information
 - **Mention Rate Limiting**: Daily engagement emails include maximum 10 mentions to prevent spam
+- **Manage Email Preferences Link**: All emails use a consistent smart link pattern that:
+  - Directs to user's profile page if they have a username: `https://vibeapps.dev/{username}`
+  - Directs to username setup page if authenticated but no username: `https://vibeapps.dev/set-username`
+  - Directs to sign-in page with redirect if not authenticated: `https://vibeapps.dev/sign-in?redirect_url=...`
+  - Implemented as: `${userUsername ? \`https://vibeapps.dev/${userUsername}\` : userId ? "https://vibeapps.dev/set-username" : "https://vibeapps.dev/sign-in?redirect_url=" + encodeURIComponent("https://vibeapps.dev/profile")}`
+  - This ensures users can always access email preferences from the "Manage Profile & Account" section on their profile page
 
 ## Implementation Timeline ✅ COMPLETED
 
@@ -1906,6 +1912,12 @@ CLERK_WEBHOOK_SECRET=whsec_xxx
   - **Logic**: `userUsername ? /username : userId ? /set-username : /sign-in`
   - **Impact**: Welcome emails and other notifications now properly guide new users through username setup
   - **Welcome Email Enhancement**: Updated welcome email to specifically guide users to complete profile setup with username selection
+- [x] **Admin Report Emails Consistency**: Extended smart link pattern to admin report notification emails
+  - **Updated Templates**: `generateAdminUserReportEmail` and `generateReportNotificationEmail`
+  - **Added Parameter**: `adminUserId` to both templates for consistent link generation
+  - **Updated Logic**: Changed from unsubscribe-only link to smart "Manage email preferences" link
+  - **Consistency**: All email templates now use the same intelligent fallback pattern for email preference management
+  - **Documentation**: Updated PRD with comprehensive explanation of the smart link pattern
 
 ## Success Metrics
 

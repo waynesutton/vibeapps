@@ -689,96 +689,241 @@ export const generateMentionEmail = internalQuery({
 });
 
 /**
- * Generate report notification email for admins/managers
+ * Generate admin user report notification email template
+ */
+export const generateAdminUserReportEmail = internalQuery({
+  args: {
+    adminUserId: v.optional(v.id("users")),
+    adminName: v.string(),
+    adminUsername: v.optional(v.string()),
+    reporterName: v.string(),
+    reporterUsername: v.optional(v.string()),
+    reporterEmail: v.optional(v.string()),
+    reportedUserName: v.string(),
+    reportedUsername: v.optional(v.string()),
+    reportReason: v.string(),
+    reportTimestamp: v.number(),
+    userJoinDate: v.number(),
+    submissionCount: v.number(),
+    commentCount: v.number(),
+    dashboardUrl: v.string(),
+    profileUrl: v.string(),
+    unsubscribeToken: v.string(),
+  },
+  returns: v.object({
+    subject: v.string(),
+    html: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const subject = `User Report - ${args.reportedUserName}`;
+
+    const formatDate = (timestamp: number) => {
+      return new Date(timestamp).toLocaleString("en-US", {
+        timeZone: "America/Los_Angeles",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <img src="https://vibeapps.dev/android-chrome-512x512.png" alt="VibeApps" style="width: 48px; height: 48px;">
+            </div>
+
+            <h1 style="color: #292929; margin-bottom: 10px;">User Report Requires Review</h1>
+            <p style="color: #666; margin-bottom: 30px;">A user has been reported and needs immediate admin attention.</p>
+            
+            <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <h2 style="margin-top: 0; color: #856404;">Report Summary</h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #292929;">Reported User:</td>
+                  <td style="padding: 8px 0;">
+                    ${args.reportedUserName}
+                    ${args.reportedUsername ? ` (@${args.reportedUsername})` : ""}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #292929;">Reported by:</td>
+                  <td style="padding: 8px 0;">
+                    ${args.reporterName}
+                    ${args.reporterUsername ? ` (@${args.reporterUsername})` : ""}
+                    ${args.reporterEmail ? `<br><small style="color: #666;">${args.reporterEmail}</small>` : ""}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #292929;">Reason:</td>
+                  <td style="padding: 8px 0; color: #d63384; font-weight: 500;">${args.reportReason}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #292929;">Reported:</td>
+                  <td style="padding: 8px 0;">${formatDate(args.reportTimestamp)}</td>
+                </tr>
+              </table>
+            </div>
+
+            <div style="background: #f9f9f9; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <h3 style="margin-top: 0; color: #292929;">User Details</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold;">Profile:</td>
+                  <td style="padding: 8px 0;">
+                    <a href="${args.profileUrl}" style="color: #292929; text-decoration: none;">${args.profileUrl}</a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold;">User since:</td>
+                  <td style="padding: 8px 0;">${formatDate(args.userJoinDate)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold;">Total Submissions:</td>
+                  <td style="padding: 8px 0;">${args.submissionCount}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold;">Total Comments:</td>
+                  <td style="padding: 8px 0;">${args.commentCount}</td>
+                </tr>
+              </table>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${args.dashboardUrl}" style="display: inline-block; background: #d63384; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: 500; margin: 0 10px;">Review Report</a>
+              <a href="${args.profileUrl}" style="display: inline-block; background: #292929; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 0 10px;">View Profile</a>
+            </div>
+
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+              <p style="margin: 0; color: #856404;">
+                <strong>Action Required:</strong> This report requires immediate admin review. Please log into the admin dashboard to investigate and take appropriate moderation action.
+              </p>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0; padding: 20px; border-top: 1px solid #eee;">
+              <p style="color: #666; font-size: 12px; margin: 5px 0;">
+                You received this email because you are an administrator at VibeApps.
+              </p>
+              <p style="color: #666; font-size: 12px; margin: 5px 0;">
+                <a href="${args.adminUsername ? `https://vibeapps.dev/${args.adminUsername}` : args.adminUserId ? "https://vibeapps.dev/set-username" : "https://vibeapps.dev/sign-in?redirect_url=" + encodeURIComponent("https://vibeapps.dev/profile")}" style="color: #666;">Manage email preferences</a> | 
+                <a href="https://vibeapps.dev/admin" style="color: #666;">Admin Dashboard</a>
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return { subject, html };
+  },
+});
+
+/**
+ * Generate story report notification email for admins/managers
  */
 export const generateReportNotificationEmail = internalQuery({
   args: {
+    adminUserId: v.optional(v.id("users")),
     adminName: v.string(),
+    adminUsername: v.optional(v.string()),
     reporterName: v.string(),
+    reporterUsername: v.optional(v.string()),
     storyTitle: v.string(),
     storyUrl: v.string(),
+    storySlug: v.optional(v.string()),
     reportReason: v.string(),
+    reportTimestamp: v.number(),
     dashboardUrl: v.string(),
+    unsubscribeToken: v.string(),
   },
-  returns: v.string(),
+  returns: v.object({
+    subject: v.string(),
+    html: v.string(),
+  }),
   handler: async (ctx, args) => {
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Report - VibeApps</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; color: #334155;">
-    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-        
-        <!-- Header -->
-        <div style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 32px 24px; text-align: center;">
-            <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">⚠️ New Report Submitted</h1>
-            <p style="margin: 8px 0 0 0; color: #fecaca; font-size: 14px;">Requires immediate attention</p>
-        </div>
+    const subject = `Story Report - ${args.storyTitle}`;
 
-        <!-- Content -->
-        <div style="padding: 32px 24px;">
-            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #475569;">
-                Hello \${args.adminName},
-            </p>
+    const formatDate = (timestamp: number) => {
+      return new Date(timestamp).toLocaleString("en-US", {
+        timeZone: "America/Los_Angeles",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <img src="https://vibeapps.dev/android-chrome-512x512.png" alt="VibeApps" style="width: 48px; height: 48px;">
+            </div>
+
+            <h1 style="color: #292929; margin-bottom: 10px;">Story Report Requires Review</h1>
+            <p style="color: #666; margin-bottom: 30px;">A submission has been reported and needs immediate admin attention.</p>
             
-            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #475569;">
-                A new report has been submitted and needs your review.
-            </p>
-
-            <!-- Report Details Card -->
-            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 24px 0;">
-                <h3 style="margin: 0 0 16px 0; color: #1e293b; font-size: 16px; font-weight: 600;">Report Details</h3>
-                
-                <div style="margin-bottom: 12px;">
-                    <strong style="color: #475569;">Story:</strong>
-                    <div style="margin-top: 4px;">
-                        <a href="\${args.storyUrl}" style="color: #2563eb; text-decoration: none; font-weight: 500; word-break: break-word;">
-                            \${args.storyTitle}
-                        </a>
-                    </div>
-                </div>
-                
-                <div style="margin-bottom: 12px;">
-                    <strong style="color: #475569;">Reported by:</strong> \${args.reporterName}
-                </div>
-                
-                <div>
-                    <strong style="color: #475569;">Reason:</strong>
-                    <div style="margin-top: 4px; background-color: #ffffff; padding: 12px; border-radius: 6px; border-left: 4px solid #dc2626;">
-                        \${args.reportReason}
-                    </div>
-                </div>
+            <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <h2 style="margin-top: 0; color: #856404;">Report Summary</h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #292929;">Reported Story:</td>
+                  <td style="padding: 8px 0;">
+                    <a href="${args.storyUrl}" style="color: #2563eb; text-decoration: none; font-weight: 500;">
+                      ${args.storyTitle}
+                    </a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #292929;">Reported by:</td>
+                  <td style="padding: 8px 0;">
+                    ${args.reporterName}
+                    ${args.reporterUsername ? ` (@${args.reporterUsername})` : ""}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #292929;">Reason:</td>
+                  <td style="padding: 8px 0; color: #d63384; font-weight: 500;">${args.reportReason}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; font-weight: bold; color: #292929;">Reported:</td>
+                  <td style="padding: 8px 0;">${formatDate(args.reportTimestamp)}</td>
+                </tr>
+              </table>
             </div>
 
-            <!-- Action Button -->
-            <div style="text-align: center; margin: 32px 0;">
-                <a href="\${args.dashboardUrl}" 
-                   style="display: inline-block; background-color: #292929; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 16px;">
-                    Review in Admin Dashboard
-                </a>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${args.dashboardUrl}" style="display: inline-block; background: #d63384; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: 500; margin: 0 10px;">Review Report</a>
+              <a href="${args.storyUrl}" style="display: inline-block; background: #292929; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin: 0 10px;">View Story</a>
             </div>
 
-            <p style="margin: 24px 0 0 0; font-size: 14px; line-height: 1.6; color: #64748b;">
-                Please review this report promptly to maintain community standards.
-            </p>
-        </div>
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+              <p style="margin: 0; color: #856404;">
+                <strong>Action Required:</strong> This report requires immediate admin review. Please log into the admin dashboard to investigate and take appropriate moderation action.
+              </p>
+            </div>
 
-        <!-- Footer -->
-        <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
-            <p style="margin: 0 0 8px 0; font-size: 14px; color: #64748b;">
-                VibeApps Moderation Team
-            </p>
-            <p style="margin: 0; font-size: 12px; color: #94a3b8;">
-                This is an automated notification for admins and managers only.
-            </p>
-        </div>
-    </div>
-</body>
-</html>
-    `.trim();
+            <div style="text-align: center; margin: 30px 0; padding: 20px; border-top: 1px solid #eee;">
+              <p style="color: #666; font-size: 12px; margin: 5px 0;">
+                You received this email because you are an administrator at VibeApps.
+              </p>
+              <p style="color: #666; font-size: 12px; margin: 5px 0;">
+                <a href="${args.adminUsername ? `https://vibeapps.dev/${args.adminUsername}` : args.adminUserId ? "https://vibeapps.dev/set-username" : "https://vibeapps.dev/sign-in?redirect_url=" + encodeURIComponent("https://vibeapps.dev/profile")}" style="color: #666;">Manage email preferences</a> | 
+                <a href="https://vibeapps.dev/admin" style="color: #666;">Admin Dashboard</a>
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return { subject, html };
   },
 });

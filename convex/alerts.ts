@@ -298,8 +298,17 @@ export const createUserReportNotifications = internalMutation({
       });
     }
 
-    // TODO: Send immediate email notifications to admins/managers
-    // Can be implemented similar to sendReportNotificationEmails
+    // Send immediate email notifications to admins/managers (non-blocking)
+    await ctx.scheduler.runAfter(
+      0,
+      internal.emails.reports.sendUserReportNotificationEmails,
+      {
+        reporterUserId: args.reporterUserId,
+        reportedUserId: args.reportedUserId,
+        reportId: args.reportId,
+        adminUserIds: args.adminUserIds,
+      },
+    );
 
     return null;
   },
