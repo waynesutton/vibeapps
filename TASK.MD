@@ -25,8 +25,8 @@ Brief description of the feature and its purpose.
 - [x] link to sections on profile page
 - [x] download icons for all the apps
 - [x] sort tags in dashboard
-- [x] Setup hosting on netlify
-- [x] Setup domain name on netlify
+- [x] Setup hosting on Netlify
+- [x] Setup domain name on Netlify
 - [x] confirm https://www.cookieyes.com/ is setup
 - [x] test forms
 - [x] setup llms.txt, sitemap.xml and robots.txt
@@ -48,24 +48,28 @@ Brief description of the feature and its purpose.
 - [x] add gallery images also show up in judging page with popup modal
 - [x] added judges score moderations system
 - [x] add @mentions for usernames in judging notes, comments for profiles and in the comments section.
-- [x] add notification section like product hunt that works with sending emails too, move notiction dot and background from page
+- [x] add notification section like product hunt that works with sending emails too, move notification dot and background from page
+- [x] update templates.ts
+- [x] fix links for weekly emails
+- [x] report a user option on profile page
+- [x] update alert's if admin pins or adds a message to their app
+- [x] setup resend for emails for notifications on post
+- [x] add option to turn off email notifications on user profiles
 
 ## In Progress Tasks
 
-- [ ] clerk roles for hackathon organizers to see judges section in admin dashboard only
-- [ ] report a user option on p
-- [ ] update alrts if admin pins or adds a message to their app
-- [ ] fix links for weekly emails
-- [ ] add inbox direct message and inbox email notifcation
-- [ ] setup resend for emails for notifications on post
-  - [ ] update templates.ts
-- [ ] add option to turn off email notifications on user profiles
-
-## Bugs
+- [ ] add reporting users or post email option to admin from adminalerrtemails.md
+- [ ] add inbox direct message and inbox email notification from friendsonlyinbox.md
 
 ## Future Tasks - Roadmap
 
+- [ ] clerk roles for hackathon organizers to see judges section in admin dashboard only from friendsonlyinbox.md
+
+## TBD Future task
+
 - [ ] add admin moderation to make app post by approval only
+
+## Bugs
 
 ## Implementation Plan
 

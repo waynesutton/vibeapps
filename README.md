@@ -97,8 +97,8 @@ The community where you go to show off what you've built, and see what others ar
 
 ## What's needed
 
-- **Inbox Messaging System** ✅ PRD COMPLETED: Text-only direct messages with @mentions, rate limiting, edit/delete functionality, and admin reporting integration (see `inboxforapp.md`)
-- **Admin Alert Emails** ✅ PRD COMPLETED: Immediate email notifications for all content reports with professional templates and admin dashboard integration (see `adminalerrtemails.md`)
+- **Inbox Messaging System** ✅ PRD COMPLETED: Text-only direct messages with @mentions, rate limiting, edit/delete functionality, and admin reporting integration (see `prds/friendsonlyinbox.md`)
+- **Admin Alert Emails** ✅ PRD COMPLETED: Immediate email notifications for all content reports with professional templates and admin dashboard integration (see `prds/adminalerrtemails.md`)
 - Clerk roles for hackathon organizers to access judges section only in admin
 - Alerts when an admin pins or posts a message to their own app
 - Fix links used in weekly digest emails
@@ -111,7 +111,7 @@ The community where you go to show off what you've built, and see what others ar
 - **Authentication**: Clerk Auth
 - **Styling**: Tailwind CSS
 - **UI Components**: Custom components with `shadcn/ui` patterns
-- **Package Manager**: Bun
+- **Package Manager**: npm
 - **Deployment**: `Netlify` (with \_redirects for SPA routing)
 
 ## Project Structure
@@ -136,7 +136,8 @@ vibeapps/
 
 ### Prerequisites
 
-- Node 18+ or Bun
+- Node 18+
+- npm
 - Convex account
 - Clerk account
 
@@ -152,7 +153,7 @@ cd vibeapps
 2. Install dependencies
 
 ```bash
-bun install
+npm install
 ```
 
 3. Set up environment variables
@@ -172,13 +173,13 @@ CLERK_SECRET_KEY=your_clerk_secret_key
 4. Set up Convex
 
 ```bash
-bunx convex dev
+npx convex dev
 ```
 
 5. Run the development server
 
 ```bash
-bun dev
+npm run dev
 ```
 
 ### Admin Setup

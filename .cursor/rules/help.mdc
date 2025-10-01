@@ -1,14 +1,14 @@
 ---
 description:
 globs:
-alwaysApply: false
+alwaysApply: true
 ---
 
 ---
 
 description: full-stack AI convex developer
 globs:
-alwaysApply: falsee
+alwaysApply: true
 
 ---
 
@@ -58,6 +58,6 @@ Understand the following foundational principles:
 
 -
 
-4. Don’t write any code until you’re very confident (95% or more) in what needs to be done.
+4. Don’t write any code until you’re very confident (98% or more) in what needs to be done.
 
 If unclear, ask for more info.

@@ -7,7 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
-### Email Testing Improvements 🧪 NEW
+### Project Documentation Organization 📁 NEW
+
+**Changed - PRD Files Reorganization**
+
+- **Folder Structure**: Moved all PRD (Product Requirements Document) files from project root to dedicated `prds/` folder
+  - **Improved Organization**: Cleaner root directory with better separation of documentation types
+  - **Files Moved**: All `.md` and `.MD` PRD files now organized under `prds/` directory
+  - **Preserved Files**: Core documentation remains in root: `README.md`, `changelog.MD`, `files.MD`, `TASK.MD`
+  - **Better Navigation**: Easier to find feature specifications and implementation plans
+
+**Technical Details**
+
+- Created new `prds/` directory for all Product Requirements Documents
+- Moved 17 PRD files from root to `prds/` folder:
+  - `addresend.md`, `adminalerrtemails.md`, `adminroles.md`, `alerts.md`
+  - `clerk-admin-fix.MD`, `clerksubmit.md`, `codeblocksinsubmit.md`
+  - `following-plan.MD`, `friendsonlyinbox.md`, `howtojudge.md`
+  - `judgingsetup.md`, `mentions.md`, `metadataforsubs.md`
+  - `moreimages.md`, `newsubmit.md`, `recentusers.md`, `themss.MD`
+- Updated documentation references to point to new `prds/` folder location
+- No impact on application functionality or codebase
+
+### Email Testing Improvements 🧪
 
 **Added - Clear Email Logs for Testing**
 

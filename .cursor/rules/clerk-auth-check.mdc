@@ -1,60 +1,554 @@
 ---
-description: 
-globs: 
+description: Ensures React components correctly handle auth state before calling admin-protected Convex queries with Clerk authentication.
+globs:
 alwaysApply: false
 ---
-This rule helps ensure that React components using Convex queries with Clerk authentication correctly handle loading and authentication states before attempting to fetch data, especially for admin-protected queries.
 
-````
-name: convex-clerk-admin-auth-guard
-description: Ensures React components correctly handle auth state before calling admin-protected Convex queries.
-globs: src/**/*.{ts,tsx}
-condition: |
-  // Heuristic: Component uses useQuery/usePaginatedQuery for an "admin" query
-  // AND does NOT seem to have robust useConvexAuth handling for skipping.
-  // This is a simplified check; real implementation might need more sophisticated AST parsing.
-  const fileContent = ctx.currentFile.content;
-  const usesAdminQuery = /use(Query|PaginatedQuery)\\s*\\(\\s*api\\.\\w+\\.\\w+Admin/.test(fileContent);
-  const usesConvexAuth = /useConvexAuth\\s*\\(\s*\\)/.test(fileContent);
-  const hasSkipLogic = /authIsLoading\\s*\\|\\|\\s*!isAuthenticated\\s*\\?\\s*\"skip\"/.test(fileContent);
+# Clerk + Convex Authentication Pattern
 
-  if (usesAdminQuery && (!usesConvexAuth || !hasSkipLogic)) {
-    return true; // Condition met to offer advice
+This rule ensures React components using Convex queries with Clerk authentication correctly handle loading and authentication states before attempting to fetch data, especially for admin-protected queries.
+
+## Current Implementation Pattern
+
+### 1. Clerk JWT Claims Configuration
+
+**Important:** This project uses Clerk as the identity source with custom JWT claims forwarded to Convex.
+
+Clerk JWT Template Configuration (in Clerk Dashboard):
+
+```json
+{
+  "role": "{{user.public_metadata.role}}",
+  "organizerGroupIds": "{{user.public_metadata.organizerGroupIds}}"
+}
+```
+
+This forwards:
+
+- `public_metadata.role` as top-level `role` claim in JWT
+- `public_metadata.organizerGroupIds` as top-level `organizerGroupIds` claim in JWT
+
+### 2. Backend: Convex Authorization Helpers
+
+**Location:** `convex/users.ts`
+
+#### Type-Safe Identity Access
+
+```typescript
+// Define custom identity type for type safety
+type ClerkIdentity = {
+  subject: string;
+  email?: string;
+  emailVerified?: boolean;
+  username?: string;
+  role?: "admin" | "manager" | "organizer";
+  organizerGroupIds?: string[];
+  // ... other Clerk fields
+};
+
+// Helper to get typed identity
+async function getIdentityOrThrow(
+  ctx: QueryCtx | MutationCtx,
+): Promise<ClerkIdentity> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("No identity found. User not authenticated.");
   }
-  return false;
-advice: |
-  When using Convex queries that require admin authentication (often named like `...Admin`) with Clerk, ensure your React component correctly handles authentication states to prevent errors:
+  return identity as ClerkIdentity;
+}
+```
 
-  1.  **Use `useConvexAuth`**: Get `authIsLoading` and `isAuthenticated`.
-      ```tsx
-      import { useConvexAuth } from "convex/react";
-      // ...
-      const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
-      ```
+#### Current Admin Check (Single Role)
 
-  2.  **Handle Auth Loading**: Display a loading message if `authIsLoading` is true.
-      ```tsx
-      if (authIsLoading) {
-        return <div>Loading authentication...</div>;
-      }
-      ```
+```typescript
+// Check if user is admin (boolean return)
+export async function isUserAdmin(
+  ctx: QueryCtx | MutationCtx,
+): Promise<boolean> {
+  try {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return false;
 
-  3.  **Handle Not Authenticated**: (Optional, but good for UX if routing doesn't cover it)
-      If not `authIsLoading` and not `isAuthenticated`, prompt for login.
-      ```tsx
-      if (!isAuthenticated) {
-        return <div>Please log in to access this section.</div>;
-      }
-      ```
+    // Access role from top-level claim
+    const clerkTokenRole = (identity as any).role;
+    return clerkTokenRole === "admin";
+  } catch (error) {
+    return false;
+  }
+}
 
-  4.  **Conditionally Skip Queries**: Pass `"skip"` to `useQuery` or `usePaginatedQuery` if `authIsLoading` or `!isAuthenticated`.
-      ```tsx
-      const adminData = useQuery(
-        api.yourModule.yourAdminQuery,
-        (authIsLoading || !isAuthenticated) ? "skip" : { /* your_args */ }
-      );
-      ```
-  This prevents queries from running before authentication is resolved, avoiding "No identity found" errors from `requireAdminRole` in your Convex functions.
+// Require admin role (throws if not admin)
+export async function requireAdminRole(
+  ctx: QueryCtx | MutationCtx,
+): Promise<void> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("Authentication required for admin action.");
+  }
 
-````
+  const clerkTokenRole = (identity as any).role;
+  if (clerkTokenRole !== "admin") {
+    throw new Error(
+      "Admin privileges required. Role 'admin' not found in Clerk token.",
+    );
+  }
+}
 
+// Query for frontend to check admin status
+export const checkIsUserAdmin = query({
+  args: {},
+  returns: v.boolean(),
+  handler: async (ctx) => {
+    return await isUserAdmin(ctx);
+  },
+});
+```
+
+#### Future Multi-Role Helpers (from adminroles.md)
+
+```typescript
+// Admin or Manager access
+export async function requireAdminOrManager(
+  ctx: QueryCtx | MutationCtx,
+): Promise<void> {
+  const identity = await getIdentityOrThrow(ctx);
+  const role = identity.role;
+
+  if (role !== "admin" && role !== "manager") {
+    throw new Error("Admin or Manager privileges required.");
+  }
+}
+
+// Admin or Organizer for specific group
+export async function requireAdminOrOrganizerForGroup(
+  ctx: QueryCtx | MutationCtx,
+  groupId: Id<"judgingGroups">,
+): Promise<void> {
+  const identity = await getIdentityOrThrow(ctx);
+  const role = identity.role;
+
+  if (role === "admin") return; // Admin has access to all groups
+
+  if (role === "organizer") {
+    const organizerGroupIds = identity.organizerGroupIds || [];
+    if (organizerGroupIds.includes(groupId)) return;
+  }
+
+  throw new Error(
+    "Access denied. You do not have permission for this judging group.",
+  );
+}
+```
+
+### 3. Frontend: React Component Auth Pattern
+
+#### Required Pattern for Admin-Protected Components
+
+```typescript
+import { useConvexAuth, useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { NotFoundPage } from "../pages/NotFoundPage";
+
+export function AdminComponent() {
+  // 1. Get Convex auth state
+  const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
+
+  // 2. Check if user is admin (skip if not authenticated)
+  const isUserAdmin = useQuery(
+    api.users.checkIsUserAdmin,
+    isAuthenticated ? {} : "skip"
+  );
+
+  // 3. Conditionally skip admin queries
+  const adminData = useQuery(
+    api.adminQueries.getTotalSubmissions,
+    (authIsLoading || !isAuthenticated) ? "skip" : {}
+  );
+
+  // 4. Handle auth loading state FIRST
+  if (authIsLoading || (isAuthenticated && isUserAdmin === undefined)) {
+    return <div>Loading authentication...</div>;
+  }
+
+  // 5. Handle unauthorized access
+  if (!isAuthenticated || isUserAdmin === false) {
+    return <NotFoundPage />;
+  }
+
+  // 6. Render authorized content
+  return <div>Admin content: {adminData}</div>;
+}
+```
+
+#### Loading State Priority Order
+
+```typescript
+// 1. Auth loading or admin check loading
+if (authIsLoading || (isAuthenticated && isUserAdmin === undefined)) {
+  return <div>Loading authentication...</div>;
+}
+
+// 2. Not authenticated or not admin
+if (!isAuthenticated || isUserAdmin === false) {
+  return <NotFoundPage />;
+}
+
+// 3. Data loading (only after auth is confirmed)
+if (isAuthenticated && adminData === undefined) {
+  return <div>Loading data...</div>;
+}
+
+// 4. Render content
+```
+
+### 4. Common Patterns by Component Type
+
+#### Admin Dashboard
+
+```typescript
+const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
+const isUserAdmin = useQuery(
+  api.users.checkIsUserAdmin,
+  isAuthenticated ? {} : "skip"
+);
+
+if (authIsLoading || (isAuthenticated && isUserAdmin === undefined)) {
+  return <div className="max-w-6xl mx-auto px-4 py-8 text-center">
+    Loading authentication...
+  </div>;
+}
+
+if (!isAuthenticated || isUserAdmin === false) {
+  return <NotFoundPage />;
+}
+```
+
+#### Admin Data Views
+
+```typescript
+const skip = authIsLoading || !isAuthenticated;
+
+const totalSubmissions = useQuery(
+  api.adminQueries.getTotalSubmissions,
+  skip ? "skip" : {}
+);
+const totalUsers = useQuery(
+  api.adminQueries.getTotalUsers,
+  skip ? "skip" : {}
+);
+
+if (authIsLoading) {
+  return <div>Loading authentication...</div>;
+}
+```
+
+#### User-Specific Queries (Non-Admin)
+
+```typescript
+const convexUserDoc = useQuery(
+  api.users.getMyUserDocument,
+  isClerkLoaded && isSignedIn ? {} : "skip",
+);
+
+const hasUnreadAlerts = useQuery(
+  api.alerts.hasUnread,
+  isClerkLoaded && isSignedIn ? {} : "skip",
+);
+```
+
+## Known Issues to Fix
+
+### 1. Schema Inconsistency
+
+**File:** `convex/schema.ts` line 10
+
+**Issue:** Schema still defines `role: v.optional(v.string())` on users table, but role is no longer stored in Convex database.
+
+**Fix:** Either:
+
+- Remove the field if not needed
+- Add comment explaining it's legacy/unused
+- Repurpose for local role caching if needed
+
+```typescript
+// OPTION 1: Remove entirely
+users: defineTable({
+  name: v.string(),
+  clerkId: v.string(),
+  // role field removed - use Clerk JWT claims
+
+// OPTION 2: Add comment
+users: defineTable({
+  name: v.string(),
+  clerkId: v.string(),
+  role: v.optional(v.string()), // DEPRECATED: Role comes from Clerk JWT, not DB
+```
+
+### 2. Incorrect Admin Check in reports.ts
+
+**File:** `convex/reports.ts` line 26
+
+**Issue:** Still checks `user?.role === "admin"` from database, which won't work.
+
+**Current (Incorrect):**
+
+```typescript
+const userIsAdmin = user?.role === "admin";
+```
+
+**Fix:**
+
+```typescript
+import { isUserAdmin } from "./users";
+
+async function getAuthenticatedUserAndRole(ctx: QueryCtx | MutationCtx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    return { user: null, userIsAdmin: false };
+  }
+
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .unique();
+
+  // Get admin status from JWT claims, not DB
+  const userIsAdmin = await isUserAdmin(ctx);
+  return { user, userIsAdmin };
+}
+```
+
+### 3. Duplicate requireAuth Functions
+
+**Issue:** Both `convex/auth.ts` and `convex/utils.ts` have `requireAuth` functions with different implementations.
+
+**Fix:** Consolidate to one canonical implementation:
+
+```typescript
+// convex/utils.ts
+export async function requireAuth(ctx: QueryCtx | MutationCtx) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    throw new Error("User must be authenticated.");
+  }
+
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .unique();
+
+  if (!user) {
+    throw new Error(
+      "User not found in database. Please ensure user is synced.",
+    );
+  }
+
+  return { user, identity: identity as ClerkIdentity };
+}
+```
+
+### 4. Type Safety for Custom Claims
+
+**Issue:** Accessing `(identity as any).role` is not type-safe.
+
+**Fix:** Create proper TypeScript types:
+
+```typescript
+// convex/types.ts (new file)
+export type ClerkRole = "admin" | "manager" | "organizer";
+
+export interface ClerkIdentity {
+  subject: string;
+  email?: string;
+  emailVerified?: boolean;
+  username?: string;
+  // Custom claims from JWT template
+  role?: ClerkRole;
+  organizerGroupIds?: string[];
+}
+
+// convex/users.ts
+import { ClerkIdentity } from "./types";
+
+export async function requireAdminRole(
+  ctx: QueryCtx | MutationCtx,
+): Promise<void> {
+  const identity = (await ctx.auth.getUserIdentity()) as ClerkIdentity | null;
+  if (!identity) {
+    throw new Error("Authentication required for admin action.");
+  }
+
+  if (identity.role !== "admin") {
+    throw new Error("Admin privileges required.");
+  }
+}
+```
+
+## Future Enhancements (from adminroles.md PRD)
+
+### Multi-Role System
+
+The system will support three roles:
+
+- **admin**: Full access to Admin Dashboard
+- **manager**: Access to Content Moderation, Tags, and User Moderation only
+- **organizer**: Access to assigned Judging Groups only
+
+### Required Convex Helpers
+
+```typescript
+// convex/utils.ts or convex/users.ts
+
+export async function getMyRole(
+  ctx: QueryCtx | MutationCtx,
+): Promise<ClerkRole | null> {
+  const identity = (await ctx.auth.getUserIdentity()) as ClerkIdentity | null;
+  return identity?.role || null;
+}
+
+export async function requireAdminOrManager(
+  ctx: QueryCtx | MutationCtx,
+): Promise<void> {
+  const identity = (await ctx.auth.getUserIdentity()) as ClerkIdentity | null;
+  if (!identity) {
+    throw new Error("Authentication required.");
+  }
+
+  if (identity.role !== "admin" && identity.role !== "manager") {
+    throw new Error("Admin or Manager privileges required.");
+  }
+}
+
+export async function requireAdminOrOrganizerForGroup(
+  ctx: QueryCtx | MutationCtx,
+  groupId: Id<"judgingGroups">,
+): Promise<void> {
+  const identity = (await ctx.auth.getUserIdentity()) as ClerkIdentity | null;
+  if (!identity) {
+    throw new Error("Authentication required.");
+  }
+
+  // Admins have access to everything
+  if (identity.role === "admin") return;
+
+  // Organizers only have access to their assigned groups
+  if (identity.role === "organizer") {
+    const organizerGroupIds = identity.organizerGroupIds || [];
+    if (organizerGroupIds.includes(groupId)) return;
+  }
+
+  throw new Error("You do not have permission to access this judging group.");
+}
+```
+
+### Frontend Role-Based Tab Visibility
+
+```typescript
+// Get current user's role from Clerk
+import { useUser } from "@clerk/clerk-react";
+
+export function AdminDashboard() {
+  const { user } = useUser();
+  const role = user?.publicMetadata?.role as ClerkRole | undefined;
+
+  // Show tabs based on role
+  const showContentTab = role === "admin" || role === "manager";
+  const showTagsTab = role === "admin" || role === "manager";
+  const showUsersTab = role === "admin" || role === "manager";
+  const showJudgingTab = role === "admin" || role === "organizer";
+  const showSettingsTab = role === "admin";
+
+  // Only show judging tab for organizers
+  if (role === "organizer") {
+    return <JudgingTab />;
+  }
+
+  return (
+    <Tabs>
+      {showContentTab && <Tab>Content</Tab>}
+      {showTagsTab && <Tab>Tags</Tab>}
+      {/* ... */}
+    </Tabs>
+  );
+}
+```
+
+## Best Practices Checklist
+
+✅ **Backend (Convex):**
+
+- [ ] Use Clerk JWT claims for role authorization, not Convex database
+- [ ] Create typed identity interfaces for custom claims
+- [ ] Implement role check helpers (`requireAdminRole`, etc.)
+- [ ] Apply authorization guards at the start of protected functions
+- [ ] Use `ctx.auth.getUserIdentity()` to access JWT claims
+- [ ] Never store sensitive role data in Convex DB that should come from Clerk
+
+✅ **Frontend (React):**
+
+- [ ] Use `useConvexAuth()` to get `authIsLoading` and `isAuthenticated`
+- [ ] Call `useQuery(api.users.checkIsUserAdmin, isAuthenticated ? {} : "skip")`
+- [ ] Skip admin queries with `(authIsLoading || !isAuthenticated) ? "skip" : {}`
+- [ ] Handle loading states in correct order (auth → authorization → data)
+- [ ] Show 404 or redirect for unauthorized access
+- [ ] Never assume auth is ready - always check loading states
+
+✅ **Clerk Configuration:**
+
+- [ ] Set up JWT template with custom claims (role, organizerGroupIds, etc.)
+- [ ] Store role in `public_metadata.role` (not `private_metadata`)
+- [ ] Configure webhook to sync user creation/updates
+- [ ] Set `applicationID: "convex"` in `auth.config.js`
+- [ ] Forward claims to Convex via JWT, not database sync
+
+✅ **Type Safety:**
+
+- [ ] Define ClerkIdentity interface with custom claims
+- [ ] Use type assertions: `identity as ClerkIdentity`
+- [ ] Define role as union type: `"admin" | "manager" | "organizer"`
+- [ ] Avoid `(identity as any).role` - use proper types
+
+## References
+
+- Clerk Docs: https://docs.clerk.com/
+- Clerk JWT Templates: https://clerk.com/docs/backend-requests/making/jwt-templates
+- Convex Auth with Clerk: https://docs.convex.dev/auth/clerk
+- Convex Best Practices: https://docs.convex.dev/understanding/best-practices/typescript
+- Project PRD: `prds/adminroles.md`
+- Project Docs: `README.md`
+
+## Quick Reference: Component Auth Pattern
+
+```typescript
+// 1. Import hooks
+import { useConvexAuth, useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+
+// 2. Get auth state
+const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
+
+// 3. Check admin (skip if not authenticated)
+const isUserAdmin = useQuery(
+  api.users.checkIsUserAdmin,
+  isAuthenticated ? {} : "skip"
+);
+
+// 4. Skip admin queries appropriately
+const adminData = useQuery(
+  api.adminQueries.someAdminQuery,
+  (authIsLoading || !isAuthenticated) ? "skip" : {}
+);
+
+// 5. Handle loading - check auth first, then admin status
+if (authIsLoading || (isAuthenticated && isUserAdmin === undefined)) {
+  return <div>Loading authentication...</div>;
+}
+
+// 6. Handle unauthorized
+if (!isAuthenticated || isUserAdmin === false) {
+  return <NotFoundPage />;
+}
+
+// 7. Render content
+return <div>{adminData}</div>;
+```

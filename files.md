@@ -19,18 +19,30 @@
 - `changelog.MD`: Developer-friendly change log of new features
 - `files.MD`: This file - comprehensive codebase documentation
 - `TASK.MD`: Project task and feature requirements
-- `mentions.md`: @Mentions system PRD and implementation documentation
-- `addresend.md`: Resend email integration PRD and requirements (daily admin/user digests, weekly digest, @mentions emails, unsubscribe, admin broadcast, alerts cross-ref)
-- `adminalerrtemails.md`: Admin alert email system PRD for immediate report notifications and moderation alerts
-- `metadataforsubs.md`: Server-side metadata generation PRD for social sharing
-- `inboxforapp.md`: Inbox messaging system PRD with text-only messages, @mentions, rate limiting, edit/delete, and admin integration
-- `following-plan.MD`: User following system implementation plan
-- `judgingsetup.md`: Judging system setup and configuration guide
-- `clerk-admin-fix.MD`: Clerk authentication admin setup documentation
-- `clerksubmit.md`: Clerk submission integration documentation
-- `themss.MD`: Theme and styling documentation
 - `llms.txt`: LLM context and training documentation
 - `robots.txt`: Search engine crawling configuration
+
+### Product Requirements Documents (prds/)
+
+All PRD files are now organized in the `prds/` folder for better project structure:
+
+- `prds/mentions.md`: @Mentions system PRD and implementation documentation
+- `prds/addresend.md`: Resend email integration PRD and requirements (daily admin/user digests, weekly digest, @mentions emails, unsubscribe, admin broadcast, alerts cross-ref)
+- `prds/adminalerrtemails.md`: Admin alert email system PRD for immediate report notifications and moderation alerts
+- `prds/metadataforsubs.md`: Server-side metadata generation PRD for social sharing
+- `prds/friendsonlyinbox.md`: Inbox messaging system PRD with text-only messages, @mentions, rate limiting, edit/delete, and admin integration
+- `prds/following-plan.MD`: User following system implementation plan
+- `prds/judgingsetup.md`: Judging system setup and configuration guide
+- `prds/clerk-admin-fix.MD`: Clerk authentication admin setup documentation
+- `prds/clerksubmit.md`: Clerk submission integration documentation
+- `prds/themss.MD`: Theme and styling documentation
+- `prds/adminroles.md`: Admin roles and permissions documentation
+- `prds/alerts.md`: Notification system documentation
+- `prds/codeblocksinsubmit.md`: Code block support in submissions
+- `prds/howtojudge.md`: Judging system user guide
+- `prds/moreimages.md`: Multi-image gallery implementation
+- `prds/newsubmit.md`: Enhanced submission form documentation
+- `prds/recentusers.md`: Recent users sidebar feature
 
 ## Backend (Convex Directory)
 
@@ -250,13 +262,13 @@
 - **Admin Alert Emails** ✅ PRD COMPLETED:
   - Backend: `convex/emails/reports.ts` (partially implemented), enhance `convex/emails/templates.ts`
   - Integration: `convex/reports.ts` already triggers admin emails via `createReportNotifications`
-  - See: `adminalerrtemails.md` for complete implementation guide
+  - See: `prds/adminalerrtemails.md` for complete implementation guide
 
 - **Inbox Messaging System** ✅ PRD COMPLETED:
-  - Backend: new tables/functions (see `inboxforapp.md`), text-only messages with @mentions
+  - Backend: new tables/functions (see `prds/friendsonlyinbox.md`), text-only messages with @mentions
   - Frontend: new components under `src/components/messages/`
   - Features: Rate limiting, edit/delete, admin reporting, email notifications
-  - See: `inboxforapp.md` for complete implementation guide
+  - See: `prds/friendsonlyinbox.md` for complete implementation guide
 
 - Clerk organizer role access to judges section:
   - Backend: `convex/auth.ts`, `convex/auth.config.js`, role checks in admin queries
