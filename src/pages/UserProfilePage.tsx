@@ -524,29 +524,18 @@ export default function UserProfilePage() {
     setIsSaving(true);
     let usernameChanged = false;
     let detailsChanged = false;
+    let nameChanged = false;
 
     try {
-      // if (
-      //   newUsername.trim() !== (loadedProfileUser.username || "").trim() &&
-      //   newUsername.trim() !== ""
-      // ) {
-      //   await updateUsernameMutation({ newUsername: newUsername.trim() });
-      //   if (authUser && authUser.update) {
-      //     try {
-      //       await authUser.update({ username: newUsername.trim() });
-      //     } catch (clerkError) {
-      //       console.warn("Clerk username update failed:", clerkError);
-      //     }
-      //   }
-      //   usernameChanged = true;
-      // }
-
       const currentName = loadedProfileUser.name || "";
       const currentBio = loadedProfileUser.bio || "";
       const currentWebsite = loadedProfileUser.website || "";
       const currentTwitter = loadedProfileUser.twitter || "";
       const currentBluesky = loadedProfileUser.bluesky || "";
       const currentLinkedin = loadedProfileUser.linkedin || "";
+
+      // Check if name changed
+      nameChanged = newName.trim() !== currentName;
 
       if (
         newName.trim() !== currentName ||
@@ -565,6 +554,25 @@ export default function UserProfilePage() {
           linkedin: newLinkedin,
         });
         detailsChanged = true;
+      }
+
+      // Update Clerk if name changed
+      if (nameChanged && authUser && authUser.update) {
+        try {
+          // Split name into first and last for Clerk
+          const nameParts = newName.trim().split(" ");
+          const firstName = nameParts[0] || "";
+          const lastName = nameParts.slice(1).join(" ") || "";
+
+          await authUser.update({
+            firstName: firstName,
+            lastName: lastName,
+          });
+        } catch (clerkError) {
+          console.warn("Clerk name update failed:", clerkError);
+          // Don't fail the whole operation if Clerk update fails
+          // The Convex update already succeeded
+        }
       }
 
       if (newProfileImageFile) {

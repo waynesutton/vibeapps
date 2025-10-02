@@ -83,13 +83,14 @@ Brief description of the feature and its purpose.
 - [x] replace browser alerts/prompts with custom modals matching site design
 - [x] add error banner for blocked user messages instead of console errors
 - [x] add custom report modal with textarea (500 char limit)
+- [x] in judging interface keep the original date but ia user make changes add just the date and time the submission was modified and still link to change log
+- [x] add an anchor link to change log and link to
 
 ## In Progress Tasks
 
-- [ ] Content moderation keep hide, add archive that hides from Content moderation but sitll able to see by dropdown selection
+- [ ] Content moderation keep hide, add archive that hides from Content moderation but still able to see by dropdown selection
 - [ ] in Content moderation add a show by date range submissions
-- [ ] in judging interface keep the orginal date but ia user make changes add just the date and time the submission was modified and still link to change log
-- [ ] add an anchor link to change log and link to
+
 
 ## Future Tasks - Roadmap
 
