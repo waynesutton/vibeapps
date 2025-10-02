@@ -75,6 +75,14 @@ Brief description of the feature and its purpose.
 - [x] fix upsertConversation to remove current user's deletion record when restarting conversation
 - [x] fix message sync - when user deletes conversation and other user sends message, conversation reappears in recipient's inbox
 - [x] add report user feature in inbox conversation header with Flag icon (light grey, hover black)
+- [x] integrate inbox user reports with UserReportManagement admin dashboard
+- [x] send email alerts to admins/managers when users are reported in inbox
+- [x] add block user feature in inbox conversation header with Ban icon (light grey, hover black)
+- [x] blocked users cannot send messages to users who blocked them
+- [x] block button shows block/unblock state and allows toggling
+- [x] replace browser alerts/prompts with custom modals matching site design
+- [x] add error banner for blocked user messages instead of console errors
+- [x] add custom report modal with textarea (500 char limit)
 
 ## In Progress Tasks
 

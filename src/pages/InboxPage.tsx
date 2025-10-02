@@ -11,6 +11,7 @@ import {
   Inbox,
   MessageCircle,
   Flag,
+  Ban,
 } from "lucide-react";
 import "@fontsource/inter/400.css";
 import "@fontsource/inter/500.css";
@@ -68,12 +69,27 @@ export default function InboxPage() {
       : "skip",
   );
 
+  // Get selected conversation details (from list or fallback query) - needed for isUserBlocked check
+  const selectedConversation =
+    conversations?.find((c) => c._id === selectedConversationId) ||
+    fallbackConversation;
+
+  // Check if current user has blocked the other user (must be before any returns)
+  const isUserBlockedQuery = useQuery(
+    api.dm.isUserBlocked,
+    selectedConversation?.otherUser._id
+      ? { userId: selectedConversation.otherUser._id }
+      : "skip",
+  );
+
   // Mutations
   const sendMessageMutation = useMutation(api.dm.sendMessage);
   const deleteConversationMutation = useMutation(api.dm.deleteConversation);
   const markConversationReadMutation = useMutation(api.dm.markConversationRead);
   const clearInboxMutation = useMutation(api.dm.clearInbox);
   const reportMutation = useMutation(api.dm.reportMessageOrUser);
+  const blockUserMutation = useMutation(api.dm.blockUser);
+  const unblockUserMutation = useMutation(api.dm.unblockUser);
 
   // Local state
   const [messageInput, setMessageInput] = useState("");
@@ -81,6 +97,11 @@ export default function InboxPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isClearingInbox, setIsClearingInbox] = useState(false);
   const [isReporting, setIsReporting] = useState(false);
+  const [isBlocking, setIsBlocking] = useState(false);
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when messages change
@@ -126,6 +147,7 @@ export default function InboxPage() {
     if (!messageInput.trim() || !selectedConversationId || isSending) return;
 
     setIsSending(true);
+    setErrorMessage(null);
     try {
       await sendMessageMutation({
         conversationId: selectedConversationId,
@@ -133,7 +155,7 @@ export default function InboxPage() {
       });
       setMessageInput("");
     } catch (error: any) {
-      alert(error.message || "Failed to send message");
+      setErrorMessage(error.message || "Failed to send message");
     } finally {
       setIsSending(false);
     }
@@ -181,27 +203,66 @@ export default function InboxPage() {
     }
   };
 
-  // Handle report user
-  const handleReportUser = async () => {
+  // Handle report user - open modal
+  const handleReportUser = () => {
     if (!selectedConversationId || !selectedConversation || isReporting) return;
+    setShowReportModal(true);
+    setReportReason("");
+  };
 
-    const reason = window.prompt(
-      "Why are you reporting this user? Please provide a detailed reason:",
-    );
-    if (!reason || !reason.trim()) return;
+  // Submit report
+  const submitReport = async () => {
+    if (
+      !selectedConversationId ||
+      !selectedConversation ||
+      !reportReason.trim()
+    )
+      return;
 
     setIsReporting(true);
     try {
       await reportMutation({
         reportedUserId: selectedConversation.otherUser._id,
         conversationId: selectedConversationId,
-        reason: reason.trim(),
+        reason: reportReason.trim(),
       });
-      alert("Report submitted. Our team will review it shortly.");
+      setShowReportModal(false);
+      setReportReason("");
     } catch (error: any) {
-      alert(error.message || "Failed to submit report");
+      setErrorMessage(error.message || "Failed to submit report");
     } finally {
       setIsReporting(false);
+    }
+  };
+
+  // Handle block user - open modal
+  const handleBlockUser = () => {
+    if (!selectedConversation || isBlocking) return;
+    setShowBlockModal(true);
+  };
+
+  // Confirm block/unblock
+  const confirmBlockAction = async () => {
+    if (!selectedConversation) return;
+
+    const isCurrentlyBlocked = isUserBlockedQuery || false;
+
+    setIsBlocking(true);
+    try {
+      if (isCurrentlyBlocked) {
+        await unblockUserMutation({
+          blockedUserId: selectedConversation.otherUser._id,
+        });
+      } else {
+        await blockUserMutation({
+          blockedUserId: selectedConversation.otherUser._id,
+        });
+      }
+      setShowBlockModal(false);
+    } catch (error: any) {
+      setErrorMessage(error.message || "Failed to update block status");
+    } finally {
+      setIsBlocking(false);
     }
   };
 
@@ -221,11 +282,6 @@ export default function InboxPage() {
       </div>
     );
   }
-
-  // Get selected conversation details (from list or fallback query)
-  const selectedConversation =
-    conversations?.find((c) => c._id === selectedConversationId) ||
-    fallbackConversation;
 
   return (
     <div
@@ -371,6 +427,14 @@ export default function InboxPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
+                    onClick={handleBlockUser}
+                    disabled={isBlocking}
+                    className="p-2 hover:bg-[#F2F4F7] rounded-md transition-colors text-[#787672] hover:text-[#292929]"
+                    title={isUserBlockedQuery ? "Unblock user" : "Block user"}
+                  >
+                    <Ban className="w-5 h-5" />
+                  </button>
+                  <button
                     onClick={handleReportUser}
                     disabled={isReporting}
                     className="p-2 hover:bg-[#F2F4F7] rounded-md transition-colors text-[#787672] hover:text-[#292929]"
@@ -501,6 +565,102 @@ export default function InboxPage() {
 
         {/* Right Sidebar - Community Section */}
       </div>
+
+      {/* Error Message Banner */}
+      {errorMessage && (
+        <div className="fixed bottom-4 right-4 max-w-md bg-white border-2 border-red-600 rounded-lg shadow-lg p-4 z-50">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-sm text-[#292929]">{errorMessage}</p>
+            <button
+              onClick={() => setErrorMessage(null)}
+              className="text-[#787672] hover:text-[#292929] text-lg font-bold"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Block Confirmation Modal */}
+      {showBlockModal && selectedConversation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 border border-[#D8E1EC]">
+            <h3 className="text-lg font-semibold text-[#292929] mb-4">
+              {isUserBlockedQuery ? "Unblock User" : "Block User"}
+            </h3>
+            <p className="text-sm text-[#787672] mb-6">
+              {isUserBlockedQuery
+                ? `Unblock ${selectedConversation.otherUser.name}? They will be able to send you messages again.`
+                : `Block ${selectedConversation.otherUser.name}? They will no longer be able to send you messages.`}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowBlockModal(false)}
+                disabled={isBlocking}
+                className="px-4 py-2 text-sm font-medium text-[#787672] hover:text-[#292929] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmBlockAction}
+                disabled={isBlocking}
+                className="px-4 py-2 text-sm font-medium bg-[#292929] text-white rounded-md hover:bg-[#3d3d3d] transition-colors disabled:bg-[#D8E1EC] disabled:cursor-not-allowed"
+              >
+                {isBlocking
+                  ? "Processing..."
+                  : isUserBlockedQuery
+                    ? "Unblock"
+                    : "Block"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report User Modal */}
+      {showReportModal && selectedConversation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 border border-[#D8E1EC]">
+            <h3 className="text-lg font-semibold text-[#292929] mb-4">
+              Report User
+            </h3>
+            <p className="text-sm text-[#787672] mb-4">
+              Why are you reporting {selectedConversation.otherUser.name}?
+            </p>
+            <textarea
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              placeholder="Please provide a detailed reason..."
+              className="w-full px-3 py-2 border border-[#D8E1EC] rounded-md focus:outline-none focus:ring-2 focus:ring-[#292929] focus:border-transparent text-sm resize-none"
+              rows={4}
+              maxLength={500}
+              disabled={isReporting}
+            />
+            <p className="text-xs text-[#787672] mt-2 mb-4">
+              {reportReason.length}/500 characters
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowReportModal(false);
+                  setReportReason("");
+                }}
+                disabled={isReporting}
+                className="px-4 py-2 text-sm font-medium text-[#787672] hover:text-[#292929] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitReport}
+                disabled={isReporting || !reportReason.trim()}
+                className="px-4 py-2 text-sm font-medium bg-[#292929] text-white rounded-md hover:bg-[#3d3d3d] transition-colors disabled:bg-[#D8E1EC] disabled:cursor-not-allowed"
+              >
+                {isReporting ? "Submitting..." : "Submit Report"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

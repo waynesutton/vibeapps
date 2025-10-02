@@ -343,6 +343,18 @@ export const sendMessage = mutation({
       );
     }
 
+    // Check if sender is blocked by recipient
+    const isBlocked = await ctx.db
+      .query("blockedUsers")
+      .withIndex("by_blocker_blocked", (q) =>
+        q.eq("blockerId", recipientId).eq("blockedUserId", currentUser._id),
+      )
+      .first();
+
+    if (isBlocked) {
+      throw new Error("You have been blocked by this user");
+    }
+
     // Check rate limits
     const rateLimitCheck = await ctx.runQuery(internal.dm.checkRateLimit, {
       senderId: currentUser._id,
@@ -1006,8 +1018,13 @@ export const reportMessageOrUser = mutation({
       throw new Error("Reason cannot be empty");
     }
 
-    // Create report
-    const reportId = await ctx.db.insert("dmReports", {
+    // Prevent self-reporting
+    if (currentUser._id === args.reportedUserId) {
+      throw new Error("You cannot report yourself");
+    }
+
+    // Create DM report
+    const dmReportId = await ctx.db.insert("dmReports", {
       reporterId: currentUser._id,
       reportedUserId: args.reportedUserId,
       messageId: args.messageId,
@@ -1016,9 +1033,165 @@ export const reportMessageOrUser = mutation({
       status: "pending",
     });
 
-    // TODO: Send alert to admins and trigger email notification
-    // This will be implemented when we add admin moderation
+    // Also create user report for admin dashboard
+    const userReportId = await ctx.db.insert("userReports", {
+      reportedUserId: args.reportedUserId,
+      reporterUserId: currentUser._id,
+      reason: args.reason,
+      status: "pending",
+    });
 
-    return reportId;
+    // Get admin user IDs for notifications
+    const adminUsers = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("role"), "admin"))
+      .collect();
+    const adminUserIds = adminUsers.map((u) => u._id);
+
+    // Send email notifications to admins
+    if (adminUserIds.length > 0) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.emails.reports.sendUserReportNotificationEmails,
+        {
+          reporterUserId: currentUser._id,
+          reportedUserId: args.reportedUserId,
+          reportId: userReportId,
+          adminUserIds: adminUserIds,
+        },
+      );
+    }
+
+    return dmReportId;
+  },
+});
+
+/**
+ * Block a user from sending messages
+ */
+export const blockUser = mutation({
+  args: {
+    blockedUserId: v.id("users"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!currentUser) {
+      throw new Error("User not found");
+    }
+
+    // Prevent self-blocking
+    if (currentUser._id === args.blockedUserId) {
+      throw new Error("You cannot block yourself");
+    }
+
+    // Check if already blocked
+    const existing = await ctx.db
+      .query("blockedUsers")
+      .withIndex("by_blocker_blocked", (q) =>
+        q
+          .eq("blockerId", currentUser._id)
+          .eq("blockedUserId", args.blockedUserId),
+      )
+      .first();
+
+    if (existing) {
+      throw new Error("User is already blocked");
+    }
+
+    // Create block record
+    await ctx.db.insert("blockedUsers", {
+      blockerId: currentUser._id,
+      blockedUserId: args.blockedUserId,
+    });
+
+    return null;
+  },
+});
+
+/**
+ * Unblock a user
+ */
+export const unblockUser = mutation({
+  args: {
+    blockedUserId: v.id("users"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!currentUser) {
+      throw new Error("User not found");
+    }
+
+    // Find block record
+    const blockRecord = await ctx.db
+      .query("blockedUsers")
+      .withIndex("by_blocker_blocked", (q) =>
+        q
+          .eq("blockerId", currentUser._id)
+          .eq("blockedUserId", args.blockedUserId),
+      )
+      .first();
+
+    if (!blockRecord) {
+      throw new Error("User is not blocked");
+    }
+
+    // Delete block record
+    await ctx.db.delete(blockRecord._id);
+
+    return null;
+  },
+});
+
+/**
+ * Check if current user has blocked another user
+ */
+export const isUserBlocked = query({
+  args: {
+    userId: v.id("users"),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return false;
+    }
+
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!currentUser) {
+      return false;
+    }
+
+    const blockRecord = await ctx.db
+      .query("blockedUsers")
+      .withIndex("by_blocker_blocked", (q) =>
+        q.eq("blockerId", currentUser._id).eq("blockedUserId", args.userId),
+      )
+      .first();
+
+    return !!blockRecord;
   },
 });

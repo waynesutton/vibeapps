@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [Enhanced] - October 2, 2025
 
+**Inbox User Blocking & Reporting**
+
+- Added user blocking feature in inbox conversations
+  - Block button (Ban icon) in conversation header next to report and delete buttons
+  - Block/unblock toggle functionality with custom modal confirmations
+  - Blocked users cannot send messages to users who blocked them
+  - Clean error banner displays "You have been blocked by this user" instead of console errors
+  - Icon styled in light grey (#787672) with hover to black (#292929)
+  - Real-time block status checking and UI updates
+  - Custom modals match site design (black/white, clean typography)
+
+- Enhanced user reporting in inbox
+  - User reports from inbox now integrate with admin UserReportManagement dashboard
+  - Reports appear in both dmReports and userReports tables
+  - Automatic email notifications sent to all admins and managers when users are reported
+  - Uses existing admin email notification system (bypasses global email toggle)
+  - Prevents self-reporting with validation
+  - Report submissions include reason and timestamp
+  - Custom report modal with textarea (500 character limit) replaces browser prompts
+  - Clean, site-matching UI design for all modals and confirmations
+
+**Database Schema**
+
+- Added blockedUsers table with indexes:
+  - by_blocker_blocked: Check if specific user is blocked
+  - by_blocker: Get all users blocked by someone
+  - by_blocked: Get all users who blocked someone
+
 **UI Improvements**
 
 - Redesigned Inbox page with messenger-style 3-column layout

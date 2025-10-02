@@ -690,4 +690,13 @@ export default defineSchema({
       "recipientId",
       "windowStart",
     ]),
+
+  // User blocking for direct messages
+  blockedUsers: defineTable({
+    blockerId: v.id("users"), // User who blocked someone
+    blockedUserId: v.id("users"), // User who got blocked
+  })
+    .index("by_blocker_blocked", ["blockerId", "blockedUserId"]) // Check if specific user is blocked
+    .index("by_blocker", ["blockerId"]) // Get all users blocked by someone
+    .index("by_blocked", ["blockedUserId"]), // Get all users who blocked someone
 });
