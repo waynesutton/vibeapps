@@ -191,6 +191,10 @@ export function StoryDetail({ story }: StoryDetailProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [editError, setEditError] = React.useState<string | null>(null);
 
+  // Dropdown search state for tags
+  const [dropdownSearchValue, setDropdownSearchValue] = React.useState("");
+  const [showDropdown, setShowDropdown] = React.useState(false);
+
   // Screenshot management state
   const [currentScreenshot, setCurrentScreenshot] = React.useState<
     string | null
@@ -254,6 +258,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
   // Additional queries for editing
   const availableTags = useQuery(api.tags.listHeader);
+  const allTags = useQuery(api.tags.listAllForDropdown); // Fetch all tags including hidden ones
 
   const [isReportModalOpen, setIsReportModalOpen] = React.useState(false);
   const [reportReason, setReportReason] = React.useState("");
@@ -519,11 +524,65 @@ export function StoryDetail({ story }: StoryDetailProps) {
   };
 
   const toggleTag = (tagId: Id<"tags">) => {
-    setSelectedTagIds((prev) =>
-      prev.includes(tagId)
-        ? prev.filter((id) => id !== tagId)
-        : [...prev, tagId],
-    );
+    setSelectedTagIds((prev) => {
+      if (prev.includes(tagId)) {
+        return prev.filter((id) => id !== tagId);
+      } else {
+        const totalTags = prev.length + newTagNames.length;
+        if (totalTags >= 10) {
+          setEditError("You can select a maximum of 10 tags.");
+          return prev;
+        }
+        setEditError(null);
+        return [...prev, tagId];
+      }
+    });
+  };
+
+  const handleSelectFromDropdown = (tagId: Id<"tags">) => {
+    const totalTags = selectedTagIds.length + newTagNames.length;
+
+    if (totalTags >= 10) {
+      setEditError("You can select a maximum of 10 tags.");
+      return;
+    }
+
+    if (!selectedTagIds.includes(tagId)) {
+      setSelectedTagIds((prev) => [...prev, tagId]);
+    }
+    setDropdownSearchValue("");
+    setShowDropdown(false);
+    setEditError(null);
+  };
+
+  const handleAddNewTag = () => {
+    const tagName = dropdownSearchValue.trim();
+    const totalTags = selectedTagIds.length + newTagNames.length;
+
+    if (totalTags >= 10) {
+      setEditError("You can select a maximum of 10 tags.");
+      return;
+    }
+
+    if (
+      tagName &&
+      !newTagNames.some((t) => t.toLowerCase() === tagName.toLowerCase()) &&
+      !availableTags?.some(
+        (t) => t.name.toLowerCase() === tagName.toLowerCase(),
+      ) &&
+      !allTags?.some((t) => t.name.toLowerCase() === tagName.toLowerCase())
+    ) {
+      setNewTagNames((prev) => [...prev, tagName]);
+      setDropdownSearchValue("");
+      setShowDropdown(false);
+      setEditError(null);
+    } else if (tagName) {
+      setEditError("Tag name already exists or is invalid.");
+    }
+  };
+
+  const handleRemoveNewTag = (tagName: string) => {
+    setNewTagNames((prev) => prev.filter((t) => t !== tagName));
   };
 
   // Screenshot handling functions
@@ -659,6 +718,22 @@ export function StoryDetail({ story }: StoryDetailProps) {
       newAdditionalPreviewUrls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [newAdditionalPreviewUrls]);
+
+  // Close dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest(".tag-dropdown-container")) {
+        setShowDropdown(false);
+      }
+    };
+
+    if (showDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showDropdown]);
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1678,26 +1753,297 @@ export function StoryDetail({ story }: StoryDetailProps) {
               <label className="block text-sm font-medium text-[#525252] mb-2">
                 Select Tags *
               </label>
+              <span className="text-xs text-gray-600 mb-2 block">
+                Select tags that best describe your app
+              </span>
               <div className="flex flex-wrap gap-2 mb-4">
                 {availableTags === undefined && (
                   <span className="text-sm text-gray-500">Loading tags...</span>
                 )}
-                {availableTags?.map((tag) => (
-                  <button
-                    key={tag._id}
-                    type="button"
-                    onClick={() => toggleTag(tag._id)}
-                    disabled={isSubmitting}
-                    className={`px-3 py-1 rounded-md text-sm transition-colors border ${
-                      selectedTagIds.includes(tag._id)
-                        ? "bg-[#F4F0ED] text-[#292929] border-[#D5D3D0]"
-                        : "bg-white text-[#545454] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"
-                    }`}
-                  >
-                    {tag.name}
-                  </button>
-                ))}
+                {availableTags
+                  ?.filter(
+                    (tag) =>
+                      tag.name !== "resendhackathon" &&
+                      tag.name !== "ychackathon",
+                  )
+                  .map((tag) => (
+                    <button
+                      key={tag._id}
+                      type="button"
+                      onClick={() => toggleTag(tag._id)}
+                      disabled={isSubmitting}
+                      className={`px-3 py-1 rounded-md text-sm transition-colors border flex items-center gap-1 ${
+                        selectedTagIds.includes(tag._id)
+                          ? "bg-[#F4F0ED] text-[#292929] border-[#D5D3D0]"
+                          : "bg-white text-[#545454] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"
+                      }`}
+                      style={{
+                        backgroundColor: selectedTagIds.includes(tag._id)
+                          ? tag.backgroundColor || "#F4F0ED"
+                          : "white",
+                        color: selectedTagIds.includes(tag._id)
+                          ? tag.textColor || "#292929"
+                          : "#545454",
+                        borderColor: selectedTagIds.includes(tag._id)
+                          ? tag.borderColor ||
+                            (tag.backgroundColor ? "transparent" : "#D5D3D0")
+                          : "#D5D3D0",
+                      }}
+                    >
+                      {tag.emoji && (
+                        <span className="text-sm">{tag.emoji}</span>
+                      )}
+                      {tag.iconUrl && !tag.emoji && (
+                        <img
+                          src={tag.iconUrl}
+                          alt=""
+                          className="w-4 h-4 rounded-sm object-cover"
+                        />
+                      )}
+                      {tag.name}
+                    </button>
+                  ))}
               </div>
+
+              {/* Dropdown Search for All Tags */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-[#525252] mb-2">
+                  Search All Available Tags
+                </label>
+                <span className="text-xs text-gray-600 mb-2 block">
+                  Find and select from all tags, including those not shown above
+                </span>
+                <div className="relative tag-dropdown-container">
+                  <input
+                    type="text"
+                    value={dropdownSearchValue}
+                    onChange={(e) => {
+                      setDropdownSearchValue(e.target.value);
+                      setShowDropdown(e.target.value.length > 0);
+                    }}
+                    onFocus={() =>
+                      setShowDropdown(dropdownSearchValue.length > 0)
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        // Try to select first matching tag or create new tag
+                        if (allTags) {
+                          const searchTerm = dropdownSearchValue.toLowerCase();
+                          const filteredTags = allTags.filter(
+                            (tag) =>
+                              tag.name.toLowerCase().includes(searchTerm) &&
+                              !selectedTagIds.includes(tag._id) &&
+                              !newTagNames.some(
+                                (newTag) =>
+                                  newTag.toLowerCase() ===
+                                  tag.name.toLowerCase(),
+                              ),
+                          );
+                          if (filteredTags.length > 0) {
+                            handleSelectFromDropdown(filteredTags[0]._id);
+                          } else {
+                            handleAddNewTag();
+                          }
+                        }
+                      }
+                    }}
+                    placeholder="Type to search for tags or create new..."
+                    className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
+                    disabled={isSubmitting}
+                  />
+
+                  {/* Dropdown Results */}
+                  {showDropdown && allTags && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-[#D8E1EC] rounded-md shadow-lg max-h-48 overflow-y-auto">
+                      {(() => {
+                        const searchTerm = dropdownSearchValue.toLowerCase();
+                        const filteredTags = allTags
+                          .filter(
+                            (tag) =>
+                              tag.name.toLowerCase().includes(searchTerm) &&
+                              !selectedTagIds.includes(tag._id) &&
+                              !newTagNames.some(
+                                (newTag) =>
+                                  newTag.toLowerCase() ===
+                                  tag.name.toLowerCase(),
+                              ),
+                          )
+                          .slice(0, 10); // Limit to 10 results
+
+                        if (filteredTags.length === 0) {
+                          return (
+                            <div>
+                              <div className="px-3 py-2 text-sm text-gray-500">
+                                No matching tags found
+                              </div>
+                              <button
+                                type="button"
+                                onClick={handleAddNewTag}
+                                disabled={
+                                  isSubmitting ||
+                                  !dropdownSearchValue.trim() ||
+                                  selectedTagIds.length + newTagNames.length >=
+                                    10
+                                }
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-[#F4F0ED] focus:bg-[#F4F0ED] focus:outline-none text-blue-600 disabled:opacity-50"
+                              >
+                                + Create new tag "{dropdownSearchValue}"
+                              </button>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <>
+                            {filteredTags.map((tag) => (
+                              <button
+                                key={tag._id}
+                                type="button"
+                                onClick={() =>
+                                  handleSelectFromDropdown(tag._id)
+                                }
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-[#F4F0ED] focus:bg-[#F4F0ED] focus:outline-none flex items-center gap-2"
+                                disabled={isSubmitting}
+                              >
+                                {tag.emoji && (
+                                  <span className="text-sm">{tag.emoji}</span>
+                                )}
+                                {tag.iconUrl && !tag.emoji && (
+                                  <img
+                                    src={tag.iconUrl}
+                                    alt=""
+                                    className="w-4 h-4 rounded-sm object-cover"
+                                  />
+                                )}
+                                <span
+                                  className="inline-block px-2 py-0.5 rounded text-xs font-medium"
+                                  style={{
+                                    backgroundColor:
+                                      tag.backgroundColor || "#F4F0ED",
+                                    color: tag.textColor || "#525252",
+                                    border: `1px solid ${tag.backgroundColor ? "transparent" : "#D5D3D0"}`,
+                                  }}
+                                >
+                                  {tag.name}
+                                </span>
+                                {tag.isHidden && (
+                                  <span className="text-xs text-gray-400">
+                                    (Hidden)
+                                  </span>
+                                )}
+                              </button>
+                            ))}
+                            {dropdownSearchValue.trim() && (
+                              <button
+                                type="button"
+                                onClick={handleAddNewTag}
+                                disabled={
+                                  isSubmitting ||
+                                  selectedTagIds.length + newTagNames.length >=
+                                    10
+                                }
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-[#F4F0ED] focus:bg-[#F4F0ED] focus:outline-none text-blue-600 border-t border-gray-100 disabled:opacity-50"
+                              >
+                                + Create new tag "{dropdownSearchValue}"
+                              </button>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Selected Tags Display */}
+              {(selectedTagIds.length > 0 || newTagNames.length > 0) && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-[#525252] mb-2">
+                    Selected Tags ({selectedTagIds.length + newTagNames.length}
+                    /10)
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {/* Show selected existing tags */}
+                    {allTags &&
+                      selectedTagIds.map((tagId) => {
+                        const tag = allTags.find((t) => t._id === tagId);
+                        if (!tag) return null;
+
+                        return (
+                          <span
+                            key={tag._id}
+                            className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm border transition-colors"
+                            style={{
+                              backgroundColor: tag.backgroundColor || "#F4F0ED",
+                              color: tag.textColor || "#292929",
+                              borderColor: tag.backgroundColor
+                                ? "transparent"
+                                : "#D5D3D0",
+                            }}
+                          >
+                            {tag.emoji && (
+                              <span className="text-sm">{tag.emoji}</span>
+                            )}
+                            {tag.iconUrl && !tag.emoji && (
+                              <img
+                                src={tag.iconUrl}
+                                alt=""
+                                className="w-4 h-4 rounded-sm object-cover"
+                              />
+                            )}
+                            {tag.name}
+                            {tag.isHidden && (
+                              <span className="text-xs opacity-70">
+                                (Hidden)
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => toggleTag(tag._id)}
+                              disabled={isSubmitting}
+                              className="ml-1 text-current hover:opacity-70 transition-opacity"
+                              title="Remove tag"
+                            >
+                              <span className="text-lg leading-none">×</span>
+                            </button>
+                          </span>
+                        );
+                      })}
+
+                    {/* Show new tags being created */}
+                    {newTagNames.map((tagName) => (
+                      <span
+                        key={tagName}
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-sm border border-blue-200"
+                      >
+                        {tagName}
+                        <span className="text-xs opacity-70">(New)</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveNewTag(tagName)}
+                          disabled={isSubmitting}
+                          className="ml-1 text-blue-500 hover:text-blue-700 transition-colors"
+                          title="Remove tag"
+                        >
+                          <span className="text-lg leading-none">×</span>
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedTagIds.length === 0 && newTagNames.length === 0 && (
+                <p className="text-xs text-red-500 mt-1">
+                  Please select or add at least one tag.
+                </p>
+              )}
+              {selectedTagIds.length + newTagNames.length >= 10 && (
+                <p className="text-xs text-amber-600 mt-1">
+                  Maximum of 10 tags reached. Remove a tag to add another.
+                </p>
+              )}
             </div>
 
             {editError && (
@@ -2166,7 +2512,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
           <h2 className="text-lg font-medium text-[#525252] mb-4">
             Change Log
           </h2>
-          
+
           {/* Original Submission Date */}
           <div className="mb-6 pb-4 border-b border-[#E5E5E5]">
             <div className="flex items-center gap-2 text-sm text-[#545454]">
@@ -2193,187 +2539,210 @@ export function StoryDetail({ story }: StoryDetailProps) {
               {story.changeLog
                 .slice()
                 .reverse()
-                .map((entry: NonNullable<typeof story.changeLog>[number], index: number) => {
-                  const isExpanded = expandedChangelogIndices.has(index);
-                  const toggleExpanded = () => {
-                    const newSet = new Set(expandedChangelogIndices);
-                    if (isExpanded) {
-                      newSet.delete(index);
-                    } else {
-                      newSet.add(index);
-                    }
-                    setExpandedChangelogIndices(newSet);
-                  };
+                .map(
+                  (
+                    entry: NonNullable<typeof story.changeLog>[number],
+                    index: number,
+                  ) => {
+                    const isExpanded = expandedChangelogIndices.has(index);
+                    const toggleExpanded = () => {
+                      const newSet = new Set(expandedChangelogIndices);
+                      if (isExpanded) {
+                        newSet.delete(index);
+                      } else {
+                        newSet.add(index);
+                      }
+                      setExpandedChangelogIndices(newSet);
+                    };
 
-                  const changeDate = new Date(entry.timestamp);
-                  const formattedDate = changeDate.toLocaleDateString(
-                    undefined,
-                    {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    },
-                  );
-                  const formattedTime = changeDate.toLocaleTimeString(
-                    undefined,
-                    {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    },
-                  );
+                    const changeDate = new Date(entry.timestamp);
+                    const formattedDate = changeDate.toLocaleDateString(
+                      undefined,
+                      {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      },
+                    );
+                    const formattedTime = changeDate.toLocaleTimeString(
+                      undefined,
+                      {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      },
+                    );
 
-                  const hasChanges =
-                    (entry.textChanges && entry.textChanges.length > 0) ||
-                    (entry.linkChanges && entry.linkChanges.length > 0) ||
-                    entry.tagChanges ||
-                    entry.videoChanged ||
-                    entry.imagesChanged;
+                    const hasChanges =
+                      (entry.textChanges && entry.textChanges.length > 0) ||
+                      (entry.linkChanges && entry.linkChanges.length > 0) ||
+                      entry.tagChanges ||
+                      entry.videoChanged ||
+                      entry.imagesChanged;
 
-                  if (!hasChanges) return null;
+                    if (!hasChanges) return null;
 
-                  return (
-                    <div
-                      key={index}
-                      className="border border-[#E5E5E5] rounded-md overflow-hidden"
-                    >
-                      <button
-                        onClick={toggleExpanded}
-                        className="w-full px-4 py-3 bg-[#F9F9F9] hover:bg-[#F4F0ED] transition-colors flex items-center justify-between text-left"
+                    return (
+                      <div
+                        key={index}
+                        className="border border-[#E5E5E5] rounded-md overflow-hidden"
                       >
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`transform transition-transform ${isExpanded ? "rotate-90" : ""}`}
-                          >
-                            ▶
+                        <button
+                          onClick={toggleExpanded}
+                          className="w-full px-4 py-3 bg-[#F9F9F9] hover:bg-[#F4F0ED] transition-colors flex items-center justify-between text-left"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`transform transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                            >
+                              ▶
+                            </span>
+                            <span className="text-sm font-medium text-[#525252]">
+                              {formattedDate} at {formattedTime}
+                            </span>
+                          </div>
+                          <span className="text-xs text-[#787672]">
+                            {isExpanded ? "Hide changes" : "Show changes"}
                           </span>
-                          <span className="text-sm font-medium text-[#525252]">
-                            {formattedDate} at {formattedTime}
-                          </span>
-                        </div>
-                        <span className="text-xs text-[#787672]">
-                          {isExpanded ? "Hide changes" : "Show changes"}
-                        </span>
-                      </button>
+                        </button>
 
-                      {isExpanded && (
-                        <div className="p-4 space-y-4">
-                          {/* Text Changes */}
-                          {entry.textChanges &&
-                            entry.textChanges.length > 0 && (
-                              <div>
-                                <h4 className="text-sm font-medium text-[#525252] mb-2">
-                                  Text Changes
-                                </h4>
-                                <ul className="space-y-2">
-                                  {entry.textChanges.map((change: { field: string; oldValue: string; newValue: string }, idx: number) => (
-                                    <li key={idx} className="text-sm">
-                                      <span className="font-medium text-[#292929]">
-                                        {change.field}:
-                                      </span>
-                                      <div className="ml-4 mt-1">
-                                        <div className="text-red-600 line-through">
-                                          {change.oldValue || "(empty)"}
-                                        </div>
-                                        <div className="text-green-600">
-                                          {change.newValue || "(empty)"}
-                                        </div>
-                                      </div>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-
-                          {/* Link Changes */}
-                          {entry.linkChanges &&
-                            entry.linkChanges.length > 0 && (
-                              <div>
-                                <h4 className="text-sm font-medium text-[#525252] mb-2">
-                                  Link Changes
-                                </h4>
-                                <ul className="space-y-2">
-                                  {entry.linkChanges.map((change: { field: string; oldValue?: string; newValue?: string }, idx: number) => (
-                                    <li key={idx} className="text-sm">
-                                      <span className="font-medium text-[#292929]">
-                                        {change.field}:
-                                      </span>
-                                      <div className="ml-4 mt-1 break-all">
-                                        {change.oldValue && (
-                                          <div className="text-red-600 line-through">
-                                            {change.oldValue}
-                                          </div>
-                                        )}
-                                        {change.newValue && (
-                                          <div className="text-green-600">
-                                            {change.newValue}
-                                          </div>
-                                        )}
-                                        {!change.oldValue &&
-                                          !change.newValue && (
-                                            <div className="text-[#787672]">
-                                              (removed)
+                        {isExpanded && (
+                          <div className="p-4 space-y-4">
+                            {/* Text Changes */}
+                            {entry.textChanges &&
+                              entry.textChanges.length > 0 && (
+                                <div>
+                                  <h4 className="text-sm font-medium text-[#525252] mb-2">
+                                    Text Changes
+                                  </h4>
+                                  <ul className="space-y-2">
+                                    {entry.textChanges.map(
+                                      (
+                                        change: {
+                                          field: string;
+                                          oldValue: string;
+                                          newValue: string;
+                                        },
+                                        idx: number,
+                                      ) => (
+                                        <li key={idx} className="text-sm">
+                                          <span className="font-medium text-[#292929]">
+                                            {change.field}:
+                                          </span>
+                                          <div className="ml-4 mt-1">
+                                            <div className="text-red-600 line-through">
+                                              {change.oldValue || "(empty)"}
                                             </div>
-                                          )}
-                                      </div>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-
-                          {/* Tag Changes */}
-                          {entry.tagChanges &&
-                            (entry.tagChanges.added.length > 0 ||
-                              entry.tagChanges.removed.length > 0) && (
-                              <div>
-                                <h4 className="text-sm font-medium text-[#525252] mb-2">
-                                  Tag Changes
-                                </h4>
-                                <div className="space-y-1">
-                                  {entry.tagChanges.added.length > 0 && (
-                                    <div className="text-sm">
-                                      <span className="text-green-600 font-medium">
-                                        Added:
-                                      </span>{" "}
-                                      {entry.tagChanges.added.join(", ")}
-                                    </div>
-                                  )}
-                                  {entry.tagChanges.removed.length > 0 && (
-                                    <div className="text-sm">
-                                      <span className="text-red-600 font-medium">
-                                        Removed:
-                                      </span>{" "}
-                                      {entry.tagChanges.removed.join(", ")}
-                                    </div>
-                                  )}
+                                            <div className="text-green-600">
+                                              {change.newValue || "(empty)"}
+                                            </div>
+                                          </div>
+                                        </li>
+                                      ),
+                                    )}
+                                  </ul>
                                 </div>
+                              )}
+
+                            {/* Link Changes */}
+                            {entry.linkChanges &&
+                              entry.linkChanges.length > 0 && (
+                                <div>
+                                  <h4 className="text-sm font-medium text-[#525252] mb-2">
+                                    Link Changes
+                                  </h4>
+                                  <ul className="space-y-2">
+                                    {entry.linkChanges.map(
+                                      (
+                                        change: {
+                                          field: string;
+                                          oldValue?: string;
+                                          newValue?: string;
+                                        },
+                                        idx: number,
+                                      ) => (
+                                        <li key={idx} className="text-sm">
+                                          <span className="font-medium text-[#292929]">
+                                            {change.field}:
+                                          </span>
+                                          <div className="ml-4 mt-1 break-all">
+                                            {change.oldValue && (
+                                              <div className="text-red-600 line-through">
+                                                {change.oldValue}
+                                              </div>
+                                            )}
+                                            {change.newValue && (
+                                              <div className="text-green-600">
+                                                {change.newValue}
+                                              </div>
+                                            )}
+                                            {!change.oldValue &&
+                                              !change.newValue && (
+                                                <div className="text-[#787672]">
+                                                  (removed)
+                                                </div>
+                                              )}
+                                          </div>
+                                        </li>
+                                      ),
+                                    )}
+                                  </ul>
+                                </div>
+                              )}
+
+                            {/* Tag Changes */}
+                            {entry.tagChanges &&
+                              (entry.tagChanges.added.length > 0 ||
+                                entry.tagChanges.removed.length > 0) && (
+                                <div>
+                                  <h4 className="text-sm font-medium text-[#525252] mb-2">
+                                    Tag Changes
+                                  </h4>
+                                  <div className="space-y-1">
+                                    {entry.tagChanges.added.length > 0 && (
+                                      <div className="text-sm">
+                                        <span className="text-green-600 font-medium">
+                                          Added:
+                                        </span>{" "}
+                                        {entry.tagChanges.added.join(", ")}
+                                      </div>
+                                    )}
+                                    {entry.tagChanges.removed.length > 0 && (
+                                      <div className="text-sm">
+                                        <span className="text-red-600 font-medium">
+                                          Removed:
+                                        </span>{" "}
+                                        {entry.tagChanges.removed.join(", ")}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                            {/* Video Changed */}
+                            {entry.videoChanged && (
+                              <div className="text-sm text-[#545454]">
+                                <span className="font-medium text-[#292929]">
+                                  Video:
+                                </span>{" "}
+                                Video demo was updated
                               </div>
                             )}
 
-                          {/* Video Changed */}
-                          {entry.videoChanged && (
-                            <div className="text-sm text-[#545454]">
-                              <span className="font-medium text-[#292929]">
-                                Video:
-                              </span>{" "}
-                              Video demo was updated
-                            </div>
-                          )}
-
-                          {/* Images Changed */}
-                          {entry.imagesChanged && (
-                            <div className="text-sm text-[#545454]">
-                              <span className="font-medium text-[#292929]">
-                                Images:
-                              </span>{" "}
-                              Screenshots or gallery images were updated
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                            {/* Images Changed */}
+                            {entry.imagesChanged && (
+                              <div className="text-sm text-[#545454]">
+                                <span className="font-medium text-[#292929]">
+                                  Images:
+                                </span>{" "}
+                                Screenshots or gallery images were updated
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  },
+                )}
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">

@@ -16,6 +16,7 @@ import {
   Menu,
   User,
   Bell,
+  Inbox,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -108,6 +109,14 @@ export function Layout({ children }: { children?: ReactNode }) {
   const recentAlerts = useQuery(
     api.alerts.listRecentForDropdown,
     isClerkLoaded && isSignedIn ? {} : "skip",
+  );
+
+  // Inbox enabled status
+  const userInboxEnabled = useQuery(
+    api.dm.getInboxEnabled,
+    isClerkLoaded && isSignedIn && convexUserDoc?._id
+      ? { userId: convexUserDoc._id }
+      : "skip",
   );
 
   React.useEffect(() => {
@@ -418,6 +427,17 @@ export function Layout({ children }: { children?: ReactNode }) {
                         </div>
                       )}
                     </div>
+
+                    {/* Inbox Icon - Only show if inbox is enabled */}
+                    {userInboxEnabled !== false && (
+                      <Link
+                        to="/inbox"
+                        className="flex items-center justify-center w-8 h-8 rounded-full border border-[#D8E1EC] bg-white hover:bg-[#F2F4F7] transition-colors mr-2"
+                        aria-label="Inbox"
+                      >
+                        <Inbox className="w-4 h-4 text-[#525252]" />
+                      </Link>
+                    )}
 
                     {/* Custom Profile Dropdown */}
                     <div className="relative" ref={profileDropdownRef}>

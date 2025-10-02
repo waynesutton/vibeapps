@@ -46,6 +46,15 @@ export default function InboxPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Scroll to bottom when conversation is selected
+  useEffect(() => {
+    if (selectedConversationId && messages) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    }
+  }, [selectedConversationId]);
+
   // Mark conversation as read when viewing
   useEffect(() => {
     if (selectedConversationId) {
@@ -136,17 +145,17 @@ export default function InboxPage() {
 
   return (
     <div
-      className="flex h-screen bg-white"
+      className="flex h-screen max-h-screen overflow-hidden bg-white"
       style={{ fontFamily: "Inter, sans-serif" }}
     >
       {/* Conversations List */}
       <div
         className={`${
           selectedConversationId ? "hidden md:block" : "block"
-        } w-full md:w-1/3 border-r border-gray-200 flex flex-col`}
+        } w-full md:w-1/3 border-r border-gray-200 flex flex-col h-full`}
       >
         {/* Header */}
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Inbox className="w-6 h-6" />
@@ -228,7 +237,7 @@ export default function InboxPage() {
       <div
         className={`${
           selectedConversationId ? "block" : "hidden md:block"
-        } flex-1 flex flex-col`}
+        } flex-1 flex flex-col h-full`}
       >
         {!selectedConversationId ? (
           <div className="flex-1 flex items-center justify-center text-gray-500">
@@ -240,7 +249,7 @@ export default function InboxPage() {
         ) : (
           <>
             {/* Conversation Header */}
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => navigate("/inbox")}
@@ -326,7 +335,7 @@ export default function InboxPage() {
 
             {/* Message Input */}
             {selectedConversation?.otherUser.inboxEnabled === false ? (
-              <div className="p-4 border-t border-gray-200 bg-gray-50">
+              <div className="p-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Inbox className="w-5 h-5" />
                   <p>
@@ -338,7 +347,7 @@ export default function InboxPage() {
             ) : (
               <form
                 onSubmit={handleSendMessage}
-                className="p-4 border-t border-gray-200"
+                className="p-4 border-t border-gray-200 flex-shrink-0"
               >
                 <div className="flex gap-2">
                   <input

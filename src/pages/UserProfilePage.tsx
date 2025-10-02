@@ -1221,19 +1221,31 @@ export default function UserProfilePage() {
 
             {/* INBOX BUTTON & TOGGLE - Only on own profile */}
             {isOwnProfile && !isEditing && (
-              <div className="mt-3 flex flex-col gap-2">
+              <div className="mt-3 flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
                 {/* Go to Inbox Button */}
                 <button
-                  onClick={() => navigate("/inbox")}
-                  className="px-6 py-2 rounded-md bg-[#292929] border border-[#D8E1EC] text-[#ffffff] text-sm font-medium hover:bg-[#F2F0ED] hover:text-[#292929] flex items-center justify-center sm:justify-start"
-                  style={{ fontFamily: "Inter, sans-serif", width: "170px" }}
+                  onClick={() =>
+                    ownInboxEnabled !== false && navigate("/inbox")
+                  }
+                  disabled={ownInboxEnabled === false}
+                  className={`px-6 py-2 rounded-md border border-[#D8E1EC] text-sm font-medium flex items-center justify-center md:justify-start md:flex-shrink-0 transition-colors ${
+                    ownInboxEnabled === false
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-[#292929] text-[#ffffff] hover:bg-[#F2F0ED] hover:text-[#292929]"
+                  }`}
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                  title={
+                    ownInboxEnabled === false
+                      ? "Enable your inbox to access messages"
+                      : "View your inbox"
+                  }
                 >
                   <Inbox className="w-4 h-4 mr-2 text-md" />
                   Go to Inbox
                 </button>
 
                 {/* Inbox Toggle Controls */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 md:flex-shrink-0">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <span>Inbox Status:</span>
                   </div>

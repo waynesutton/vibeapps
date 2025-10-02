@@ -423,6 +423,7 @@ export const getGroupSubmissions = query({
   returns: v.array(
     v.object({
       _id: v.id("stories"),
+      _creationTime: v.number(),
       title: v.string(),
       slug: v.string(),
       description: v.string(),
@@ -489,6 +490,7 @@ export const getGroupSubmissions = query({
 
         return {
           _id: story._id,
+          _creationTime: story._creationTime,
           title: story.title,
           slug: story.slug,
           description: story.description,

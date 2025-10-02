@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Fixed] - October 1, 2025
+
+**Bug Fixes**
+
+- Fixed "Invalid Date" display on judging interface page by adding `_creationTime` field to submission data
+  - Updated `getGroupSubmissions` query to include `_creationTime` in return validator
+  - Submission dates now display correctly showing when apps were originally submitted
+
 ### Inbox Messaging System ✅ FULLY IMPLEMENTED
 
 **Added - Complete Direct Messaging Infrastructure**
@@ -121,7 +129,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [x] Mobile responsive design
 - [x] Error handling and edge cases
 
-### Submission Change Log Tracking 📝 NEW
+### Enhanced Tag Selection in Submission Editing 🏷️ NEW
+
+**Added - Advanced Tag Management for User Edits**
+
+- **Enhanced Tag Selection**: Users can now search and add/remove tags when editing their submissions (matching StoryForm.tsx functionality)
+  - **All Tags Dropdown Search**: Type to search through all tags including hidden ones
+  - **Visual Tag Display**: Shows tag colors, emojis, and icons in both visible tags and dropdown
+  - **Hidden Tag Access**: Users can select tags that admins have hidden from the header display
+  - **Create New Tags**: Enter key or "Create new tag" button to add custom tags
+  - **Smart Filtering**: Excludes already selected tags from search results
+  - **Click Outside to Close**: Dropdown closes when clicking outside for better UX
+  - **10-Tag Limit**: Comprehensive validation prevents selection beyond 10 total tags
+  - **Selected Tags Display**: Dedicated section showing all selected tags with remove buttons
+  - **Tag Counter**: Shows current selection count with maximum (e.g., "Selected Tags (3/10)")
+  - **Visual Indicators**: "(New)" label for newly created tags, "(Hidden)" for hidden tags
+
+- **Tag Change Tracking**: All tag modifications automatically tracked in submission changelog
+  - Shows which tags were added (green)
+  - Shows which tags were removed (red)
+  - Displays tag names in easy-to-read format
+  - Includes in overall edit history with timestamps
+
+**Technical Implementation**
+
+- **Frontend Updates**: Enhanced `StoryDetail.tsx` with comprehensive tag management
+  - Added `allTags` query to fetch all tags including hidden ones
+  - Added dropdown search state and handlers
+  - Implemented `handleSelectFromDropdown` and `handleAddNewTag` functions
+  - Added `handleRemoveNewTag` for managing new tag creation
+  - Enhanced `toggleTag` with 10-tag limit validation
+  - Added click-outside handler for dropdown auto-close
+  - Replaced simple tag buttons with full dropdown search UI
+
+- **State Management**: Added new state variables for tag editing
+  - `dropdownSearchValue`: Tracks search input
+  - `showDropdown`: Controls dropdown visibility
+  - `newTagNames`: Manages newly created tags before submission
+
+- **UI Components**: Comprehensive tag selection interface
+  - Visual tag buttons with emoji/icon support
+  - Dropdown search with 10-result limit for performance
+  - Selected tags display section with remove functionality
+  - Error messages for tag limit and validation
+  - Consistent styling with existing design system
+
+**User Benefits**
+
+- **Enhanced Flexibility**: Search and select from all tags including hidden ones
+- **Better UX**: Same powerful tag management as initial submission form
+- **No Limitations**: Users can update tags just as easily as creating new submissions
+- **Visual Feedback**: Clear indication of selected, new, and hidden tags
+- **Change Tracking**: All tag modifications tracked in changelog for transparency
+
+**Integration Notes**
+
+- Works seamlessly with existing changelog system
+- No breaking changes to existing tag functionality
+- Maintains 10-tag limit across all tag selection methods
+- Consistent with StoryForm.tsx tag management experience
+
+### Submission Change Log Tracking 📝
 
 **Added - Comprehensive Edit History Tracking**
 
