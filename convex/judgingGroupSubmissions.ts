@@ -500,55 +500,58 @@ export const getGroupSubmissions = query({
       .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
       .collect();
 
-    const stories = await Promise.all(
-      submissions.map(async (submission) => {
-        const story = await ctx.db.get(submission.storyId);
-        if (!story) {
-          throw new Error(`Story ${submission.storyId} not found`);
-        }
+    const stories = (
+      await Promise.all(
+        submissions.map(async (submission) => {
+          const story = await ctx.db.get(submission.storyId);
+          // Skip if story doesn't exist (deleted/archived)
+          if (!story) {
+            return null;
+          }
 
-        // Resolve screenshot URL if screenshot exists
-        const screenshotUrl = story.screenshotId
-          ? (await ctx.storage.getUrl(story.screenshotId)) || undefined
-          : undefined;
+          // Resolve screenshot URL if screenshot exists
+          const screenshotUrl = story.screenshotId
+            ? (await ctx.storage.getUrl(story.screenshotId)) || undefined
+            : undefined;
 
-        // Resolve additional image URLs
-        const additionalImageUrls = story.additionalImageIds
-          ? await Promise.all(
-              story.additionalImageIds.map(async (imageId) => {
-                const url = await ctx.storage.getUrl(imageId);
-                return url || "";
-              }),
-            ).then((urls) => urls.filter((url) => url !== ""))
-          : [];
+          // Resolve additional image URLs
+          const additionalImageUrls = story.additionalImageIds
+            ? await Promise.all(
+                story.additionalImageIds.map(async (imageId) => {
+                  const url = await ctx.storage.getUrl(imageId);
+                  return url || "";
+                }),
+              ).then((urls) => urls.filter((url) => url !== ""))
+            : [];
 
-        return {
-          _id: story._id,
-          _creationTime: story._creationTime,
-          title: story.title,
-          slug: story.slug,
-          description: story.description,
-          url: story.url,
-          screenshotId: story.screenshotId,
-          screenshotUrl: screenshotUrl,
-          additionalImageUrls: additionalImageUrls,
-          videoUrl: story.videoUrl,
-          longDescription: story.longDescription,
-          linkedinUrl: story.linkedinUrl,
-          twitterUrl: story.twitterUrl,
-          githubUrl: story.githubUrl,
-          chefShowUrl: story.chefShowUrl,
-          chefAppUrl: story.chefAppUrl,
-          votes: story.votes,
-          // Hackathon team info
-          teamName: story.teamName,
-          teamMemberCount: story.teamMemberCount,
-          teamMembers: story.teamMembers,
-          // Changelog tracking
-          changeLog: story.changeLog,
-        };
-      }),
-    );
+          return {
+            _id: story._id,
+            _creationTime: story._creationTime,
+            title: story.title,
+            slug: story.slug,
+            description: story.description,
+            url: story.url,
+            screenshotId: story.screenshotId,
+            screenshotUrl: screenshotUrl,
+            additionalImageUrls: additionalImageUrls,
+            videoUrl: story.videoUrl,
+            longDescription: story.longDescription,
+            linkedinUrl: story.linkedinUrl,
+            twitterUrl: story.twitterUrl,
+            githubUrl: story.githubUrl,
+            chefShowUrl: story.chefShowUrl,
+            chefAppUrl: story.chefAppUrl,
+            votes: story.votes,
+            // Hackathon team info
+            teamName: story.teamName,
+            teamMemberCount: story.teamMemberCount,
+            teamMembers: story.teamMembers,
+            // Changelog tracking
+            changeLog: story.changeLog,
+          };
+        }),
+      )
+    ).filter((story): story is NonNullable<typeof story> => story !== null);
 
     return stories;
   },
@@ -646,37 +649,40 @@ export const getSubmissionStatuses = query({
       .collect();
 
     // Enrich with story and judge information
-    const enrichedStatuses = await Promise.all(
-      statuses.map(async (status) => {
-        const story = await ctx.db.get(status.storyId);
-        if (!story) {
-          throw new Error(`Story ${status.storyId} not found`);
-        }
+    const enrichedStatuses = (
+      await Promise.all(
+        statuses.map(async (status) => {
+          const story = await ctx.db.get(status.storyId);
+          // Skip if story doesn't exist (deleted/archived)
+          if (!story) {
+            return null;
+          }
 
-        let assignedJudgeName: string | undefined;
-        if (status.assignedJudgeId) {
-          const assignedJudge = await ctx.db.get(status.assignedJudgeId);
-          assignedJudgeName = assignedJudge?.name;
-        }
+          let assignedJudgeName: string | undefined;
+          if (status.assignedJudgeId) {
+            const assignedJudge = await ctx.db.get(status.assignedJudgeId);
+            assignedJudgeName = assignedJudge?.name;
+          }
 
-        let lastUpdatedByName: string | undefined;
-        if (status.lastUpdatedBy) {
-          const lastUpdatedJudge = await ctx.db.get(status.lastUpdatedBy);
-          lastUpdatedByName = lastUpdatedJudge?.name;
-        }
+          let lastUpdatedByName: string | undefined;
+          if (status.lastUpdatedBy) {
+            const lastUpdatedJudge = await ctx.db.get(status.lastUpdatedBy);
+            lastUpdatedByName = lastUpdatedJudge?.name;
+          }
 
-        return {
-          _id: status._id,
-          storyId: status.storyId,
-          storyTitle: story.title,
-          storySlug: story.slug,
-          status: status.status,
-          assignedJudgeName,
-          lastUpdatedByName,
-          lastUpdatedAt: status.lastUpdatedAt,
-        };
-      }),
-    );
+          return {
+            _id: status._id,
+            storyId: status.storyId,
+            storyTitle: story.title,
+            storySlug: story.slug,
+            status: status.status,
+            assignedJudgeName,
+            lastUpdatedByName,
+            lastUpdatedAt: status.lastUpdatedAt,
+          };
+        }),
+      )
+    ).filter((status): status is NonNullable<typeof status> => status !== null);
 
     return enrichedStatuses;
   },
