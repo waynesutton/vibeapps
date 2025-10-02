@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [Fixed] - October 2, 2025
 
+**Judging Group Error Handling**
+
+- Fixed server error when accessing judging groups with deleted submissions
+  - **Root Cause**: Query threw an error when a story referenced in judgingGroupSubmissions no longer existed
+  - **Impact**: Judges saw blank page with "Server Error" when trying to access groups with deleted stories
+  - **Fix Applied**: Updated `getJudgeProgress` query to gracefully handle missing stories
+  - Query now skips submissions where story has been deleted or archived
+  - Progress calculations now based only on submissions with valid stories
+  - No more server crashes when stories are removed from system
+
 **Judging Progress Calculation & Display**
 
 - Fixed judging progress calculation to accurately reflect completion status

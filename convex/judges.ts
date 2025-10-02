@@ -396,44 +396,49 @@ export const getJudgeProgress = query({
       .filter((q) => q.neq(q.field("isHidden"), true))
       .collect();
 
-    const totalSubmissions = availableSubmissions.length; // Only count available submissions
     const totalCriteria = criteria.length;
-    const expectedScores = totalSubmissions * totalCriteria;
     const completedScores = scores.length;
 
     // Calculate progress per submission (only for available submissions)
-    const submissionProgress = await Promise.all(
-      availableSubmissions.map(async (submission) => {
-        const story = await ctx.db.get(submission.storyId);
-        if (!story) {
-          throw new Error(`Story ${submission.storyId} not found`);
-        }
+    const submissionProgress = (
+      await Promise.all(
+        availableSubmissions.map(async (submission) => {
+          const story = await ctx.db.get(submission.storyId);
+          // Skip if story doesn't exist (deleted/archived)
+          if (!story) {
+            return null;
+          }
 
-        const storyScores = scores.filter(
-          (s) => s.storyId === submission.storyId,
-        );
-        const criteriaScored = storyScores.length;
+          const storyScores = scores.filter(
+            (s) => s.storyId === submission.storyId,
+          );
+          const criteriaScored = storyScores.length;
 
-        // Get submission status to check if it's marked as completed
-        const submissionStatus = submissionStatuses.find(
-          (s) => s.storyId === submission.storyId,
-        );
+          // Get submission status to check if it's marked as completed
+          const submissionStatus = submissionStatuses.find(
+            (s) => s.storyId === submission.storyId,
+          );
 
-        // A submission is complete if:
-        // 1. It has a status of "completed" AND was completed by this judge
-        const isComplete =
-          submissionStatus?.status === "completed" &&
-          submissionStatus?.assignedJudgeId === judge._id;
+          // A submission is complete if:
+          // 1. It has a status of "completed" AND was completed by this judge
+          const isComplete =
+            submissionStatus?.status === "completed" &&
+            submissionStatus?.assignedJudgeId === judge._id;
 
-        return {
-          storyId: submission.storyId,
-          storyTitle: story.title,
-          criteriaScored,
-          totalCriteria,
-          isComplete,
-        };
-      }),
-    );
+          return {
+            storyId: submission.storyId,
+            storyTitle: story.title,
+            criteriaScored,
+            totalCriteria,
+            isComplete,
+          };
+        }),
+      )
+    ).filter((item): item is NonNullable<typeof item> => item !== null);
+
+    // Count only submissions with valid stories
+    const totalSubmissions = submissionProgress.length;
+    const expectedScores = totalSubmissions * totalCriteria;
 
     // Calculate completion percentage based on completed SUBMISSIONS, not individual scores
     const completedSubmissionsCount = submissionProgress.filter(
