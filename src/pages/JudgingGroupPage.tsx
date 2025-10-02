@@ -110,20 +110,20 @@ export default function JudgingGroupPage() {
               {group.name}
             </h1>
             <p className="text-gray-600">
-              This judging group is private. Please enter the password to
+              This judging group is private. Please enter the access code to
               continue.
             </p>
           </div>
 
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Access Code</Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter group password"
+                placeholder="Enter group access code"
                 required
                 className={passwordError ? "border-red-500" : ""}
               />
