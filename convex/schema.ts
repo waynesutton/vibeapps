@@ -50,6 +50,7 @@ export default defineSchema({
     ),
     isHidden: v.boolean(),
     isPinned: v.boolean(),
+    isArchived: v.optional(v.boolean()), // Archive submissions to hide from default view
     customMessage: v.optional(v.string()),
     isApproved: v.optional(v.boolean()),
     rejectionReason: v.optional(v.string()),

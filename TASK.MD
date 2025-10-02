@@ -85,18 +85,19 @@ Brief description of the feature and its purpose.
 - [x] add custom report modal with textarea (500 char limit)
 - [x] in judging interface keep the original date but ia user make changes add just the date and time the submission was modified and still link to change log
 - [x] add an anchor link to change log and link to
+- [x] in Content moderation add a show by date range submissions
+- [x] Content moderation keep hide, add archive that hides from Content moderation but still able to see by dropdown selection
+- [x] fixed judging progress
+- [x] added edit add tags to submissions
 
 ## In Progress Tasks
 
-- [ ] Content moderation keep hide, add archive that hides from Content moderation but still able to see by dropdown selection
-- [ ] in Content moderation add a show by date range submissions
-
+- [ ]
 
 ## Future Tasks - Roadmap
 
-- edit submissions add tags
+- [ ] test judging progress on results page
 - [ ] clerk roles for hackathon organizers to see judges section in admin dashboard only from friendsonlyinbox.md
-- [ ] add notifications for people who follow
 
 ## TBD Future task
 

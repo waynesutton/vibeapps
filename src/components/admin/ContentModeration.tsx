@@ -54,7 +54,13 @@ type ModeratableItem =
   | (StoryWithDetails & { type: "story" })
   | (Comment & { type: "comment" });
 
-type StatusFilter = "all" | "pending" | "approved" | "rejected" | "hidden";
+type StatusFilter =
+  | "all"
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "hidden"
+  | "archived";
 
 export function ContentModeration() {
   const navigate = useNavigate();
@@ -64,6 +70,9 @@ export function ContentModeration() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  // Date range filtering
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
   // State for custom message editing - Commented out
   const [editingMessageId, setEditingMessageId] =
     useState<Id<"stories"> | null>(null);
@@ -155,14 +164,22 @@ export function ContentModeration() {
 
   const storyFilters = useMemo(() => {
     const convexFilters: any = {};
-    if (statusFilter === "hidden") {
-      convexFilters.isHidden = true;
-    } else if (statusFilter !== "all") {
-      convexFilters.status = statusFilter;
-      convexFilters.isHidden = false; // Explicitly set to false for non-hidden, non-all filters
+
+    // Handle archive filter - only set when explicitly viewing archived
+    if (statusFilter === "archived") {
+      convexFilters.isArchived = true;
     } else {
-      // For 'all', explicitly set isHidden to undefined
-      convexFilters.isHidden = undefined;
+      // For all other views, don't filter on isArchived
+      // This allows submissions without isArchived field to appear
+      if (statusFilter === "hidden") {
+        convexFilters.isHidden = true;
+      } else if (statusFilter !== "all") {
+        convexFilters.status = statusFilter;
+        convexFilters.isHidden = false;
+      } else {
+        // For 'all', explicitly set isHidden to undefined
+        convexFilters.isHidden = undefined;
+      }
     }
 
     // Add tag filtering for stories
@@ -170,12 +187,28 @@ export function ContentModeration() {
       convexFilters.tagIds = selectedTagIds;
     }
 
+    // Add date range filtering
+    if (startDate) {
+      convexFilters.startDate = new Date(startDate).getTime();
+    }
+    if (endDate) {
+      // Set end date to end of day (23:59:59.999)
+      const endDateTime = new Date(endDate);
+      endDateTime.setHours(23, 59, 59, 999);
+      convexFilters.endDate = endDateTime.getTime();
+    }
+
     return convexFilters;
-  }, [statusFilter, selectedTagIds]);
+  }, [statusFilter, selectedTagIds, startDate, endDate]);
 
   const commentFilters = useMemo(() => {
     const convexFilters: any = {};
-    if (statusFilter === "hidden") {
+
+    // Comments don't support "archived" filter - that's only for stories
+    if (statusFilter === "archived") {
+      // Don't set any status filter for comments when viewing archived
+      // (comments don't have isArchived field)
+    } else if (statusFilter === "hidden") {
       convexFilters.isHidden = true;
     } else if (statusFilter !== "all") {
       convexFilters.status = statusFilter;
@@ -187,8 +220,19 @@ export function ContentModeration() {
 
     // Comments don't have tag filtering - no tagIds field
 
+    // Add date range filtering
+    if (startDate) {
+      convexFilters.startDate = new Date(startDate).getTime();
+    }
+    if (endDate) {
+      // Set end date to end of day (23:59:59.999)
+      const endDateTime = new Date(endDate);
+      endDateTime.setHours(23, 59, 59, 999);
+      convexFilters.endDate = endDateTime.getTime();
+    }
+
     return convexFilters;
-  }, [statusFilter]);
+  }, [statusFilter, selectedTagIds, startDate, endDate]);
 
   const {
     results: stories,
@@ -224,6 +268,8 @@ export function ContentModeration() {
   const rejectStory = useMutation(api.stories.updateStatus);
   const hideStory = useMutation(api.stories.hideStory);
   const showStory = useMutation(api.stories.showStory);
+  const archiveStory = useMutation(api.stories.archiveStory);
+  const unarchiveStory = useMutation(api.stories.unarchiveStory);
   const deleteStory = useMutation(api.stories.deleteStory);
   const updateCustomMessage = useMutation(api.stories.updateStoryCustomMessage);
   const togglePin = useMutation(api.stories.toggleStoryPinStatus);
@@ -258,7 +304,15 @@ export function ContentModeration() {
   const deleteComment = useMutation(api.comments.deleteComment);
 
   const handleAction = (
-    action: "approve" | "reject" | "hide" | "show" | "delete" | "togglePin",
+    action:
+      | "approve"
+      | "reject"
+      | "hide"
+      | "show"
+      | "delete"
+      | "togglePin"
+      | "archive"
+      | "unarchive",
     item: ModeratableItem,
   ) => {
     if (item.type === "story") {
@@ -275,6 +329,14 @@ export function ContentModeration() {
           break;
         case "show":
           showStory({ storyId });
+          break;
+        case "archive":
+          archiveStory({ storyId });
+          toast.success("Story archived");
+          break;
+        case "unarchive":
+          unarchiveStory({ storyId });
+          toast.success("Story unarchived");
           break;
         case "delete":
           if (window.confirm("Delete story? This cannot be undone."))
@@ -1678,6 +1740,31 @@ export function ContentModeration() {
                 </Button>
               )}
 
+              {/* Archive/Unarchive Button - Only for stories */}
+              {item.type === "story" && (
+                <>
+                  {(item as StoryWithDetails).isArchived ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                      onClick={() => handleAction("unarchive", item)}
+                    >
+                      <FileX className="w-4 h-4 mr-1" /> Unarchive
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200"
+                      onClick={() => handleAction("archive", item)}
+                    >
+                      <FileX className="w-4 h-4 mr-1" /> Archive
+                    </Button>
+                  )}
+                </>
+              )}
+
               {/* Story Specific Actions for Row 1 */}
               {item.type === "story" && (
                 <>
@@ -1786,7 +1873,8 @@ export function ContentModeration() {
           Content Moderation
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {/* First Row - Main Filters */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
           <Select
             value={activeItemType}
             onValueChange={(v: string) => setActiveItemType(v as any)}
@@ -1808,11 +1896,12 @@ export function ContentModeration() {
               <SelectValue placeholder="Filter by status..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All (Visible & Hidden)</SelectItem>
+              <SelectItem value="all">All (Active)</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="approved">Approved</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
               <SelectItem value="hidden">Hidden Only</SelectItem>
+              <SelectItem value="archived">Archived Only</SelectItem>
             </SelectContent>
           </Select>
 
@@ -1832,11 +1921,53 @@ export function ContentModeration() {
               </span>
             )}
           </div>
+        </div>
+
+        {/* Second Row - Date Range and Tag Filters */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          {/* Date Range Filter */}
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <label className="text-xs text-gray-600 mb-1 block">
+                Start Date
+              </label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="text-sm"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-xs text-gray-600 mb-1 block">
+                End Date
+              </label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="text-sm"
+              />
+            </div>
+            {(startDate || endDate) && (
+              <button
+                onClick={() => {
+                  setStartDate("");
+                  setEndDate("");
+                }}
+                className="px-3 py-2 text-xs text-gray-600 hover:text-gray-900 border border-gray-300 rounded-md whitespace-nowrap"
+              >
+                Clear
+              </button>
+            )}
+          </div>
 
           {/* Tag Filter - Only show for submissions */}
           {activeItemType === "submissions" && (
             <div className="relative tag-search-container">
-              <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <label className="text-xs text-gray-600 mb-1 block">
+                Filter by Tags
+              </label>
               <Input
                 type="search"
                 placeholder="Search tags to filter..."
@@ -1846,7 +1977,7 @@ export function ContentModeration() {
                   setShowTagDropdown(e.target.value.length > 0);
                 }}
                 onFocus={() => setShowTagDropdown(tagSearchTerm.length > 0)}
-                className="pl-10"
+                className="text-sm"
               />
 
               {/* Tag Dropdown */}

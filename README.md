@@ -88,6 +88,14 @@ The community where you go to show off what you've built, and see what others ar
 
 ## Recent Updates
 
+- **Judging Progress Calculation Fix** ✅ COMPLETED:
+  - Fixed judging progress calculation to accurately reflect submission completion status
+  - Progress now correctly counts submissions marked as "completed" instead of just scored criteria
+  - Fixed submission counter to only show submissions available to current judge
+  - Submissions completed by other judges no longer appear in judge's view
+  - Progress bar and submission count now properly aligned
+  - Backend: Enhanced `getJudgeProgress` query in `convex/judges.ts`
+  - Frontend: Added submission filtering in `src/pages/JudgingInterfacePage.tsx`
 - **Inbox Messaging System** ✅ FULLY IMPLEMENTED:
   - Text-only direct messages with @mentions integration
   - Edit/delete functionality (24-hour edit window)

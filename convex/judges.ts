@@ -400,8 +400,6 @@ export const getJudgeProgress = query({
     const totalCriteria = criteria.length;
     const expectedScores = totalSubmissions * totalCriteria;
     const completedScores = scores.length;
-    const completionPercentage =
-      expectedScores > 0 ? (completedScores / expectedScores) * 100 : 0;
 
     // Calculate progress per submission (only for available submissions)
     const submissionProgress = await Promise.all(
@@ -415,7 +413,17 @@ export const getJudgeProgress = query({
           (s) => s.storyId === submission.storyId,
         );
         const criteriaScored = storyScores.length;
-        const isComplete = criteriaScored === totalCriteria;
+
+        // Get submission status to check if it's marked as completed
+        const submissionStatus = submissionStatuses.find(
+          (s) => s.storyId === submission.storyId,
+        );
+
+        // A submission is complete if:
+        // 1. It has a status of "completed" AND was completed by this judge
+        const isComplete =
+          submissionStatus?.status === "completed" &&
+          submissionStatus?.assignedJudgeId === judge._id;
 
         return {
           storyId: submission.storyId,
@@ -426,6 +434,15 @@ export const getJudgeProgress = query({
         };
       }),
     );
+
+    // Calculate completion percentage based on completed SUBMISSIONS, not individual scores
+    const completedSubmissionsCount = submissionProgress.filter(
+      (s) => s.isComplete,
+    ).length;
+    const completionPercentage =
+      totalSubmissions > 0
+        ? (completedSubmissionsCount / totalSubmissions) * 100
+        : 0;
 
     return {
       totalSubmissions,

@@ -99,6 +99,8 @@ export const listAllCommentsAdmin = query({
         ),
       ),
       isHidden: v.optional(v.boolean()),
+      startDate: v.optional(v.number()), // Timestamp for date range start
+      endDate: v.optional(v.number()), // Timestamp for date range end
     }),
     searchTerm: v.optional(v.string()),
   },
@@ -134,9 +136,32 @@ export const listAllCommentsAdmin = query({
         args.paginationOpts,
       );
 
+      // Apply date range filtering if specified
+      let filteredComments = paginatedComments.page;
+      if (
+        args.filters.startDate !== undefined ||
+        args.filters.endDate !== undefined
+      ) {
+        filteredComments = filteredComments.filter((comment) => {
+          if (
+            args.filters.startDate !== undefined &&
+            comment._creationTime < args.filters.startDate
+          ) {
+            return false;
+          }
+          if (
+            args.filters.endDate !== undefined &&
+            comment._creationTime > args.filters.endDate
+          ) {
+            return false;
+          }
+          return true;
+        });
+      }
+
       // Enrich with author information
       const commentsWithAuthors = await Promise.all(
-        paginatedComments.page.map(async (comment) => {
+        filteredComments.map(async (comment) => {
           const author = comment.userId
             ? await ctx.db.get(comment.userId)
             : null;
@@ -209,9 +234,32 @@ export const listAllCommentsAdmin = query({
         args.paginationOpts,
       );
 
+      // Apply date range filtering if specified
+      let filteredComments = paginatedComments.page;
+      if (
+        args.filters.startDate !== undefined ||
+        args.filters.endDate !== undefined
+      ) {
+        filteredComments = filteredComments.filter((comment) => {
+          if (
+            args.filters.startDate !== undefined &&
+            comment._creationTime < args.filters.startDate
+          ) {
+            return false;
+          }
+          if (
+            args.filters.endDate !== undefined &&
+            comment._creationTime > args.filters.endDate
+          ) {
+            return false;
+          }
+          return true;
+        });
+      }
+
       // Enrich with author information
       const commentsWithAuthors = await Promise.all(
-        paginatedComments.page.map(async (comment) => {
+        filteredComments.map(async (comment) => {
           const author = comment.userId
             ? await ctx.db.get(comment.userId)
             : null;

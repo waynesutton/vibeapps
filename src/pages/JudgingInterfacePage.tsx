@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -67,7 +67,7 @@ export default function JudgingInterfacePage() {
     sessionId ? { sessionId } : "skip",
   );
 
-  const submissions = useQuery(
+  const allSubmissions = useQuery(
     api.judgingGroupSubmissions.getGroupSubmissions,
     judgeSession ? { groupId: judgeSession.group._id } : "skip",
   );
@@ -77,16 +77,32 @@ export default function JudgingInterfacePage() {
     judgeSession ? { groupId: judgeSession.group._id } : "skip",
   );
 
+  const judgeProgress = useQuery(
+    api.judges.getJudgeProgress,
+    sessionId ? { sessionId } : "skip",
+  );
+
+  // Filter submissions to only show ones this judge can view
+  // (pending, skip, or completed by this judge)
+  const submissions = useMemo(() => {
+    if (!allSubmissions || !judgeProgress) return allSubmissions;
+
+    // Get the list of available submission IDs from judgeProgress
+    const availableSubmissionIds = new Set(
+      judgeProgress.submissionProgress.map((s) => s.storyId),
+    );
+
+    // Filter to only show available submissions
+    return allSubmissions.filter((submission) =>
+      availableSubmissionIds.has(submission._id),
+    );
+  }, [allSubmissions, judgeProgress]);
+
   const existingScores = useQuery(
     api.judgeScores.getJudgeSubmissionScores,
     sessionId && submissions && submissions.length > 0
       ? { sessionId, storyId: submissions[currentSubmissionIndex]._id }
       : "skip",
-  );
-
-  const judgeProgress = useQuery(
-    api.judges.getJudgeProgress,
-    sessionId ? { sessionId } : "skip",
   );
 
   const submitScore = useMutation(api.judgeScores.submitScore);

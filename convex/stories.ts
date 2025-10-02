@@ -980,6 +980,28 @@ export const showStory = mutation({
   },
 });
 
+// Archive story - hides from default view but keeps accessible via filter
+export const archiveStory = mutation({
+  args: { storyId: v.id("stories") },
+  returns: v.object({ success: v.boolean() }),
+  handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
+    await ctx.db.patch(args.storyId, { isArchived: true });
+    return { success: true };
+  },
+});
+
+// Unarchive story - returns to default view
+export const unarchiveStory = mutation({
+  args: { storyId: v.id("stories") },
+  returns: v.object({ success: v.boolean() }),
+  handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
+    await ctx.db.patch(args.storyId, { isArchived: false });
+    return { success: true };
+  },
+});
+
 export const deleteStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
@@ -1688,7 +1710,10 @@ export const listAllStoriesAdmin = query({
         ),
       ),
       isHidden: v.optional(v.boolean()),
+      isArchived: v.optional(v.boolean()), // Filter archived stories
       tagIds: v.optional(v.array(v.id("tags"))), // Add tag filtering
+      startDate: v.optional(v.number()), // Timestamp for date range start
+      endDate: v.optional(v.number()), // Timestamp for date range end
     }),
     searchTerm: v.optional(v.string()),
   },
@@ -1733,6 +1758,13 @@ export const listAllStoriesAdmin = query({
           (s) => s.isHidden === args.filters.isHidden,
         );
       }
+      // Apply isArchived filter - only when explicitly true (viewing archived)
+      if (args.filters.isArchived === true) {
+        initialStories = initialStories.filter((s) => s.isArchived === true);
+      } else {
+        // For all other views, exclude archived submissions
+        initialStories = initialStories.filter((s) => s.isArchived !== true);
+      }
     } else {
       let query = ctx.db.query("stories");
       // Rely on filter for combined criteria
@@ -1748,6 +1780,14 @@ export const listAllStoriesAdmin = query({
           return conditions.length > 0 ? q.and(...conditions) : true;
         })
         .collect();
+
+      // Apply isArchived filter - only when explicitly true (viewing archived)
+      if (args.filters.isArchived === true) {
+        initialStories = initialStories.filter((s) => s.isArchived === true);
+      } else {
+        // For all other views, exclude archived submissions
+        initialStories = initialStories.filter((s) => s.isArchived !== true);
+      }
     }
 
     // Apply tag filtering if specified
@@ -1760,6 +1800,28 @@ export const listAllStoriesAdmin = query({
         return args.filters.tagIds!.some((tagId) =>
           story.tagIds!.includes(tagId),
         );
+      });
+    }
+
+    // Apply date range filtering if specified
+    if (
+      args.filters.startDate !== undefined ||
+      args.filters.endDate !== undefined
+    ) {
+      initialStories = initialStories.filter((story) => {
+        if (
+          args.filters.startDate !== undefined &&
+          story._creationTime < args.filters.startDate
+        ) {
+          return false;
+        }
+        if (
+          args.filters.endDate !== undefined &&
+          story._creationTime > args.filters.endDate
+        ) {
+          return false;
+        }
+        return true;
       });
     }
 

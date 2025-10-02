@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Fixed] - October 2, 2025
+
+**Judging Progress Calculation & Display**
+
+- Fixed judging progress calculation to accurately reflect completion status
+  - **Root Cause**: Progress was calculated based on individual criterion scores rather than submission completion status
+  - **Impact**: Judges saw incorrect progress percentages and misaligned submission counts
+  - **Fix Applied**: Updated `getJudgeProgress` query to check `submissionStatuses` table for completed submissions
+  - Progress now correctly counts submissions with status "completed" assigned to current judge
+  - Completion percentage now based on completed submissions count, not individual scores
+- Fixed submission navigation counter alignment
+  - **Root Cause**: Frontend showed all submissions while progress showed only available ones
+  - **Impact**: "Submission X of Y" counter didn't match progress "X/Y submissions" display
+  - **Fix Applied**: Added `useMemo` hook to filter submissions based on judge's available list
+  - Only shows submissions with status: pending, skip, or completed by current judge
+  - Submissions completed by other judges are now hidden from judge's view
+  - Navigation counter and progress display now properly synchronized
+
+**Technical Implementation**
+
+- **Backend Changes** (`convex/judges.ts`):
+  - Modified `isComplete` logic to check `submissionStatuses` table
+  - Changed from `criteriaScored === totalCriteria` to `submissionStatus?.status === "completed" && submissionStatus?.assignedJudgeId === judge._id`
+  - Updated `completionPercentage` calculation to count completed submissions instead of scores
+  - Formula changed from `(completedScores / totalScores)` to `(completedSubmissionsCount / totalSubmissions)`
+
+- **Frontend Changes** (`src/pages/JudgingInterfacePage.tsx`):
+  - Added `useMemo` hook to filter `allSubmissions` based on `judgeProgress.submissionProgress`
+  - Creates `availableSubmissionIds` Set from judge's available submissions
+  - Filters submissions to only show those available to current judge
+  - Reordered `judgeProgress` query before `submissions` filter to fix dependency order
+
+**User Benefits**
+
+- Accurate progress tracking reflects actual completion status
+- No confusion between progress percentage and submission counter
+- Judges only see submissions they should be judging
+- Previously completed submissions correctly counted in progress
+- Clean, consistent judging experience across all metrics
+
 ### [Enhanced] - October 2, 2025
 
 **Inbox User Blocking & Reporting**
