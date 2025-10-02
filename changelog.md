@@ -24,13 +24,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Features**
 
-- Enhanced inbox conversation deletion behavior
-  - Conversations use soft delete (only hidden from your view, not deleted from database)
-  - When you delete a conversation and the other person sends you a new message, it automatically "undeletes" and shows as a fresh conversation
-  - Your deleted conversation reappears in your inbox when receiving new messages
-  - Old messages are still preserved so conversation history is maintained
+- Added report user functionality in inbox
+  - Report button (Flag icon) in conversation header next to delete button
+  - Click to report a user for inappropriate behavior
+  - Provides prompt for detailed reason
+  - Reports submitted to admin moderation queue
+  - Icon styled in light grey (#787672) with hover to black
+  - Uses existing `reportMessageOrUser` mutation for admin review
+
+- Enhanced inbox conversation deletion and sync behavior
+  - Conversations use soft delete (hidden from your view, not deleted from database)
+  - When you delete a conversation, **all existing messages are marked as deleted** and hidden from your view
+  - **NEW: Message sync fixed** - When someone sends you a message after you deleted the conversation, it automatically reappears in your inbox
+  - `sendMessage` mutation now checks and removes recipient's deletion record when sending
+  - **Only NEW messages** (sent after you deleted) will be visible - old messages stay hidden
+  - Fresh conversation experience when restarting chats after deletion
+  - Real-time conversation restoration when receiving new messages
+
+- Clickable usernames and @mentions in inbox
+  - @username mentions in chat messages are now clickable links
+  - Usernames in conversation list (left sidebar) are clickable with hover underline
+  - Username in chat header (top of conversation) is clickable
+  - All username links navigate directly to user profiles
+  - Links styled in blue for @mentions, standard text color for names
+  - No hover cards, just clean direct links to profiles
 
 **Bug Fixes**
+
+- Fixed missing input box when starting new conversation after deletion
+  - **Root cause**: `upsertConversation` was only removing the other user's deletion record, not your own
+  - Now removes **both** current user's and recipient's deletion records when restarting conversation
+  - Added new `getConversation` query to fetch individual conversation details as fallback
+  - Uses fallback query when conversation not yet in `listConversations` (timing issue)
+  - Input box and conversation header now render immediately when starting new chat
+  - Prevents "undefined" conversation state when navigating from profile "Message" button
+  - Fixed useEffect dependency array warning by removing unstable navigate function
+
+- Fixed deleted conversations still appearing in inbox
+  - Added automatic clearing of selected conversation when it no longer exists in the list
+  - Navigation now uses `replace: true` to properly clear the URL state
+  - Conversation automatically disappears from view immediately after deletion
+  - Added useEffect hook to monitor conversation list and auto-clear stale selections
+
+- Fixed deleted conversations showing old messages when restarted
+  - When deleting a conversation, all messages are now marked as deleted for that user
+  - Old messages from deleted conversations no longer appear when someone messages you again
+  - Creates true "fresh start" experience for restarted conversations
+  - Both `deleteConversation` and `clearInbox` now properly hide all existing messages
+
+- Fixed "Not authenticated" errors in inbox
+  - Added authentication check before calling `markConversationRead` mutation
+  - Made mutation gracefully handle unauthenticated state during page load
+  - Prevents error spam in console when opening inbox before Clerk auth finishes loading
+  - Mutation now silently returns null instead of throwing errors when user not authenticated
 
 - Fixed inbox page scrolling behavior
   - Updated conversation list and messages area to have independent scrolling with `overflow-hidden` and `overflow-y-auto`

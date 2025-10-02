@@ -4,12 +4,42 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Send, ArrowLeft, Trash2, Inbox, MessageCircle } from "lucide-react";
-import { WeeklyLeaderboard } from "../components/WeeklyLeaderboard";
-import { RecentVibers } from "../components/RecentVibers";
-import { TopCategoriesOfWeek } from "../components/TopCategoriesOfWeek";
+import {
+  Send,
+  ArrowLeft,
+  Trash2,
+  Inbox,
+  MessageCircle,
+  Flag,
+} from "lucide-react";
 import "@fontsource/inter/400.css";
 import "@fontsource/inter/500.css";
+
+// Helper function to parse @mentions and create links
+const parseMessageWithMentions = (content: string, isOwnMessage: boolean) => {
+  const parts = content.split(/(@\w+)/g);
+
+  return parts.map((part, index) => {
+    if (part.startsWith("@")) {
+      const username = part.slice(1);
+      return (
+        <a
+          key={index}
+          href={`/${username}`}
+          className={`font-semibold hover:underline ${
+            isOwnMessage
+              ? "text-blue-300 hover:text-blue-200"
+              : "text-blue-600 hover:text-blue-800"
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
 
 export default function InboxPage() {
   const { user: authUser, isLoaded } = useUser();
@@ -30,18 +60,27 @@ export default function InboxPage() {
       ? { conversationId: selectedConversationId }
       : "skip",
   );
+  // Fallback query to get conversation details if not in list yet
+  const fallbackConversation = useQuery(
+    api.dm.getConversation,
+    selectedConversationId
+      ? { conversationId: selectedConversationId }
+      : "skip",
+  );
 
   // Mutations
   const sendMessageMutation = useMutation(api.dm.sendMessage);
   const deleteConversationMutation = useMutation(api.dm.deleteConversation);
   const markConversationReadMutation = useMutation(api.dm.markConversationRead);
   const clearInboxMutation = useMutation(api.dm.clearInbox);
+  const reportMutation = useMutation(api.dm.reportMessageOrUser);
 
   // Local state
   const [messageInput, setMessageInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isClearingInbox, setIsClearingInbox] = useState(false);
+  const [isReporting, setIsReporting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when messages change
@@ -63,10 +102,23 @@ export default function InboxPage() {
 
   // Mark conversation as read when viewing
   useEffect(() => {
-    if (selectedConversationId) {
+    if (selectedConversationId && isLoaded && authUser) {
       markConversationReadMutation({ conversationId: selectedConversationId });
     }
-  }, [selectedConversationId]);
+  }, [selectedConversationId, isLoaded, authUser]);
+
+  // Clear selection if the conversation no longer exists (e.g., after deletion)
+  useEffect(() => {
+    if (
+      selectedConversationId &&
+      conversations &&
+      !conversations.find((c) => c._id === selectedConversationId) &&
+      fallbackConversation === null
+    ) {
+      navigate("/inbox", { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversations, selectedConversationId, fallbackConversation]);
 
   // Handle message send
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -97,11 +149,13 @@ export default function InboxPage() {
     if (!confirmed) return;
 
     setIsDeleting(true);
+    const conversationToDelete = selectedConversationId;
     try {
       await deleteConversationMutation({
-        conversationId: selectedConversationId,
+        conversationId: conversationToDelete,
       });
-      navigate("/inbox"); // Go back to conversation list
+      // Clear the URL parameter and navigate to inbox without selection
+      navigate("/inbox", { replace: true });
     } catch (error: any) {
       alert(error.message || "Failed to delete conversation");
     } finally {
@@ -127,6 +181,30 @@ export default function InboxPage() {
     }
   };
 
+  // Handle report user
+  const handleReportUser = async () => {
+    if (!selectedConversationId || !selectedConversation || isReporting) return;
+
+    const reason = window.prompt(
+      "Why are you reporting this user? Please provide a detailed reason:",
+    );
+    if (!reason || !reason.trim()) return;
+
+    setIsReporting(true);
+    try {
+      await reportMutation({
+        reportedUserId: selectedConversation.otherUser._id,
+        conversationId: selectedConversationId,
+        reason: reason.trim(),
+      });
+      alert("Report submitted. Our team will review it shortly.");
+    } catch (error: any) {
+      alert(error.message || "Failed to submit report");
+    } finally {
+      setIsReporting(false);
+    }
+  };
+
   if (!isLoaded) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -144,10 +222,10 @@ export default function InboxPage() {
     );
   }
 
-  // Get selected conversation details
-  const selectedConversation = conversations?.find(
-    (c) => c._id === selectedConversationId,
-  );
+  // Get selected conversation details (from list or fallback query)
+  const selectedConversation =
+    conversations?.find((c) => c._id === selectedConversationId) ||
+    fallbackConversation;
 
   return (
     <div
@@ -206,9 +284,19 @@ export default function InboxPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
-                        <p className="font-semibold text-[#292929] text-sm truncate">
-                          {conversation.otherUser.name}
-                        </p>
+                        {conversation.otherUser.username ? (
+                          <a
+                            href={`/${conversation.otherUser.username}`}
+                            className="font-semibold text-[#292929] text-sm truncate hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {conversation.otherUser.name}
+                          </a>
+                        ) : (
+                          <p className="font-semibold text-[#292929] text-sm truncate">
+                            {conversation.otherUser.name}
+                          </p>
+                        )}
                         {!conversation.otherUser.inboxEnabled && (
                           <span className="text-xs text-red-600 bg-red-50 px-1.5 py-0.5 rounded">
                             Disabled
@@ -261,25 +349,44 @@ export default function InboxPage() {
                   >
                     <ArrowLeft className="w-5 h-5 text-[#292929]" />
                   </button>
-                  <div>
-                    <p className="font-semibold text-[#292929]">
-                      {selectedConversation?.otherUser.name}
-                    </p>
-                    {selectedConversation?.otherUser.username && (
+                  {selectedConversation?.otherUser.username ? (
+                    <a
+                      href={`/${selectedConversation.otherUser.username}`}
+                      className="hover:opacity-80 transition-opacity"
+                    >
+                      <p className="font-semibold text-[#292929]">
+                        {selectedConversation.otherUser.name}
+                      </p>
                       <p className="text-xs text-[#787672]">
                         @{selectedConversation.otherUser.username}
                       </p>
-                    )}
-                  </div>
+                    </a>
+                  ) : (
+                    <div>
+                      <p className="font-semibold text-[#292929]">
+                        {selectedConversation?.otherUser.name}
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <button
-                  onClick={handleDeleteConversation}
-                  disabled={isDeleting}
-                  className="p-2 hover:bg-[#F2F4F7] rounded-md transition-colors text-red-600"
-                  title="Delete conversation"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleReportUser}
+                    disabled={isReporting}
+                    className="p-2 hover:bg-[#F2F4F7] rounded-md transition-colors text-[#787672] hover:text-[#292929]"
+                    title="Report user"
+                  >
+                    <Flag className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={handleDeleteConversation}
+                    disabled={isDeleting}
+                    className="p-2 hover:bg-[#F2F4F7] rounded-md transition-colors text-red-600"
+                    title="Delete conversation"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               {/* Messages */}
@@ -318,7 +425,10 @@ export default function InboxPage() {
                           }`}
                         >
                           <p className="text-sm break-words">
-                            {message.content}
+                            {parseMessageWithMentions(
+                              message.content,
+                              isOwnMessage,
+                            )}
                           </p>
                           <p
                             className={`text-xs mt-1 ${

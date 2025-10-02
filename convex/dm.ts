@@ -236,6 +236,19 @@ export const upsertConversation = mutation({
       .unique();
 
     if (existing) {
+      // Check if the CURRENT user has deleted this conversation
+      const currentUserDeletion = await ctx.db
+        .query("dmDeletedConversations")
+        .withIndex("by_conversation_user", (q) =>
+          q.eq("conversationId", existing._id).eq("userId", currentUser._id),
+        )
+        .first();
+
+      // If current user deleted it, remove their deletion record so they can see it again
+      if (currentUserDeletion) {
+        await ctx.db.delete(currentUserDeletion._id);
+      }
+
       // Check if the OTHER user (recipient) has deleted this conversation
       const recipientDeletion = await ctx.db
         .query("dmDeletedConversations")
@@ -354,6 +367,19 @@ export const sendMessage = mutation({
       lastActivityTime: Date.now(),
     });
 
+    // Check if recipient has deleted this conversation - if so, remove their deletion record
+    // so the conversation reappears in their inbox when they receive a new message
+    const recipientDeletion = await ctx.db
+      .query("dmDeletedConversations")
+      .withIndex("by_conversation_user", (q) =>
+        q.eq("conversationId", args.conversationId).eq("userId", recipientId),
+      )
+      .first();
+
+    if (recipientDeletion) {
+      await ctx.db.delete(recipientDeletion._id);
+    }
+
     // Record rate limit
     await ctx.runMutation(internal.dm.recordMessageSend, {
       senderId: currentUser._id,
@@ -416,7 +442,7 @@ export const deleteMessage = mutation({
 });
 
 /**
- * Delete a conversation (soft delete - only removes from user's view)
+ * Delete a conversation (soft delete - removes from user's view and hides all messages)
  */
 export const deleteConversation = mutation({
   args: { conversationId: v.id("dmConversations") },
@@ -463,6 +489,23 @@ export const deleteConversation = mutation({
       return null; // Already deleted
     }
 
+    // Mark all messages in this conversation as deleted for this user
+    const messages = await ctx.db
+      .query("dmMessages")
+      .withIndex("by_conversation", (q) =>
+        q.eq("conversationId", args.conversationId),
+      )
+      .collect();
+
+    for (const message of messages) {
+      const deletedBy = message.deletedBy || [];
+      if (!deletedBy.includes(currentUser._id)) {
+        await ctx.db.patch(message._id, {
+          deletedBy: [...deletedBy, currentUser._id],
+        });
+      }
+    }
+
     // Create deletion record
     await ctx.db.insert("dmDeletedConversations", {
       conversationId: args.conversationId,
@@ -474,7 +517,7 @@ export const deleteConversation = mutation({
 });
 
 /**
- * Clear entire inbox (delete all conversations for user)
+ * Clear entire inbox (delete all conversations and hide all messages for user)
  */
 export const clearInbox = mutation({
   args: {},
@@ -520,6 +563,24 @@ export const clearInbox = mutation({
         .first();
 
       if (!existing) {
+        // Mark all messages in this conversation as deleted for this user
+        const messages = await ctx.db
+          .query("dmMessages")
+          .withIndex("by_conversation", (q) =>
+            q.eq("conversationId", conversation._id),
+          )
+          .collect();
+
+        for (const message of messages) {
+          const deletedBy = message.deletedBy || [];
+          if (!deletedBy.includes(currentUser._id)) {
+            await ctx.db.patch(message._id, {
+              deletedBy: [...deletedBy, currentUser._id],
+            });
+          }
+        }
+
+        // Mark conversation as deleted
         await ctx.db.insert("dmDeletedConversations", {
           conversationId: conversation._id,
           userId: currentUser._id,
@@ -675,6 +736,89 @@ export const listConversations = query({
 });
 
 /**
+ * Get a single conversation's details (for when it's not in the list yet)
+ */
+export const getConversation = query({
+  args: { conversationId: v.id("dmConversations") },
+  returns: v.union(
+    v.object({
+      _id: v.id("dmConversations"),
+      otherUser: v.object({
+        _id: v.id("users"),
+        name: v.string(),
+        username: v.optional(v.string()),
+        imageUrl: v.optional(v.string()),
+        inboxEnabled: v.boolean(),
+      }),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null;
+    }
+
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!currentUser) {
+      return null;
+    }
+
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation) {
+      return null;
+    }
+
+    // Verify user is part of conversation
+    if (
+      conversation.userAId !== currentUser._id &&
+      conversation.userBId !== currentUser._id
+    ) {
+      return null;
+    }
+
+    // Check if conversation is deleted by current user
+    const deleted = await ctx.db
+      .query("dmDeletedConversations")
+      .withIndex("by_conversation_user", (q) =>
+        q
+          .eq("conversationId", args.conversationId)
+          .eq("userId", currentUser._id),
+      )
+      .first();
+
+    if (deleted) {
+      return null; // Don't show deleted conversations
+    }
+
+    const otherUserId =
+      conversation.userAId === currentUser._id
+        ? conversation.userBId
+        : conversation.userAId;
+
+    const otherUser = await ctx.db.get(otherUserId);
+    if (!otherUser) {
+      return null;
+    }
+
+    return {
+      _id: conversation._id,
+      otherUser: {
+        _id: otherUser._id,
+        name: otherUser.name,
+        username: otherUser.username,
+        imageUrl: otherUser.imageUrl,
+        inboxEnabled: otherUser.inboxEnabled ?? true,
+      },
+    };
+  },
+});
+
+/**
  * List messages in a conversation (excludes messages deleted by current user)
  */
 export const listMessages = query({
@@ -778,7 +922,8 @@ export const markConversationRead = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      // Silently return if not authenticated (happens during page load)
+      return null;
     }
 
     const currentUser = await ctx.db
@@ -787,7 +932,8 @@ export const markConversationRead = mutation({
       .unique();
 
     if (!currentUser) {
-      throw new Error("User not found");
+      // Silently return if user not found (happens during initial sync)
+      return null;
     }
 
     const conversation = await ctx.db.get(args.conversationId);

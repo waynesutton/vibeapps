@@ -66,16 +66,28 @@ Brief description of the feature and its purpose.
 - [x] fix inbox scrolling behavior to prevent whole page from scrolling, only chat window and conversation list scroll independently
 - [x] redesign inbox page with messenger-style 3-column layout with right sidebar showing Most Vibes This Week, Recent Vibers, and Top Categories This Week
 - [x] implement soft delete for inbox conversations with automatic undelete when receiving new messages
+- [x] add clickable @username links in inbox chat messages that link to user profiles (without hover cards)
+- [x] make usernames in conversation list and chat header clickable links to user profiles
+- [x] fix "Not authenticated" errors in markConversationRead mutation
+- [x] fix deleted conversations showing old messages when restarted - now marks all messages as deleted when deleting conversation
+- [x] fix deleted conversation still appearing in inbox - added auto-clear when conversation no longer exists in list
+- [x] fix missing input box when starting new conversation after deletion - added fallback query to fetch conversation details
+- [x] fix upsertConversation to remove current user's deletion record when restarting conversation
+- [x] fix message sync - when user deletes conversation and other user sends message, conversation reappears in recipient's inbox
+- [x] add report user feature in inbox conversation header with Flag icon (light grey, hover black)
 
 ## In Progress Tasks
 
-- [ ] content moderation keep hide, add archive that hides from content modration but sitll able to see by dropdown selction
-- [ ] in contnet modersation add a show by date range submissions
+- [ ] Content moderation keep hide, add archive that hides from Content moderation but sitll able to see by dropdown selection
+- [ ] in Content moderation add a show by date range submissions
+- [ ] in judging interface keep the orginal date but ia user make changes add just the date and time the submission was modified and still link to change log
+- [ ] add an anchor link to change log and link to
 
 ## Future Tasks - Roadmap
 
 - edit submissions add tags
 - [ ] clerk roles for hackathon organizers to see judges section in admin dashboard only from friendsonlyinbox.md
+- [ ] add notifications for people who follow
 
 ## TBD Future task
 

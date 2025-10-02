@@ -1228,7 +1228,7 @@ export default function UserProfilePage() {
                     ownInboxEnabled !== false && navigate("/inbox")
                   }
                   disabled={ownInboxEnabled === false}
-                  className={`px-6 py-2 rounded-md border border-[#D8E1EC] text-sm font-medium flex items-center justify-center md:justify-start md:flex-shrink-0 transition-colors ${
+                  className={`px-6 py-2 rounded-md border border-[#D8E1EC] text-sm font-medium flex items-center justify-center transition-colors ${
                     ownInboxEnabled === false
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                       : "bg-[#292929] text-[#ffffff] hover:bg-[#F2F0ED] hover:text-[#292929]"
@@ -1241,7 +1241,7 @@ export default function UserProfilePage() {
                   }
                 >
                   <Inbox className="w-4 h-4 mr-2 text-md" />
-                  Go to Inbox
+                  Inbox
                 </button>
 
                 {/* Inbox Toggle Controls */}
@@ -1276,17 +1276,16 @@ export default function UserProfilePage() {
                         : "Disabled"}
                   </span>
                 </div>
-              </div>
-            )}
 
-            {isOwnProfile && !isEditing && (
-              <button
-                onClick={handleEditToggle}
-                className="mt-2 px-6 py-2 rounded-md bg-[#292929] border border-[#D8E1EC] text-[#ffffff] rounded-md text-sm font-medium hover:bg-[#F2F0ED] hover:text-[#292929] flex items-center justify-center sm:justify-start"
-                style={{ fontFamily: "Inter, sans-serif" }}
-              >
-                <Edit3 className="w-4 h-4 mr-2 text-md" /> Edit my profile
-              </button>
+                {/* Edit Profile Button */}
+                <button
+                  onClick={handleEditToggle}
+                  className="px-6 py-2 rounded-md bg-[#292929] border border-[#D8E1EC] text-[#ffffff] text-sm font-medium hover:bg-[#F2F0ED] hover:text-[#292929] flex items-center justify-center transition-colors"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
+                  <Edit3 className="w-4 h-4 mr-2 text-md" /> Edit my profile
+                </button>
+              </div>
             )}
           </div>
         </div>

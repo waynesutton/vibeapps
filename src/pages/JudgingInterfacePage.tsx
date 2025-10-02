@@ -854,24 +854,52 @@ export default function JudgingInterfacePage() {
                       View Change Log
                     </Link>
                   </div>
-                  <div className="text-sm text-gray-600">
-                    <span className="font-medium text-gray-700">
-                      Originally submitted:
-                    </span>{" "}
-                    {new Date(
-                      currentSubmission._creationTime,
-                    ).toLocaleDateString(undefined, {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}{" "}
-                    at{" "}
-                    {new Date(
-                      currentSubmission._creationTime,
-                    ).toLocaleTimeString(undefined, {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <div>
+                      <span className="font-medium text-gray-700">
+                        Originally submitted:
+                      </span>{" "}
+                      {new Date(
+                        currentSubmission._creationTime,
+                      ).toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}{" "}
+                      at{" "}
+                      {new Date(
+                        currentSubmission._creationTime,
+                      ).toLocaleTimeString(undefined, {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                    {(currentSubmission as any).changeLog &&
+                      (currentSubmission as any).changeLog.length > 0 && (
+                        <div>
+                          <span className="font-medium text-gray-700">
+                            Last modified:
+                          </span>{" "}
+                          {new Date(
+                            (currentSubmission as any).changeLog[
+                              (currentSubmission as any).changeLog.length - 1
+                            ].timestamp,
+                          ).toLocaleDateString(undefined, {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}{" "}
+                          at{" "}
+                          {new Date(
+                            (currentSubmission as any).changeLog[
+                              (currentSubmission as any).changeLog.length - 1
+                            ].timestamp,
+                          ).toLocaleTimeString(undefined, {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      )}
                   </div>
                 </div>
               </div>
