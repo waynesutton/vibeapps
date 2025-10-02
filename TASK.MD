@@ -62,13 +62,15 @@ Brief description of the feature and its purpose.
 - [x] test inbox direct message and inbox email notification from friendsonlyinbox.md
 - [x] change notifications for inbox to be inbox check in
 - [x] fix "Invalid Date" display on judging interface page submission timestamps
+- [x] add inbox icon to header
+- [x] fix inbox scrolling behavior to prevent whole page from scrolling, only chat window and conversation list scroll independently
+- [x] redesign inbox page with messenger-style 3-column layout with right sidebar showing Most Vibes This Week, Recent Vibers, and Top Categories This Week
+- [x] implement soft delete for inbox conversations with automatic undelete when receiving new messages
 
 ## In Progress Tasks
 
-- [ ] fix inbox window
 - [ ] content moderation keep hide, add archive that hides from content modration but sitll able to see by dropdown selction
 - [ ] in contnet modersation add a show by date range submissions
-- [ ] add inbox icon to header
 
 ## Future Tasks - Roadmap
 

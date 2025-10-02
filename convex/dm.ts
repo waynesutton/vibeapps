@@ -236,6 +236,19 @@ export const upsertConversation = mutation({
       .unique();
 
     if (existing) {
+      // Check if the OTHER user (recipient) has deleted this conversation
+      const recipientDeletion = await ctx.db
+        .query("dmDeletedConversations")
+        .withIndex("by_conversation_user", (q) =>
+          q.eq("conversationId", existing._id).eq("userId", args.otherUserId),
+        )
+        .first();
+
+      // If recipient deleted it, remove their deletion record so conversation appears fresh for them
+      if (recipientDeletion) {
+        await ctx.db.delete(recipientDeletion._id);
+      }
+
       return existing._id;
     }
 

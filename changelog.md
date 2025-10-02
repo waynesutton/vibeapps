@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Enhanced] - October 2, 2025
+
+**UI Improvements**
+
+- Redesigned Inbox page with messenger-style 3-column layout
+  - **Left Column**: Conversations list with improved card design and rounded borders
+  - **Middle Column**: Messages area with cleaner chat bubbles and improved typography
+  - **Right Column**: Community sidebar featuring "Most Vibes This Week", "Recent Vibers", and "Top Categories This Week" (visible on XL screens)
+  - Changed from full-viewport fixed layout to container-based layout with `h-[calc(100vh-12rem)]`
+  - Updated color scheme to match site design system using `#292929`, `#D8E1EC`, `#F2F4F7`, `#787672`
+  - Improved conversation list items with better spacing and unread badge styling
+  - Enhanced message input with rounded corners and refined button styling
+  - Better visual hierarchy with consistent borders and background colors
+  - Responsive design: Single column on mobile, 2 columns on tablet, 3 columns on desktop (XL+)
+
+**Features**
+
+- Enhanced inbox conversation deletion behavior
+  - Conversations use soft delete (only hidden from your view, not deleted from database)
+  - When you delete a conversation and the other person sends you a new message, it automatically "undeletes" and shows as a fresh conversation
+  - Your deleted conversation reappears in your inbox when receiving new messages
+  - Old messages are still preserved so conversation history is maintained
+
+**Bug Fixes**
+
+- Fixed inbox page scrolling behavior
+  - Updated conversation list and messages area to have independent scrolling with `overflow-hidden` and `overflow-y-auto`
+  - Changed auto-scroll behavior from "smooth" to "auto" with `block: "end"` to prevent triggering page scroll
+  - Both conversation list and chat window now scroll independently within their containers
+  - Page no longer scrolls when clicking messages or sending new messages
+
 ### [Fixed] - October 1, 2025
 
 **Bug Fixes**
