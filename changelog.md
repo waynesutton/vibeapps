@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Added] - October 2, 2025
+
+**Judging Interface Tags Display**
+
+- Added tags display to the Judging Interface page
+  - Tags now appear above the "Originally submitted" date section
+  - Matches the tag display style from the StoryDetail page
+  - Shows tag emoji/icon, name, and custom colors
+  - Filters out hidden tags and specific hackathon tags (resendhackathon, ychackathon)
+  - Tags are clickable and link to the tag filter page
+  - Judges can now quickly see what categories/technologies each submission belongs to
+
+**Technical Implementation**
+
+- **Backend Changes** (`convex/judgingGroupSubmissions.ts`):
+  - Updated `getGroupSubmissions` query to resolve and return tags
+  - Added `tagIds` and `tags` to return type validator
+  - Tags are now fetched and resolved with all properties (emoji, iconUrl, colors)
+  - Properly handles missing/deleted tags by filtering them out
+- **Backend Changes** (`convex/validators.ts`):
+  - Updated `tagDocValidator` to include all tag fields
+  - Added `borderColor`, `emoji`, and `iconUrl` to validator
+  - Ensures type safety for tag data across all queries
+
+- **Frontend Changes** (`src/pages/JudgingInterfacePage.tsx`):
+  - Imported `Doc` type from dataModel for proper tag typing
+  - Added tags display section with same styling as StoryDetail page
+  - Positioned tags between action buttons and submission date info
+  - Uses inline styles for custom tag colors (backgroundColor, textColor, borderColor)
+  - Conditional rendering only shows tags if submission has tags array with items
+
 ### [Fixed] - October 2, 2025
 
 **Judging Group Error Handling**

@@ -451,7 +451,7 @@ export function StoryForm() {
             </label>
             <textarea
               id="longDescription"
-              placeholder="- Problem you're solving&#10;- How the app works&#10;- Notable features&#10;- Why did you build this&#10;- Modern Stack cohost(s) included&#10;- Tech stack list&#10;- Prize category OpenAI or InKeep (select the correct tag)"
+              placeholder="- Problem you're solving&#10;- How the app works&#10;- Notable features&#10;- Why did you build this&#10;- Tech stack list&#10;- Challenges we ran into&#10;- Any success stories or metrics&#10;"
               value={formData.longDescription}
               onChange={(e) =>
                 setFormData((prev) => ({

@@ -439,6 +439,25 @@ export const getGroupSubmissions = query({
       chefShowUrl: v.optional(v.string()),
       chefAppUrl: v.optional(v.string()),
       votes: v.number(),
+      // Tags
+      tagIds: v.optional(v.array(v.id("tags"))),
+      tags: v.optional(
+        v.array(
+          v.object({
+            _id: v.id("tags"),
+            _creationTime: v.number(),
+            name: v.string(),
+            slug: v.string(),
+            showInHeader: v.boolean(),
+            isHidden: v.optional(v.boolean()),
+            backgroundColor: v.optional(v.string()),
+            textColor: v.optional(v.string()),
+            borderColor: v.optional(v.string()),
+            emoji: v.optional(v.string()),
+            iconUrl: v.optional(v.string()),
+          }),
+        ),
+      ),
       // Hackathon team info
       teamName: v.optional(v.string()),
       teamMemberCount: v.optional(v.number()),
@@ -524,6 +543,29 @@ export const getGroupSubmissions = query({
               ).then((urls) => urls.filter((url) => url !== ""))
             : [];
 
+          // Resolve tags
+          const resolvedTags = story.tagIds
+            ? await Promise.all(
+                story.tagIds.map(async (tagId) => {
+                  const tag = await ctx.db.get(tagId);
+                  if (!tag) return null;
+                  return {
+                    _id: tag._id,
+                    _creationTime: tag._creationTime,
+                    name: tag.name,
+                    slug: tag.slug || "",
+                    showInHeader: tag.showInHeader,
+                    isHidden: tag.isHidden,
+                    backgroundColor: tag.backgroundColor,
+                    textColor: tag.textColor,
+                    borderColor: tag.borderColor,
+                    emoji: tag.emoji,
+                    iconUrl: tag.iconUrl,
+                  };
+                }),
+              ).then((tags) => tags.filter((tag) => tag !== null))
+            : [];
+
           return {
             _id: story._id,
             _creationTime: story._creationTime,
@@ -542,6 +584,9 @@ export const getGroupSubmissions = query({
             chefShowUrl: story.chefShowUrl,
             chefAppUrl: story.chefAppUrl,
             votes: story.votes,
+            // Tags
+            tagIds: story.tagIds,
+            tags: resolvedTags.length > 0 ? resolvedTags : undefined,
             // Hackathon team info
             teamName: story.teamName,
             teamMemberCount: story.teamMemberCount,

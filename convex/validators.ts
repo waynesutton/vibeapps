@@ -11,6 +11,9 @@ export const tagDocValidator = v.object({
   isHidden: v.optional(v.boolean()),
   backgroundColor: v.optional(v.string()),
   textColor: v.optional(v.string()),
+  borderColor: v.optional(v.string()),
+  emoji: v.optional(v.string()),
+  iconUrl: v.optional(v.string()),
 });
 
 // Validator for the main story document fields that are directly from the 'stories' table

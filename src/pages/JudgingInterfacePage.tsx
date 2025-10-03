@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
+import { Id, Doc } from "../../convex/_generated/dataModel";
 import {
   ChevronLeft,
   ChevronRight,
@@ -870,6 +870,45 @@ export default function JudgingInterfacePage() {
                       View Change Log
                     </Link>
                   </div>
+
+                  {/* Tags */}
+                  {(currentSubmission as any).tags &&
+                    (currentSubmission as any).tags.length > 0 && (
+                      <div className="flex gap-1.5 flex-wrap py-2">
+                        {((currentSubmission as any).tags || []).map(
+                          (tag: Doc<"tags">) =>
+                            !tag.isHidden &&
+                            tag.name !== "resendhackathon" &&
+                            tag.name !== "ychackathon" && (
+                              <Link
+                                key={tag._id}
+                                to={`/tag/${tag.slug}`}
+                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition-opacity hover:opacity-80"
+                                style={{
+                                  backgroundColor:
+                                    tag.backgroundColor || "#F4F0ED",
+                                  color: tag.textColor || "#525252",
+                                  border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "#D5D3D0")}`,
+                                }}
+                                title={`View all apps tagged with ${tag.name}`}
+                              >
+                                {tag.emoji && (
+                                  <span className="mr-1">{tag.emoji}</span>
+                                )}
+                                {tag.iconUrl && !tag.emoji && (
+                                  <img
+                                    src={tag.iconUrl}
+                                    alt=""
+                                    className="w-3 h-3 mr-1 rounded-sm object-cover"
+                                  />
+                                )}
+                                {tag.name}
+                              </Link>
+                            ),
+                        )}
+                      </div>
+                    )}
+
                   <div className="text-sm text-gray-600 space-y-1">
                     <div>
                       <span className="font-medium text-gray-700">
