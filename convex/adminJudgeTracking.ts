@@ -459,3 +459,105 @@ export const unlinkJudgeFromUser = mutation({
     return null;
   },
 });
+
+/**
+ * Get comprehensive judge data for CSV export
+ */
+export const getJudgeTrackingExportData = query({
+  args: { groupId: v.id("judgingGroups") },
+  returns: v.array(
+    v.object({
+      judgeName: v.string(),
+      judgeEmail: v.optional(v.string()),
+      judgeUsername: v.optional(v.string()),
+      linkedUserId: v.optional(v.string()),
+      storyTitle: v.string(),
+      storySlug: v.string(),
+      criteriaQuestion: v.string(),
+      criteriaDescription: v.optional(v.string()),
+      score: v.number(),
+      comments: v.optional(v.string()),
+      isHidden: v.boolean(),
+      submittedAt: v.number(),
+      submittedAtFormatted: v.string(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
+
+    // Get all judges for this group
+    const judges = await ctx.db
+      .query("judges")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+
+    // Get all scores for this group
+    const allScores = await ctx.db
+      .query("judgeScores")
+      .withIndex("by_groupId_storyId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+
+    // Build detailed export data
+    const exportDataPromises = allScores.map(async (score) => {
+      const judge = judges.find((j) => j._id === score.judgeId);
+      const story = await ctx.db.get(score.storyId);
+      const criteria = await ctx.db.get(score.criteriaId);
+
+      // Skip scores with missing related data (deleted judges, stories, or criteria)
+      if (!judge || !story || !criteria) {
+        return null;
+      }
+
+      // Get user profile if linked
+      let judgeUsername: string | undefined;
+      let linkedUserId: string | undefined;
+      if (judge.userId) {
+        const user = await ctx.db.get(judge.userId);
+        if (user) {
+          judgeUsername = user.username;
+          linkedUserId = user._id;
+        }
+      }
+
+      // Format date
+      const submittedDate = new Date(score._creationTime);
+      const submittedAtFormatted = submittedDate.toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      return {
+        judgeName: judge.name,
+        judgeEmail: judge.email,
+        judgeUsername,
+        linkedUserId,
+        storyTitle: story.title,
+        storySlug: story.slug,
+        criteriaQuestion: criteria.question,
+        criteriaDescription: criteria.description,
+        score: score.score,
+        comments: score.comments,
+        isHidden: score.isHidden || false,
+        submittedAt: score._creationTime,
+        submittedAtFormatted,
+      };
+    });
+
+    const exportDataWithNulls = await Promise.all(exportDataPromises);
+    // Filter out null entries (scores with missing related data)
+    const exportData = exportDataWithNulls.filter(
+      (item): item is NonNullable<typeof item> => item !== null,
+    );
+
+    // Sort by judge name, then by submission date
+    return exportData.sort((a, b) => {
+      if (a.judgeName !== b.judgeName) {
+        return a.judgeName.localeCompare(b.judgeName);
+      }
+      return b.submittedAt - a.submittedAt;
+    });
+  },
+});

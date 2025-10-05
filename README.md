@@ -61,6 +61,8 @@ The community where you go to show off what you've built, and see what others ar
 - **Judging Groups**: Create public or private judging competitions with password protection
 - **Custom Criteria**: Define scoring questions with 1-10 star ratings and weighted scoring
 - **Judge Management**: Session-based judge authentication and tracking with progress monitoring
+- **Judge Tracking Dashboard**: Admin view of all judges with submissions judged, average scores, and activity timestamps
+- **CSV Export**: Download comprehensive judge activity reports including all scores, submissions, criteria, and comments
 - **Submission Management**: Add/remove submissions from judging groups with search functionality
 - **Real-time Scoring**: Live score submission and progress tracking across all submissions
 - **Results Dashboard**: Comprehensive results with rankings, analytics, and CSV export

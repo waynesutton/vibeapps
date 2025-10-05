@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Added] - October 5, 2025
+
+**Judge Tracking CSV Export**
+
+- Added comprehensive CSV export functionality to Judge Tracking dashboard
+  - Export button in header downloads all judge activity data
+  - CSV includes judge names, emails, usernames, linked user IDs
+  - Submission titles and slugs for each score
+  - Judging criteria questions and descriptions
+  - Individual scores and comments
+  - Hidden status for moderated scores
+  - Formatted submission timestamps
+  - Filename format: `judge-activity-{group-name}-{date}.csv`
+  - Properly escaped CSV values handling commas, quotes, and newlines
+  - Button disabled when no data available
+  - Gracefully handles deleted judges, stories, or criteria by skipping those scores
+
+**Judge Tracking UI Improvements**
+
+- Removed confusing "scores" column from judge list
+- Simplified metrics to show only submissions judged and average score
+- Changed "subs" abbreviation to "submissions judged" for clarity
+- Reordered columns to show submissions judged first
+- Changed "avg" label to "avg score" for better clarity
+
+**Technical Implementation**
+
+- Backend: Added `getJudgeTrackingExportData` query in `convex/adminJudgeTracking.ts`
+  - Fetches comprehensive judge scoring data across all criteria
+  - Includes judge profile information and user linkages
+  - Sorts data by judge name then submission date
+  - Returns formatted date strings for CSV readability
+- Frontend: Enhanced `JudgeTracking.tsx` component
+  - Added CSV generation function with proper escaping
+  - Integrated Download icon from lucide-react
+  - Added export button with loading state handling
+  - Cleaned up unused imports and mutations
+
+### [Fixed] - October 5, 2025
+
+**Judge Tracking Error Handling**
+
+- Fixed crash when exporting CSV with deleted judges, stories, or criteria
+  - **Root Cause**: Export query threw error when encountering scores with missing related data
+  - **Impact**: JudgeTracking component crashed with "Missing related data for score" error
+  - **Fix Applied**: Changed query to gracefully skip scores with deleted references
+  - Now returns only valid scores and filters out orphaned entries
+  - Maintains data integrity while preventing application crashes
+
 ### [Added] - October 2, 2025
 
 **Judging Interface Tags Display**

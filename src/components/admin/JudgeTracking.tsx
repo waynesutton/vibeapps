@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Users,
@@ -7,7 +7,6 @@ import {
   Edit,
   Trash2,
   UserCheck,
-  UserX,
   Award,
   Clock,
   BarChart3,
@@ -15,9 +14,9 @@ import {
   ChevronRight,
   User,
   Mail,
-  Calendar,
   Target,
   AlertTriangle,
+  Download,
 } from "lucide-react";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -67,16 +66,18 @@ export function JudgeTracking({
   );
   const deleteJudgeScore = useMutation(api.adminJudgeTracking.deleteJudgeScore);
   const deleteJudge = useMutation(api.adminJudgeTracking.deleteJudge);
-  const linkJudgeToUser = useMutation(api.adminJudgeTracking.linkJudgeToUser);
-  const unlinkJudgeFromUser = useMutation(
-    api.adminJudgeTracking.unlinkJudgeFromUser,
-  );
 
   const judgeScores = useQuery(
     api.adminJudgeTracking.getJudgeDetailedScores,
     expandedJudges.size > 0 && authIsLoading === false && isAuthenticated
       ? { judgeId: Array.from(expandedJudges)[0] }
       : "skip",
+  );
+
+  // Get export data
+  const exportData = useQuery(
+    api.adminJudgeTracking.getJudgeTrackingExportData,
+    authIsLoading || !isAuthenticated ? "skip" : { groupId },
   );
 
   const handleExpandJudge = (judgeId: Id<"judges">) => {
@@ -139,6 +140,74 @@ export function JudgeTracking({
     }
   };
 
+  // CSV export handler
+  const handleExportCSV = () => {
+    if (!exportData || exportData.length === 0) {
+      alert("No data available to export");
+      return;
+    }
+
+    // CSV headers
+    const headers = [
+      "Judge Name",
+      "Judge Email",
+      "Judge Username",
+      "Linked User ID",
+      "Submission Title",
+      "Submission Slug",
+      "Criteria Question",
+      "Criteria Description",
+      "Score",
+      "Comments",
+      "Is Hidden",
+      "Submitted At",
+    ];
+
+    // Convert data to CSV rows
+    const rows = exportData.map((row) => [
+      row.judgeName,
+      row.judgeEmail || "",
+      row.judgeUsername || "",
+      row.linkedUserId || "",
+      row.storyTitle,
+      row.storySlug,
+      row.criteriaQuestion,
+      row.criteriaDescription || "",
+      row.score.toString(),
+      row.comments || "",
+      row.isHidden ? "Yes" : "No",
+      row.submittedAtFormatted,
+    ]);
+
+    // Escape CSV values (handle commas, quotes, newlines)
+    const escapeCSV = (value: string) => {
+      if (value.includes(",") || value.includes('"') || value.includes("\n")) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    };
+
+    // Build CSV content
+    const csvContent = [
+      headers.map(escapeCSV).join(","),
+      ...rows.map((row) => row.map(escapeCSV).join(",")),
+    ].join("\n");
+
+    // Create and trigger download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    const timestamp = new Date().toISOString().split("T")[0];
+    const filename = `judge-activity-${groupName.toLowerCase().replace(/\s+/g, "-")}-${timestamp}.csv`;
+
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (authIsLoading) {
     return (
       <div className="space-y-6 text-center">Loading authentication...</div>
@@ -173,7 +242,16 @@ export function JudgeTracking({
             Monitor and moderate judge activity and scores
           </p>
         </div>
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-3 text-sm">
+          <button
+            onClick={handleExportCSV}
+            disabled={!exportData || exportData.length === 0}
+            className="flex items-center gap-2 px-3 py-2 bg-black text-white rounded hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            title="Export all judge scores to CSV"
+          >
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
           <div
             className={`px-2 py-1 rounded text-xs font-medium ${
               group.isActive
@@ -265,17 +343,11 @@ export function JudgeTracking({
                     </div>
                   </button>
                   <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <div className="text-center min-w-12">
-                      <div className="font-medium text-gray-900">
-                        {judge.scoresCount}
-                      </div>
-                      <div className="text-xs">scores</div>
-                    </div>
                     <div className="text-center min-w-16">
                       <div className="font-medium text-gray-900">
                         {judge.submissionsJudged}
                       </div>
-                      <div className="text-xs">subs</div>
+                      <div className="text-xs">submissions judged</div>
                     </div>
                     <div className="text-center min-w-12">
                       <div className="font-medium text-gray-900">
@@ -283,7 +355,7 @@ export function JudgeTracking({
                           ? judge.averageScore.toFixed(1)
                           : "N/A"}
                       </div>
-                      <div className="text-xs">avg</div>
+                      <div className="text-xs">avg score</div>
                     </div>
                     <div className="text-center min-w-16">
                       <div className="text-xs">

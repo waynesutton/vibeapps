@@ -89,6 +89,9 @@ Brief description of the feature and its purpose.
 - [x] Content moderation keep hide, add archive that hides from Content moderation but still able to see by dropdown selection
 - [x] fixed judging progress
 - [x] added edit add tags to submissions
+- [x] added CSV export to Judge Tracking dashboard for comprehensive judge activity reports
+- [x] updated Judge Tracking UI to show submissions judged and avg score instead of confusing scores column
+- [x] fixed Judge Tracking crash when encountering deleted judges, stories, or criteria
 
 ## In Progress Tasks
 
