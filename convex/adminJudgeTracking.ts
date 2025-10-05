@@ -476,6 +476,7 @@ export const getJudgeTrackingExportData = query({
       criteriaQuestion: v.string(),
       criteriaDescription: v.optional(v.string()),
       score: v.number(),
+      totalScoreForSubmission: v.number(),
       comments: v.optional(v.string()),
       isHidden: v.boolean(),
       submittedAt: v.number(),
@@ -496,6 +497,14 @@ export const getJudgeTrackingExportData = query({
       .query("judgeScores")
       .withIndex("by_groupId_storyId", (q) => q.eq("groupId", args.groupId))
       .collect();
+
+    // Calculate total scores for each judge-submission pair
+    const totalScoreMap = new Map<string, number>();
+    for (const score of allScores) {
+      const key = `${score.judgeId}-${score.storyId}`;
+      const currentTotal = totalScoreMap.get(key) || 0;
+      totalScoreMap.set(key, currentTotal + score.score);
+    }
 
     // Build detailed export data
     const exportDataPromises = allScores.map(async (score) => {
@@ -529,6 +538,10 @@ export const getJudgeTrackingExportData = query({
         minute: "2-digit",
       });
 
+      // Get total score for this judge-submission pair
+      const totalScoreKey = `${score.judgeId}-${score.storyId}`;
+      const totalScoreForSubmission = totalScoreMap.get(totalScoreKey) || 0;
+
       return {
         judgeName: judge.name,
         judgeEmail: judge.email,
@@ -539,6 +552,7 @@ export const getJudgeTrackingExportData = query({
         criteriaQuestion: criteria.question,
         criteriaDescription: criteria.description,
         score: score.score,
+        totalScoreForSubmission,
         comments: score.comments,
         isHidden: score.isHidden || false,
         submittedAt: score._creationTime,

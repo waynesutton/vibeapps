@@ -98,7 +98,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `convex/judgingGroupSubmissions.ts`: Submission assignment within judging groups with @mentions in notes, search functionality, and status tracking
 - `convex/judges.ts`: Judge registration, session management, and accurate progress tracking with completion-based calculations
 - `convex/judgeScores.ts`: Score submission, calculation, and results with CSV export and weighted scoring
-- `convex/adminJudgeTracking.ts`: Admin utilities for judge monitoring, submission status management, and comprehensive CSV export of judge activity including scores, submissions, criteria, and comments
+- `convex/adminJudgeTracking.ts`: Admin utilities for judge monitoring, submission status management, and comprehensive CSV export of judge activity including individual scores, total scores per submission, submissions, criteria, and comments
 
 ### Email System (Resend Integration) ✅ FULLY IMPLEMENTED
 

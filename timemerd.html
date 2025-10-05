@@ -1,0 +1,944 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VibeApps Development Timeline</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
+        background-color: #f2f4f7;
+        padding: 20px;
+        margin: 0;
+      }
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+        background-color: white;
+        padding: 40px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #292929;
+        text-align: center;
+        margin-bottom: 10px;
+      }
+      .subtitle {
+        text-align: center;
+        color: #787672;
+        margin-bottom: 40px;
+      }
+      .timeline {
+        position: relative;
+        padding: 20px 0;
+      }
+      .timeline::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(to bottom, #292929, #787672);
+        top: 0;
+      }
+      .timeline-item {
+        margin-bottom: 40px;
+        position: relative;
+      }
+      .timeline-header {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        padding: 20px;
+        background-color: #f2f4f7;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        position: relative;
+      }
+      .timeline-header:hover {
+        background-color: #d8e1ec;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      .timeline-dot {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 20px;
+        height: 20px;
+        background-color: #292929;
+        border: 4px solid white;
+        border-radius: 50%;
+        z-index: 2;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+      }
+      .timeline-item.active .timeline-dot {
+        background-color: #787672;
+        width: 24px;
+        height: 24px;
+      }
+      .timeline-content-wrapper {
+        width: 45%;
+        margin-left: auto;
+        padding-left: 40px;
+      }
+      .timeline-item:nth-child(even) .timeline-content-wrapper {
+        margin-left: 0;
+        margin-right: auto;
+        padding-left: 0;
+        padding-right: 40px;
+        text-align: right;
+      }
+      .phase-title {
+        font-size: 24px;
+        font-weight: bold;
+        color: #292929;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .timeline-item:nth-child(even) .phase-title {
+        flex-direction: row-reverse;
+      }
+      .phase-number {
+        display: inline-block;
+        width: 40px;
+        height: 40px;
+        line-height: 40px;
+        text-align: center;
+        background-color: #292929;
+        color: white;
+        border-radius: 50%;
+        font-size: 18px;
+      }
+      .timeline-details {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.5s ease;
+        margin-top: 0;
+      }
+      .timeline-details.expanded {
+        max-height: 2000px;
+        margin-top: 20px;
+      }
+      .timeline-details-content {
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        border: 2px solid #d8e1ec;
+      }
+      .feature-group {
+        margin-bottom: 20px;
+      }
+      .feature-group:last-child {
+        margin-bottom: 0;
+      }
+      .feature-group h4 {
+        color: #292929;
+        margin: 0 0 10px 0;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .feature-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .feature-list li {
+        padding: 6px 0;
+        color: #787672;
+        font-size: 14px;
+        line-height: 1.5;
+        position: relative;
+        padding-left: 20px;
+      }
+      .feature-list li::before {
+        content: "✓";
+        position: absolute;
+        left: 0;
+        color: #292929;
+        font-weight: bold;
+      }
+      .expand-icon {
+        margin-left: auto;
+        transition: transform 0.3s ease;
+        font-size: 20px;
+        color: #787672;
+      }
+      .timeline-item.active .expand-icon {
+        transform: rotate(180deg);
+      }
+      @media (max-width: 768px) {
+        .timeline::before {
+          left: 20px;
+        }
+        .timeline-content-wrapper {
+          width: calc(100% - 60px);
+          margin-left: 60px !important;
+          padding-left: 20px !important;
+          padding-right: 0 !important;
+          text-align: left !important;
+        }
+        .timeline-dot {
+          left: 20px;
+          transform: translateX(0);
+        }
+        .phase-title {
+          flex-direction: row !important;
+          font-size: 18px;
+        }
+        .phase-number {
+          width: 32px;
+          height: 32px;
+          line-height: 32px;
+          font-size: 14px;
+        }
+      }
+      .legend {
+        margin-top: 40px;
+        padding: 20px;
+        background-color: #f2f4f7;
+        border-radius: 8px;
+      }
+      .legend h3 {
+        color: #292929;
+        margin-top: 0;
+      }
+      .legend-item {
+        margin-bottom: 10px;
+        color: #292929;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>VibeApps Development Timeline</h1>
+      <p class="subtitle">
+        Click on any phase to see detailed features and milestones
+      </p>
+
+      <div class="timeline">
+        <!-- Phase 1: Foundation -->
+        <div class="timeline-item" data-phase="1">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content-wrapper">
+            <div class="timeline-header">
+              <h3 class="phase-title">
+                <span class="phase-number">1</span>
+                <span>Foundation (Early Development)</span>
+              </h3>
+              <span class="expand-icon">▼</span>
+            </div>
+            <div class="timeline-details">
+              <div class="timeline-details-content">
+                <div class="feature-group">
+                  <h4>Initial Project Setup</h4>
+                  <ul class="feature-list">
+                    <li>Core React, TypeScript, Vite setup</li>
+                    <li>Convex backend integration</li>
+                    <li>Clerk authentication setup</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Basic Infrastructure</h4>
+                  <ul class="feature-list">
+                    <li>Database schema design</li>
+                    <li>User authentication flows</li>
+                    <li>Basic routing and navigation</li>
+                    <li>404 page creation</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 2: Core Features -->
+        <div class="timeline-item" data-phase="2">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content-wrapper">
+            <div class="timeline-header">
+              <h3 class="phase-title">
+                <span class="phase-number">2</span>
+                <span>Core Features</span>
+              </h3>
+              <span class="expand-icon">▼</span>
+            </div>
+            <div class="timeline-details">
+              <div class="timeline-details-content">
+                <div class="feature-group">
+                  <h4>App Submissions</h4>
+                  <ul class="feature-list">
+                    <li>Story form with validation</li>
+                    <li>File upload support</li>
+                    <li>Tag system integration</li>
+                    <li>Anonymous submissions</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>User Engagement</h4>
+                  <ul class="feature-list">
+                    <li>Voting system implementation</li>
+                    <li>Comment system (10 word minimum)</li>
+                    <li>Rating system (1-5 stars)</li>
+                    <li>Bookmarking functionality</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Discovery Features</h4>
+                  <ul class="feature-list">
+                    <li>Search functionality</li>
+                    <li>Tag-based filtering</li>
+                    <li>Weekly leaderboards</li>
+                    <li>Related products by tags</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 3: User System -->
+        <div class="timeline-item" data-phase="3">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content-wrapper">
+            <div class="timeline-header">
+              <h3 class="phase-title">
+                <span class="phase-number">3</span>
+                <span>User System</span>
+              </h3>
+              <span class="expand-icon">▼</span>
+            </div>
+            <div class="timeline-details">
+              <div class="timeline-details-content">
+                <div class="feature-group">
+                  <h4>User Profiles</h4>
+                  <ul class="feature-list">
+                    <li>Custom username pages (/username)</li>
+                    <li>User verification badges</li>
+                    <li>Profile customization</li>
+                    <li>Joined date display</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Following System</h4>
+                  <ul class="feature-list">
+                    <li>Follow/unfollow functionality</li>
+                    <li>Follower/following counts</li>
+                    <li>Activity feeds</li>
+                    <li>Social graph queries</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>User Management</h4>
+                  <ul class="feature-list">
+                    <li>Ban/pause user functionality</li>
+                    <li>User search and filtering</li>
+                    <li>Profile administration</li>
+                    <li>User moderation tools</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 4: Admin Dashboard -->
+        <div class="timeline-item" data-phase="4">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content-wrapper">
+            <div class="timeline-header">
+              <h3 class="phase-title">
+                <span class="phase-number">4</span>
+                <span>Admin Dashboard</span>
+              </h3>
+              <span class="expand-icon">▼</span>
+            </div>
+            <div class="timeline-details">
+              <div class="timeline-details-content">
+                <div class="feature-group">
+                  <h4>Content Moderation</h4>
+                  <ul class="feature-list">
+                    <li>Approval/rejection workflows</li>
+                    <li>Report management system</li>
+                    <li>Admin inline editing</li>
+                    <li>Image management</li>
+                    <li>Bulk selection and actions</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Tag Management</h4>
+                  <ul class="feature-list">
+                    <li>Tag creation interface</li>
+                    <li>Custom colors and emojis</li>
+                    <li>Numbered ordering system</li>
+                    <li>Search functionality</li>
+                    <li>Admin/user tag tracking</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Analytics</h4>
+                  <ul class="feature-list">
+                    <li>User metrics dashboard</li>
+                    <li>Engagement tracking</li>
+                    <li>Content analytics</li>
+                    <li>Admin/manager roles</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 5: Forms System -->
+        <div class="timeline-item" data-phase="5">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content-wrapper">
+            <div class="timeline-header">
+              <h3 class="phase-title">
+                <span class="phase-number">5</span>
+                <span>Forms System</span>
+              </h3>
+              <span class="expand-icon">▼</span>
+            </div>
+            <div class="timeline-details">
+              <div class="timeline-details-content">
+                <div class="feature-group">
+                  <h4>Dynamic Forms</h4>
+                  <ul class="feature-list">
+                    <li>Custom form builder</li>
+                    <li>Field configuration</li>
+                    <li>Form results and export</li>
+                    <li>Public/private forms</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Submit Forms</h4>
+                  <ul class="feature-list">
+                    <li>Hackathon-specific forms</li>
+                    <li>YC AI Hackathon form</li>
+                    <li>Resend integration form</li>
+                    <li>Dynamic field system</li>
+                    <li>GitHub field made optional</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 6: Comprehensive Judging System -->
+        <div class="timeline-item" data-phase="6">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content-wrapper">
+            <div class="timeline-header">
+              <h3 class="phase-title">
+                <span class="phase-number">6</span>
+                <span>Comprehensive Judging System</span>
+              </h3>
+              <span class="expand-icon">▼</span>
+            </div>
+            <div class="timeline-details">
+              <div class="timeline-details-content">
+                <div class="feature-group">
+                  <h4>Judging Infrastructure</h4>
+                  <ul class="feature-list">
+                    <li>Judging groups (public/private)</li>
+                    <li>Password protection</li>
+                    <li>Session-based auth</li>
+                    <li>Judge registration</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Scoring System</h4>
+                  <ul class="feature-list">
+                    <li>Custom criteria editor</li>
+                    <li>1-10 star ratings (updated from 1-5)</li>
+                    <li>Weighted scoring</li>
+                    <li>Real-time score submission</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Judge Experience</h4>
+                  <ul class="feature-list">
+                    <li>Submission search</li>
+                    <li>Progress tracking</li>
+                    <li>Status management (pending/skip/completed)</li>
+                    <li>Notes with @mentions</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Results Dashboard</h4>
+                  <ul class="feature-list">
+                    <li>Rankings and analytics</li>
+                    <li>CSV export functionality</li>
+                    <li>Public results viewer</li>
+                    <li>Password-protected access</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Judge Tracking</h4>
+                  <ul class="feature-list">
+                    <li>Admin monitoring dashboard</li>
+                    <li>Submissions judged counts</li>
+                    <li>Average score tracking</li>
+                    <li>Comprehensive CSV export</li>
+                    <li>Fixed progress calculations</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 7: Mention System -->
+        <div class="timeline-item" data-phase="7">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content-wrapper">
+            <div class="timeline-header">
+              <h3 class="phase-title">
+                <span class="phase-number">7</span>
+                <span>@Mention System</span>
+              </h3>
+              <span class="expand-icon">▼</span>
+            </div>
+            <div class="timeline-details">
+              <div class="timeline-details-content">
+                <div class="feature-group">
+                  <h4>@Mentions Core</h4>
+                  <ul class="feature-list">
+                    <li>Extract and resolve mentions</li>
+                    <li>LinkedIn-style autocomplete</li>
+                    <li>Profile link rendering</li>
+                    <li>Quota enforcement (30/day creation)</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Integration</h4>
+                  <ul class="feature-list">
+                    <li>Comments integration</li>
+                    <li>Judging notes integration</li>
+                    <li>Inbox messages integration</li>
+                    <li>Email notification support</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 8: Notification System -->
+        <div class="timeline-item" data-phase="8">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content-wrapper">
+            <div class="timeline-header">
+              <h3 class="phase-title">
+                <span class="phase-number">8</span>
+                <span>Notification System</span>
+              </h3>
+              <span class="expand-icon">▼</span>
+            </div>
+            <div class="timeline-details">
+              <div class="timeline-details-content">
+                <div class="feature-group">
+                  <h4>Core Alerts</h4>
+                  <ul class="feature-list">
+                    <li>Vote notifications</li>
+                    <li>Comment notifications</li>
+                    <li>Rating notifications</li>
+                    <li>Follow notifications</li>
+                    <li>Bookmark notifications</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Admin Alerts</h4>
+                  <ul class="feature-list">
+                    <li>Report notifications for admins</li>
+                    <li>Real-time admin notifications</li>
+                    <li>Notification dropdown</li>
+                    <li>Notifications page</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 9: Email System -->
+        <div class="timeline-item" data-phase="9">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content-wrapper">
+            <div class="timeline-header">
+              <h3 class="phase-title">
+                <span class="phase-number">9</span>
+                <span>Email System (Resend)</span>
+              </h3>
+              <span class="expand-icon">▼</span>
+            </div>
+            <div class="timeline-details">
+              <div class="timeline-details-content">
+                <div class="feature-group">
+                  <h4>Email Infrastructure</h4>
+                  <ul class="feature-list">
+                    <li>Resend component integration</li>
+                    <li>Email templates system</li>
+                    <li>Logging and tracking</li>
+                    <li>Webhook handler</li>
+                    <li>Global kill switch</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Automated Emails</h4>
+                  <ul class="feature-list">
+                    <li>Daily admin reports (9 AM PST)</li>
+                    <li>Daily user engagement (6 PM PST)</li>
+                    <li>Weekly digest (Monday 9 AM PST)</li>
+                    <li>Welcome emails</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Email Features</h4>
+                  <ul class="feature-list">
+                    <li>User email preferences</li>
+                    <li>Unsubscribe functionality</li>
+                    <li>Admin broadcast system</li>
+                    <li>Admin alert emails</li>
+                    <li>Force logout for email sync</li>
+                    <li>Test email system</li>
+                    <li>Clear logs utility</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 10: Messaging System -->
+        <div class="timeline-item" data-phase="10">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content-wrapper">
+            <div class="timeline-header">
+              <h3 class="phase-title">
+                <span class="phase-number">10</span>
+                <span>Messaging System (Inbox)</span>
+              </h3>
+              <span class="expand-icon">▼</span>
+            </div>
+            <div class="timeline-details">
+              <div class="timeline-details-content">
+                <div class="feature-group">
+                  <h4>Inbox Core</h4>
+                  <ul class="feature-list">
+                    <li>Text-only direct messages</li>
+                    <li>Conversation management</li>
+                    <li>Real-time updates</li>
+                    <li>2000 character limit</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Message Features</h4>
+                  <ul class="feature-list">
+                    <li>Edit within 24 hours</li>
+                    <li>Delete anytime</li>
+                    <li>@Mention integration</li>
+                    <li>Clickable username links</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Protection</h4>
+                  <ul class="feature-list">
+                    <li>Rate limiting (10 convos/30min, 50 msgs/hr)</li>
+                    <li>User blocking system</li>
+                    <li>Report user functionality</li>
+                    <li>Admin email alerts</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>UI Enhancements</h4>
+                  <ul class="feature-list">
+                    <li>3-column messenger layout</li>
+                    <li>Independent scrolling</li>
+                    <li>Soft delete conversations</li>
+                    <li>Auto-restore on new messages</li>
+                    <li>Community sidebar</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 11: Recent Enhancements -->
+        <div class="timeline-item" data-phase="11">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content-wrapper">
+            <div class="timeline-header">
+              <h3 class="phase-title">
+                <span class="phase-number">11</span>
+                <span>Recent Enhancements (October 2025)</span>
+              </h3>
+              <span class="expand-icon">▼</span>
+            </div>
+            <div class="timeline-details">
+              <div class="timeline-details-content">
+                <div class="feature-group">
+                  <h4>Content Improvements</h4>
+                  <ul class="feature-list">
+                    <li>Multi-image gallery support</li>
+                    <li>Markdown support and preview</li>
+                    <li>Code blocks in submissions</li>
+                    <li>Gallery in judging interface</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Submission Tracking</h4>
+                  <ul class="feature-list">
+                    <li>Changelog tracking system</li>
+                    <li>Edit history with timestamps</li>
+                    <li>Tag change tracking</li>
+                    <li>Always visible changelog</li>
+                    <li>Anchor links to changelog</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Tag Enhancements</h4>
+                  <ul class="feature-list">
+                    <li>Enhanced tag search dropdown</li>
+                    <li>All tags including hidden</li>
+                    <li>10-tag selection limit</li>
+                    <li>Tag editing in submissions</li>
+                    <li>Tag display in judging</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Archive System</h4>
+                  <ul class="feature-list">
+                    <li>Date range filtering</li>
+                    <li>Archive vs hide submissions</li>
+                    <li>Admin moderation controls</li>
+                    <li>Content organization</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>Judge System Fixes</h4>
+                  <ul class="feature-list">
+                    <li>Fixed progress calculations</li>
+                    <li>Accurate completion tracking</li>
+                    <li>Filtered submission views</li>
+                    <li>CSV export improvements</li>
+                    <li>Graceful error handling</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 12: Production & Polish -->
+        <div class="timeline-item" data-phase="12">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content-wrapper">
+            <div class="timeline-header">
+              <h3 class="phase-title">
+                <span class="phase-number">12</span>
+                <span>Production & Polish (Ongoing)</span>
+              </h3>
+              <span class="expand-icon">▼</span>
+            </div>
+            <div class="timeline-details">
+              <div class="timeline-details-content">
+                <div class="feature-group">
+                  <h4>Deployment</h4>
+                  <ul class="feature-list">
+                    <li>Netlify hosting setup</li>
+                    <li>Domain configuration</li>
+                    <li>Cookie consent (CookieYes)</li>
+                    <li>Analytics (Rybbit)</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>SEO</h4>
+                  <ul class="feature-list">
+                    <li>llms.txt configuration</li>
+                    <li>sitemap.xml setup</li>
+                    <li>robots.txt configuration</li>
+                    <li>Open Graph images</li>
+                  </ul>
+                </div>
+                <div class="feature-group">
+                  <h4>UX Improvements</h4>
+                  <ul class="feature-list">
+                    <li>Mobile UI enhancements</li>
+                    <li>ProfileHoverCard integration</li>
+                    <li>Recent Vibers sidebar</li>
+                    <li>Responsive design refinements</li>
+                    <li>Authentication UX improvements</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <script>
+        // Add click handlers to timeline items
+        document.querySelectorAll(".timeline-item").forEach((item) => {
+          const header = item.querySelector(".timeline-header");
+          const details = item.querySelector(".timeline-details");
+
+          header.addEventListener("click", () => {
+            // Toggle active state
+            const isActive = item.classList.contains("active");
+
+            // Close all other items
+            document.querySelectorAll(".timeline-item").forEach((otherItem) => {
+              if (otherItem !== item) {
+                otherItem.classList.remove("active");
+                otherItem
+                  .querySelector(".timeline-details")
+                  .classList.remove("expanded");
+              }
+            });
+
+            // Toggle current item
+            if (isActive) {
+              item.classList.remove("active");
+              details.classList.remove("expanded");
+            } else {
+              item.classList.add("active");
+              details.classList.add("expanded");
+              // Smooth scroll to item
+              setTimeout(() => {
+                item.scrollIntoView({ behavior: "smooth", block: "nearest" });
+              }, 300);
+            }
+          });
+        });
+      </script>
+
+      <div class="legend">
+        <h3>Development Phases Overview</h3>
+        <div class="legend-item">
+          <strong>Foundation:</strong> Core infrastructure, authentication, and
+          basic setup
+        </div>
+        <div class="legend-item">
+          <strong>Core Features:</strong> Essential app functionality
+          (submissions, voting, comments, ratings)
+        </div>
+        <div class="legend-item">
+          <strong>User System:</strong> Profiles, following, and user management
+        </div>
+        <div class="legend-item">
+          <strong>Admin Dashboard:</strong> Content moderation, analytics, and
+          platform management
+        </div>
+        <div class="legend-item">
+          <strong>Forms System:</strong> Dynamic forms and specialized
+          submission forms
+        </div>
+        <div class="legend-item">
+          <strong>Judging System:</strong> Comprehensive hackathon judging
+          infrastructure
+        </div>
+        <div class="legend-item">
+          <strong>Mention System:</strong> @username mentions across the
+          platform
+        </div>
+        <div class="legend-item">
+          <strong>Notification System:</strong> Real-time alerts and
+          notifications
+        </div>
+        <div class="legend-item">
+          <strong>Email System:</strong> Complete Resend integration with
+          automated emails
+        </div>
+        <div class="legend-item">
+          <strong>Messaging System:</strong> Direct messaging inbox with full
+          feature set
+        </div>
+        <div class="legend-item">
+          <strong>Recent Enhancements:</strong> Latest improvements and
+          refinements (October 2025)
+        </div>
+        <div class="legend-item">
+          <strong>Production & Polish:</strong> Deployment, SEO, and UX
+          refinements
+        </div>
+      </div>
+
+      <div class="legend">
+        <h3>Key Milestones</h3>
+        <div class="legend-item">
+          ✅ <strong>Anonymous Submissions:</strong> Users can submit without
+          accounts
+        </div>
+        <div class="legend-item">
+          ✅ <strong>Comprehensive Judging:</strong> Full hackathon judging
+          system with scoring, tracking, and export
+        </div>
+        <div class="legend-item">
+          ✅ <strong>Email Integration:</strong> Complete Resend integration
+          with daily/weekly emails
+        </div>
+        <div class="legend-item">
+          ✅ <strong>Inbox Messaging:</strong> Direct messaging with @mentions,
+          edit/delete, and rate limiting
+        </div>
+        <div class="legend-item">
+          ✅ <strong>Admin Alerts:</strong> Immediate email notifications for
+          content reports
+        </div>
+        <div class="legend-item">
+          ✅ <strong>Judge Tracking:</strong> Comprehensive monitoring and CSV
+          export of judge activity
+        </div>
+        <div class="legend-item">
+          ✅ <strong>Changelog System:</strong> Track all submission edits with
+          timestamps
+        </div>
+        <div class="legend-item">
+          ✅ <strong>Multi-Image Gallery:</strong> Support for multiple images
+          with Lightbox viewer
+        </div>
+      </div>
+
+      <div class="legend">
+        <h3>Tech Stack</h3>
+        <div class="legend-item">
+          <strong>Frontend:</strong> React 18, TypeScript, Vite, Tailwind CSS
+        </div>
+        <div class="legend-item">
+          <strong>Backend:</strong> Convex (real-time database and serverless
+          functions)
+        </div>
+        <div class="legend-item">
+          <strong>Authentication:</strong> Clerk Auth
+        </div>
+        <div class="legend-item">
+          <strong>Email:</strong> Resend (via Convex Resend Component)
+        </div>
+        <div class="legend-item"><strong>Deployment:</strong> Netlify</div>
+        <div class="legend-item"><strong>Analytics:</strong> Rybbit</div>
+      </div>
+
+      <div class="legend">
+        <h3>What's Coming Next</h3>
+        <div class="legend-item">
+          🔜 Clerk roles for hackathon organizers (judges-only access)
+        </div>
+        <div class="legend-item">
+          🔜 Admin moderation to make posts approval-only
+        </div>
+        <div class="legend-item">🔜 Test judging progress on results page</div>
+      </div>
+    </div>
+  </body>
+</html>

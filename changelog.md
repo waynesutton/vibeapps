@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Submission titles and slugs for each score
   - Judging criteria questions and descriptions
   - Individual scores and comments
+  - Total score for each submission (sum of all criterion scores by that judge)
   - Hidden status for moderated scores
   - Formatted submission timestamps
   - Filename format: `judge-activity-{group-name}-{date}.csv`
@@ -36,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Backend: Added `getJudgeTrackingExportData` query in `convex/adminJudgeTracking.ts`
   - Fetches comprehensive judge scoring data across all criteria
+  - Calculates total scores for each judge-submission pair
   - Includes judge profile information and user linkages
   - Sorts data by judge name then submission date
   - Returns formatted date strings for CSV readability
