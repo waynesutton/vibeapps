@@ -17,6 +17,8 @@ import {
   Target,
   AlertTriangle,
   Download,
+  MessageSquare,
+  Send,
 } from "lucide-react";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -27,6 +29,8 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { ProfileHoverCard } from "../ui/ProfileHoverCard";
+import { MentionTextarea } from "../ui/MentionTextarea";
+import { renderTextWithMentions } from "../../utils/mentions";
 
 interface JudgeTrackingProps {
   groupId: Id<"judgingGroups">;
@@ -58,6 +62,11 @@ export function JudgeTracking({
     useState<Id<"judges"> | null>(null);
   const [deleteConfirmScore, setDeleteConfirmScore] =
     useState<Id<"judgeScores"> | null>(null);
+  const [expandedScoreForNotes, setExpandedScoreForNotes] =
+    useState<Id<"judgeScores"> | null>(null);
+  const [replyContent, setReplyContent] = useState("");
+  const [replyingToNote, setReplyingToNote] =
+    useState<Id<"submissionNotes"> | null>(null);
 
   // Mutations
   const updateJudgeScore = useMutation(api.adminJudgeTracking.updateJudgeScore);
@@ -66,6 +75,9 @@ export function JudgeTracking({
   );
   const deleteJudgeScore = useMutation(api.adminJudgeTracking.deleteJudgeScore);
   const deleteJudge = useMutation(api.adminJudgeTracking.deleteJudge);
+  const addSubmissionNote = useMutation(
+    api.judgingGroupSubmissions.addSubmissionNote,
+  );
 
   const judgeScores = useQuery(
     api.adminJudgeTracking.getJudgeDetailedScores,
@@ -78,6 +90,25 @@ export function JudgeTracking({
   const exportData = useQuery(
     api.adminJudgeTracking.getJudgeTrackingExportData,
     authIsLoading || !isAuthenticated ? "skip" : { groupId },
+  );
+
+  // Get note counts for submissions
+  const noteCountsData = useQuery(
+    api.adminJudgeTracking.getSubmissionNoteCounts,
+    authIsLoading || !isAuthenticated ? "skip" : { groupId },
+  );
+
+  // Get submission notes when viewing notes for a score
+  const submissionNotes = useQuery(
+    api.judgingGroupSubmissions.getSubmissionNotes,
+    expandedScoreForNotes && judgeScores
+      ? {
+          groupId,
+          storyId:
+            judgeScores.find((s) => s._id === expandedScoreForNotes)?.story
+              ._id || ("" as Id<"stories">),
+        }
+      : "skip",
   );
 
   const handleExpandJudge = (judgeId: Id<"judges">) => {
@@ -140,6 +171,31 @@ export function JudgeTracking({
     }
   };
 
+  const handleReplyToNote = async (noteId: Id<"submissionNotes">) => {
+    if (!replyContent.trim() || !expandedScoreForNotes || !judgeScores) return;
+
+    const score = judgeScores.find((s) => s._id === expandedScoreForNotes);
+    if (!score) return;
+
+    const currentJudgeId = Array.from(expandedJudges)[0];
+    if (!currentJudgeId) return;
+
+    try {
+      await addSubmissionNote({
+        groupId,
+        storyId: score.story._id,
+        judgeId: currentJudgeId,
+        content: replyContent.trim(),
+        replyToId: noteId,
+      });
+      setReplyContent("");
+      setReplyingToNote(null);
+    } catch (error) {
+      console.error("Error adding reply:", error);
+      alert("Failed to add reply. Please try again.");
+    }
+  };
+
   // CSV export handler
   const handleExportCSV = () => {
     if (!exportData || exportData.length === 0) {
@@ -160,26 +216,10 @@ export function JudgeTracking({
       "Score",
       "Total Score for Submission",
       "Comments",
+      "Judge Notes",
       "Is Hidden",
       "Submitted At",
     ];
-
-    // Convert data to CSV rows
-    const rows = exportData.map((row) => [
-      row.judgeName,
-      row.judgeEmail || "",
-      row.judgeUsername || "",
-      row.linkedUserId || "",
-      row.storyTitle,
-      row.storySlug,
-      row.criteriaQuestion,
-      row.criteriaDescription || "",
-      row.score.toString(),
-      row.totalScoreForSubmission.toString(),
-      row.comments || "",
-      row.isHidden ? "Yes" : "No",
-      row.submittedAtFormatted,
-    ]);
 
     // Escape CSV values (handle commas, quotes, newlines)
     const escapeCSV = (value: string) => {
@@ -189,11 +229,59 @@ export function JudgeTracking({
       return value;
     };
 
-    // Build CSV content
-    const csvContent = [
-      headers.map(escapeCSV).join(","),
-      ...rows.map((row) => row.map(escapeCSV).join(",")),
-    ].join("\n");
+    // Group data by submission (judgeName + storySlug) to add blank rows between submissions
+    const groupedData: Array<Array<string[]>> = [];
+    let currentGroup: Array<string[]> = [];
+    let lastSubmissionKey = "";
+
+    exportData.forEach((row, index) => {
+      const submissionKey = `${row.judgeName}-${row.storySlug}`;
+
+      // If we're on a new submission, save the current group and start a new one
+      if (submissionKey !== lastSubmissionKey && currentGroup.length > 0) {
+        groupedData.push(currentGroup);
+        currentGroup = [];
+      }
+
+      currentGroup.push([
+        row.judgeName,
+        row.judgeEmail || "",
+        row.judgeUsername || "",
+        row.linkedUserId || "",
+        row.storyTitle,
+        row.storySlug,
+        row.criteriaQuestion,
+        row.criteriaDescription || "",
+        row.score.toString(),
+        row.totalScoreForSubmission.toString(),
+        row.comments || "",
+        row.judgeNotes || "",
+        row.isHidden ? "Yes" : "No",
+        row.submittedAtFormatted,
+      ]);
+
+      lastSubmissionKey = submissionKey;
+
+      // Add the last group
+      if (index === exportData.length - 1) {
+        groupedData.push(currentGroup);
+      }
+    });
+
+    // Build CSV content with blank rows between submissions
+    const csvLines = [headers.map(escapeCSV).join(",")];
+
+    groupedData.forEach((group, groupIndex) => {
+      group.forEach((row) => {
+        csvLines.push(row.map(escapeCSV).join(","));
+      });
+      // Add blank row between submissions (except after the last one)
+      if (groupIndex < groupedData.length - 1) {
+        csvLines.push("");
+      }
+    });
+
+    const csvContent = csvLines.join("\n");
 
     // Create and trigger download
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -288,10 +376,10 @@ export function JudgeTracking({
             {judges.map((judge) => (
               <div key={judge._id} className="p-4">
                 {/* Judge Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-8">
                   <button
                     onClick={() => handleExpandJudge(judge._id)}
-                    className="flex items-center gap-3 text-left hover:bg-gray-50 rounded p-2 -m-2 flex-1"
+                    className="flex items-center gap-3 text-left hover:bg-gray-50 rounded p-2 -m-2"
                   >
                     <div className="flex items-center gap-2">
                       {expandedJudges.has(judge._id) ? (
@@ -311,7 +399,7 @@ export function JudgeTracking({
                         )}
                       </div>
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-gray-900">
                           {judge.name}
@@ -344,23 +432,32 @@ export function JudgeTracking({
                       </div>
                     </div>
                   </button>
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <div className="text-center min-w-16">
+                  <div className="flex items-center gap-6 text-sm text-gray-500 ml-auto">
+                    <div className="text-center min-w-20">
                       <div className="font-medium text-gray-900">
                         {judge.submissionsJudged}
                       </div>
-                      <div className="text-xs">submissions judged</div>
+                      <div className="text-xs text-gray-500">
+                        submissions judged
+                      </div>
                     </div>
-                    <div className="text-center min-w-12">
+                    <div className="text-center min-w-16">
+                      <div className="font-medium text-gray-900 flex items-center gap-1 justify-center">
+                        {judge.notesCount || 0}
+                        <MessageSquare className="w-3 h-3 text-purple-500" />
+                      </div>
+                      <div className="text-xs text-gray-500">notes</div>
+                    </div>
+                    <div className="text-center min-w-16">
                       <div className="font-medium text-gray-900">
                         {judge.averageScore
                           ? judge.averageScore.toFixed(1)
                           : "N/A"}
                       </div>
-                      <div className="text-xs">avg score</div>
+                      <div className="text-xs text-gray-500">avg score</div>
                     </div>
-                    <div className="text-center min-w-16">
-                      <div className="text-xs">
+                    <div className="text-center min-w-24">
+                      <div className="text-xs text-gray-600">
                         {judge.lastScoreAt
                           ? formatDistanceToNow(judge.lastScoreAt, {
                               addSuffix: true,
@@ -370,7 +467,7 @@ export function JudgeTracking({
                     </div>
                     <button
                       onClick={() => setDeleteConfirmJudge(judge._id)}
-                      className="p-1 text-red-600 hover:bg-red-50 rounded"
+                      className="p-2 text-red-600 hover:bg-red-50 rounded ml-2"
                       title="Delete judge and all scores"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -422,6 +519,16 @@ export function JudgeTracking({
                                         Hidden
                                       </span>
                                     )}
+                                    {noteCountsData &&
+                                      noteCountsData[score.story._id] > 0 && (
+                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+                                          <MessageSquare className="w-3 h-3 mr-1" />
+                                          {noteCountsData[score.story._id]}{" "}
+                                          {noteCountsData[score.story._id] === 1
+                                            ? "note"
+                                            : "notes"}
+                                        </span>
+                                      )}
                                   </div>
                                   <div className="text-sm text-gray-600 mb-2">
                                     <strong>{score.criteria.question}</strong>
@@ -454,6 +561,19 @@ export function JudgeTracking({
                                   )}
                                 </div>
                                 <div className="flex items-center gap-1 ml-2">
+                                  <button
+                                    onClick={() =>
+                                      setExpandedScoreForNotes(
+                                        expandedScoreForNotes === score._id
+                                          ? null
+                                          : score._id,
+                                      )
+                                    }
+                                    className="p-1 text-purple-600 hover:bg-purple-50 rounded"
+                                    title="View judge notes"
+                                  >
+                                    <MessageSquare className="w-3 h-3" />
+                                  </button>
                                   <button
                                     onClick={() =>
                                       setEditingScore({
@@ -502,6 +622,139 @@ export function JudgeTracking({
                                   </button>
                                 </div>
                               </div>
+
+                              {/* Judge Notes Section */}
+                              {expandedScoreForNotes === score._id &&
+                                submissionNotes && (
+                                  <div className="mt-4 pt-4 border-t border-gray-200">
+                                    <div className="flex items-center justify-between mb-3">
+                                      <h5 className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                                        <MessageSquare className="w-4 h-4" />
+                                        Judge Notes for this Submission
+                                      </h5>
+                                      <span className="text-xs text-gray-500">
+                                        {submissionNotes.length} notes
+                                      </span>
+                                    </div>
+
+                                    {submissionNotes.length === 0 ? (
+                                      <div className="text-center py-4 text-gray-500 text-xs">
+                                        <MessageSquare className="w-6 h-6 mx-auto mb-2 text-gray-300" />
+                                        <p>No notes left by judges yet</p>
+                                      </div>
+                                    ) : (
+                                      <div className="space-y-3">
+                                        {submissionNotes.map((note) => (
+                                          <div
+                                            key={note._id}
+                                            className="bg-white border border-gray-200 rounded p-3"
+                                          >
+                                            <div className="flex items-start justify-between mb-2">
+                                              <div className="flex items-center gap-2">
+                                                <User className="w-3 h-3 text-gray-400" />
+                                                <span className="text-xs font-medium text-gray-900">
+                                                  {note.judgeName}
+                                                </span>
+                                                <span className="text-xs text-gray-500">
+                                                  {formatDistanceToNow(
+                                                    note._creationTime,
+                                                    { addSuffix: true },
+                                                  )}
+                                                </span>
+                                              </div>
+                                              <button
+                                                onClick={() =>
+                                                  setReplyingToNote(note._id)
+                                                }
+                                                className="text-xs text-blue-600 hover:text-blue-800 hover:underline flex-shrink-0"
+                                              >
+                                                Reply
+                                              </button>
+                                            </div>
+
+                                            <div className="text-xs text-gray-700 whitespace-pre-wrap mb-2">
+                                              {renderTextWithMentions(
+                                                note.content,
+                                              )}
+                                            </div>
+
+                                            {/* Replies */}
+                                            {note.replies &&
+                                              note.replies.length > 0 && (
+                                                <div className="ml-4 mt-3 space-y-2 border-l-2 border-purple-100 pl-3">
+                                                  {note.replies.map((reply) => (
+                                                    <div
+                                                      key={reply._id}
+                                                      className="bg-purple-50 rounded p-2"
+                                                    >
+                                                      <div className="flex items-center gap-2 mb-1">
+                                                        <User className="w-3 h-3 text-gray-400" />
+                                                        <span className="text-xs font-medium text-gray-900">
+                                                          {reply.judgeName}
+                                                        </span>
+                                                        <span className="text-xs text-gray-500">
+                                                          {formatDistanceToNow(
+                                                            reply._creationTime,
+                                                            { addSuffix: true },
+                                                          )}
+                                                        </span>
+                                                      </div>
+                                                      <div className="text-xs text-gray-700 whitespace-pre-wrap">
+                                                        {renderTextWithMentions(
+                                                          reply.content,
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              )}
+
+                                            {/* Reply Form */}
+                                            {replyingToNote === note._id && (
+                                              <div className="ml-4 mt-3 border-l-2 border-purple-200 pl-3">
+                                                <MentionTextarea
+                                                  value={replyContent}
+                                                  onChange={setReplyContent}
+                                                  placeholder="Write a reply as admin/moderator... (use @username to mention)"
+                                                  rows={2}
+                                                  className="mb-2 text-xs"
+                                                />
+                                                <div className="flex items-center gap-2">
+                                                  <Button
+                                                    onClick={() =>
+                                                      handleReplyToNote(
+                                                        note._id,
+                                                      )
+                                                    }
+                                                    disabled={
+                                                      !replyContent.trim()
+                                                    }
+                                                    size="sm"
+                                                    className="h-7 text-xs"
+                                                  >
+                                                    <Send className="w-3 h-3 mr-1" />
+                                                    Reply
+                                                  </Button>
+                                                  <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                      setReplyingToNote(null);
+                                                      setReplyContent("");
+                                                    }}
+                                                    className="h-7 text-xs"
+                                                  >
+                                                    Cancel
+                                                  </Button>
+                                                </div>
+                                              </div>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                             </div>
                           ))}
                         </div>

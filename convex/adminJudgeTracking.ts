@@ -90,6 +90,7 @@ export const getGroupJudgeTracking = query({
         ),
         scoresCount: v.number(),
         submissionsJudged: v.number(),
+        notesCount: v.number(),
         averageScore: v.optional(v.number()),
         lastScoreAt: v.optional(v.number()),
       }),
@@ -114,6 +115,13 @@ export const getGroupJudgeTracking = query({
     const allScores = await ctx.db
       .query("judgeScores")
       .withIndex("by_groupId_storyId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+
+    // Get all notes for this group to count judge notes
+    // Note: This fetches ALL notes including historical ones - no filters on creation time
+    const allNotes = await ctx.db
+      .query("submissionNotes")
+      .filter((q) => q.eq(q.field("groupId"), args.groupId))
       .collect();
 
     // Build judge tracking data
@@ -152,6 +160,11 @@ export const getGroupJudgeTracking = query({
             ? Math.max(...judgeScores.map((score) => score._creationTime))
             : undefined;
 
+        // Count ALL notes written by this judge (includes all historical notes and replies)
+        const notesCount = allNotes.filter(
+          (note) => note.judgeId === judge._id,
+        ).length;
+
         return {
           _id: judge._id,
           name: judge.name,
@@ -162,6 +175,7 @@ export const getGroupJudgeTracking = query({
           userProfile,
           scoresCount,
           submissionsJudged,
+          notesCount,
           averageScore,
           lastScoreAt,
         };
@@ -478,6 +492,7 @@ export const getJudgeTrackingExportData = query({
       score: v.number(),
       totalScoreForSubmission: v.number(),
       comments: v.optional(v.string()),
+      judgeNotes: v.string(),
       isHidden: v.boolean(),
       submittedAt: v.number(),
       submittedAtFormatted: v.string(),
@@ -496,6 +511,12 @@ export const getJudgeTrackingExportData = query({
     const allScores = await ctx.db
       .query("judgeScores")
       .withIndex("by_groupId_storyId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+
+    // Get all notes for this group
+    const allNotes = await ctx.db
+      .query("submissionNotes")
+      .filter((q) => q.eq(q.field("groupId"), args.groupId))
       .collect();
 
     // Calculate total scores for each judge-submission pair
@@ -542,6 +563,27 @@ export const getJudgeTrackingExportData = query({
       const totalScoreKey = `${score.judgeId}-${score.storyId}`;
       const totalScoreForSubmission = totalScoreMap.get(totalScoreKey) || 0;
 
+      // Get judge notes for this submission
+      const judgeNotesForSubmission = allNotes.filter(
+        (note) =>
+          note.judgeId === score.judgeId && note.storyId === score.storyId,
+      );
+
+      // Format notes: include only parent notes (not replies) with timestamp
+      const formattedNotes = judgeNotesForSubmission
+        .filter((note) => !note.replyToId)
+        .map((note) => {
+          const noteDate = new Date(note._creationTime);
+          const noteDateStr = noteDate.toLocaleString("en-US", {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          return `[${noteDateStr}] ${note.content}`;
+        })
+        .join(" | ");
+
       return {
         judgeName: judge.name,
         judgeEmail: judge.email,
@@ -554,6 +596,7 @@ export const getJudgeTrackingExportData = query({
         score: score.score,
         totalScoreForSubmission,
         comments: score.comments,
+        judgeNotes: formattedNotes || "",
         isHidden: score.isHidden || false,
         submittedAt: score._creationTime,
         submittedAtFormatted,
@@ -573,5 +616,31 @@ export const getJudgeTrackingExportData = query({
       }
       return b.submittedAt - a.submittedAt;
     });
+  },
+});
+
+/**
+ * Get note counts for submissions in a judging group
+ * Returns a count of ALL notes (including historical and replies) per submission
+ */
+export const getSubmissionNoteCounts = query({
+  args: { groupId: v.id("judgingGroups") },
+  returns: v.record(v.id("stories"), v.number()),
+  handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
+
+    // Get ALL notes for this group (no time filters - includes all historical notes)
+    const notes = await ctx.db
+      .query("submissionNotes")
+      .filter((q) => q.eq(q.field("groupId"), args.groupId))
+      .collect();
+
+    // Count notes per submission (includes both parent notes and replies)
+    const noteCounts: Record<Id<"stories">, number> = {};
+    for (const note of notes) {
+      noteCounts[note.storyId] = (noteCounts[note.storyId] || 0) + 1;
+    }
+
+    return noteCounts;
   },
 });

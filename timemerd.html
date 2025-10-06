@@ -102,9 +102,17 @@
         display: flex;
         align-items: center;
         gap: 10px;
+        flex: 1;
       }
       .timeline-item:nth-child(even) .phase-title {
         flex-direction: row-reverse;
+      }
+      .phase-date {
+        font-size: 14px;
+        color: #787672;
+        font-weight: normal;
+        margin-left: 10px;
+        white-space: nowrap;
       }
       .phase-number {
         display: inline-block;
@@ -233,6 +241,7 @@
                 <span class="phase-number">1</span>
                 <span>Foundation (Early Development)</span>
               </h3>
+              <span class="phase-date">Early 2024</span>
               <span class="expand-icon">▼</span>
             </div>
             <div class="timeline-details">
@@ -268,6 +277,7 @@
                 <span class="phase-number">2</span>
                 <span>Core Features</span>
               </h3>
+              <span class="phase-date">Q2 2024</span>
               <span class="expand-icon">▼</span>
             </div>
             <div class="timeline-details">
@@ -313,6 +323,7 @@
                 <span class="phase-number">3</span>
                 <span>User System</span>
               </h3>
+              <span class="phase-date">Q3 2024</span>
               <span class="expand-icon">▼</span>
             </div>
             <div class="timeline-details">
@@ -358,6 +369,7 @@
                 <span class="phase-number">4</span>
                 <span>Admin Dashboard</span>
               </h3>
+              <span class="phase-date">Q3 2024</span>
               <span class="expand-icon">▼</span>
             </div>
             <div class="timeline-details">
@@ -405,6 +417,7 @@
                 <span class="phase-number">5</span>
                 <span>Forms System</span>
               </h3>
+              <span class="phase-date">Sep 2024</span>
               <span class="expand-icon">▼</span>
             </div>
             <div class="timeline-details">
@@ -442,6 +455,7 @@
                 <span class="phase-number">6</span>
                 <span>Comprehensive Judging System</span>
               </h3>
+              <span class="phase-date">Sep-Oct 2024</span>
               <span class="expand-icon">▼</span>
             </div>
             <div class="timeline-details">
@@ -506,6 +520,7 @@
                 <span class="phase-number">7</span>
                 <span>@Mention System</span>
               </h3>
+              <span class="phase-date">Sep 2024</span>
               <span class="expand-icon">▼</span>
             </div>
             <div class="timeline-details">
@@ -542,6 +557,7 @@
                 <span class="phase-number">8</span>
                 <span>Notification System</span>
               </h3>
+              <span class="phase-date">Sep 2024</span>
               <span class="expand-icon">▼</span>
             </div>
             <div class="timeline-details">
@@ -579,6 +595,7 @@
                 <span class="phase-number">9</span>
                 <span>Email System (Resend)</span>
               </h3>
+              <span class="phase-date">Sep-Oct 2024</span>
               <span class="expand-icon">▼</span>
             </div>
             <div class="timeline-details">
@@ -628,6 +645,7 @@
                 <span class="phase-number">10</span>
                 <span>Messaging System (Inbox)</span>
               </h3>
+              <span class="phase-date">Oct 2024</span>
               <span class="expand-icon">▼</span>
             </div>
             <div class="timeline-details">
@@ -681,8 +699,9 @@
             <div class="timeline-header">
               <h3 class="phase-title">
                 <span class="phase-number">11</span>
-                <span>Recent Enhancements (October 2025)</span>
+                <span>Recent Enhancements</span>
               </h3>
+              <span class="phase-date">Oct 2025</span>
               <span class="expand-icon">▼</span>
             </div>
             <div class="timeline-details">
@@ -747,8 +766,9 @@
             <div class="timeline-header">
               <h3 class="phase-title">
                 <span class="phase-number">12</span>
-                <span>Production & Polish (Ongoing)</span>
+                <span>Production & Polish</span>
               </h3>
+              <span class="phase-date">Ongoing</span>
               <span class="expand-icon">▼</span>
             </div>
             <div class="timeline-details">
@@ -875,42 +895,6 @@
       </div>
 
       <div class="legend">
-        <h3>Key Milestones</h3>
-        <div class="legend-item">
-          ✅ <strong>Anonymous Submissions:</strong> Users can submit without
-          accounts
-        </div>
-        <div class="legend-item">
-          ✅ <strong>Comprehensive Judging:</strong> Full hackathon judging
-          system with scoring, tracking, and export
-        </div>
-        <div class="legend-item">
-          ✅ <strong>Email Integration:</strong> Complete Resend integration
-          with daily/weekly emails
-        </div>
-        <div class="legend-item">
-          ✅ <strong>Inbox Messaging:</strong> Direct messaging with @mentions,
-          edit/delete, and rate limiting
-        </div>
-        <div class="legend-item">
-          ✅ <strong>Admin Alerts:</strong> Immediate email notifications for
-          content reports
-        </div>
-        <div class="legend-item">
-          ✅ <strong>Judge Tracking:</strong> Comprehensive monitoring and CSV
-          export of judge activity
-        </div>
-        <div class="legend-item">
-          ✅ <strong>Changelog System:</strong> Track all submission edits with
-          timestamps
-        </div>
-        <div class="legend-item">
-          ✅ <strong>Multi-Image Gallery:</strong> Support for multiple images
-          with Lightbox viewer
-        </div>
-      </div>
-
-      <div class="legend">
         <h3>Tech Stack</h3>
         <div class="legend-item">
           <strong>Frontend:</strong> React 18, TypeScript, Vite, Tailwind CSS
@@ -927,17 +911,6 @@
         </div>
         <div class="legend-item"><strong>Deployment:</strong> Netlify</div>
         <div class="legend-item"><strong>Analytics:</strong> Rybbit</div>
-      </div>
-
-      <div class="legend">
-        <h3>What's Coming Next</h3>
-        <div class="legend-item">
-          🔜 Clerk roles for hackathon organizers (judges-only access)
-        </div>
-        <div class="legend-item">
-          🔜 Admin moderation to make posts approval-only
-        </div>
-        <div class="legend-item">🔜 Test judging progress on results page</div>
       </div>
     </div>
   </body>

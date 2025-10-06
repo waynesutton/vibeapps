@@ -92,6 +92,15 @@ Brief description of the feature and its purpose.
 - [x] added CSV export to Judge Tracking dashboard for comprehensive judge activity reports
 - [x] updated Judge Tracking UI to show submissions judged and avg score instead of confusing scores column
 - [x] fixed Judge Tracking crash when encountering deleted judges, stories, or criteria
+- [x] added judge notes viewing and moderation in Judge Tracking dashboard
+- [x] admins can view all judge collaboration notes on submissions and reply to them
+- [x] added note count badges showing number of notes per submission in Judge Tracking
+- [x] improved reply button design for better mobile responsiveness in judge notes
+- [x] added total notes count per judge in judge list next to submissions judged stat
+- [x] verified notes counts back-fill all existing/historical notes from database
+- [x] improved Judge Tracking UI spacing and layout for better readability
+- [x] enhanced CSV export to include judge collaboration notes with timestamps
+- [x] added blank rows between submissions in CSV export for better organization
 
 ## In Progress Tasks
 

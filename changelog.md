@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [Added] - October 5, 2025
 
+**Judge Notes Viewing and Moderation in Judge Tracking**
+
+- Added ability for admins/moderators to view judge notes on submissions
+  - Purple message icon on each score entry to view notes for that submission
+  - Shows all collaboration notes judges left on that specific submission
+  - Displays note author, timestamp, and full content with @mention support
+  - Shows threaded replies to notes
+  - Admin/moderator can reply to any note as the judge they're viewing
+  - Reply form includes @mention autocomplete for user mentions
+  - All replies are posted as if from the currently selected judge
+  - Uses consistent messaging UI with MentionTextarea component
+  - Real-time updates when notes are added or replied to
+  - Note count badges (purple) display on submissions with notes
+  - Badge shows total number of notes including replies (e.g., "3 notes")
+  - Compact reply button design for better mobile responsiveness
+  - Judge list shows total notes count per judge next to submissions judged
+  - Notes count displays with purple message icon for visual clarity
+
 **Judge Tracking CSV Export**
 
 - Added comprehensive CSV export functionality to Judge Tracking dashboard
@@ -17,9 +35,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Submission titles and slugs for each score
   - Judging criteria questions and descriptions
   - Individual scores and comments
+  - Judge collaboration notes with timestamps for each submission
   - Total score for each submission (sum of all criterion scores by that judge)
   - Hidden status for moderated scores
   - Formatted submission timestamps
+  - Blank rows automatically added between different submissions for readability
+  - Notes formatted as: [Date] Note content | [Date] Next note
   - Filename format: `judge-activity-{group-name}-{date}.csv`
   - Properly escaped CSV values handling commas, quotes, and newlines
   - Button disabled when no data available
@@ -32,19 +53,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Changed "subs" abbreviation to "submissions judged" for clarity
 - Reordered columns to show submissions judged first
 - Changed "avg" label to "avg score" for better clarity
+- Improved spacing and layout of judge stats
+  - Increased gap between stats from 2 to 6 (gap-6)
+  - Added ml-auto to push stats to the right side
+  - Increased minimum widths for better readability
+  - Better color contrast for stat labels (text-gray-500, text-gray-600)
 
 **Technical Implementation**
 
-- Backend: Added `getJudgeTrackingExportData` query in `convex/adminJudgeTracking.ts`
+- Backend: Enhanced `getJudgeTrackingExportData` query in `convex/adminJudgeTracking.ts`
   - Fetches comprehensive judge scoring data across all criteria
   - Calculates total scores for each judge-submission pair
   - Includes judge profile information and user linkages
+  - Fetches all judge collaboration notes for each submission
+  - Formats notes with timestamps for CSV export
+  - Filters to include only parent notes (not replies) in export
   - Sorts data by judge name then submission date
   - Returns formatted date strings for CSV readability
+- Backend: Added `getSubmissionNoteCounts` query in `convex/adminJudgeTracking.ts`
+  - Efficiently counts ALL notes per submission in a judging group (including historical)
+  - Returns Record<Id<"stories">, number> for type-safe lookups
+  - Includes all notes and replies in the count (no time filters applied)
+  - Properly back-fills existing notes from database
+- Backend: Enhanced `getGroupJudgeTracking` query in `convex/adminJudgeTracking.ts`
+  - Fetches ALL submission notes for the judging group (includes all historical notes)
+  - Calculates total notes count per judge (notesCount field)
+  - Includes notes count in judge tracking data structure
+  - Uses `.collect()` with no time filters to ensure all existing notes are counted
+  - Counts both parent notes and replies written by each judge
 - Frontend: Enhanced `JudgeTracking.tsx` component
   - Added CSV generation function with proper escaping
-  - Integrated Download icon from lucide-react
+  - Integrated Download and MessageSquare icons from lucide-react
   - Added export button with loading state handling
+  - Added note count badges next to submissions with notes
+  - Added notes count stat in judge list showing total notes per judge
+  - Notes count displays with purple MessageSquare icon next to submissions judged
+  - Converted reply button to compact link-style for mobile responsiveness
+  - Note counts update in real-time when notes are added
+  - CSV export now includes judge notes column
+  - CSV export groups data by submission and adds blank rows between groups
+  - Improved judge stats layout with better spacing (gap-6, ml-auto)
+  - Increased minimum widths for stats columns for better readability
   - Cleaned up unused imports and mutations
 
 ### [Fixed] - October 5, 2025
