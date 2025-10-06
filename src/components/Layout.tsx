@@ -36,7 +36,6 @@ import { WeeklyLeaderboard } from "./WeeklyLeaderboard";
 import { TopCategoriesOfWeek } from "./TopCategoriesOfWeek";
 import { RecentVibers } from "./RecentVibers";
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
-import { ProfileHoverCard } from "./ui/ProfileHoverCard";
 import { formatDistanceToNow } from "date-fns";
 
 interface LayoutContextType {
@@ -54,7 +53,8 @@ type SortPeriod =
   | "votes_today"
   | "votes_week"
   | "votes_month"
-  | "votes_year";
+  | "votes_year"
+  | "votes_all";
 
 export function Layout({ children }: { children?: ReactNode }) {
   const navigate = useNavigate();
@@ -403,6 +403,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                                 <DropdownNotificationItem
                                   key={alert._id}
                                   alert={alert}
+                                  onClose={() => setShowAlertsDropdown(false)}
                                 />
                               ))
                             ) : (
@@ -626,11 +627,12 @@ export function Layout({ children }: { children?: ReactNode }) {
                       <option value="week">This Week</option>
                       <option value="month">This Month</option>
                       <option value="year">This Year</option>
-                      <option value="all">All Time</option>
+                      <option value="all">Most Recent</option>
                       <option value="votes_today">Most Vibes (Today)</option>
                       <option value="votes_week">Most Vibes (Week)</option>
                       <option value="votes_month">Most Vibes (Month)</option>
                       <option value="votes_year">Most Vibes (Year)</option>
+                      <option value="votes_all">Most Vibes (All Time)</option>
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1 md:px-2 text-[#545454]">
                       <ChevronDown className="h-3 w-3 md:h-4 md:w-4" />
@@ -790,7 +792,13 @@ export function useLayoutContext() {
 }
 
 // Dropdown notification item component
-function DropdownNotificationItem({ alert }: { alert: any }) {
+function DropdownNotificationItem({
+  alert,
+  onClose,
+}: {
+  alert: any;
+  onClose: () => void;
+}) {
   const actorUser = useQuery(
     api.users.getUserById,
     alert.actorUserId ? { userId: alert.actorUserId } : "skip",
@@ -853,7 +861,7 @@ function DropdownNotificationItem({ alert }: { alert: any }) {
                   <Link
                     to={`/${actorUser.username}`}
                     className="font-medium hover:underline cursor-pointer text-[#525252] hover:text-[#292929]"
-                    onClick={() => setShowAlertsDropdown(false)}
+                    onClick={onClose}
                   >
                     {actorUser.name}
                   </Link>

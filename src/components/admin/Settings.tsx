@@ -15,7 +15,8 @@ type SortPeriod =
   | "votes_today"
   | "votes_week"
   | "votes_month"
-  | "votes_year";
+  | "votes_year"
+  | "votes_all";
 
 // Define ViewMode locally for type casting
 type ViewMode = "list" | "grid" | "vibe";
@@ -292,11 +293,12 @@ export function Settings() {
               <option value="week">This Week</option>
               <option value="month">This Month</option>
               <option value="year">This Year</option>
-              <option value="all">All Time</option>
+              <option value="all">Most Recent</option>
               <option value="votes_today">Most Vibes (Today)</option>
               <option value="votes_week">Most Vibes (Week)</option>
               <option value="votes_month">Most Vibes (Month)</option>
               <option value="votes_year">Most Vibes (Year)</option>
+              <option value="votes_all">Most Vibes (All Time)</option>
             </select>
           </div>
 

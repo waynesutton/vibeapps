@@ -190,7 +190,8 @@ export type SortPeriod =
   | "votes_today"
   | "votes_week"
   | "votes_month"
-  | "votes_year";
+  | "votes_year"
+  | "votes_all";
 
 // Updated listApproved query to sort by pinned status first and handle new vote sorts
 export const listApproved = query({
@@ -208,6 +209,7 @@ export const listApproved = query({
         v.literal("votes_week"),
         v.literal("votes_month"),
         v.literal("votes_year"),
+        v.literal("votes_all"),
       ),
     ),
     searchTerm: v.optional(v.string()),
@@ -2245,6 +2247,7 @@ export const getApprovedCountByTag = query({
         v.literal("votes_week"),
         v.literal("votes_month"),
         v.literal("votes_year"),
+        v.literal("votes_all"),
       ),
     ),
   },
