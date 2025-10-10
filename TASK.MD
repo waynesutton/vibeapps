@@ -101,6 +101,11 @@ Brief description of the feature and its purpose.
 - [x] improved Judge Tracking UI spacing and layout for better readability
 - [x] enhanced CSV export to include judge collaboration notes with timestamps
 - [x] added blank rows between submissions in CSV export for better organization
+- [x] fixed Judge Tracking server error when scores reference deleted stories or criteria - now gracefully skips orphaned scores
+- [x] fixed write conflicts in judges table by optimizing updateActivity and registerJudge mutations
+- [x] reduced database queries in registerJudge from multiple filtered queries to single collect with in-memory filtering
+- [x] added client-side throttling to updateActivity (60 seconds) and conditional updates (only if timestamp is newer)
+- [x] added 1-minute threshold for lastActiveAt updates in registerJudge to prevent excessive writes
 
 ## In Progress Tasks
 
@@ -109,6 +114,16 @@ Brief description of the feature and its purpose.
 ## Future Tasks - Roadmap
 
 - [ ] test judging progress on results page
+- [ ] fix judging count
+- [ ] add dates to messages inbox
+- [ ] judge tracking links go to their own page
+- [ ] make judge notes yellow
+- [ ] on judges page show who gave it the score
+- [ ] link to submisson on judges socr
+- [ ] message from user on the right
+- [ ] rankings don't show until judge has clicked on complete
+- [ ] Submissions Judged doesn't update until say complete
+- [ ] shift entere sends instead of creating a new line
 - [ ] clerk roles for hackathon organizers to see judges section in admin dashboard only from friendsonlyinbox.md
 
 ## TBD Future task

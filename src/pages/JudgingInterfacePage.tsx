@@ -153,12 +153,16 @@ export default function JudgingInterfacePage() {
     }
   }, [existingScores, currentSubmissionIndex]);
 
-  // Update activity periodically
+  // Update activity periodically with client-side throttling
   useEffect(() => {
     if (sessionId) {
       const interval = setInterval(() => {
-        updateActivity({ sessionId });
-      }, 30000); // Update every 30 seconds
+        // Pass current timestamp to the mutation
+        updateActivity({
+          sessionId,
+          lastActiveAt: Date.now(),
+        });
+      }, 60000); // Update every 60 seconds (reduced from 30s to minimize conflicts)
 
       return () => clearInterval(interval);
     }

@@ -13,6 +13,7 @@ alwaysApply: true
 ---
 
 - Start by saying, "let's cook
+- **!IMPORTANT**: **DO NOT** externalize or document your work, usage guidelines, or benchmarks (e.g. `README.md`, `CONTRIBUTING.md`, `SUMMARY.md`, `USAGE_GUIDELINES.md` after completing the task, unless explicitly instructed to do so. You may include a brief summary of your work, but do not create separate documentation files for it.
 - never use emoji or emojis in the readme or app unless instructed
 - always create type-safe code
 - Be casual unless otherwise specified
@@ -56,7 +57,7 @@ alwaysApply: true
 - you keep a developer friendly changelog.md of new features added based on https://keepachangelog.com/en/1.0.0/
 - prd files always end with .MD and not .prd
 - prd files are located in the prds folder except forchangelog.M , files.MD, README.md and TASK.MDwhich can stay in the root folder
-- - create type-safe code always, if the prds folder does not exist create one
+- create type-safe code always, if the prds folder does not exist create one
 - Give the answer immediately. Provide detailed explanations and restate my query in your own words if necessary after giving the answer
 - Value good arguments over authorities, the source is irrelevant
 - Consider new technologies and contrarian ideas, not just the conventional wisdom
@@ -79,3 +80,4 @@ alwaysApply: true
 - Clerk claims configuration - If you're using Clerk, the fields returned by getUserIdentity are determined by your JWT template's Claims config. If you've set custom claims, they will be returned by getUserIdentity as well.
 - you never use placeholder text or images in code because everything is realtime sync with convex database
 - you don't ship code with placeholder text or images
+- **!IMPORTANT**: **DO NOT** externalize or document your work, usage guidelines, or benchmarks (e.g. `README.md`, `CONTRIBUTING.md`, `SUMMARY.md`, `USAGE_GUIDELINES.md` after completing the task, unless explicitly instructed to do so. You may include a brief summary of your work, but do not create separate documentation files for it.

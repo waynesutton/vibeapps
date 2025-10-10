@@ -115,6 +115,7 @@ export const removeJudge = mutation({
 
 /**
  * Register a judge for a group
+ * Optimized to reduce write conflicts by minimizing database queries
  */
 export const registerJudge = mutation({
   args: {
@@ -127,7 +128,15 @@ export const registerJudge = mutation({
     sessionId: v.string(),
   }),
   handler: async (ctx, args) => {
-    // Verify the group exists and is accessible
+    // Validate name first (before any DB queries)
+    const trimmedName = args.name.trim();
+    if (trimmedName.length < 2) {
+      throw new Error("Name must be at least 2 characters long");
+    }
+
+    const now = Date.now();
+
+    // Verify the group exists and is accessible (single query)
     const group = await ctx.db.get(args.groupId);
     if (!group) {
       throw new Error("Judging group not found");
@@ -138,7 +147,6 @@ export const registerJudge = mutation({
     }
 
     // Check if judging period is valid
-    const now = Date.now();
     if (group.startDate && now < group.startDate) {
       throw new Error("Judging has not started yet");
     }
@@ -147,54 +155,57 @@ export const registerJudge = mutation({
       throw new Error("Judging period has ended");
     }
 
-    // Validate name
-    const trimmedName = args.name.trim();
-    if (trimmedName.length < 2) {
-      throw new Error("Name must be at least 2 characters long");
-    }
-
-    // Check if user is authenticated and get their profile
+    // Check if user is authenticated
     const identity = await ctx.auth.getUserIdentity();
     let userId: Id<"users"> | undefined = undefined;
+    let user: Doc<"users"> | null = null;
 
     if (identity) {
-      const user = await ctx.db
+      user = await ctx.db
         .query("users")
         .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
         .unique();
 
       if (user) {
         userId = user._id;
+      }
+    }
 
-        // Check if this user is already registered as a judge for this group
-        const existingUserJudge = await ctx.db
-          .query("judges")
-          .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
-          .filter((q) => q.eq(q.field("userId"), user._id))
-          .first();
+    // Single query to get all judges for this group with filters
+    // This is more efficient than multiple separate queries
+    const allGroupJudges = await ctx.db
+      .query("judges")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
 
-        if (existingUserJudge) {
-          // Update their info and return existing session
+    // Check for existing judge by userId first (most reliable)
+    if (userId) {
+      const existingUserJudge = allGroupJudges.find((j) => j.userId === userId);
+
+      if (existingUserJudge) {
+        // Update their info and return existing session (only update if changed)
+        const needsUpdate =
+          existingUserJudge.name !== trimmedName ||
+          existingUserJudge.email !== args.email?.trim() ||
+          now - existingUserJudge.lastActiveAt > 60000; // Only update if > 1 minute old
+
+        if (needsUpdate) {
           await ctx.db.patch(existingUserJudge._id, {
             name: trimmedName,
             email: args.email?.trim(),
             lastActiveAt: now,
           });
-
-          return {
-            judgeId: existingUserJudge._id,
-            sessionId: existingUserJudge.sessionId,
-          };
         }
+
+        return {
+          judgeId: existingUserJudge._id,
+          sessionId: existingUserJudge.sessionId,
+        };
       }
     }
 
     // Check if judge with same name already exists in this group
-    const existingJudge = await ctx.db
-      .query("judges")
-      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
-      .filter((q) => q.eq(q.field("name"), trimmedName))
-      .first();
+    const existingJudge = allGroupJudges.find((j) => j.name === trimmedName);
 
     if (existingJudge) {
       // If user is authenticated and judge doesn't have userId, link them
@@ -204,9 +215,13 @@ export const registerJudge = mutation({
           email: args.email?.trim() || existingJudge.email,
           lastActiveAt: now,
         });
+      } else if (now - existingJudge.lastActiveAt > 60000) {
+        // Only update lastActiveAt if > 1 minute old to reduce conflicts
+        await ctx.db.patch(existingJudge._id, {
+          lastActiveAt: now,
+        });
       }
 
-      // Return existing judge's session
       return {
         judgeId: existingJudge._id,
         sessionId: existingJudge.sessionId,
@@ -292,9 +307,13 @@ export const getJudgeSession = query({
 
 /**
  * Update judge's last active timestamp (throttled to reduce write conflicts)
+ * Note: Throttling should be done on the client side to minimize database reads
  */
 export const updateActivity = mutation({
-  args: { sessionId: v.string() },
+  args: {
+    sessionId: v.string(),
+    lastActiveAt: v.number(),
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
     const judge = await ctx.db
@@ -303,18 +322,15 @@ export const updateActivity = mutation({
       .unique();
 
     if (!judge) {
-      throw new Error("Judge session not found");
+      // Silently fail instead of throwing to avoid errors when session expires
+      return null;
     }
 
-    const now = Date.now();
-    const timeSinceLastUpdate = now - judge.lastActiveAt;
-    const updateThreshold = 30 * 1000; // 30 seconds
-
-    // Only update if more than 30 seconds have passed since last update
-    // This prevents excessive write conflicts while maintaining activity tracking
-    if (timeSinceLastUpdate >= updateThreshold) {
+    // Only update if the provided timestamp is newer than the current one
+    // This prevents conflicts from out-of-order updates
+    if (args.lastActiveAt > judge.lastActiveAt) {
       await ctx.db.patch(judge._id, {
-        lastActiveAt: now,
+        lastActiveAt: args.lastActiveAt,
       });
     }
 

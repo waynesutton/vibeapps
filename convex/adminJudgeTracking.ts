@@ -229,13 +229,17 @@ export const getJudgeDetailedScores = query({
       .collect();
 
     // Get story and criteria details for each score
-    const detailedScores = await Promise.all(
+    const detailedScoresWithNulls = await Promise.all(
       scores.map(async (score) => {
         const story = await ctx.db.get(score.storyId);
         const criteria = await ctx.db.get(score.criteriaId);
 
+        // Skip scores that reference deleted stories or criteria
         if (!story || !criteria) {
-          throw new Error("Score references missing story or criteria");
+          console.warn(
+            `Score ${score._id} references deleted ${!story ? "story" : "criteria"}. Skipping.`,
+          );
+          return null;
         }
 
         return {
@@ -256,6 +260,11 @@ export const getJudgeDetailedScores = query({
           },
         };
       }),
+    );
+
+    // Filter out null entries (scores with missing references)
+    const detailedScores = detailedScoresWithNulls.filter(
+      (score): score is NonNullable<typeof score> => score !== null,
     );
 
     return detailedScores.sort((a, b) => b._creationTime - a._creationTime);
