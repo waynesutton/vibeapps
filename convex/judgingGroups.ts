@@ -252,6 +252,53 @@ export const deleteGroup = mutation({
 });
 
 /**
+ * Get a judging group by slug (admin only)
+ */
+export const getGroupBySlug = query({
+  args: { slug: v.string() },
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("judgingGroups"),
+      _creationTime: v.number(),
+      name: v.string(),
+      slug: v.string(),
+      description: v.optional(v.string()),
+      isPublic: v.boolean(),
+      isActive: v.boolean(),
+      startDate: v.optional(v.number()),
+      endDate: v.optional(v.number()),
+      createdBy: v.id("users"),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
+
+    const group = await ctx.db
+      .query("judgingGroups")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+
+    if (!group) {
+      return null;
+    }
+
+    return {
+      _id: group._id,
+      _creationTime: group._creationTime,
+      name: group.name,
+      slug: group.slug,
+      description: group.description,
+      isPublic: group.isPublic,
+      isActive: group.isActive,
+      startDate: group.startDate,
+      endDate: group.endDate,
+      createdBy: group.createdBy,
+    };
+  },
+});
+
+/**
  * Get a judging group with all details (admin only)
  */
 export const getGroupWithDetails = query({

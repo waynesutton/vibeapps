@@ -24,7 +24,6 @@ import { formatDistanceToNow } from "date-fns";
 import { CreateJudgingGroupModal } from "./CreateJudgingGroupModal";
 import { JudgingCriteriaEditor } from "./JudgingCriteriaEditor";
 import { JudgingResultsDashboard } from "./JudgingResultsDashboard";
-import { JudgeTracking } from "./JudgeTracking";
 
 export function Judging() {
   const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
@@ -42,7 +41,7 @@ export function Judging() {
     useState<Id<"judgingGroups"> | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [currentView, setCurrentView] = useState<
-    "list" | "criteria" | "results" | "tracking"
+    "list" | "criteria" | "results"
   >("list");
   const [selectedGroup, setSelectedGroup] = useState<{
     id: Id<"judgingGroups">;
@@ -97,11 +96,6 @@ export function Judging() {
   const handleBackToList = () => {
     setCurrentView("list");
     setSelectedGroup(null);
-  };
-
-  const handleViewTracking = (group: any) => {
-    setSelectedGroup({ id: group._id, name: group.name });
-    setCurrentView("tracking");
   };
 
   const getStatusBadge = (group: any) => {
@@ -159,17 +153,6 @@ export function Judging() {
   if (currentView === "results" && selectedGroup) {
     return (
       <JudgingResultsDashboard
-        groupId={selectedGroup.id}
-        groupName={selectedGroup.name}
-        onBack={handleBackToList}
-      />
-    );
-  }
-
-  // Show judge tracking if selected
-  if (currentView === "tracking" && selectedGroup) {
-    return (
-      <JudgeTracking
         groupId={selectedGroup.id}
         groupName={selectedGroup.name}
         onBack={handleBackToList}
@@ -383,14 +366,14 @@ export function Judging() {
                           </button>
                         )}
 
-                        <button
-                          onClick={() => handleViewTracking(group)}
+                        <Link
+                          to={`/admin/judging/${group.slug}/tracking`}
                           className="flex flex-col items-center gap-1 p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-md transition-colors min-w-[70px]"
                           title="Track judges"
                         >
                           <Users className="w-4 h-4" />
                           <span className="text-xs">Judge Tracking</span>
-                        </button>
+                        </Link>
 
                         <button
                           onClick={() => handleDelete(group._id)}

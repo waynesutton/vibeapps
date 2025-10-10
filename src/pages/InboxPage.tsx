@@ -481,15 +481,6 @@ export default function InboxPage() {
                           isOwnMessage ? "items-end" : "items-start"
                         }`}
                       >
-                        {/* Sender name with link */}
-                        {message.sender.username && (
-                          <a
-                            href={`/${message.sender.username}`}
-                            className="text-xs text-gray-600 hover:text-gray-900 mb-1 px-1"
-                          >
-                            {message.sender.name}
-                          </a>
-                        )}
                         <div
                           className={`max-w-[70%] rounded-lg p-3 ${
                             isOwnMessage
@@ -503,22 +494,15 @@ export default function InboxPage() {
                               isOwnMessage,
                             )}
                           </p>
-                          <p
-                            className={`text-xs mt-1 ${
-                              isOwnMessage ? "text-gray-400" : "text-gray-500"
-                            }`}
-                          >
-                            {new Date(message._creationTime).toLocaleString(
-                              [],
-                              {
-                                month: "short",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              },
-                            )}
-                          </p>
                         </div>
+                        <p className="text-xs text-gray-500 mt-1 px-1">
+                          {new Date(message._creationTime).toLocaleString([], {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
                       </div>
                     );
                   })

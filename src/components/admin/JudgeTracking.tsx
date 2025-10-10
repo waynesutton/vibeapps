@@ -647,15 +647,15 @@ export function JudgeTracking({
                                         {submissionNotes.map((note) => (
                                           <div
                                             key={note._id}
-                                            className="bg-white border border-gray-200 rounded p-3"
+                                            className="bg-[#FFF9C4] border border-[#F9E79F] rounded p-3"
                                           >
                                             <div className="flex items-start justify-between mb-2">
                                               <div className="flex items-center gap-2">
-                                                <User className="w-3 h-3 text-gray-400" />
-                                                <span className="text-xs font-medium text-gray-900">
+                                                <User className="w-3 h-3 text-gray-600" />
+                                                <span className="text-xs font-medium text-black">
                                                   {note.judgeName}
                                                 </span>
-                                                <span className="text-xs text-gray-500">
+                                                <span className="text-xs text-gray-700">
                                                   {formatDistanceToNow(
                                                     note._creationTime,
                                                     { addSuffix: true },
@@ -666,13 +666,13 @@ export function JudgeTracking({
                                                 onClick={() =>
                                                   setReplyingToNote(note._id)
                                                 }
-                                                className="text-xs text-blue-600 hover:text-blue-800 hover:underline flex-shrink-0"
+                                                className="text-xs text-blue-700 hover:text-blue-900 hover:underline flex-shrink-0"
                                               >
                                                 Reply
                                               </button>
                                             </div>
 
-                                            <div className="text-xs text-gray-700 whitespace-pre-wrap mb-2">
+                                            <div className="text-xs text-black whitespace-pre-wrap mb-2">
                                               {renderTextWithMentions(
                                                 note.content,
                                               )}
@@ -681,25 +681,25 @@ export function JudgeTracking({
                                             {/* Replies */}
                                             {note.replies &&
                                               note.replies.length > 0 && (
-                                                <div className="ml-4 mt-3 space-y-2 border-l-2 border-purple-100 pl-3">
+                                                <div className="ml-4 mt-3 space-y-2 border-l-2 border-[#F9E79F] pl-3">
                                                   {note.replies.map((reply) => (
                                                     <div
                                                       key={reply._id}
-                                                      className="bg-purple-50 rounded p-2"
+                                                      className="bg-[#FFFDE7] rounded p-2 border border-[#F9E79F]"
                                                     >
                                                       <div className="flex items-center gap-2 mb-1">
-                                                        <User className="w-3 h-3 text-gray-400" />
-                                                        <span className="text-xs font-medium text-gray-900">
+                                                        <User className="w-3 h-3 text-gray-600" />
+                                                        <span className="text-xs font-medium text-black">
                                                           {reply.judgeName}
                                                         </span>
-                                                        <span className="text-xs text-gray-500">
+                                                        <span className="text-xs text-gray-700">
                                                           {formatDistanceToNow(
                                                             reply._creationTime,
                                                             { addSuffix: true },
                                                           )}
                                                         </span>
                                                       </div>
-                                                      <div className="text-xs text-gray-700 whitespace-pre-wrap">
+                                                      <div className="text-xs text-black whitespace-pre-wrap">
                                                         {renderTextWithMentions(
                                                           reply.content,
                                                         )}
@@ -711,7 +711,7 @@ export function JudgeTracking({
 
                                             {/* Reply Form */}
                                             {replyingToNote === note._id && (
-                                              <div className="ml-4 mt-3 border-l-2 border-purple-200 pl-3">
+                                              <div className="ml-4 mt-3 border-l-2 border-[#F9E79F] pl-3">
                                                 <MentionTextarea
                                                   value={replyContent}
                                                   onChange={setReplyContent}

@@ -42,6 +42,7 @@ import { TagPage } from "./pages/TagPage";
 import JudgingGroupPage from "./pages/JudgingGroupPage";
 import JudgingInterfacePage from "./pages/JudgingInterfacePage";
 import PublicJudgingResultsPage from "./pages/PublicJudgingResultsPage";
+import JudgeTrackingPage from "./pages/JudgeTrackingPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { LeaderboardPage } from "./pages/LeaderboardPage";
 import InboxPage from "./pages/InboxPage";
@@ -179,6 +180,10 @@ function App() {
           <Route
             path="/judging/:slug/results"
             element={<PublicJudgingResultsPage />}
+          />
+          <Route
+            path="/admin/judging/:slug/tracking"
+            element={<JudgeTrackingPage />}
           />
           <Route path="/:username" element={<UserProfilePage />} />
           <Route path="/navtest" element={<NavTestPage />} />

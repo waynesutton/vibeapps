@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Added] - October 10, 2025
+
+**Judge Tracking Dedicated Page & UI Improvements**
+
+- Created dedicated page for Judge Tracking with URL pattern `/admin/judging/{slug}/tracking`
+  - Each judging group now has its own dedicated tracking page
+  - Judges button in admin judging list now links to dedicated page instead of inline view
+  - Better navigation with URL-based routing
+  - Back button returns to admin judging dashboard
+  - Supports direct linking and bookmarking of tracking pages
+  - Cleaner admin interface with separated concerns
+
+- Enhanced judge notes styling with sticky note appearance
+  - Main notes display with bright yellow sticky note background (#FFF9C4)
+  - Replies display with lighter yellow background (#FFFDE7)
+  - Black text for better readability and sticky note aesthetic
+  - Yellow borders (#F9E79F) for consistent theme
+  - Improved visual hierarchy with darker text colors
+  - Better contrast for judge names and timestamps
+
+**Technical Implementation**
+
+- **Frontend Changes**:
+  - Created `src/pages/JudgeTrackingPage.tsx` for dedicated tracking interface
+  - Updated `src/App.tsx` with new route: `/admin/judging/:slug/tracking`
+  - Modified `src/components/admin/Judging.tsx` to use Link instead of inline state
+  - Removed tracking view state management from Judging component
+  - Updated `src/components/admin/JudgeTracking.tsx` with sticky note styling for notes
+  - Changed note background from white to yellow (#FFF9C4)
+  - Changed reply background from purple to lighter yellow (#FFFDE7)
+  - Updated text colors from gray to black for better readability
+  - Changed border colors to match yellow theme (#F9E79F)
+- **Backend Changes**:
+  - Added `getGroupBySlug` query in `convex/judgingGroups.ts`
+  - Admin-only query that fetches judging group by slug
+  - Maintains admin role requirements for security
+- **User Experience**:
+  - Each tracking session has its own URL for sharing and bookmarking
+  - Browser back/forward buttons work naturally
+  - Deep linking support for direct access to tracking pages
+  - Improved navigation flow in admin dashboard
+
 ### [Added] - October 5, 2025
 
 **Judge Notes Viewing and Moderation in Judge Tracking**

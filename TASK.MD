@@ -107,6 +107,8 @@ Brief description of the feature and its purpose.
 - [x] added client-side throttling to updateActivity (60 seconds) and conditional updates (only if timestamp is newer)
 - [x] added 1-minute threshold for lastActiveAt updates in registerJudge to prevent excessive writes
 - [x] add dates to messages inbox
+- [x] judge tracking now has its own dedicated page with URL pattern /admin/judging/{slug}/tracking for each judging group
+- [x] made judge notes display with sticky note yellow background and black text for better visibility
 
 ## In Progress Tasks
 
@@ -116,8 +118,6 @@ Brief description of the feature and its purpose.
 
 - [ ] test judging progress on results page
 - [ ] fix judging count
-- [ ] judge tracking links go to their own page
-- [ ] make judge notes yellow
 - [ ] on judges page show who gave it the score
 - [ ] link to submisson on judges socr
 - [ ] message from user on the right

@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -164,15 +165,19 @@ export function PublicJudgingResultsDashboard({
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h4 className="font-medium text-gray-900">
+                      <Link
+                        to={`/s/${submission.storySlug}`}
+                        className="font-medium text-gray-900 hover:text-blue-600 hover:underline"
+                      >
                         {submission.storyTitle}
-                      </h4>
+                      </Link>
                       {submission.storyUrl && (
                         <a
                           href={submission.storyUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800"
+                          className="text-gray-500 hover:text-gray-700"
+                          title="Visit live app"
                         >
                           <ExternalLink className="w-4 h-4" />
                         </a>

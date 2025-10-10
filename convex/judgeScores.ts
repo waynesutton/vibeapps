@@ -221,12 +221,30 @@ export const getGroupScores = query({
   handler: async (ctx, args) => {
     await requireAdminRole(ctx);
 
-    // Get all scores for this group (excluding hidden scores for results calculations)
-    const scores = await ctx.db
+    // Get all submission statuses to filter by completion
+    const submissionStatuses = await ctx.db
+      .query("submissionStatuses")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+
+    // Get only completed submission IDs
+    const completedSubmissionIds = new Set(
+      submissionStatuses
+        .filter((status) => status.status === "completed")
+        .map((status) => status.storyId),
+    );
+
+    // Get all scores for this group, filtered by completed submissions only (excluding hidden scores)
+    const allScores = await ctx.db
       .query("judgeScores")
       .withIndex("by_groupId_storyId", (q) => q.eq("groupId", args.groupId))
       .filter((q) => q.neq(q.field("isHidden"), true))
       .collect();
+
+    // Filter scores to only include completed submissions
+    const scores = allScores.filter((score) =>
+      completedSubmissionIds.has(score.storyId),
+    );
 
     // Get group metadata
     const submissions = await ctx.db
@@ -258,13 +276,7 @@ export const getGroupScores = query({
     const submissionCount = submissions.length;
     const criteriaCount = criteria.length;
 
-    // Calculate completion based on submissions marked as "completed" in submissionStatuses
-    // Progress is based on how many submissions have been marked complete, not judge-submission combinations
-    const submissionStatuses = await ctx.db
-      .query("submissionStatuses")
-      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
-      .collect();
-
+    // Calculate completion based on submissions marked as "completed" (already fetched above)
     const completedSubmissions = submissionStatuses.filter(
       (status) => status.status === "completed",
     ).length;
@@ -661,6 +673,7 @@ export const getPublicGroupScores = query({
         v.object({
           storyId: v.id("stories"),
           storyTitle: v.string(),
+          storySlug: v.string(),
           storyUrl: v.optional(v.string()),
           totalScore: v.number(),
           averageScore: v.number(),
@@ -684,12 +697,30 @@ export const getPublicGroupScores = query({
       return null;
     }
 
+    // Get all submission statuses to filter by completion
+    const submissionStatuses = await ctx.db
+      .query("submissionStatuses")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+
+    // Get only completed submission IDs
+    const completedSubmissionIds = new Set(
+      submissionStatuses
+        .filter((status) => status.status === "completed")
+        .map((status) => status.storyId),
+    );
+
     // Get all scores for this group (excluding hidden scores)
-    const scores = await ctx.db
+    const allScores = await ctx.db
       .query("judgeScores")
       .withIndex("by_groupId_storyId", (q) => q.eq("groupId", args.groupId))
       .filter((q) => q.neq(q.field("isHidden"), true))
       .collect();
+
+    // Filter scores to only include completed submissions
+    const scores = allScores.filter((score) =>
+      completedSubmissionIds.has(score.storyId),
+    );
 
     // Get group metadata
     const submissions = await ctx.db
@@ -721,13 +752,7 @@ export const getPublicGroupScores = query({
     const submissionCount = submissions.length;
     const criteriaCount = criteria.length;
 
-    // Calculate completion based on submissions marked as "completed" in submissionStatuses
-    // Progress is based on how many submissions have been marked complete, not judge-submission combinations
-    const submissionStatuses = await ctx.db
-      .query("submissionStatuses")
-      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
-      .collect();
-
+    // Calculate completion based on submissions marked as "completed" (already fetched above)
     const completedSubmissions = submissionStatuses.filter(
       (status) => status.status === "completed",
     ).length;
@@ -755,6 +780,7 @@ export const getPublicGroupScores = query({
         return {
           storyId: storyId as Id<"stories">,
           storyTitle: story?.title || "Unknown Story",
+          storySlug: story?.slug || "",
           storyUrl: story?.url,
           totalScore: data.totalScore,
           averageScore: data.count > 0 ? data.totalScore / data.count : 0,
@@ -841,6 +867,19 @@ export const getPublicGroupJudgeDetails = query({
       return null;
     }
 
+    // Get all submission statuses to filter by completion
+    const submissionStatuses = await ctx.db
+      .query("submissionStatuses")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+
+    // Get only completed submission IDs
+    const completedSubmissionIds = new Set(
+      submissionStatuses
+        .filter((status) => status.status === "completed")
+        .map((status) => status.storyId),
+    );
+
     const judges = await ctx.db
       .query("judges")
       .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
@@ -855,8 +894,11 @@ export const getPublicGroupJudgeDetails = query({
           .filter((q) => q.neq(q.field("isHidden"), true))
           .collect();
 
+        // Filter scores to only include completed submissions
         const scores = allGroupScores.filter(
-          (score) => score.judgeId === judge._id,
+          (score) =>
+            score.judgeId === judge._id &&
+            completedSubmissionIds.has(score.storyId),
         );
 
         const enrichedScores = await Promise.all(
