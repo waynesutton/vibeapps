@@ -51,6 +51,7 @@ export default function InboxPage() {
   ) as Id<"dmConversations"> | null;
 
   // Queries
+  const currentUser = useQuery(api.users.getMyUserDocument);
   const conversations = useQuery(
     api.dm.listConversations,
     isLoaded ? {} : "skip",
@@ -158,6 +159,14 @@ export default function InboxPage() {
       setErrorMessage(error.message || "Failed to send message");
     } finally {
       setIsSending(false);
+    }
+  };
+
+  // Handle Shift+Enter to send
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage(e as any);
     }
   };
 
@@ -464,7 +473,7 @@ export default function InboxPage() {
                 ) : (
                   messages?.map((message) => {
                     const isOwnMessage =
-                      message.sender._id === authUser.publicMetadata.userId;
+                      currentUser && message.senderId === currentUser._id;
                     return (
                       <div
                         key={message._id}
@@ -499,9 +508,11 @@ export default function InboxPage() {
                               isOwnMessage ? "text-gray-400" : "text-gray-500"
                             }`}
                           >
-                            {new Date(message._creationTime).toLocaleTimeString(
+                            {new Date(message._creationTime).toLocaleString(
                               [],
                               {
+                                month: "short",
+                                day: "numeric",
                                 hour: "2-digit",
                                 minute: "2-digit",
                               },
@@ -532,19 +543,23 @@ export default function InboxPage() {
                   className="p-4 border-t border-[#D8E1EC] flex-shrink-0 bg-white"
                 >
                   <div className="flex gap-2">
-                    <input
-                      type="text"
+                    <textarea
                       value={messageInput}
                       onChange={(e) => setMessageInput(e.target.value)}
-                      placeholder="Type a message..."
-                      className="flex-1 px-4 py-2.5 border border-[#D8E1EC] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#292929] focus:border-transparent text-sm"
+                      onKeyDown={handleKeyDown}
+                      placeholder="Type a message... (Shift+Enter to send)"
+                      className="flex-1 px-4 py-2.5 border border-[#D8E1EC] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#292929] focus:border-transparent text-sm resize-none"
                       maxLength={2000}
                       disabled={isSending}
+                      rows={3}
+                      data-gramm="false"
+                      data-gramm_editor="false"
+                      data-enable-grammarly="false"
                     />
                     <button
                       type="submit"
                       disabled={isSending || !messageInput.trim()}
-                      className="px-5 py-2.5 bg-[#292929] text-white rounded-lg hover:bg-[#3d3d3d] transition-colors disabled:bg-[#D8E1EC] disabled:cursor-not-allowed flex items-center gap-2 font-medium text-sm"
+                      className="px-5 py-2.5 bg-[#292929] text-white rounded-lg hover:bg-[#3d3d3d] transition-colors disabled:bg-[#D8E1EC] disabled:cursor-not-allowed flex items-center gap-2 font-medium text-sm self-end"
                     >
                       {isSending ? (
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>

@@ -47,6 +47,7 @@ export const baseStoryValidator = {
   ),
   isHidden: v.boolean(),
   isPinned: v.boolean(),
+  isArchived: v.optional(v.boolean()),
   customMessage: v.optional(v.string()),
   isApproved: v.optional(v.boolean()),
   email: v.optional(v.string()),
@@ -200,6 +201,7 @@ export type StoryWithDetailsPublic = {
   status: "pending" | "approved" | "rejected";
   isHidden: boolean;
   isPinned: boolean;
+  isArchived?: boolean;
   customMessage?: string;
   isApproved?: boolean;
   email?: string;

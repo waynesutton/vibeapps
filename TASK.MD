@@ -106,6 +106,7 @@ Brief description of the feature and its purpose.
 - [x] reduced database queries in registerJudge from multiple filtered queries to single collect with in-memory filtering
 - [x] added client-side throttling to updateActivity (60 seconds) and conditional updates (only if timestamp is newer)
 - [x] added 1-minute threshold for lastActiveAt updates in registerJudge to prevent excessive writes
+- [x] add dates to messages inbox
 
 ## In Progress Tasks
 
@@ -115,7 +116,6 @@ Brief description of the feature and its purpose.
 
 - [ ] test judging progress on results page
 - [ ] fix judging count
-- [ ] add dates to messages inbox
 - [ ] judge tracking links go to their own page
 - [ ] make judge notes yellow
 - [ ] on judges page show who gave it the score
@@ -123,7 +123,6 @@ Brief description of the feature and its purpose.
 - [ ] message from user on the right
 - [ ] rankings don't show until judge has clicked on complete
 - [ ] Submissions Judged doesn't update until say complete
-- [ ] shift entere sends instead of creating a new line
 - [ ] clerk roles for hackathon organizers to see judges section in admin dashboard only from friendsonlyinbox.md
 
 ## TBD Future task
