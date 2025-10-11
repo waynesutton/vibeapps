@@ -43,6 +43,8 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `prds/moreimages.md`: Multi-image gallery implementation
 - `prds/newsubmit.md`: Enhanced submission form documentation
 - `prds/recentusers.md`: Recent users sidebar feature
+- `prds/TESTING_SUMMARY.md`: Comprehensive email testing system documentation and guide
+- `prds/EMAIL_DATE_RANGE_FIX.md`: Detailed explanation of date range bug fix and email testing improvements
 
 ## Backend (Convex Directory)
 

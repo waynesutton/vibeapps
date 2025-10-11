@@ -270,6 +270,15 @@ export const generateEngagementEmail = internalQuery({
         }),
       ),
     ),
+    inboxMessages: v.optional(
+      v.array(
+        v.object({
+          senderId: v.id("users"),
+          senderName: v.string(),
+          messageCount: v.number(),
+        }),
+      ),
+    ), // Inbox messages received today with sender info
     unsubscribeToken: v.optional(v.string()),
   },
   returns: v.object({
@@ -405,6 +414,29 @@ export const generateEngagementEmail = internalQuery({
     `
         : "";
 
+    const inboxSection =
+      args.inboxMessages && args.inboxMessages.length > 0
+        ? `
+      <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 10px 0;">
+        <h3 style="margin-top: 0; color: #292929;">You received ${args.inboxMessages.reduce((sum, dm) => sum + dm.messageCount, 0)} new inbox message${args.inboxMessages.reduce((sum, dm) => sum + dm.messageCount, 0) !== 1 ? "s" : ""}</h3>
+        <ul style="list-style: none; padding: 0;">
+          ${args.inboxMessages
+            .map(
+              (dm) => `
+            <li style="margin: 8px 0; padding: 8px; background: #ffffff; border-radius: 4px;">
+              <strong>${dm.senderName}</strong> sent you ${dm.messageCount} message${dm.messageCount !== 1 ? "s" : ""}
+            </li>
+          `,
+            )
+            .join("")}
+        </ul>
+        <p style="margin: 10px 0;">
+          <a href="https://vibeapps.dev/inbox" style="color: #292929; text-decoration: none; font-weight: 500;">View your inbox →</a>
+        </p>
+      </div>
+    `
+        : "";
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -434,6 +466,8 @@ export const generateEngagementEmail = internalQuery({
             ${pinnedSection}
 
             ${adminMessageSection}
+
+            ${inboxSection}
 
             <div style="text-align: center; margin: 30px 0;">
               <a href="${args.userUsername ? `https://vibeapps.dev/${args.userUsername}` : args.userId ? "https://vibeapps.dev/set-username" : "https://vibeapps.dev/profile"}" style="background: #292929; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">View Your Profile</a>

@@ -109,6 +109,14 @@ Brief description of the feature and its purpose.
 - [x] add dates to messages inbox
 - [x] judge tracking now has its own dedicated page with URL pattern /admin/judging/{slug}/tracking for each judging group
 - [x] made judge notes display with sticky note yellow background and black text for better visibility
+- [x] inbox message from user on the right
+- [x] rankings score don't show until judge has clicked on complete
+- [x] add link to submission on judges score page
+- [x] add inbox messages to daily engagement emails with sender name and count
+- [x] fix critical date range bug causing incorrect email activity calculations
+- [x] enhance email testing panel with date range display and activity warnings
+- [x] move TESTING_SUMMARY.md and EMAIL_DATE_RANGE_FIX.md to prds folder
+- [x] update addresend.md with Phase 11 implementation details
 
 ## In Progress Tasks
 
@@ -116,13 +124,7 @@ Brief description of the feature and its purpose.
 
 ## Future Tasks - Roadmap
 
-- [ ] test judging progress on results page
-- [ ] fix judging count
-- [ ] on judges page show who gave it the score
-- [ ] link to submisson on judges socr
-- [ ] message from user on the right
-- [ ] rankings don't show until judge has clicked on complete
-- [ ] Submissions Judged doesn't update until say complete
+- [ ] fix judging count for submission
 - [ ] clerk roles for hackathon organizers to see judges section in admin dashboard only from friendsonlyinbox.md
 
 ## TBD Future task

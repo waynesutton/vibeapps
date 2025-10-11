@@ -1931,6 +1931,40 @@ CLERK_WEBHOOK_SECRET=whsec_xxx
   - **Impact**: Admin moderation emails for user reports and story reports now work correctly in production
   - **Logging**: Added console log to indicate when critical emails bypass the global toggle for debugging
 
+### Phase 11: Daily Email Inbox Messages & Date Range Fixes ✅ COMPLETED
+
+- [x] **Inbox Messages in Daily Engagement Emails**: Added DM notifications to user daily emails
+  - **Problem**: Users were not receiving daily emails when they received inbox messages
+  - **Solution**: Enhanced `convex/emails/daily.ts` to check for inbox messages received today
+  - **Implementation**: Added `getDMsReceivedByUser` helper in `convex/emails/helpers.ts`
+  - **Data Structure**: Groups messages by sender with counts: `[{senderId, senderName, messageCount}]`
+  - **Template Update**: Updated `generateEngagementEmail` in `convex/emails/templates.ts` to display inbox message notifications
+  - **Privacy**: Shows sender name and message count only, never shows message content
+  - **Integration**: Daily emails now trigger if user has engagement OR mentions OR replies OR inbox messages
+
+- [x] **Critical Date Range Bug Fix**: Fixed date mutation issues in daily email calculations
+  - **Problem**: Daily and weekly emails were showing zero activity due to incorrect date range calculations
+  - **Root Cause**: `setHours()` method mutates Date objects in place, causing `startOfDay` and `endOfDay` to be incorrect
+  - **Example**: `new Date(today.setHours(0,0,0,0))` modified `today` itself, breaking subsequent `setHours` calls
+  - **Solution**: Refactored date range calculation in `convex/emails/daily.ts` to parse date string and create new Date objects
+  - **Functions Fixed**:
+    - `calculateDailyMetrics`: Now correctly calculates today's activity (00:00:00 to 23:59:59)
+    - `processEngagementForAllUsers`: Fixed date range for user engagement processing
+  - **Code Pattern**: Changed from `new Date(today.setHours(...))` to `new Date(year, month - 1, day, hour, minute, second, ms)`
+  - **Impact**: Daily admin emails and user engagement emails now correctly report activity for the proper date range
+  - **Testing**: Enhanced testing panel to show date ranges and activity warnings for debugging
+
+- [x] **Email Testing Panel Enhancements**: Improved admin testing tools for better visibility
+  - **Date Range Display**: Testing panel now clearly shows which date range is being tested
+  - **Activity Warnings**: Shows warnings when no activity is found for the tested date range
+  - **Warning Types**:
+    - "⚠️ No activity on this date - email will show zeros"
+    - "⚠️ No engagement on this date - no emails will be sent"
+    - "⚠️ No votes last week - digest will be empty"
+    - "✅ Activity found" with counts
+  - **Help Documentation**: Added inline help explaining how daily and weekly date ranges work
+  - **Testing Files**: Created comprehensive documentation in `prds/TESTING_SUMMARY.md` and `prds/EMAIL_DATE_RANGE_FIX.md`
+
 ## Success Metrics
 
 ### Email Performance

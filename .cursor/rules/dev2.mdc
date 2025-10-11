@@ -13,6 +13,7 @@ alwaysApply: true
 ---
 
 - Start by saying, "let's cook
+- always create type-safe code
 - **!IMPORTANT**: **DO NOT** externalize or document your work, usage guidelines, or benchmarks (e.g. `README.md`, `CONTRIBUTING.md`, `SUMMARY.md`, `USAGE_GUIDELINES.md` after completing the task, unless explicitly instructed to do so. You may include a brief summary of your work, but do not create separate documentation files for it.
 - never use emoji or emojis in the readme or app unless instructed
 - always create type-safe code

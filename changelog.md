@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Fixed] - October 11, 2025
+
+**Daily Email Inbox Messages Integration ✅ COMPLETED**
+
+- **Inbox Messages in Daily Engagement Emails**: Users now receive daily emails when they get inbox messages
+  - Enhanced `convex/emails/daily.ts` to check for inbox messages received today
+  - Added `getDMsReceivedByUser` helper in `convex/emails/helpers.ts` that groups messages by sender
+  - Updated `generateEngagementEmail` template to display inbox notifications
+  - Shows sender name and message count (e.g., "You received 3 messages from John Doe")
+  - Privacy-first: Never shows message content in emails
+  - Daily emails now trigger for: engagement OR mentions OR replies OR inbox messages
+
+**Critical Date Range Bug Fix ✅ COMPLETED**
+
+- **Fixed Date Mutation Issues**: Resolved critical bug causing incorrect date range calculations
+  - **Root Cause**: `setHours()` method mutates Date objects in place, breaking subsequent calculations
+  - **Impact**: Daily and weekly emails showed zero activity even when there was activity
+  - **Solution**: Refactored date range calculation to parse date string and create new Date objects
+  - **Functions Fixed**:
+    - `calculateDailyMetrics`: Now correctly calculates today's activity (00:00:00 to 23:59:59)
+    - `processEngagementForAllUsers`: Fixed date range for user engagement processing
+  - **Code Pattern**: Changed from `new Date(today.setHours(...))` to `new Date(year, month - 1, day, ...)`
+
+**Email Testing Panel Enhancements ✅ COMPLETED**
+
+- **Enhanced Testing Visibility**: Improved admin testing tools for better debugging
+  - Date range display now shows exact date range being tested
+  - Activity warnings show when no activity found for tested date range
+  - Warning types: "⚠️ No activity", "✅ Activity found"
+  - Help documentation explains daily and weekly date ranges
+  - Created comprehensive documentation in `prds/TESTING_SUMMARY.md` and `prds/EMAIL_DATE_RANGE_FIX.md`
+
+**Documentation Organization**
+
+- **Moved Testing Documentation**: Organized testing files into prds folder
+  - Moved `TESTING_SUMMARY.md` to `prds/TESTING_SUMMARY.md`
+  - Moved `EMAIL_DATE_RANGE_FIX.md` to `prds/EMAIL_DATE_RANGE_FIX.md`
+  - Updated `addresend.md` with Phase 11 implementation details
+  - All markdown documentation now properly organized in prds folder
+
+**Technical Implementation**
+
+- **Backend Changes**:
+  - `convex/emails/daily.ts`: Fixed date range bugs, added inbox message checking
+  - `convex/emails/helpers.ts`: Added `getDMsReceivedByUser` query with sender grouping
+  - `convex/emails/templates.ts`: Updated engagement email template for inbox messages
+- **Frontend Changes**:
+  - `src/components/admin/EmailTestingPanel.tsx`: Enhanced with date range display and warnings
+- **Documentation**:
+  - `prds/addresend.md`: Added Phase 11 documentation with detailed fixes
+  - `prds/TESTING_SUMMARY.md`: Comprehensive testing guide
+  - `prds/EMAIL_DATE_RANGE_FIX.md`: Detailed date range fix explanation
+
 ### [Added] - October 10, 2025
 
 **Judge Tracking Dedicated Page & UI Improvements**

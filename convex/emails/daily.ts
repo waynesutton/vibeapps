@@ -55,9 +55,17 @@ export const calculateDailyMetrics = internalQuery({
     resolvedReports: v.number(),
   }),
   handler: async (ctx, args) => {
-    const today = new Date(args.date);
-    const startOfDay = new Date(today.setHours(0, 0, 0, 0)).getTime();
-    const endOfDay = new Date(today.setHours(23, 59, 59, 999)).getTime();
+    // Parse date string (YYYY-MM-DD) and create date boundaries
+    // Using separate date objects to avoid mutation issues
+    const dateStr = args.date; // e.g., "2025-10-11"
+    const [year, month, day] = dateStr.split("-").map(Number);
+
+    const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0).getTime();
+    const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999).getTime();
+
+    console.log(`📅 Calculating metrics for ${dateStr}:`);
+    console.log(`  Start: ${new Date(startOfDay).toISOString()}`);
+    console.log(`  End: ${new Date(endOfDay).toISOString()}`);
 
     // Calculate metrics using existing admin queries patterns
     const newSubmissions = await ctx.db
@@ -199,6 +207,50 @@ export const storeDailyMetrics = internalMutation({
 });
 
 /**
+ * Get users who received DM messages today
+ */
+export const getUsersWithDMsToday = internalQuery({
+  args: { date: v.string() },
+  returns: v.array(v.id("users")),
+  handler: async (ctx, args) => {
+    const dateStr = args.date;
+    const [year, month, day] = dateStr.split("-").map(Number);
+
+    const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0).getTime();
+    const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999).getTime();
+
+    // Get all DM messages sent today
+    const messages = await ctx.db
+      .query("dmMessages")
+      .filter(
+        (q) =>
+          q.gte(q.field("_creationTime"), startOfDay) &&
+          q.lte(q.field("_creationTime"), endOfDay),
+      )
+      .collect();
+
+    // Get unique recipient user IDs
+    const recipientIds = new Set<string>();
+
+    for (const message of messages) {
+      // Get the conversation to find who received the message
+      const conversation = await ctx.db.get(message.conversationId);
+      if (!conversation) continue;
+
+      // Add both participants (userAId and userBId), excluding the sender
+      const participants = [conversation.userAId, conversation.userBId];
+      for (const participantId of participants) {
+        if (participantId !== message.senderId) {
+          recipientIds.add(participantId);
+        }
+      }
+    }
+
+    return Array.from(recipientIds) as any[];
+  },
+});
+
+/**
  * Process daily engagement for users
  */
 export const processUserEngagement = internalAction({
@@ -242,9 +294,12 @@ export const processEngagementForAllUsers = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const today = new Date(args.date);
-    const startOfDay = new Date(today.setHours(0, 0, 0, 0)).getTime();
-    const endOfDay = new Date(today.setHours(23, 59, 59, 999)).getTime();
+    // Parse date string (YYYY-MM-DD) and create date boundaries
+    const dateStr = args.date;
+    const [year, month, day] = dateStr.split("-").map(Number);
+
+    const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0).getTime();
+    const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999).getTime();
 
     const uniqueAuthorIds = [
       ...new Set(args.storyAuthors.map((s) => s.userId)),
@@ -511,7 +566,16 @@ export const sendDailyUserEmails = internalAction({
       `Daily user emails: Found ${allMentionedUsers.length} users with mentions`,
     );
 
-    // Combine users with engagement and users with mentions
+    // Get all users who received DM messages today
+    const usersWithDMs = await ctx.runQuery(
+      internal.emails.daily.getUsersWithDMsToday,
+      { date: today },
+    );
+    console.log(
+      `Daily user emails: Found ${usersWithDMs.length} users who received DMs`,
+    );
+
+    // Combine users with engagement, mentions, and DMs
     const usersToEmail = new Set();
 
     // Add users with engagement
@@ -521,6 +585,11 @@ export const sendDailyUserEmails = internalAction({
 
     // Add users with mentions
     for (const userId of allMentionedUsers) {
+      usersToEmail.add(userId);
+    }
+
+    // Add users who received DMs
+    for (const userId of usersWithDMs) {
       usersToEmail.add(userId);
     }
 
@@ -592,21 +661,61 @@ export const sendDailyUserEmails = internalAction({
         { userId: userId as any, date: today },
       );
 
-      console.log(
-        `User ${user.name || userId} data: engagement=${!!userEngagement}, mentions=${mentions.length}, replies=${replies.length}`,
+      // Get inbox messages received by this user today
+      const dateStr = today;
+      const [yearDM, monthDM, dayDM] = dateStr.split("-").map(Number);
+      const startOfDayDM = new Date(
+        yearDM,
+        monthDM - 1,
+        dayDM,
+        0,
+        0,
+        0,
+        0,
+      ).getTime();
+      const endOfDayDM = new Date(
+        yearDM,
+        monthDM - 1,
+        dayDM,
+        23,
+        59,
+        59,
+        999,
+      ).getTime();
+
+      const inboxMessages = await ctx.runQuery(
+        internal.emails.helpers.getDMsReceivedByUser,
+        {
+          userId: userId as any,
+          startTime: startOfDayDM,
+          endTime: endOfDayDM,
+        },
+      );
+      const totalDMs = inboxMessages.reduce(
+        (sum, dm) => sum + dm.messageCount,
+        0,
       );
 
-      // Skip if no engagement, no mentions, no replies
-      if (!userEngagement && mentions.length === 0 && replies.length === 0) {
+      console.log(
+        `User ${user.name || userId} data: engagement=${!!userEngagement}, mentions=${mentions.length}, replies=${replies.length}, dms=${totalDMs}`,
+      );
+
+      // Skip if no engagement, no mentions, no replies, and no DMs
+      if (
+        !userEngagement &&
+        mentions.length === 0 &&
+        replies.length === 0 &&
+        totalDMs === 0
+      ) {
         console.log(
-          `Skipped user ${user.name || userId}: No engagement, mentions, or replies`,
+          `Skipped user ${user.name || userId}: No engagement, mentions, replies, or DMs`,
         );
         emailsSkipped++;
         continue;
       }
 
       console.log(
-        `Sending email to ${user.name || userId}: ${userEngagement ? "engagement" : ""}${mentions.length > 0 ? " mentions" : ""}${replies.length > 0 ? " replies" : ""}`,
+        `Sending email to ${user.name || userId}: ${userEngagement ? "engagement" : ""}${mentions.length > 0 ? " mentions" : ""}${replies.length > 0 ? " replies" : ""}${totalDMs > 0 ? ` ${totalDMs} DMs` : ""}`,
       );
 
       // Generate unsubscribe token for this user
@@ -670,6 +779,7 @@ export const sendDailyUserEmails = internalAction({
           replies: replies.length > 0 ? replies : undefined,
           pinnedStories: pinnedStories.length > 0 ? pinnedStories : undefined,
           adminMessages: adminMessages.length > 0 ? adminMessages : undefined,
+          inboxMessages: inboxMessages.length > 0 ? inboxMessages : undefined,
           unsubscribeToken,
         },
       );

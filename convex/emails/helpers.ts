@@ -208,3 +208,76 @@ export const getUserEmailSettings = internalQuery({
       .unique();
   },
 });
+
+/**
+ * Get DM messages received by a user in a time range with sender info
+ */
+export const getDMsReceivedByUser = internalQuery({
+  args: {
+    userId: v.id("users"),
+    startTime: v.number(),
+    endTime: v.number(),
+  },
+  returns: v.array(
+    v.object({
+      senderId: v.id("users"),
+      senderName: v.string(),
+      messageCount: v.number(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    // Get all DM messages in the time range
+    const messages = await ctx.db
+      .query("dmMessages")
+      .filter(
+        (q) =>
+          q.gte(q.field("_creationTime"), args.startTime) &&
+          q.lte(q.field("_creationTime"), args.endTime),
+      )
+      .collect();
+
+    // Filter for messages where this user is a recipient (not the sender)
+    const receivedMessages = [];
+    for (const message of messages) {
+      // Skip messages sent by this user
+      if (message.senderId === args.userId) continue;
+
+      // Check if this user is in the conversation
+      const conversation = await ctx.db.get(message.conversationId);
+      if (!conversation) continue;
+
+      // Check if this user is a participant (userAId or userBId)
+      const participants = [conversation.userAId, conversation.userBId];
+      if (participants.includes(args.userId)) {
+        receivedMessages.push(message);
+      }
+    }
+
+    // Group by sender and count messages
+    const senderCounts = new Map<any, number>();
+    for (const message of receivedMessages) {
+      const senderId = message.senderId;
+      senderCounts.set(senderId, (senderCounts.get(senderId) || 0) + 1);
+    }
+
+    // Get sender names and build result
+    const result: Array<{
+      senderId: any;
+      senderName: string;
+      messageCount: number;
+    }> = [];
+
+    for (const [senderId, count] of senderCounts.entries()) {
+      const sender = await ctx.db.get(senderId);
+      if (sender && "name" in sender) {
+        result.push({
+          senderId: sender._id,
+          senderName: sender.name || "Someone",
+          messageCount: count,
+        });
+      }
+    }
+
+    return result;
+  },
+});

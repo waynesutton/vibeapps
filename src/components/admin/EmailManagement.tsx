@@ -14,6 +14,7 @@ import { api } from "../../../convex/_generated/api";
 import AlertDialog from "../ui/AlertDialog";
 import MessageDialog from "../ui/MessageDialog";
 import PromptDialog from "../ui/PromptDialog";
+import { EmailTestingPanel } from "./EmailTestingPanel";
 
 export function EmailManagement() {
   const [emailToggling, setEmailToggling] = useState(false);
@@ -879,6 +880,9 @@ Are you sure you want to proceed?`)
           </div>
         </div>
       </div>
+
+      {/* Email Testing Panel */}
+      <EmailTestingPanel />
 
       {/* Dialog Components */}
       <AlertDialog
