@@ -28,6 +28,8 @@ This admin alert system leverages the fully implemented email infrastructure doc
 - Accessible via Admin Dashboard → Emails → "Clear Today's Email Logs"
 - Safe for testing - only affects current day's logs
 - Can filter by specific email type for targeted testing
+- **Enhanced Testing Panel**: Email testing panel shows date ranges and activity warnings for better debugging (see `prds/TESTING_SUMMARY.md`)
+- **Comprehensive Documentation**: Testing guides available in `prds/TESTING_SUMMARY.md` and `prds/EMAIL_DATE_RANGE_FIX.md`
 
 **Production Ready**:
 
@@ -35,6 +37,7 @@ This admin alert system leverages the fully implemented email infrastructure doc
 - No need to manually clear logs or reset states
 - System self-manages duplicate prevention
 - Works with existing Resend infrastructure and templates system
+- **Recent Infrastructure Improvements** (Phase 11): Enhanced email system with date range bug fixes and inbox message integration (see `addresend.md` Phase 11)
 
 ## Current System Analysis
 
@@ -1421,6 +1424,7 @@ export const sendEmail = internalAction({
 4. **Link Testing**: Confirm all dashboard and submission links work properly
 5. **Unsubscribe Test**: Test admin unsubscribe functionality
 6. **Global Kill Switch**: Verify emails respect global email disable setting
+7. **Testing Panel**: Use enhanced email testing panel in Admin Dashboard for better visibility (see `prds/TESTING_SUMMARY.md` for complete guide)
 
 ### Integration Testing
 
@@ -1551,7 +1555,9 @@ To complete user report email integration:
   - `convex/emails/templates.ts` - Email templates
   - `convex/emails/queries.ts` - Email logging
 - Related PRDs:
-  - `addresend.md` - Complete Resend integration documentation
+  - `addresend.md` - Complete Resend integration documentation (includes Phase 11: recent improvements)
+  - `TESTING_SUMMARY.md` - Comprehensive email testing system documentation
+  - `EMAIL_DATE_RANGE_FIX.md` - Date range bug fix and testing improvements
   - `friendsonlyinbox.md` - Future DM system with reporting
   - `adminroles.prd` - Admin, manager, and organizer roles
 - Admin Dashboard: `src/components/admin/AdminDashboard.tsx`
