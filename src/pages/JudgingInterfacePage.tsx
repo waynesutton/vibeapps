@@ -98,6 +98,16 @@ export default function JudgingInterfacePage() {
     );
   }, [allSubmissions, judgeProgress]);
 
+  // Handle when submissions list changes and current index becomes invalid
+  useEffect(() => {
+    if (submissions && submissions.length > 0) {
+      // If current index is out of bounds, reset to 0
+      if (currentSubmissionIndex >= submissions.length) {
+        setCurrentSubmissionIndex(0);
+      }
+    }
+  }, [submissions, currentSubmissionIndex]);
+
   const existingScores = useQuery(
     api.judgeScores.getJudgeSubmissionScores,
     sessionId && submissions && submissions.length > 0
@@ -985,9 +995,9 @@ export default function JudgingInterfacePage() {
                     {(() => {
                       const url = currentSubmission.videoUrl.trim();
 
-                      // YouTube URL patterns
+                      // YouTube URL patterns (including Shorts)
                       const youtubeMatch = url.match(
-                        /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/,
+                        /(?:youtube\.com\/(?:shorts\/|[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/,
                       );
                       if (youtubeMatch) {
                         const videoId = youtubeMatch[1];

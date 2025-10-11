@@ -15,6 +15,20 @@ export function Markdown({ children }: Props) {
         a: ({ node, ...props }) => (
           <a {...props} target="_blank" rel="noopener noreferrer" />
         ),
+        p: ({ node, children, ...props }) => {
+          // Check if paragraph contains block-level elements like pre/code blocks
+          const hasBlockElements = React.Children.toArray(children).some(
+            (child: any) =>
+              child?.type === "pre" || child?.props?.node?.tagName === "pre",
+          );
+
+          // Use div instead of p for block elements to avoid nesting issues
+          if (hasBlockElements) {
+            return <div {...props}>{children}</div>;
+          }
+
+          return <p {...props}>{children}</p>;
+        },
         code: ({ inline, className, children, ...props }) => {
           const match = /language-(\w+)/.exec(className || "");
           if (inline) {

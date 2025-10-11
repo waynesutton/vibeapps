@@ -2287,9 +2287,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
             {(() => {
               const url = story.videoUrl.trim();
 
-              // YouTube URL patterns
+              // YouTube URL patterns (including Shorts)
               const youtubeMatch = url.match(
-                /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/,
+                /(?:youtube\.com\/(?:shorts\/|[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/,
               );
               if (youtubeMatch) {
                 const videoId = youtubeMatch[1];
