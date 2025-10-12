@@ -365,10 +365,10 @@ export const compareEmailDataWithDatabase = query({
       timestamp: Date.now(),
     };
 
-    // Get most recent admin email log
+    // Get most recent admin email log using index
     const recentAdminEmails = await ctx.db
       .query("emailLogs")
-      .filter((q) => q.eq(q.field("emailType"), "daily_admin"))
+      .withIndex("by_type_date", (q) => q.eq("emailType", "daily_admin"))
       .order("desc")
       .take(1);
 
