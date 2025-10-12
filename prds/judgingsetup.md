@@ -830,10 +830,10 @@ const submissions = allSubmissions;
 - **Edit restrictions**: UI prevents editing while maintaining visibility
 - **Better collaboration**: Judges can see overall group progress
 
-#### Progress Calculation: Group-Wide Completion Tracking - **UPDATED**
+#### Progress Calculation: Group-Wide Completion Tracking - **UPDATED October 12, 2025**
 
 **File**: `src/pages/JudgingInterfacePage.tsx`  
-**Lines**: 345-347
+**Lines**: 345-352
 
 **New Approach (October 12, 2025)**: Progress now shows submissions completed by ANY judge in the group:
 
@@ -842,30 +842,40 @@ const currentSubmission = submissions[currentSubmissionIndex];
 // Count submissions completed by ANY judge in the group (not just this judge)
 const completedSubmissions =
   judgeProgress?.submissionProgress.filter((s) => s.completedBy).length || 0;
+
+// Calculate group-wide completion percentage based on total submissions
+const groupCompletionPercentage = judgeProgress?.totalSubmissions
+  ? (completedSubmissions / judgeProgress.totalSubmissions) * 100
+  : 0;
 ```
 
 **Changed Logic**:
 
 1. **Before**: `filter((s) => s.isComplete)` - only counted submissions completed by THIS judge
 2. **After**: `filter((s) => s.completedBy)` - counts submissions completed by ANY judge
-3. **Result**: All judges see the same group-wide completion count
+3. **Result**: All judges see the same group-wide completion count AND percentage
 
 **Progress Display**:
 
 ```
 Progress: 5/20 submissions
+Overall Progress: 25%
 ```
 
 Where:
 
 - **5** = Submissions completed by ANY judge in the group
 - **20** = Total submissions in the group
+- **25%** = Group-wide completion percentage (5/20 \* 100)
 
-**Individual Progress Tracking**:
+**Group-Wide Progress Tracking**:
 
-- **Individual completion percentage**: Still calculated based on THIS judge's completed submissions
-- **Header progress bar**: Shows individual judge's completion percentage
+- **Progress bars**: All progress bars now show `groupCompletionPercentage` (group-wide)
+- **Header progress bar**: Shows group-wide completion percentage
+- **Overall Progress text**: Shows group-wide completion percentage
+- **Progress summary bar**: Shows group-wide completion percentage
 - **Submission counter**: Shows group-wide total for transparency
+- **Result**: All judges see the exact same progress indicators for full transparency
 
 #### Checking If a Judge Can Score a Submission
 
@@ -920,10 +930,10 @@ await ctx.db.patch(existingStatus._id, {
 3. **All other judges** immediately lose access to this submission
 4. Only the assigned judge can edit their scores or change status back to "pending"
 
-#### Navigation and Progress Synchronization - **UPDATED**
+#### Navigation and Progress Synchronization - **UPDATED October 12, 2025**
 
 **File**: `src/pages/JudgingInterfacePage.tsx`  
-**Lines**: 344-356
+**Lines**: 344-360
 
 **New Approach (October 12, 2025)**: Navigation works with ALL submissions, progress shows group-wide completion:
 
@@ -932,6 +942,11 @@ const currentSubmission = submissions[currentSubmissionIndex];
 // Count submissions completed by ANY judge in the group (not just this judge)
 const completedSubmissions =
   judgeProgress?.submissionProgress.filter((s) => s.completedBy).length || 0;
+
+// Calculate group-wide completion percentage based on total submissions
+const groupCompletionPercentage = judgeProgress?.totalSubmissions
+  ? (completedSubmissions / judgeProgress.totalSubmissions) * 100
+  : 0;
 
 const nextSubmission = () => {
   setCurrentSubmissionIndex((prev) =>
@@ -942,20 +957,21 @@ const nextSubmission = () => {
 
 **Result**:
 
-- Progress bar shows: "Progress: 5/20 submissions" (group-wide count)
+- Progress counter shows: "Progress: 5/20 submissions" (group-wide count)
+- Progress bars show: 25% completion (group-wide percentage)
 - Navigation shows: "Submission 1 of 20" (all submissions)
-- Completion percentage: Based on THIS judge's completed submissions
-- All judges see the same total (20) for transparency
+- Overall Progress shows: 25% (group-wide, not individual)
+- All judges see the same totals and percentages for full transparency
 
 #### Key Files Involved in This System - **UPDATED**
 
-| File                                 | Purpose                                           | Key Functions/Lines                                                                                     |
-| ------------------------------------ | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `convex/judges.ts`                   | Calculate judge progress with edit permissions    | `getJudgeProgress` (lines 344-482) - Returns ALL submissions with `canEdit` and `completedBy` flags     |
-| `convex/judgingGroupSubmissions.ts`  | Manage submission statuses and check judge access | `updateSubmissionStatus` (lines 25-66)<br/>`getSubmissionStatusForJudge` (lines 68-121)                 |
-| `src/pages/JudgingInterfacePage.tsx` | Display all submissions with edit restrictions    | Direct assignment (line 87)<br/>Progress counter (lines 345-347)<br/>UI disable logic (lines 1370-1379) |
-| `convex/schema.ts`                   | Define submission status data model               | `submissionStatuses` table definition                                                                   |
-| `convex/adminJudgeTracking.ts`       | Reset statuses when scores deleted/hidden         | `checkAndResetSubmissionStatus` (lines 10-58)                                                           |
+| File                                 | Purpose                                           | Key Functions/Lines                                                                                                                             |
+| ------------------------------------ | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `convex/judges.ts`                   | Calculate judge progress with edit permissions    | `getJudgeProgress` (lines 344-482) - Returns ALL submissions with `canEdit` and `completedBy` flags                                             |
+| `convex/judgingGroupSubmissions.ts`  | Manage submission statuses and check judge access | `updateSubmissionStatus` (lines 25-66)<br/>`getSubmissionStatusForJudge` (lines 68-121)                                                         |
+| `src/pages/JudgingInterfacePage.tsx` | Display all submissions with group-wide progress  | Direct assignment (line 87)<br/>Progress calculation (lines 345-352)<br/>Header progress bar (line 459)<br/>Overall progress (lines 1474, 1481) |
+| `convex/schema.ts`                   | Define submission status data model               | `submissionStatuses` table definition                                                                                                           |
+| `convex/adminJudgeTracking.ts`       | Reset statuses when scores deleted/hidden         | `checkAndResetSubmissionStatus` (lines 10-58)                                                                                                   |
 
 #### Example Multi-Judge Scenario - **UPDATED**
 
@@ -992,31 +1008,31 @@ const nextSubmission = () => {
 - **All judges can now edit Submission #1** (pending = editable by all)
 - **Progress for all judges**: 1/10 submissions completed
 
-#### Why This Design? - **UPDATED**
+#### Why This Design? - **UPDATED October 12, 2025**
 
-**Advantages of New Approach (October 12, 2025)**:
+**Advantages of Current Approach (October 12, 2025)**:
 
 1. **Full transparency**: All judges see the complete list of submissions
 2. **Group-wide visibility**: Judges know exactly what's been completed by the team
 3. **Better coordination**: No confusion about which submissions still need scoring
-4. **Progress tracking**: Everyone sees the same total submission count
+4. **Unified progress tracking**: Everyone sees the same submission count AND completion percentage
 5. **Read-only access**: Judges can view others' work without being able to modify it
 6. **Prevents duplicate work**: Edit restrictions prevent conflicts while maintaining visibility
 7. **Real-time sync**: Changes propagate immediately via Convex reactivity
 8. **Flexibility**: Judges can still un-complete their own submissions to revise
+9. **Consistent metrics**: Progress bars match submission counters (e.g., 5/20 = 25%)
+10. **Enhanced collaboration**: All judges see identical progress indicators for better team coordination
 
-**Previous Approach (Before October 12, 2025)**:
+**Previous Approaches**:
 
-- Submissions were filtered per judge (hidden if completed by others)
-- Each judge saw different totals
-- Less transparency about group progress
-- Confusion when submission counts didn't match
+- **Before October 12, 2025 (first update)**: Submissions were filtered per judge (hidden if completed by others), each judge saw different totals, less transparency
+- **Before October 12, 2025 (second update)**: All submissions visible but each judge saw individual completion percentage, causing confusion when percentages didn't match submission counts
 
 **Trade-offs**:
 
-- Judges can see submissions they can't edit (might be confusing initially)
-- UI must clearly indicate read-only vs editable submissions
-- Requires clear visual indicators for completion status
+- Judges can see submissions they can't edit (mitigated by clear UI indicators)
+- UI must clearly indicate read-only vs editable submissions (implemented with disabled inputs and notices)
+- Requires clear visual indicators for completion status (implemented with icons and judge names)
 
 ### Future Enhancements (Potential Features)
 
@@ -1046,6 +1062,13 @@ const nextSubmission = () => {
 ### Recent Updates & Changelog Integration
 
 #### October 12, 2025
+
+- **Group-Wide Progress Tracking Enhancement**: Updated all progress indicators to show group-wide completion
+  - All progress bars now display percentage of submissions completed by ANY judge in the group
+  - Changed calculation from individual `judgeProgress.completionPercentage` to group-wide `groupCompletionPercentage`
+  - All judges now see the same progress percentage for consistency
+  - Progress bars now match submission counter (e.g., "5/20 submissions" = 25% for all judges)
+  - Enhanced transparency and coordination by showing unified group progress
 
 - **Multi-Judge Submission Visibility Enhancement**: Changed judging system to show ALL submissions to all judges
   - Backend now returns all submissions with `canEdit` and `completedBy` flags

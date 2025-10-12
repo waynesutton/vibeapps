@@ -346,6 +346,11 @@ export default function JudgingInterfacePage() {
   const completedSubmissions =
     judgeProgress?.submissionProgress.filter((s) => s.completedBy).length || 0;
 
+  // Calculate group-wide completion percentage based on total submissions
+  const groupCompletionPercentage = judgeProgress?.totalSubmissions
+    ? (completedSubmissions / judgeProgress.totalSubmissions) * 100
+    : 0;
+
   const nextSubmission = () => {
     setCurrentSubmissionIndex((prev) =>
       prev < submissions.length - 1 ? prev + 1 : prev,
@@ -451,7 +456,7 @@ export default function JudgingInterfacePage() {
                 <div
                   className="bg-green-500 h-2 rounded-full transition-all duration-300"
                   style={{
-                    width: `${judgeProgress?.completionPercentage || 0}%`,
+                    width: `${groupCompletionPercentage}%`,
                   }}
                 ></div>
               </div>
@@ -1466,14 +1471,14 @@ export default function JudgingInterfacePage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Overall Progress</span>
                   <span className="font-medium">
-                    {Math.round(judgeProgress?.completionPercentage || 0)}%
+                    {Math.round(groupCompletionPercentage)}%
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
                     className="bg-green-500 h-2 rounded-full transition-all duration-300"
                     style={{
-                      width: `${judgeProgress?.completionPercentage || 0}%`,
+                      width: `${groupCompletionPercentage}%`,
                     }}
                   ></div>
                 </div>

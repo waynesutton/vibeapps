@@ -134,6 +134,13 @@ Brief description of the feature and its purpose.
 - [x] reorganized JudgeTracking page layout: Stats Overview, Judge Scores & Comments, Judge Activity
 - [x] simplified public results page to focus on rankings and criteria performance only
 - [x] enhanced admin workflow with centralized judging data view in Judge Tracking
+- [x] reorganized JudgeTracking page section order to Stats Overview → Judge Activity → Judge Scores & Comments
+- [x] added breadcrumb navigation links to quickly jump between sections on JudgeTracking page
+- [x] added floating scroll-to-top and scroll-to-bottom buttons on JudgeTracking page
+- [x] added anchor IDs and smooth scroll behavior to all major sections for better navigation
+- [x] updated JudgingInterfacePage progress bars to show group-wide completion percentage
+- [x] changed progress calculation from individual judge completion to group-wide completion
+- [x] synchronized all progress indicators (header bar, overall progress text, progress summary) to use groupCompletionPercentage
 
 ## In Progress Tasks
 

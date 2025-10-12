@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [Enhanced] - October 12, 2025
 
+**Group-Wide Progress Tracking Enhancement ✅ COMPLETED**
+
+- **Updated Progress Bars**: All progress indicators now show group-wide completion percentage
+  - **Header Progress Bar**: Now displays percentage of submissions completed by ANY judge in the group
+  - **Overall Progress Display**: Shows group-wide completion instead of individual judge progress
+  - **Progress Summary Bar**: Updated to reflect total group completion for better transparency
+  - **Calculation Change**: Changed from `judgeProgress.completionPercentage` (individual) to `groupCompletionPercentage` (group-wide)
+  - **User Experience**: All judges now see the same progress percentage, improving coordination and transparency
+  - **Consistency**: Progress bars now match the submission counter (e.g., "5/20 submissions" = 25% for all judges)
+
+**Judge Tracking UI Reorganization & Navigation Enhancements ✅ COMPLETED**
+
+- **Improved Page Structure**: Reorganized Judge Tracking page sections for better workflow
+  - **Section Order**: Changed section order to Stats Overview → Judge Activity → Judge Scores & Comments
+  - **Breadcrumb Navigation**: Added quick navigation links to jump between sections (Stats, Activity, Scores)
+  - **Scroll Enhancements**: Added floating scroll-to-top and scroll-to-bottom buttons for easy navigation
+  - **Anchor Links**: Added id attributes and smooth scroll behavior to all major sections
+  - **User Experience**: Improved page navigation for admins monitoring multiple judges and reviewing detailed scoring data
+
 **Judge Tracking UI Reorganization ✅ COMPLETED**
 
 - **Moved Judge Scores & Comments Section**: Relocated comprehensive judge scoring interface from public results to admin tracking

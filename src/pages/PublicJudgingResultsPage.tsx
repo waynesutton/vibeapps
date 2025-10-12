@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Lock, Eye, Home, BarChart2, Calendar } from "lucide-react";
+import { Lock, Home } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -135,11 +135,11 @@ export default function PublicJudgingResultsPage() {
 
           <div className="mt-6 text-center">
             <Link
-              to={`/judging/${slug}`}
+              to="/"
               className="text-sm text-gray-500 hover:text-gray-700 inline-flex items-center gap-1"
             >
-              <BarChart2 className="w-3 h-3" />
-              Back to Judging Group
+              <Home className="w-3 h-3" />
+              Back to Home
             </Link>
           </div>
         </div>
@@ -153,24 +153,13 @@ export default function PublicJudgingResultsPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-medium text-gray-900">
-                {group.name} - Results
-              </h1>
-              {group.description && (
-                <p className="text-gray-600 mt-1">{group.description}</p>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <Link
-                to={`/judging/${slug}`}
-                className="inline-flex items-center px-3 py-2 text-sm border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
-              >
-                <BarChart2 className="w-4 h-4 mr-2" />
-                Back to Group
-              </Link>
-            </div>
+          <div>
+            <h1 className="text-2xl font-medium text-gray-900">
+              {group.name} - Results
+            </h1>
+            {group.description && (
+              <p className="text-gray-600 mt-1">{group.description}</p>
+            )}
           </div>
         </div>
       </div>

@@ -20,6 +20,8 @@ import {
   MessageSquare,
   Send,
   Star,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -69,6 +71,27 @@ export function JudgeTracking({
   const [replyingToNote, setReplyingToNote] =
     useState<Id<"submissionNotes"> | null>(null);
   const [selectedJudgeTabIndex, setSelectedJudgeTabIndex] = useState(0);
+  const [showScrollButtons, setShowScrollButtons] = useState(false);
+
+  // Handle scroll visibility for floating buttons
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollButtons(window.scrollY > 300);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const scrollToBottom = () => {
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: "smooth",
+    });
+  };
 
   // Mutations
   const updateJudgeScore = useMutation(api.adminJudgeTracking.updateJudgeScore);
@@ -372,8 +395,40 @@ export function JudgeTracking({
         </div>
       </div>
 
+      {/* Breadcrumb Navigation */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <nav className="flex flex-wrap gap-4 text-sm">
+          <a
+            href="#stats"
+            className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+          >
+            <BarChart3 className="w-4 h-4" />
+            Stats Overview
+          </a>
+          <span className="text-gray-300">|</span>
+          <a
+            href="#activity"
+            className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+          >
+            <Users className="w-4 h-4" />
+            Judge Activity
+          </a>
+          <span className="text-gray-300">|</span>
+          <a
+            href="#scores"
+            className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+          >
+            <Star className="w-4 h-4" />
+            Judge Scores & Comments
+          </a>
+        </nav>
+      </div>
+
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div
+        id="stats"
+        className="grid grid-cols-1 md:grid-cols-4 gap-4 scroll-mt-6"
+      >
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center gap-2 mb-2">
             <Users className="w-4 h-4 text-blue-600" />
@@ -425,161 +480,11 @@ export function JudgeTracking({
         </div>
       </div>
 
-      {/* Judge Scores & Comments */}
-      {judgeDetailsData && judgeDetailsData.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Star className="w-5 h-5" />
-              Judge Scores & Comments
-            </h3>
-          </div>
-
-          {/* Judge Tabs */}
-          <div className="border-b border-gray-200">
-            <div className="flex flex-wrap gap-1 p-4">
-              {judgeDetailsData.map((judge, index) => (
-                <button
-                  key={judge.judgeId}
-                  onClick={() => setSelectedJudgeTabIndex(index)}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    selectedJudgeTabIndex === index
-                      ? "bg-blue-100 text-blue-700 border border-blue-200"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 border border-transparent"
-                  }`}
-                >
-                  {judge.judgeName}
-                  <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                    {judge.totalScores}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Selected Judge Content */}
-          <div className="p-6">
-            {(() => {
-              const judge = judgeDetailsData[selectedJudgeTabIndex];
-              return (
-                <div key={judge.judgeId}>
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h4 className="font-medium text-gray-900">
-                        {judge.judgeName}
-                      </h4>
-                      {judge.judgeEmail && (
-                        <p className="text-sm text-gray-600">
-                          {judge.judgeEmail}
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <div className="flex items-center gap-2">
-                        <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                        <span className="font-medium">
-                          {judge.averageScore
-                            ? judge.averageScore.toFixed(1)
-                            : "No scores"}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        {judge.totalScores} scores submitted
-                      </p>
-                    </div>
-                  </div>
-
-                  {judge.scores.length > 0 && (
-                    <div className="space-y-3">
-                      {/* Group scores by submission */}
-                      {Object.entries(
-                        judge.scores.reduce(
-                          (acc, score) => {
-                            if (!acc[score.storyId]) {
-                              acc[score.storyId] = {
-                                storyTitle: score.storyTitle,
-                                scores: [],
-                                totalScore: 0,
-                              };
-                            }
-                            acc[score.storyId].scores.push(score);
-                            acc[score.storyId].totalScore += score.score;
-                            return acc;
-                          },
-                          {} as Record<
-                            string,
-                            {
-                              storyTitle: string;
-                              scores: any[];
-                              totalScore: number;
-                            }
-                          >,
-                        ),
-                      ).map(([storyId, submissionData], submissionIndex) => (
-                        <div
-                          key={storyId}
-                          className={`rounded-lg p-4 border border-gray-200 ${
-                            submissionIndex % 2 === 0
-                              ? "bg-white"
-                              : "bg-gray-50"
-                          }`}
-                        >
-                          {/* Submission Header */}
-                          <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200">
-                            <h5 className="font-semibold text-gray-900">
-                              {submissionData.storyTitle}
-                            </h5>
-                            <div className="text-right">
-                              <div className="text-lg font-bold text-gray-900">
-                                {submissionData.totalScore}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                Total Score
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Individual Criteria Scores */}
-                          <div className="space-y-2">
-                            {submissionData.scores.map((score) => (
-                              <div
-                                key={`${score.storyId}-${score.criteriaId}`}
-                                className="bg-white bg-opacity-50 rounded p-3 border border-gray-100"
-                              >
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex-1">
-                                    <p className="text-sm font-medium text-gray-700">
-                                      {score.criteriaQuestion}
-                                    </p>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                                    <span className="font-medium text-sm">
-                                      {score.score}/10
-                                    </span>
-                                  </div>
-                                </div>
-                                {score.comments && (
-                                  <p className="text-sm text-gray-600 italic bg-white rounded p-2 border border-gray-200 mt-2">
-                                    "{score.comments}"
-                                  </p>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-      )}
-
-      {/* Judges List */}
-      <div className="bg-white rounded-lg border border-gray-200">
+      {/* Judge Activity */}
+      <div
+        id="activity"
+        className="bg-white rounded-lg border border-gray-200 scroll-mt-6"
+      >
         <div className="p-4 border-b border-gray-200">
           <h3 className="font-medium text-gray-900">Judge Activity</h3>
           <p className="text-sm text-gray-600 mt-1">
@@ -989,6 +894,162 @@ export function JudgeTracking({
         )}
       </div>
 
+      {/* Judge Scores & Comments */}
+      {judgeDetailsData && judgeDetailsData.length > 0 && (
+        <div
+          id="scores"
+          className="bg-white rounded-lg border border-gray-200 scroll-mt-6"
+        >
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Star className="w-5 h-5" />
+              Judge Scores & Comments
+            </h3>
+          </div>
+
+          {/* Judge Tabs */}
+          <div className="border-b border-gray-200">
+            <div className="flex flex-wrap gap-1 p-4">
+              {judgeDetailsData.map((judge, index) => (
+                <button
+                  key={judge.judgeId}
+                  onClick={() => setSelectedJudgeTabIndex(index)}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    selectedJudgeTabIndex === index
+                      ? "bg-blue-100 text-blue-700 border border-blue-200"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 border border-transparent"
+                  }`}
+                >
+                  {judge.judgeName}
+                  <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                    {judge.totalScores}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Selected Judge Content */}
+          <div className="p-6">
+            {(() => {
+              const judge = judgeDetailsData[selectedJudgeTabIndex];
+              return (
+                <div key={judge.judgeId}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="font-medium text-gray-900">
+                        {judge.judgeName}
+                      </h4>
+                      {judge.judgeEmail && (
+                        <p className="text-sm text-gray-600">
+                          {judge.judgeEmail}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <div className="flex items-center gap-2">
+                        <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                        <span className="font-medium">
+                          {judge.averageScore
+                            ? judge.averageScore.toFixed(1)
+                            : "No scores"}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {judge.totalScores} scores submitted
+                      </p>
+                    </div>
+                  </div>
+
+                  {judge.scores.length > 0 && (
+                    <div className="space-y-3">
+                      {/* Group scores by submission */}
+                      {Object.entries(
+                        judge.scores.reduce(
+                          (acc, score) => {
+                            if (!acc[score.storyId]) {
+                              acc[score.storyId] = {
+                                storyTitle: score.storyTitle,
+                                scores: [],
+                                totalScore: 0,
+                              };
+                            }
+                            acc[score.storyId].scores.push(score);
+                            acc[score.storyId].totalScore += score.score;
+                            return acc;
+                          },
+                          {} as Record<
+                            string,
+                            {
+                              storyTitle: string;
+                              scores: any[];
+                              totalScore: number;
+                            }
+                          >,
+                        ),
+                      ).map(([storyId, submissionData], submissionIndex) => (
+                        <div
+                          key={storyId}
+                          className={`rounded-lg p-4 border border-gray-200 ${
+                            submissionIndex % 2 === 0
+                              ? "bg-white"
+                              : "bg-gray-50"
+                          }`}
+                        >
+                          {/* Submission Header */}
+                          <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200">
+                            <h5 className="font-semibold text-gray-900">
+                              {submissionData.storyTitle}
+                            </h5>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-gray-900">
+                                {submissionData.totalScore}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                Total Score
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Individual Criteria Scores */}
+                          <div className="space-y-2">
+                            {submissionData.scores.map((score) => (
+                              <div
+                                key={`${score.storyId}-${score.criteriaId}`}
+                                className="bg-white bg-opacity-50 rounded p-3 border border-gray-100"
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-gray-700">
+                                      {score.criteriaQuestion}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                                    <span className="font-medium text-sm">
+                                      {score.score}/10
+                                    </span>
+                                  </div>
+                                </div>
+                                {score.comments && (
+                                  <p className="text-sm text-gray-600 italic bg-white rounded p-2 border border-gray-200 mt-2">
+                                    "{score.comments}"
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
       {/* Edit Score Modal */}
       {editingScore && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -1103,6 +1164,26 @@ export function JudgeTracking({
               </Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Floating Scroll Buttons */}
+      {showScrollButtons && (
+        <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-40">
+          <button
+            onClick={scrollToTop}
+            className="p-3 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors"
+            title="Scroll to top"
+          >
+            <ArrowUp className="w-5 h-5" />
+          </button>
+          <button
+            onClick={scrollToBottom}
+            className="p-3 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors"
+            title="Scroll to bottom"
+          >
+            <ArrowDown className="w-5 h-5" />
+          </button>
         </div>
       )}
     </div>
