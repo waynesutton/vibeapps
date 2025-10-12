@@ -118,6 +118,22 @@ Brief description of the feature and its purpose.
 - [x] move TESTING_SUMMARY.md and EMAIL_DATE_RANGE_FIX.md to prds folder
 - [x] update addresend.md with Phase 11 implementation details
 - [x] update adminalerrtemails.md to reference recent email infrastructure improvements and testing documentation
+- [x] update email-testing-guide.MD with Phase 11 enhancements and cross-references to new testing documentation
+- [x] update mentions.md to reference Phase 11 inbox message integration in daily email system
+- [x] fix judging count for submission
+- [x] enhanced multi-judge submission visibility to show ALL submissions to all judges for better transparency
+- [x] added canEdit and completedBy fields to judge progress tracking in backend
+- [x] removed submission filtering logic from frontend judging interface
+- [x] updated progress counter to show group-wide completion (submissions completed by ANY judge)
+- [x] enhanced search dropdown to show completion status and judge names
+- [x] added UI controls to disable scoring for submissions completed by other judges
+- [x] improved transparency and coordination in multi-judge scenarios
+- [x] updated judgingsetup.md with comprehensive documentation of new multi-judge visibility system
+- [x] updated changelog.MD with October 12, 2025 multi-judge visibility enhancement
+- [x] moved Judge Scores & Comments section from PublicJudgingResultsDashboard to admin JudgeTracking page
+- [x] reorganized JudgeTracking page layout: Stats Overview, Judge Scores & Comments, Judge Activity
+- [x] simplified public results page to focus on rankings and criteria performance only
+- [x] enhanced admin workflow with centralized judging data view in Judge Tracking
 
 ## In Progress Tasks
 
@@ -125,7 +141,6 @@ Brief description of the feature and its purpose.
 
 ## Future Tasks - Roadmap
 
-- [ ] fix judging count for submission
 - [ ] clerk roles for hackathon organizers to see judges section in admin dashboard only from friendsonlyinbox.md
 
 ## TBD Future task

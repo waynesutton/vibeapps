@@ -98,7 +98,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `convex/judgingGroups.ts`: Judging group management with public/private access and password protection
 - `convex/judgingCriteria.ts`: Judging criteria and scoring questions management with 1-10 star ratings
 - `convex/judgingGroupSubmissions.ts`: Submission assignment within judging groups with @mentions in notes, search functionality, and status tracking
-- `convex/judges.ts`: Judge registration, session management, and accurate progress tracking with completion-based calculations
+- `convex/judges.ts`: Judge registration, session management, and group-wide progress tracking with canEdit/completedBy flags for multi-judge transparency and edit permission enforcement
 - `convex/judgeScores.ts`: Score submission, calculation, and results with CSV export and weighted scoring
 - `convex/adminJudgeTracking.ts`: Admin utilities for judge monitoring, submission status management, and comprehensive CSV export of judge activity including individual scores, total scores per submission, submissions, criteria, and comments
 
@@ -195,10 +195,10 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/components/admin/CreateJudgingGroupModal.tsx`: Judging group creation modal with password protection
 - `src/components/admin/JudgingCriteriaEditor.tsx`: Scoring criteria management with 1-10 star ratings
 - `src/components/admin/JudgingResultsDashboard.tsx`: Admin results and analytics with CSV export
-- `src/components/admin/JudgeTracking.tsx`: Judge progress monitoring, score management, and CSV export of comprehensive judge activity data
-- `src/components/PublicJudgingResultsDashboard.tsx`: Public-facing results display with password protection
+- `src/components/admin/JudgeTracking.tsx`: Comprehensive judge tracking dashboard with Stats Overview, Judge Scores & Comments tabbed interface showing detailed scoring per judge with submission grouping, expandable Judge Activity list with score moderation tools, notes viewing, and CSV export of comprehensive judge activity data
+- `src/components/PublicJudgingResultsDashboard.tsx`: Public-facing results display showing overall stats, rankings, and criteria performance (Judge Scores & Comments section moved to admin JudgeTracking)
 - `src/components/PublicResultsViewer.tsx`: Public results viewer component
-- `src/pages/JudgingInterfacePage.tsx`: Individual submission judging interface with accurate progress tracking, filtered submission views, and @mention autocomplete in notes
+- `src/pages/JudgingInterfacePage.tsx`: Individual submission judging interface showing ALL submissions with group-wide progress tracking, edit permissions based on completion status, read-only views of others' completed submissions, and @mention autocomplete in notes
 
 ### Notification & Configuration
 
@@ -226,7 +226,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/pages/UserProfilePage.tsx`: User profile display and management with email preferences and unsubscribe functionality
 - `src/pages/TagPage.tsx`: Tag-specific app listings
 - `src/pages/JudgingGroupPage.tsx`: Judge interface for scoring submissions with session management
-- `src/pages/JudgingInterfacePage.tsx`: Individual submission judging interface with accurate progress tracking, filtered submission views, and @mention autocomplete in notes
+- `src/pages/JudgingInterfacePage.tsx`: Individual submission judging interface showing ALL submissions with group-wide progress tracking, edit permissions based on completion status, read-only views of others' completed submissions, and @mention autocomplete in notes
 - `src/pages/PublicJudgingResultsPage.tsx`: Public judging results page with password protection
 - `src/pages/NotificationsPage.tsx`: User notifications page with comprehensive alert system for all interaction types
 - `src/pages/InboxPage.tsx`: Direct messaging inbox with conversation view, message threads, @mentions, edit/delete, and real-time updates

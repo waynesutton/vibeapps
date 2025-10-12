@@ -4,6 +4,12 @@
 
 This guide explains how to test that your Resend email system fetches fresh data from the database for scheduled emails.
 
+**📖 Related Documentation:**
+
+- **`TESTING_SUMMARY.md`** - Comprehensive email testing system documentation with all fixes and features
+- **`EMAIL_DATE_RANGE_FIX.md`** - Detailed explanation of date range bug fix and testing improvements
+- **`addresend.md`** - Complete Resend integration documentation (see Phase 11 for recent improvements)
+
 ## Quick Testing Methods
 
 ### Method 1: Admin Dashboard UI (Recommended - No Convex Dashboard Required!)
@@ -30,11 +36,19 @@ The email testing panel is now built into your Admin Dashboard!
 4. **What happens when you test**:
    - System takes snapshot of current database
    - Triggers email with fresh data
-   - Shows success/failure message
+   - **Shows date range being tested** (e.g., "Today: 2025-10-11")
+   - **Displays activity warnings** if no data found for that date range
+   - Shows success/failure message with detailed metrics
    - Auto-verifies email logs after sending
    - You receive actual email in your inbox
 
-5. **No Convex Dashboard access needed** - Everything works directly in the app!
+5. **Enhanced Testing Features** (Phase 11 improvements):
+   - **Date Range Display**: See exactly which date range is being tested
+   - **Activity Warnings**: Get alerts if no activity found (e.g., "⚠️ No activity on this date")
+   - **Inbox Message Integration**: Daily emails now include inbox message notifications
+   - **Accurate Date Calculations**: Fixed critical date range bug for correct activity reporting
+
+6. **No Convex Dashboard access needed** - Everything works directly in the app!
 
 ### Method 2: Convex Dashboard (Optional - For Advanced Debugging Only)
 
@@ -333,7 +347,11 @@ If emails are not fetching fresh data:
 1. Check Convex logs for errors
 2. Verify database queries in email functions
 3. Run test functions and compare output
-4. Check GitHub issues: https://github.com/waynesutton/vibeapps/issues
+4. **Review comprehensive testing documentation**:
+   - See `TESTING_SUMMARY.md` for complete testing system overview
+   - See `EMAIL_DATE_RANGE_FIX.md` for date range calculation details
+   - See `addresend.md` Phase 11 for recent bug fixes
+5. Check GitHub issues: https://github.com/waynesutton/vibeapps/issues
 
 ## Summary
 
@@ -343,8 +361,14 @@ If emails are not fetching fresh data:
 
 ✅ **Real-Time Monitoring**: View current database metrics and email freshness status
 
+✅ **Enhanced Visibility** (Phase 11): Date range display and activity warnings for better debugging
+
+✅ **Inbox Integration**: Daily emails now include inbox message notifications with sender info
+
 ✅ **Admin-Only**: All testing features require admin role for security
 
 ✅ **In-App Experience**: Everything works directly in your app - no external tools needed
 
-The email system fetches fresh data each time cron jobs run or when manually triggered. The testing panel confirms this by taking database snapshots before sending emails and showing you the results in real-time.
+✅ **Comprehensive Documentation**: See `TESTING_SUMMARY.md` and `EMAIL_DATE_RANGE_FIX.md` for detailed guides
+
+The email system fetches fresh data each time cron jobs run or when manually triggered. The testing panel confirms this by taking database snapshots before sending emails and showing you the results in real-time with date ranges and activity warnings.

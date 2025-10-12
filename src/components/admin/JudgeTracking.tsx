@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Users,
@@ -19,6 +19,7 @@ import {
   Download,
   MessageSquare,
   Send,
+  Star,
 } from "lucide-react";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -67,6 +68,7 @@ export function JudgeTracking({
   const [replyContent, setReplyContent] = useState("");
   const [replyingToNote, setReplyingToNote] =
     useState<Id<"submissionNotes"> | null>(null);
+  const [selectedJudgeTabIndex, setSelectedJudgeTabIndex] = useState(0);
 
   // Mutations
   const updateJudgeScore = useMutation(api.adminJudgeTracking.updateJudgeScore);
@@ -98,6 +100,12 @@ export function JudgeTracking({
     authIsLoading || !isAuthenticated ? "skip" : { groupId },
   );
 
+  // Get judge details for Judge Scores & Comments section
+  const judgeDetailsData = useQuery(
+    api.judgeScores.getGroupJudgeDetails,
+    authIsLoading || !isAuthenticated ? "skip" : { groupId },
+  );
+
   // Get submission notes when viewing notes for a score
   const submissionNotes = useQuery(
     api.judgingGroupSubmissions.getSubmissionNotes,
@@ -110,6 +118,13 @@ export function JudgeTracking({
         }
       : "skip",
   );
+
+  // Reset selected judge tab index if it's out of bounds
+  useEffect(() => {
+    if (judgeDetailsData && selectedJudgeTabIndex >= judgeDetailsData.length) {
+      setSelectedJudgeTabIndex(0);
+    }
+  }, [judgeDetailsData, selectedJudgeTabIndex]);
 
   const handleExpandJudge = (judgeId: Id<"judges">) => {
     const newExpanded = new Set(expandedJudges);
@@ -356,6 +371,212 @@ export function JudgeTracking({
           </span>
         </div>
       </div>
+
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Users className="w-4 h-4 text-blue-600" />
+            <span className="text-sm font-medium text-gray-700">
+              Total Judges
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-gray-900">
+            {judges.length}
+          </div>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Award className="w-4 h-4 text-green-600" />
+            <span className="text-sm font-medium text-gray-700">
+              Total Scores
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-gray-900">
+            {judges.reduce((sum, judge) => sum + judge.scoresCount, 0)}
+          </div>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <BarChart3 className="w-4 h-4 text-purple-600" />
+            <span className="text-sm font-medium text-gray-700">Avg Score</span>
+          </div>
+          <div className="text-2xl font-semibold text-gray-900">
+            {judges.length > 0
+              ? (
+                  judges.reduce(
+                    (sum, judge) => sum + (judge.averageScore || 0),
+                    0,
+                  ) / judges.filter((j) => j.averageScore).length
+                ).toFixed(1)
+              : "0.0"}
+          </div>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <UserCheck className="w-4 h-4 text-indigo-600" />
+            <span className="text-sm font-medium text-gray-700">
+              Linked Profiles
+            </span>
+          </div>
+          <div className="text-2xl font-semibold text-gray-900">
+            {judges.filter((judge) => judge.userProfile).length}
+          </div>
+        </div>
+      </div>
+
+      {/* Judge Scores & Comments */}
+      {judgeDetailsData && judgeDetailsData.length > 0 && (
+        <div className="bg-white rounded-lg border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Star className="w-5 h-5" />
+              Judge Scores & Comments
+            </h3>
+          </div>
+
+          {/* Judge Tabs */}
+          <div className="border-b border-gray-200">
+            <div className="flex flex-wrap gap-1 p-4">
+              {judgeDetailsData.map((judge, index) => (
+                <button
+                  key={judge.judgeId}
+                  onClick={() => setSelectedJudgeTabIndex(index)}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    selectedJudgeTabIndex === index
+                      ? "bg-blue-100 text-blue-700 border border-blue-200"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 border border-transparent"
+                  }`}
+                >
+                  {judge.judgeName}
+                  <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                    {judge.totalScores}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Selected Judge Content */}
+          <div className="p-6">
+            {(() => {
+              const judge = judgeDetailsData[selectedJudgeTabIndex];
+              return (
+                <div key={judge.judgeId}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="font-medium text-gray-900">
+                        {judge.judgeName}
+                      </h4>
+                      {judge.judgeEmail && (
+                        <p className="text-sm text-gray-600">
+                          {judge.judgeEmail}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <div className="flex items-center gap-2">
+                        <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                        <span className="font-medium">
+                          {judge.averageScore
+                            ? judge.averageScore.toFixed(1)
+                            : "No scores"}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {judge.totalScores} scores submitted
+                      </p>
+                    </div>
+                  </div>
+
+                  {judge.scores.length > 0 && (
+                    <div className="space-y-3">
+                      {/* Group scores by submission */}
+                      {Object.entries(
+                        judge.scores.reduce(
+                          (acc, score) => {
+                            if (!acc[score.storyId]) {
+                              acc[score.storyId] = {
+                                storyTitle: score.storyTitle,
+                                scores: [],
+                                totalScore: 0,
+                              };
+                            }
+                            acc[score.storyId].scores.push(score);
+                            acc[score.storyId].totalScore += score.score;
+                            return acc;
+                          },
+                          {} as Record<
+                            string,
+                            {
+                              storyTitle: string;
+                              scores: any[];
+                              totalScore: number;
+                            }
+                          >,
+                        ),
+                      ).map(([storyId, submissionData], submissionIndex) => (
+                        <div
+                          key={storyId}
+                          className={`rounded-lg p-4 border border-gray-200 ${
+                            submissionIndex % 2 === 0
+                              ? "bg-white"
+                              : "bg-gray-50"
+                          }`}
+                        >
+                          {/* Submission Header */}
+                          <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200">
+                            <h5 className="font-semibold text-gray-900">
+                              {submissionData.storyTitle}
+                            </h5>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-gray-900">
+                                {submissionData.totalScore}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                Total Score
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Individual Criteria Scores */}
+                          <div className="space-y-2">
+                            {submissionData.scores.map((score) => (
+                              <div
+                                key={`${score.storyId}-${score.criteriaId}`}
+                                className="bg-white bg-opacity-50 rounded p-3 border border-gray-100"
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-gray-700">
+                                      {score.criteriaQuestion}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                                    <span className="font-medium text-sm">
+                                      {score.score}/10
+                                    </span>
+                                  </div>
+                                </div>
+                                {score.comments && (
+                                  <p className="text-sm text-gray-600 italic bg-white rounded p-2 border border-gray-200 mt-2">
+                                    "{score.comments}"
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* Judges List */}
       <div className="bg-white rounded-lg border border-gray-200">
@@ -884,59 +1105,6 @@ export function JudgeTracking({
           </div>
         </div>
       )}
-
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Users className="w-4 h-4 text-blue-600" />
-            <span className="text-sm font-medium text-gray-700">
-              Total Judges
-            </span>
-          </div>
-          <div className="text-2xl font-semibold text-gray-900">
-            {judges.length}
-          </div>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Award className="w-4 h-4 text-green-600" />
-            <span className="text-sm font-medium text-gray-700">
-              Total Scores
-            </span>
-          </div>
-          <div className="text-2xl font-semibold text-gray-900">
-            {judges.reduce((sum, judge) => sum + judge.scoresCount, 0)}
-          </div>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <BarChart3 className="w-4 h-4 text-purple-600" />
-            <span className="text-sm font-medium text-gray-700">Avg Score</span>
-          </div>
-          <div className="text-2xl font-semibold text-gray-900">
-            {judges.length > 0
-              ? (
-                  judges.reduce(
-                    (sum, judge) => sum + (judge.averageScore || 0),
-                    0,
-                  ) / judges.filter((j) => j.averageScore).length
-                ).toFixed(1)
-              : "0.0"}
-          </div>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <UserCheck className="w-4 h-4 text-indigo-600" />
-            <span className="text-sm font-medium text-gray-700">
-              Linked Profiles
-            </span>
-          </div>
-          <div className="text-2xl font-semibold text-gray-900">
-            {judges.filter((judge) => judge.userProfile).length}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

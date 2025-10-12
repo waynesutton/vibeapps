@@ -130,6 +130,7 @@
 - **Template integration**: Mentions appear in the daily engagement email template with author names, story titles, and content excerpts
 - **Link generation**: Mentions in emails link back to the notifications page for full mention history
 - **Profile URL fix**: Email templates now generate correct profile links using `/${username}` format instead of `/user/${userId}`
+- **Phase 11 improvements**: Enhanced daily email system now includes inbox messages alongside mentions, comments, and engagement (see `addresend.md` Phase 11 for details)
 
 9. Metrics and admin visibility
 

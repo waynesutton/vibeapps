@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -82,21 +82,9 @@ export default function JudgingInterfacePage() {
     sessionId ? { sessionId } : "skip",
   );
 
-  // Filter submissions to only show ones this judge can view
-  // (pending, skip, or completed by this judge)
-  const submissions = useMemo(() => {
-    if (!allSubmissions || !judgeProgress) return allSubmissions;
-
-    // Get the list of available submission IDs from judgeProgress
-    const availableSubmissionIds = new Set(
-      judgeProgress.submissionProgress.map((s) => s.storyId),
-    );
-
-    // Filter to only show available submissions
-    return allSubmissions.filter((submission) =>
-      availableSubmissionIds.has(submission._id),
-    );
-  }, [allSubmissions, judgeProgress]);
+  // Show ALL submissions in the group (no filtering)
+  // The backend determines edit permissions via canEdit field
+  const submissions = allSubmissions;
 
   // Handle when submissions list changes and current index becomes invalid
   useEffect(() => {
@@ -354,8 +342,9 @@ export default function JudgingInterfacePage() {
   }
 
   const currentSubmission = submissions[currentSubmissionIndex];
+  // Count submissions completed by ANY judge in the group (not just this judge)
   const completedSubmissions =
-    judgeProgress?.submissionProgress.filter((s) => s.isComplete).length || 0;
+    judgeProgress?.submissionProgress.filter((s) => s.completedBy).length || 0;
 
   const nextSubmission = () => {
     setCurrentSubmissionIndex((prev) =>
@@ -536,6 +525,11 @@ export default function JudgingInterfacePage() {
                         const submissionIndex = submissions.findIndex(
                           (s) => s._id === submission._id,
                         );
+                        // Get completion info from judgeProgress
+                        const progressInfo =
+                          judgeProgress?.submissionProgress.find(
+                            (p) => p.storyId === submission._id,
+                          );
                         return (
                           <button
                             key={submission._id}
@@ -544,13 +538,23 @@ export default function JudgingInterfacePage() {
                             }
                             className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
                           >
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between gap-2">
                               <span className="text-sm font-medium text-gray-900 truncate">
                                 {submission.title}
                               </span>
-                              <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
-                                #{submissionIndex + 1}
-                              </span>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                {progressInfo?.isComplete && (
+                                  <CheckCircle className="w-3 h-3 text-green-600" />
+                                )}
+                                {!progressInfo?.canEdit && (
+                                  <span className="text-xs text-gray-500">
+                                    (by {progressInfo?.completedBy})
+                                  </span>
+                                )}
+                                <span className="text-xs text-gray-500">
+                                  #{submissionIndex + 1}
+                                </span>
+                              </div>
                             </div>
                           </button>
                         );
@@ -727,8 +731,10 @@ export default function JudgingInterfacePage() {
                         submissionStatus.status === "completed" && (
                           <div className="mt-2">
                             <p className="text-xs text-gray-600">
-                              This submission has been completed and can no
-                              longer be judged.
+                              This submission has been completed by{" "}
+                              {submissionStatus.assignedJudgeName ||
+                                "another judge"}
+                              . You can view it but cannot edit the scores.
                             </p>
                           </div>
                         )}
@@ -1347,17 +1353,17 @@ export default function JudgingInterfacePage() {
                 submissionStatus.assignedJudgeName &&
                 judgeSession &&
                 submissionStatus.assignedJudgeName !== judgeSession.name && (
-                  <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                  <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <CheckCircle className="w-5 h-5 text-blue-600" />
                       <h4 className="font-medium text-gray-900">
-                        Submission Completed
+                        Completed by Another Judge
                       </h4>
                     </div>
                     <p className="text-sm text-gray-600">
                       This submission has been completed by{" "}
-                      <strong>{submissionStatus.assignedJudgeName}</strong>. The
-                      scoring criteria are disabled.
+                      <strong>{submissionStatus.assignedJudgeName}</strong>. You
+                      can view the submission but cannot edit or score it.
                     </p>
                   </div>
                 )}

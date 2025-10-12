@@ -358,6 +358,8 @@ export const getJudgeProgress = query({
           criteriaScored: v.number(),
           totalCriteria: v.number(),
           isComplete: v.boolean(),
+          canEdit: v.boolean(), // NEW: Indicates if judge can edit this submission
+          completedBy: v.optional(v.string()), // NEW: Name of judge who completed it
         }),
       ),
     }),
@@ -372,32 +374,17 @@ export const getJudgeProgress = query({
       return null;
     }
 
-    // Get group submissions
+    // Get group submissions (ALL submissions, not filtered)
     const submissions = await ctx.db
       .query("judgingGroupSubmissions")
       .withIndex("by_groupId", (q) => q.eq("groupId", judge.groupId))
       .collect();
 
-    // Get submission statuses to determine which submissions are available for this judge
+    // Get submission statuses to determine edit permissions
     const submissionStatuses = await ctx.db
       .query("submissionStatuses")
       .withIndex("by_groupId", (q) => q.eq("groupId", judge.groupId))
       .collect();
-
-    // Filter submissions that this judge can score (pending or skip status, or completed by this judge)
-    const availableSubmissions = submissions.filter((submission) => {
-      const status = submissionStatuses.find(
-        (s) => s.storyId === submission.storyId,
-      );
-      if (!status) return true; // If no status, assume available
-
-      // Can judge if pending, skip, or completed by this judge
-      return (
-        status.status === "pending" ||
-        status.status === "skip" ||
-        (status.status === "completed" && status.assignedJudgeId === judge._id)
-      );
-    });
 
     // Get group criteria
     const criteria = await ctx.db
@@ -415,10 +402,10 @@ export const getJudgeProgress = query({
     const totalCriteria = criteria.length;
     const completedScores = scores.length;
 
-    // Calculate progress per submission (only for available submissions)
+    // Calculate progress per submission (ALL submissions)
     const submissionProgress = (
       await Promise.all(
-        availableSubmissions.map(async (submission) => {
+        submissions.map(async (submission) => {
           const story = await ctx.db.get(submission.storyId);
           // Skip if story doesn't exist (deleted/archived)
           if (!story) {
@@ -441,12 +428,36 @@ export const getJudgeProgress = query({
             submissionStatus?.status === "completed" &&
             submissionStatus?.assignedJudgeId === judge._id;
 
+          // Determine if judge can edit this submission
+          let canEdit = true;
+          let completedBy: string | undefined = undefined;
+
+          if (submissionStatus) {
+            if (submissionStatus.status === "completed") {
+              // Can only edit if they're the assigned judge
+              canEdit = submissionStatus.assignedJudgeId === judge._id;
+
+              // Get the name of the judge who completed it
+              if (submissionStatus.assignedJudgeId) {
+                const assignedJudge = await ctx.db.get(
+                  submissionStatus.assignedJudgeId,
+                );
+                if (assignedJudge) {
+                  completedBy = assignedJudge.name;
+                }
+              }
+            }
+            // "pending" and "skip" are always editable by all judges
+          }
+
           return {
             storyId: submission.storyId,
             storyTitle: story.title,
             criteriaScored,
             totalCriteria,
             isComplete,
+            canEdit,
+            completedBy,
           };
         }),
       )
@@ -456,7 +467,7 @@ export const getJudgeProgress = query({
     const totalSubmissions = submissionProgress.length;
     const expectedScores = totalSubmissions * totalCriteria;
 
-    // Calculate completion percentage based on completed SUBMISSIONS, not individual scores
+    // Calculate completion percentage based on completed SUBMISSIONS by THIS JUDGE only
     const completedSubmissionsCount = submissionProgress.filter(
       (s) => s.isComplete,
     ).length;

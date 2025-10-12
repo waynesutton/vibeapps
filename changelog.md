@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Enhanced] - October 12, 2025
+
+**Judge Tracking UI Reorganization ✅ COMPLETED**
+
+- **Moved Judge Scores & Comments Section**: Relocated comprehensive judge scoring interface from public results to admin tracking
+  - **Admin Focus**: Judge Scores & Comments now appears in Judge Tracking page for better admin workflow
+  - **Page Reordering**: Reorganized Judge Tracking page layout for optimal information hierarchy
+    - Header with group info and export button
+    - Stats Overview (Total Judges, Total Scores, Avg Score, Linked Profiles)
+    - Judge Scores & Comments (tabbed interface with detailed scores per judge)
+    - Judge Activity (expandable list with score moderation tools)
+  - **Public Results Cleanup**: Removed Judge Scores & Comments from PublicJudgingResultsDashboard
+  - **Simplified Public View**: Public results now focus on rankings and criteria performance only
+  - **Backend Integration**: Uses existing `getGroupJudgeDetails` query for comprehensive judge data
+  - **User Experience**: Admins get centralized view of all judging data in one location
+  - **Code Quality**: Removed unused imports and state management from public dashboard
+
+**Multi-Judge Submission Visibility System ✅ COMPLETED**
+
+- **Enhanced Transparency in Judging**: All judges now see ALL submissions in a judging group for better coordination
+  - **Backend Changes** (`convex/judges.ts`):
+    - Modified `getJudgeProgress` query to return all submissions instead of filtering
+    - Added `canEdit` boolean flag to indicate if judge can edit each submission
+    - Added `completedBy` string field showing which judge completed the submission
+    - Judges can only edit submissions that are: pending, skip, or completed by themselves
+  - **Frontend Changes** (`src/pages/JudgingInterfacePage.tsx`):
+    - Removed submission filtering logic that previously hid completed submissions
+    - Changed progress counter to count submissions completed by ANY judge (not just this judge)
+    - Enhanced search dropdown to show completion status and judge names
+    - UI now disables scoring inputs for submissions completed by other judges
+    - Added visual notices explaining when submissions are read-only
+  - **User Experience Improvements**:
+    - All judges see the same total submission count
+    - Progress shows group-wide completion (e.g., "5/20 submissions")
+    - Judges can VIEW others' completed submissions but cannot edit them
+    - Clear visual indicators show who completed which submission
+    - Improved coordination and transparency in multi-judge scenarios
+  - **Code Quality**: Removed unused `useMemo` import from React
+
+**Documentation Updates**
+
+- **Judging Setup PRD**: Updated `prds/judgingsetup.md` with comprehensive documentation of new multi-judge visibility system
+  - Updated "How Submission Availability Works" section with October 12, 2025 changes
+  - Documented new backend logic with `canEdit` and `completedBy` fields
+  - Updated frontend implementation examples
+  - Revised progress calculation explanation
+  - Updated multi-judge scenario examples
+  - Added comparison of old vs new approach with advantages/trade-offs
+
 ### [Updated] - October 11, 2025
 
 **Documentation Updates ✅ COMPLETED**
@@ -17,6 +66,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added note about Phase 11 infrastructure improvements (date range fixes and inbox message integration)
   - Updated testing procedures to include new testing panel functionality
   - Enhanced References section with links to all testing documentation
+
+- **Email Testing Guide**: Updated `prds/email-testing-guide.MD` with Phase 11 enhancements
+  - Added cross-references to TESTING_SUMMARY.md and EMAIL_DATE_RANGE_FIX.md
+  - Documented enhanced testing features: date range display, activity warnings, inbox message integration
+  - Updated testing workflow to highlight Phase 11 improvements
+  - Enhanced Support section with links to comprehensive testing documentation
+
+- **Mentions PRD**: Updated `prds/mentions.md` email integration section
+  - Added note about Phase 11 improvements to daily email system
+  - Documented inbox message integration alongside mentions in daily emails
+  - Cross-referenced addresend.md Phase 11 for complete details
 
 ### [Fixed] - October 11, 2025
 

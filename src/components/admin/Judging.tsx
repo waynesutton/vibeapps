@@ -5,7 +5,6 @@ import {
   Settings,
   Eye,
   EyeOff,
-  Copy,
   ExternalLink,
   Trash2,
   BarChart2,
@@ -36,7 +35,6 @@ export function Judging() {
   const updateGroup = useMutation(api.judgingGroups.updateGroup);
   const deleteGroup = useMutation(api.judgingGroups.deleteGroup);
 
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] =
     useState<Id<"judgingGroups"> | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -54,17 +52,6 @@ export function Judging() {
 
   const toggleGroupStatus = (group: any) => {
     updateGroup({ groupId: group._id, isActive: !group.isActive });
-  };
-
-  const copyGroupUrl = async (group: any) => {
-    const url = `${window.location.origin}/judging/${group.slug}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopiedId(group._id + "-group");
-      setTimeout(() => setCopiedId(null), 2000);
-    } catch (err) {
-      console.error("Failed to copy Group URL:", err);
-    }
   };
 
   const handleDelete = (groupId: Id<"judgingGroups">) => {
@@ -299,47 +286,31 @@ export function Judging() {
                       {formatDistanceToNow(group._creationTime)} ago
                     </td>
                     <td className="p-2 px-3">
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => copyGroupUrl(group)}
-                          className="flex flex-col items-center gap-1 p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-md transition-colors min-w-[70px]"
-                          title="Copy judging URL"
-                        >
-                          {copiedId === group._id + "-group" ? (
-                            <>
-                              <span className="text-green-500 text-xs">✓</span>
-                              <span className="text-green-500 text-xs">
-                                Copied!
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-4 h-4" />
-                              <span className="text-xs">Copy URL</span>
-                            </>
-                          )}
-                        </button>
-
+                      <div className="flex items-center gap-1 flex-wrap">
                         <a
                           href={`/judging/${group.slug}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex flex-col items-center gap-1 p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-md transition-colors min-w-[70px]"
+                          className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors min-w-[60px]"
                           title="Open judging page"
                         >
-                          <ExternalLink className="w-4 h-4" />
-                          <span className="text-xs">Open Page</span>
+                          <ExternalLink className="w-3 h-3 mx-auto" />
+                          <span className="text-[10px] leading-tight mt-0.5">
+                            Open Page
+                          </span>
                         </a>
 
                         <button
                           onClick={() =>
                             handleEditCriteria(group._id, group.name)
                           }
-                          className="flex flex-col items-center gap-1 p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-md transition-colors min-w-[70px]"
+                          className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors min-w-[60px]"
                           title="Edit criteria"
                         >
-                          <Edit className="w-4 h-4" />
-                          <span className="text-xs">Edit Criteria</span>
+                          <Edit className="w-3 h-3 mx-auto" />
+                          <span className="text-[10px] leading-tight mt-0.5">
+                            Edit Criteria
+                          </span>
                         </button>
 
                         {group.resultsIsPublic ? (
@@ -347,45 +318,51 @@ export function Judging() {
                             href={`/judging/${group.slug}/results`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex flex-col items-center gap-1 p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-md transition-colors min-w-[70px]"
+                            className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors min-w-[60px]"
                             title="View public results"
                           >
-                            <BarChart2 className="w-4 h-4" />
-                            <span className="text-xs">Public Results</span>
+                            <BarChart2 className="w-3 h-3 mx-auto" />
+                            <span className="text-[10px] leading-tight mt-0.5">
+                              Public Results
+                            </span>
                           </a>
                         ) : (
                           <button
                             onClick={() =>
                               handleViewResults(group._id, group.name)
                             }
-                            className="flex flex-col items-center gap-1 p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-md transition-colors min-w-[70px]"
+                            className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors min-w-[60px]"
                             title="View admin results"
                           >
-                            <BarChart2 className="w-4 h-4" />
-                            <span className="text-xs">Admin Results</span>
+                            <BarChart2 className="w-3 h-3 mx-auto" />
+                            <span className="text-[10px] leading-tight mt-0.5">
+                              Admin Results
+                            </span>
                           </button>
                         )}
 
                         <Link
                           to={`/admin/judging/${group.slug}/tracking`}
-                          className="flex flex-col items-center gap-1 p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-md transition-colors min-w-[70px]"
+                          className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors min-w-[60px]"
                           title="Track judges"
                         >
-                          <Users className="w-4 h-4" />
-                          <span className="text-xs">Judge Tracking</span>
+                          <Users className="w-3 h-3 mx-auto" />
+                          <span className="text-[10px] leading-tight mt-0.5">
+                            Judge Tracking
+                          </span>
                         </Link>
 
                         <button
                           onClick={() => handleDelete(group._id)}
-                          className="flex flex-col items-center gap-1 p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors min-w-[70px]"
+                          className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-gray-600 hover:text-red-600 bg-gray-50 hover:bg-red-50 rounded border border-gray-200 hover:border-red-200 transition-colors min-w-[60px]"
                           title={
                             deleteConfirmId === group._id
                               ? "Click again to confirm"
                               : "Delete group"
                           }
                         >
-                          <Trash2 className="w-4 h-4" />
-                          <span className="text-xs">
+                          <Trash2 className="w-3 h-3 mx-auto" />
+                          <span className="text-[10px] leading-tight mt-0.5">
                             {deleteConfirmId === group._id
                               ? "Confirm"
                               : "Delete"}
