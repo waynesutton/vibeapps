@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { requireAdminRole, isUserAdmin } from "./users";
 
 /**
  * Test that email system fetches fresh data from database
@@ -22,20 +23,8 @@ export const testEmailDataFreshness = mutation({
     dateRange: v.string(),
   }),
   handler: async (ctx, args) => {
-    // Check admin permission
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user || user.role !== "admin") {
-      throw new Error("Admin access required");
-    }
+    // Check admin permission using Clerk JWT token
+    await requireAdminRole(ctx);
 
     const now = Date.now();
     const today = args.testDate || new Date().toISOString().split("T")[0];
@@ -262,20 +251,9 @@ export const verifyEmailLogFreshness = query({
     }),
   }),
   handler: async (ctx, args) => {
-    // Check admin permission
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    // Check admin permission using Clerk JWT token
+    await requireAdminRole(ctx);
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user || user.role !== "admin") {
-      throw new Error("Admin access required");
-    }
     const lookbackMs = (args.lookbackMinutes || 60) * 60 * 1000;
     const cutoffTime = Date.now() - lookbackMs;
 
@@ -335,20 +313,9 @@ export const compareEmailDataWithDatabase = query({
     notes: v.array(v.string()),
   }),
   handler: async (ctx, args) => {
-    // Check admin permission
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    // Check admin permission using Clerk JWT token
+    await requireAdminRole(ctx);
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user || user.role !== "admin") {
-      throw new Error("Admin access required");
-    }
     const notes: string[] = [];
 
     // Get current database state
