@@ -148,10 +148,9 @@ Brief description of the feature and its purpose.
 
 ## Future Tasks - Roadmap
 
+- add emjoi support in inbox
+- add inbox dot for new messages
 - [ ] clerk roles for hackathon organizers to see judges section in admin dashboard only from friendsonlyinbox.md
-
-## TBD Future task
-
 - [ ] add admin moderation to make app post by approval only
 
 ## Bugs

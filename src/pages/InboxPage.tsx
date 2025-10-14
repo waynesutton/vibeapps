@@ -87,6 +87,7 @@ export default function InboxPage() {
   const sendMessageMutation = useMutation(api.dm.sendMessage);
   const deleteConversationMutation = useMutation(api.dm.deleteConversation);
   const markConversationReadMutation = useMutation(api.dm.markConversationRead);
+  const markAllAsReadMutation = useMutation(api.dm.markAllConversationsRead);
   const clearInboxMutation = useMutation(api.dm.clearInbox);
   const reportMutation = useMutation(api.dm.reportMessageOrUser);
   const blockUserMutation = useMutation(api.dm.blockUser);
@@ -128,6 +129,13 @@ export default function InboxPage() {
       markConversationReadMutation({ conversationId: selectedConversationId });
     }
   }, [selectedConversationId, isLoaded, authUser]);
+
+  // Mark all conversations as read when visiting inbox page
+  useEffect(() => {
+    if (isLoaded && authUser) {
+      markAllAsReadMutation();
+    }
+  }, [isLoaded, authUser, markAllAsReadMutation]);
 
   // Clear selection if the conversation no longer exists (e.g., after deletion)
   useEffect(() => {

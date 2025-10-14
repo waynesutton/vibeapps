@@ -988,6 +988,166 @@ export const markConversationRead = mutation({
 });
 
 /**
+ * Check if user has any unread messages (for showing the black dot indicator)
+ */
+export const hasUnreadMessages = query({
+  args: {},
+  returns: v.boolean(),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return false;
+    }
+
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!currentUser) {
+      return false;
+    }
+
+    // Get all conversations for user
+    const conversationsA = await ctx.db
+      .query("dmConversations")
+      .withIndex("by_userA_activity", (q) => q.eq("userAId", currentUser._id))
+      .collect();
+
+    const conversationsB = await ctx.db
+      .query("dmConversations")
+      .withIndex("by_userB_activity", (q) => q.eq("userBId", currentUser._id))
+      .collect();
+
+    const allConversations = [...conversationsA, ...conversationsB];
+
+    // Filter out deleted conversations
+    const deletedConversations = await ctx.db
+      .query("dmDeletedConversations")
+      .withIndex("by_user", (q) => q.eq("userId", currentUser._id))
+      .collect();
+
+    const deletedIds = new Set(
+      deletedConversations.map((d) => d.conversationId),
+    );
+    const activeConversations = allConversations.filter(
+      (c) => !deletedIds.has(c._id),
+    );
+
+    // Get read status
+    const reads = await ctx.db
+      .query("dmReads")
+      .withIndex("by_user", (q) => q.eq("userId", currentUser._id))
+      .collect();
+
+    const readMap = new Map(
+      reads.map((r) => [r.conversationId, r.lastReadTime]),
+    );
+
+    // Check if any conversation has unread messages
+    for (const conversation of activeConversations) {
+      const lastReadTime = readMap.get(conversation._id) || 0;
+      const messages = await ctx.db
+        .query("dmMessages")
+        .withIndex("by_conversation", (q) =>
+          q.eq("conversationId", conversation._id),
+        )
+        .filter((q) => q.gte(q.field("_creationTime"), lastReadTime))
+        .filter((q) => q.neq(q.field("senderId"), currentUser._id))
+        .take(1);
+
+      const unreadMessages = messages.filter(
+        (m) => !(m.deletedBy || []).includes(currentUser._id),
+      );
+
+      if (unreadMessages.length > 0) {
+        return true;
+      }
+    }
+
+    return false;
+  },
+});
+
+/**
+ * Mark all conversations as read (called when visiting inbox page)
+ */
+export const markAllConversationsRead = mutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      // Silently return if not authenticated
+      return null;
+    }
+
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!currentUser) {
+      // Silently return if user not found
+      return null;
+    }
+
+    // Get all conversations for user
+    const conversationsA = await ctx.db
+      .query("dmConversations")
+      .withIndex("by_userA_activity", (q) => q.eq("userAId", currentUser._id))
+      .collect();
+
+    const conversationsB = await ctx.db
+      .query("dmConversations")
+      .withIndex("by_userB_activity", (q) => q.eq("userBId", currentUser._id))
+      .collect();
+
+    const allConversations = [...conversationsA, ...conversationsB];
+
+    // Filter out deleted conversations
+    const deletedConversations = await ctx.db
+      .query("dmDeletedConversations")
+      .withIndex("by_user", (q) => q.eq("userId", currentUser._id))
+      .collect();
+
+    const deletedIds = new Set(
+      deletedConversations.map((d) => d.conversationId),
+    );
+    const activeConversations = allConversations.filter(
+      (c) => !deletedIds.has(c._id),
+    );
+
+    // Mark all active conversations as read
+    const now = Date.now();
+    for (const conversation of activeConversations) {
+      const existing = await ctx.db
+        .query("dmReads")
+        .withIndex("by_conversation_user", (q) =>
+          q
+            .eq("conversationId", conversation._id)
+            .eq("userId", currentUser._id),
+        )
+        .first();
+
+      if (existing) {
+        await ctx.db.patch(existing._id, {
+          lastReadTime: now,
+        });
+      } else {
+        await ctx.db.insert("dmReads", {
+          conversationId: conversation._id,
+          userId: currentUser._id,
+          lastReadTime: now,
+        });
+      }
+    }
+
+    return null;
+  },
+});
+
+/**
  * Report a message or user
  */
 export const reportMessageOrUser = mutation({

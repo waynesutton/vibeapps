@@ -111,12 +111,16 @@ export function Layout({ children }: { children?: ReactNode }) {
     isClerkLoaded && isSignedIn ? {} : "skip",
   );
 
-  // Inbox enabled status
+  // Inbox queries
   const userInboxEnabled = useQuery(
     api.dm.getInboxEnabled,
     isClerkLoaded && isSignedIn && convexUserDoc?._id
       ? { userId: convexUserDoc._id }
       : "skip",
+  );
+  const hasUnreadMessages = useQuery(
+    api.dm.hasUnreadMessages,
+    isClerkLoaded && isSignedIn ? {} : "skip",
   );
 
   React.useEffect(() => {
@@ -431,13 +435,21 @@ export function Layout({ children }: { children?: ReactNode }) {
 
                     {/* Inbox Icon - Only show if inbox is enabled */}
                     {userInboxEnabled !== false && (
-                      <Link
-                        to="/inbox"
-                        className="flex items-center justify-center w-8 h-8 rounded-full border border-[#D8E1EC] bg-white hover:bg-[#F2F4F7] transition-colors mr-2"
-                        aria-label="Inbox"
+                      <div
+                        className="relative"
+                        style={{ marginRight: "0.5rem" }}
                       >
-                        <Inbox className="w-4 h-4 text-[#525252]" />
-                      </Link>
+                        <Link
+                          to="/inbox"
+                          className="flex items-center justify-center w-8 h-8 rounded-full border border-[#D8E1EC] bg-white hover:bg-[#F2F4F7] transition-colors"
+                          aria-label="Inbox"
+                        >
+                          <Inbox className="w-4 h-4 text-[#525252]" />
+                        </Link>
+                        {hasUnreadMessages && (
+                          <div className="absolute top-0 right-0 w-2 h-2 bg-black rounded-full"></div>
+                        )}
+                      </div>
                     )}
 
                     {/* Custom Profile Dropdown */}
