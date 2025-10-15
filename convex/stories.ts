@@ -1119,8 +1119,11 @@ export const toggleStoryPinStatus = mutation({
     if (!story) {
       throw new Error("Story not found");
     }
+    const newPinnedStatus = !story.isPinned;
     await ctx.db.patch(args.storyId, {
-      isPinned: !story.isPinned,
+      isPinned: newPinnedStatus,
+      // Track if story was ever pinned
+      wasPinned: newPinnedStatus ? true : story.wasPinned,
     });
 
     // Notify author about pin status (non-blocking)
@@ -1716,6 +1719,10 @@ export const listAllStoriesAdmin = query({
       tagIds: v.optional(v.array(v.id("tags"))), // Add tag filtering
       startDate: v.optional(v.number()), // Timestamp for date range start
       endDate: v.optional(v.number()), // Timestamp for date range end
+      hasMessage: v.optional(v.boolean()), // Filter stories with admin message
+      isPinned: v.optional(v.boolean()), // Filter currently pinned stories
+      wasPinned: v.optional(v.boolean()), // Filter stories that were ever pinned
+      judgingGroupId: v.optional(v.id("judgingGroups")), // Filter by judging group
     }),
     searchTerm: v.optional(v.string()),
   },
@@ -1825,6 +1832,43 @@ export const listAllStoriesAdmin = query({
         }
         return true;
       });
+    }
+
+    // Apply hasMessage filter - stories with custom admin message
+    if (args.filters.hasMessage) {
+      initialStories = initialStories.filter(
+        (story) => story.customMessage && story.customMessage.trim() !== "",
+      );
+    }
+
+    // Apply isPinned filter - currently pinned stories
+    if (args.filters.isPinned) {
+      initialStories = initialStories.filter(
+        (story) => story.isPinned === true,
+      );
+    }
+
+    // Apply wasPinned filter - stories that were ever pinned
+    if (args.filters.wasPinned) {
+      initialStories = initialStories.filter(
+        (story) => story.wasPinned === true,
+      );
+    }
+
+    // Apply judging group filter - stories in specific judging group
+    if (args.filters.judgingGroupId) {
+      const groupSubmissions = await ctx.db
+        .query("judgingGroupSubmissions")
+        .withIndex("by_groupId", (q) =>
+          q.eq("groupId", args.filters.judgingGroupId!),
+        )
+        .collect();
+      const storyIdsInGroup = new Set(
+        groupSubmissions.map((sub) => sub.storyId),
+      );
+      initialStories = initialStories.filter((story) =>
+        storyIdsInGroup.has(story._id),
+      );
     }
 
     // Manual Sorting: Pinned first, then by creation time descending

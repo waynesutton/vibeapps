@@ -73,6 +73,12 @@ export function ContentModeration() {
   // Date range filtering
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  // Advanced filters
+  const [hasMessage, setHasMessage] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
+  const [wasPinned, setWasPinned] = useState(false);
+  const [selectedJudgingGroupIdFilter, setSelectedJudgingGroupIdFilter] =
+    useState<Id<"judgingGroups"> | null>(null);
   // State for custom message editing - Commented out
   const [editingMessageId, setEditingMessageId] =
     useState<Id<"stories"> | null>(null);
@@ -198,8 +204,31 @@ export function ContentModeration() {
       convexFilters.endDate = endDateTime.getTime();
     }
 
+    // Add advanced filters
+    if (hasMessage) {
+      convexFilters.hasMessage = true;
+    }
+    if (isPinned) {
+      convexFilters.isPinned = true;
+    }
+    if (wasPinned) {
+      convexFilters.wasPinned = true;
+    }
+    if (selectedJudgingGroupIdFilter) {
+      convexFilters.judgingGroupId = selectedJudgingGroupIdFilter;
+    }
+
     return convexFilters;
-  }, [statusFilter, selectedTagIds, startDate, endDate]);
+  }, [
+    statusFilter,
+    selectedTagIds,
+    startDate,
+    endDate,
+    hasMessage,
+    isPinned,
+    wasPinned,
+    selectedJudgingGroupIdFilter,
+  ]);
 
   const commentFilters = useMemo(() => {
     const convexFilters: any = {};
@@ -691,6 +720,11 @@ export function ContentModeration() {
       setSelectedStoryIds(new Set());
       setShowBulkActions(false);
       setBulkActionType(null);
+      // Clear advanced filters when switching away from submissions
+      setHasMessage(false);
+      setIsPinned(false);
+      setWasPinned(false);
+      setSelectedJudgingGroupIdFilter(null);
     }
   }, [activeItemType]);
 
@@ -2040,6 +2074,75 @@ export function ContentModeration() {
             </div>
           )}
         </div>
+
+        {/* Advanced Filters Section */}
+        {activeItemType === "submissions" && (
+          <div className="mb-6 p-4 bg-[#F2F4F7] rounded-lg border border-gray-200">
+            <label className="text-sm font-medium text-gray-700 block mb-3">
+              Advanced Filters
+            </label>
+
+            {/* Checkboxes */}
+            <div className="flex flex-wrap gap-4 mb-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hasMessage}
+                  onChange={(e) => setHasMessage(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                />
+                <span className="text-sm text-gray-700">Has Admin Message</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isPinned}
+                  onChange={(e) => setIsPinned(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                />
+                <span className="text-sm text-gray-700">Currently Pinned</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={wasPinned}
+                  onChange={(e) => setWasPinned(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                />
+                <span className="text-sm text-gray-700">Was Pinned Before</span>
+              </label>
+            </div>
+
+            {/* Judging Group Filter */}
+            <div>
+              <label className="text-xs text-gray-600 mb-1 block">
+                In Judging Group
+              </label>
+              <Select
+                value={selectedJudgingGroupIdFilter || "all"}
+                onValueChange={(value) =>
+                  setSelectedJudgingGroupIdFilter(
+                    value === "all" ? null : (value as Id<"judgingGroups">),
+                  )
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All groups..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All groups</SelectItem>
+                  {judgingGroups?.map((group) => (
+                    <SelectItem key={group._id} value={group._id}>
+                      {group.name} ({group.submissionCount} submissions)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
 
         {/* Bulk Actions Bar */}
         {activeItemType === "submissions" && showBulkActions && (

@@ -51,6 +51,7 @@ export default defineSchema({
     ),
     isHidden: v.boolean(),
     isPinned: v.boolean(),
+    wasPinned: v.optional(v.boolean()), // Track if story was ever pinned in the past
     isArchived: v.optional(v.boolean()), // Archive submissions to hide from default view
     customMessage: v.optional(v.string()),
     isApproved: v.optional(v.boolean()),
