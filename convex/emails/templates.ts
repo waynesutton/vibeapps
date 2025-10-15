@@ -99,7 +99,7 @@ export const generateDailyAdminEmail = internalQuery({
                 <p style="margin: 5px 0;">If you have any questions, feedback, ideas or problems <a href="https://github.com/waynesutton/vibeapps/issues" style="color: #666;">contact us!</a></p>
                 <p style="margin: 5px 0;">You can manage which email notifications you receive and unsubscribe from your profile page.</p>
                 <p style="margin: 5px 0;">VibeApps is an <a href="https://github.com/waynesutton/vibeapps" style="color: #666;">open-source project</a>.</p>
-                <p style="margin: 5px 0;"><a href="https://convex.dev/" style="color: #666;">Convex</a> 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
+                <p style="margin: 5px 0;">Convex, 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
                 <p style="margin: 5px 0;">
                   Follow us on <a href="https://twitter.com/convex_dev" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
                   <a href="https://github.com/get-convex/convex-backend" style="color: #666;">Star on Github</a>
@@ -188,7 +188,7 @@ export const generateWelcomeEmail = internalQuery({
                 <p style="margin: 5px 0;">If you have any questions, feedback, ideas or problems <a href="https://github.com/waynesutton/vibeapps/issues" style="color: #666;">contact us!</a></p>
                 <p style="margin: 5px 0;">You can manage which email notifications you receive and unsubscribe from your profile page.</p>
                 <p style="margin: 5px 0;">VibeApps is an <a href="https://github.com/waynesutton/vibeapps" style="color: #666;">open-source project</a>.</p>
-                <p style="margin: 5px 0;"><a href="https://convex.dev/" style="color: #666;">Convex</a> 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
+                <p style="margin: 5px 0;">Convex, 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
                 <p style="margin: 5px 0;">
                   Follow us on <a href="https://twitter.com/convex_dev" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
                   <a href="https://github.com/get-convex/convex-backend" style="color: #666;">Star on Github</a>
@@ -483,7 +483,7 @@ export const generateEngagementEmail = internalQuery({
                 <p style="margin: 5px 0;">If you have any questions, feedback, ideas or problems <a href="https://github.com/waynesutton/vibeapps/issues" style="color: #666;">contact us!</a></p>
                 <p style="margin: 5px 0;">You can manage which email notifications you receive and unsubscribe from your profile page.</p>
                 <p style="margin: 5px 0;">VibeApps is an <a href="https://github.com/waynesutton/vibeapps" style="color: #666;">open-source project</a>.</p>
-                <p style="margin: 5px 0;"><a href="https://convex.dev/" style="color: #666;">Convex</a> 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
+                <p style="margin: 5px 0;">Convex, 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
                 <p style="margin: 5px 0;">
                   Follow us on <a href="https://twitter.com/convex_dev" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
                   <a href="https://github.com/get-convex/convex-backend" style="color: #666;">Star on Github</a>
@@ -569,7 +569,7 @@ export const generateWeeklyDigest = internalQuery({
                 <p style="margin: 5px 0;">If you have any questions, feedback, ideas or problems <a href="https://github.com/waynesutton/vibeapps/issues" style="color: #666;">contact us!</a></p>
                 <p style="margin: 5px 0;">You can manage which email notifications you receive and unsubscribe from your profile page.</p>
                 <p style="margin: 5px 0;">VibeApps is an <a href="https://github.com/waynesutton/vibeapps" style="color: #666;">open-source project</a>.</p>
-                <p style="margin: 5px 0;"><a href="https://convex.dev/" style="color: #666;">Convex</a> 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
+                <p style="margin: 5px 0;">Convex, 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
                 <p style="margin: 5px 0;">
                   Follow us on <a href="https://twitter.com/convex_dev" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
                   <a href="https://github.com/get-convex/convex-backend" style="color: #666;">Star on Github</a>
@@ -637,7 +637,7 @@ export const generateBroadcastEmail = internalQuery({
                 <p style="margin: 5px 0;">If you have any questions, feedback, ideas or problems <a href="https://github.com/waynesutton/vibeapps/issues" style="color: #666;">contact us!</a></p>
                 <p style="margin: 5px 0;">You can manage which email notifications you receive and unsubscribe from your profile page.</p>
                 <p style="margin: 5px 0;">VibeApps is an <a href="https://github.com/waynesutton/vibeapps" style="color: #666;">open-source project</a>.</p>
-                <p style="margin: 5px 0;"><a href="https://convex.dev/" style="color: #666;">Convex</a> 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
+                <p style="margin: 5px 0;">Convex, 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
                 <p style="margin: 5px 0;">
                   Follow us on <a href="https://twitter.com/convex_dev" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
                   <a href="https://github.com/get-convex/convex-backend" style="color: #666;">Star on Github</a>
@@ -706,7 +706,7 @@ export const generateMentionEmail = internalQuery({
                 <p style="margin: 5px 0;">If you have any questions, feedback, ideas or problems <a href="https://github.com/waynesutton/vibeapps/issues" style="color: #666;">contact us!</a></p>
                 <p style="margin: 5px 0;">You can manage which email notifications you receive and unsubscribe from your profile page.</p>
                 <p style="margin: 5px 0;">VibeApps is an <a href="https://github.com/waynesutton/vibeapps" style="color: #666;">open-source project</a>.</p>
-                <p style="margin: 5px 0;"><a href="https://convex.dev/" style="color: #666;">Convex</a> 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
+                <p style="margin: 5px 0;">Convex, 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
                 <p style="margin: 5px 0;">
                   Follow us on <a href="https://twitter.com/convex_dev" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
                   <a href="https://github.com/get-convex/convex-backend" style="color: #666;">Star on Github</a>
