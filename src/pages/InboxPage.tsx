@@ -12,9 +12,13 @@ import {
   MessageCircle,
   Flag,
   Ban,
+  Smile,
 } from "lucide-react";
 import "@fontsource/inter/400.css";
 import "@fontsource/inter/500.css";
+
+// Define predefined emoji reactions
+const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "👏"];
 
 // Helper function to parse @mentions and create links
 const parseMessageWithMentions = (content: string, isOwnMessage: boolean) => {
@@ -83,6 +87,9 @@ export default function InboxPage() {
       : "skip",
   );
 
+  // Emoji theme query (always use default)
+  const userEmojiTheme = "default";
+
   // Mutations
   const sendMessageMutation = useMutation(api.dm.sendMessage);
   const deleteConversationMutation = useMutation(api.dm.deleteConversation);
@@ -92,6 +99,8 @@ export default function InboxPage() {
   const reportMutation = useMutation(api.dm.reportMessageOrUser);
   const blockUserMutation = useMutation(api.dm.blockUser);
   const unblockUserMutation = useMutation(api.dm.unblockUser);
+  const addReactionMutation = useMutation(api.dmReactions.addOrUpdateReaction);
+  const removeReactionMutation = useMutation(api.dmReactions.removeReaction);
 
   // Local state
   const [messageInput, setMessageInput] = useState("");
@@ -105,6 +114,13 @@ export default function InboxPage() {
   const [reportReason, setReportReason] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Reaction picker state
+  const [showReactionPicker, setShowReactionPicker] =
+    useState<Id<"dmMessages"> | null>(null);
+  const [hoveredMessage, setHoveredMessage] = useState<Id<"dmMessages"> | null>(
+    null,
+  );
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -280,6 +296,25 @@ export default function InboxPage() {
       setErrorMessage(error.message || "Failed to update block status");
     } finally {
       setIsBlocking(false);
+    }
+  };
+
+  // Handle emoji reaction
+  const handleReaction = async (messageId: Id<"dmMessages">, emoji: string) => {
+    try {
+      await addReactionMutation({ messageId, emoji });
+      setShowReactionPicker(null);
+    } catch (error: any) {
+      setErrorMessage(error.message || "Failed to add reaction");
+    }
+  };
+
+  // Handle remove reaction
+  const handleRemoveReaction = async (messageId: Id<"dmMessages">) => {
+    try {
+      await removeReactionMutation({ messageId });
+    } catch (error: any) {
+      setErrorMessage(error.message || "Failed to remove reaction");
     }
   };
 
@@ -488,21 +523,103 @@ export default function InboxPage() {
                         className={`flex flex-col ${
                           isOwnMessage ? "items-end" : "items-start"
                         }`}
+                        onMouseEnter={() => setHoveredMessage(message._id)}
+                        onMouseLeave={() => {
+                          setHoveredMessage(null);
+                          if (showReactionPicker !== message._id) {
+                            setShowReactionPicker(null);
+                          }
+                        }}
                       >
-                        <div
-                          className={`max-w-[70%] rounded-lg p-3 ${
-                            isOwnMessage
-                              ? "bg-[#292929] text-white"
-                              : "bg-gray-100 text-gray-900"
-                          }`}
-                        >
-                          <p className="text-sm break-words">
-                            {parseMessageWithMentions(
-                              message.content,
-                              isOwnMessage,
+                        <div className="relative max-w-[70%]">
+                          <div
+                            className={`rounded-lg p-3 ${
+                              isOwnMessage
+                                ? "bg-[#292929] text-white"
+                                : "bg-gray-100 text-gray-900"
+                            }`}
+                          >
+                            <p className="text-sm break-words">
+                              {parseMessageWithMentions(
+                                message.content,
+                                isOwnMessage,
+                              )}
+                            </p>
+                          </div>
+
+                          {/* Reaction button (appears on hover) */}
+                          {hoveredMessage === message._id &&
+                            showReactionPicker !== message._id && (
+                              <button
+                                onClick={() =>
+                                  setShowReactionPicker(message._id)
+                                }
+                                className={`absolute -bottom-2 ${
+                                  isOwnMessage ? "left-0" : "right-0"
+                                } bg-white border border-[#D8E1EC] rounded-full p-1 shadow-sm hover:bg-[#F2F4F7] transition-colors`}
+                                title="Add reaction"
+                              >
+                                <Smile className="w-4 h-4 text-[#787672]" />
+                              </button>
                             )}
-                          </p>
+
+                          {/* Reaction picker */}
+                          {showReactionPicker === message._id && (
+                            <div
+                              className={`absolute top-full mt-2 ${
+                                isOwnMessage ? "right-0" : "left-0"
+                              } bg-white border border-[#D8E1EC] rounded-lg shadow-lg p-2 flex gap-1 z-10`}
+                              onMouseLeave={() => setShowReactionPicker(null)}
+                            >
+                              {REACTION_EMOJIS.map((emoji) => (
+                                <button
+                                  key={emoji}
+                                  onClick={() =>
+                                    handleReaction(message._id, emoji)
+                                  }
+                                  className="text-2xl hover:scale-125 transition-transform p-1"
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Display reactions */}
+                          {message.reactions.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {message.reactions.map((reaction) => {
+                                const isUserReaction = reaction.users.some(
+                                  (u) => u.userId === currentUser?._id,
+                                );
+                                return (
+                                  <button
+                                    key={reaction.emoji}
+                                    onClick={() => {
+                                      if (isUserReaction) {
+                                        handleRemoveReaction(message._id);
+                                      }
+                                    }}
+                                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm ${
+                                      isUserReaction
+                                        ? "bg-[#292929] text-white border-2 border-[#292929]"
+                                        : "bg-[#F2F4F7] text-[#292929] border border-[#D8E1EC]"
+                                    } hover:scale-105 transition-transform`}
+                                    title={reaction.users
+                                      .map((u) => u.name)
+                                      .join(", ")}
+                                  >
+                                    <span>{reaction.emoji}</span>
+                                    <span className="text-xs">
+                                      {reaction.count}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
+
                         <p className="text-xs text-gray-500 mt-1 px-1">
                           {new Date(message._creationTime).toLocaleString([], {
                             month: "short",

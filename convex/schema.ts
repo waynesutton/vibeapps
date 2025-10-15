@@ -18,6 +18,7 @@ export default defineSchema({
     isPaused: v.optional(v.boolean()), // New field for pausing users
     isVerified: v.optional(v.boolean()), // New field for verifying users
     inboxEnabled: v.optional(v.boolean()), // Inbox messaging toggle (default true)
+    emojiTheme: v.optional(v.string()), // Emoji color theme preference: "default", "red", "blue", "green", "purple", "orange"
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_username", ["username"]), // Index for fetching by username
@@ -700,4 +701,13 @@ export default defineSchema({
     .index("by_blocker_blocked", ["blockerId", "blockedUserId"]) // Check if specific user is blocked
     .index("by_blocker", ["blockerId"]) // Get all users blocked by someone
     .index("by_blocked", ["blockedUserId"]), // Get all users who blocked someone
+
+  // Emoji reactions for direct messages
+  dmReactions: defineTable({
+    messageId: v.id("dmMessages"), // Message being reacted to
+    userId: v.id("users"), // User who reacted
+    emoji: v.string(), // One of predefined emojis: "👍", "❤️", "😂", "😮", "😢", "👏"
+  })
+    .index("by_message", ["messageId"]) // Get all reactions for a message
+    .index("by_user_message", ["userId", "messageId"]), // Check if user already reacted to message
 });

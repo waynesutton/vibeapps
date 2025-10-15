@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Added] - October 15, 2025
+
+**Inbox Message Emoji Reactions**
+
+- **Emoji Reactions**: Users can now react to direct messages with predefined emoji reactions
+  - **Predefined Emojis**: Six emoji reactions available: 👍 ❤️ 😂 😮 😢 👏
+  - **One Reaction Per User**: Each user can add one emoji reaction per message
+  - **Hover to React**: Reaction picker appears when hovering over messages
+  - **Click to Remove**: Users can remove their own reactions by clicking them
+  - **Real-Time Updates**: Reactions update instantly via Convex reactivity
+  - **Reaction Display**: Shows emoji with count and list of who reacted on hover
+- **Backend Implementation**:
+  - **New Table**: `dmReactions` table for storing message reactions
+  - **New File**: `convex/dmReactions.ts` with reaction mutations and queries
+  - **Updated Queries**: `listMessages` in `convex/dm.ts` now includes reactions
+- **Frontend Features**:
+  - **Interactive UI**: Smooth animations for adding and removing reactions
+  - **Reaction Picker**: Displays on message hover with all emoji options
+  - **Highlight User Reactions**: User's own reactions highlighted with dark background
+  - **Responsive Design**: Works seamlessly on desktop and mobile
+  - **Type Safety**: Fully type-safe implementation with Convex validators
+  - **Clean Layout**: Message bubbles maintain proper width with reactions displayed below
+
 ### [Enhanced] - October 12, 2025
 
 **Group-Wide Progress Tracking Enhancement ✅ COMPLETED**

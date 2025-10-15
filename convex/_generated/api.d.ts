@@ -21,6 +21,7 @@ import type * as comments from "../comments.js";
 import type * as convexBoxConfig from "../convexBoxConfig.js";
 import type * as crons from "../crons.js";
 import type * as dm from "../dm.js";
+import type * as dmReactions from "../dmReactions.js";
 import type * as emailSettings from "../emailSettings.js";
 import type * as emails_broadcast from "../emails/broadcast.js";
 import type * as emails_daily from "../emails/daily.js";
@@ -89,6 +90,7 @@ declare const fullApi: ApiFromModules<{
   convexBoxConfig: typeof convexBoxConfig;
   crons: typeof crons;
   dm: typeof dm;
+  dmReactions: typeof dmReactions;
   emailSettings: typeof emailSettings;
   "emails/broadcast": typeof emails_broadcast;
   "emails/daily": typeof emails_daily;

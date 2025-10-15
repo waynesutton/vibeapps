@@ -141,6 +141,7 @@ Brief description of the feature and its purpose.
 - [x] updated JudgingInterfacePage progress bars to show group-wide completion percentage
 - [x] changed progress calculation from individual judge completion to group-wide completion
 - [x] synchronized all progress indicators (header bar, overall progress text, progress summary) to use groupCompletionPercentage
+- [x] add emoji support in inbox
 
 ## In Progress Tasks
 
@@ -148,8 +149,6 @@ Brief description of the feature and its purpose.
 
 ## Future Tasks - Roadmap
 
-- add emjoi support in inbox
-- add inbox dot for new messages
 - [ ] clerk roles for hackathon organizers to see judges section in admin dashboard only from friendsonlyinbox.md
 - [ ] add admin moderation to make app post by approval only
 

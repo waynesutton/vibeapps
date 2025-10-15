@@ -2009,3 +2009,80 @@ export const getRecentVibers = query({
     return recentActiveUsers;
   },
 });
+
+/**
+ * Define allowed emoji themes
+ */
+const ALLOWED_EMOJI_THEMES = [
+  "default",
+  "red",
+  "blue",
+  "green",
+  "purple",
+  "orange",
+] as const;
+
+export const emojiThemeValidator = v.union(
+  v.literal("default"),
+  v.literal("red"),
+  v.literal("blue"),
+  v.literal("green"),
+  v.literal("purple"),
+  v.literal("orange"),
+);
+
+/**
+ * Update user's emoji theme preference
+ */
+export const updateEmojiTheme = mutation({
+  args: {
+    theme: emojiThemeValidator,
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    await ctx.db.patch(user._id, {
+      emojiTheme: args.theme,
+    });
+
+    return null;
+  },
+});
+
+/**
+ * Get current user's emoji theme preference
+ */
+export const getMyEmojiTheme = query({
+  args: {},
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null;
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      return null;
+    }
+
+    return user.emojiTheme || "default";
+  },
+});

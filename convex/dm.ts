@@ -856,6 +856,18 @@ export const listMessages = query({
         username: v.optional(v.string()),
         imageUrl: v.optional(v.string()),
       }),
+      reactions: v.array(
+        v.object({
+          emoji: v.string(),
+          count: v.number(),
+          users: v.array(
+            v.object({
+              userId: v.id("users"),
+              name: v.string(),
+            }),
+          ),
+        }),
+      ),
     }),
   ),
   handler: async (ctx, args) => {
@@ -900,11 +912,44 @@ export const listMessages = query({
       (m) => !(m.deletedBy || []).includes(currentUser._id),
     );
 
-    // Get sender details
+    // Get sender details and reactions
     const result = [];
     for (const message of visibleMessages) {
       const sender = await ctx.db.get(message.senderId);
       if (!sender) continue;
+
+      // Get reactions for this message
+      const reactions = await ctx.db
+        .query("dmReactions")
+        .withIndex("by_message", (q) => q.eq("messageId", message._id))
+        .collect();
+
+      // Group reactions by emoji
+      const groupedReactions = new Map<
+        string,
+        Array<{ userId: Id<"users">; name: string }>
+      >();
+
+      for (const reaction of reactions) {
+        const reactionUser = await ctx.db.get(reaction.userId);
+        if (!reactionUser) continue;
+
+        const existing = groupedReactions.get(reaction.emoji) || [];
+        existing.push({
+          userId: reaction.userId,
+          name: reactionUser.name,
+        });
+        groupedReactions.set(reaction.emoji, existing);
+      }
+
+      // Convert reactions to array format
+      const reactionsList = Array.from(groupedReactions.entries()).map(
+        ([emoji, users]) => ({
+          emoji,
+          count: users.length,
+          users,
+        }),
+      );
 
       result.push({
         _id: message._id,
@@ -918,6 +963,7 @@ export const listMessages = query({
           username: sender.username,
           imageUrl: sender.imageUrl,
         },
+        reactions: reactionsList,
       });
     }
 
