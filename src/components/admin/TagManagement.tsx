@@ -12,6 +12,8 @@ import {
   Edit3,
   Check,
   Smile,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -81,10 +83,31 @@ export function TagManagement() {
   const [editIconEmojiTagId, setEditIconEmojiTagId] =
     useState<Id<"tags"> | null>(null); // For icon/emoji editor
   const [searchQuery, setSearchQuery] = useState<string>(""); // Search functionality
+  const [showScrollButtons, setShowScrollButtons] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null); // Ref for file input
   const orderSaveTimersRef = useRef<Record<string, number>>({}); // Debounce timers per tag
   const draggingTagIdRef = useRef<Id<"tags"> | null>(null); // Drag-and-drop state
+
+  // Handle scroll visibility for floating buttons
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollButtons(window.scrollY > 300);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const scrollToBottom = () => {
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: "smooth",
+    });
+  };
 
   // Sync Convex data to local editable state
   useEffect(() => {
@@ -1199,6 +1222,26 @@ export function TagManagement() {
           </p>
         </div>
       </div>
+
+      {/* Floating Scroll Buttons */}
+      {showScrollButtons && (
+        <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-40">
+          <button
+            onClick={scrollToTop}
+            className="p-3 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors"
+            title="Scroll to top"
+          >
+            <ArrowUp className="w-5 h-5" />
+          </button>
+          <button
+            onClick={scrollToBottom}
+            className="p-3 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors"
+            title="Scroll to bottom"
+          >
+            <ArrowDown className="w-5 h-5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
