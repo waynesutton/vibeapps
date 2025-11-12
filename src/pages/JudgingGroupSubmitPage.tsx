@@ -257,6 +257,7 @@ export function JudgingGroupSubmitPage() {
                   {isSignedIn ? (
                     <SubmissionFormContent
                       judgingGroupId={submissionPage._id}
+                      requiredTagId={submissionPage.submissionFormRequiredTagId}
                       onSuccess={() => {
                         setShowSuccess(true);
                         // Redirect to homepage after 2.5 seconds
@@ -290,9 +291,11 @@ export function JudgingGroupSubmitPage() {
 // Submission Form Content Component - Matches StoryForm.tsx exactly
 function SubmissionFormContent({
   judgingGroupId,
+  requiredTagId,
   onSuccess,
 }: {
   judgingGroupId: Id<"judgingGroups">;
+  requiredTagId?: Id<"tags"> | null;
   onSuccess: () => void;
 }) {
   const submit = useMutation(api.stories.submit);
@@ -333,6 +336,13 @@ function SubmissionFormContent({
   const MAX_TAGLINE_LENGTH = 140;
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Auto-select required tag if specified
+  useEffect(() => {
+    if (requiredTagId && !selectedTagIds.includes(requiredTagId)) {
+      setSelectedTagIds((prev) => [...prev, requiredTagId]);
+    }
+  }, [requiredTagId]);
 
   // Click outside handler for dropdown
   useEffect(() => {
@@ -405,6 +415,10 @@ function SubmissionFormContent({
   };
 
   const toggleTag = (tagId: Id<"tags">) => {
+    // Prevent deselecting the required tag
+    if (requiredTagId && tagId === requiredTagId) {
+      return;
+    }
     setSelectedTagIds((prev) =>
       prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId],
     );
@@ -957,6 +971,7 @@ function SubmissionFormContent({
                 const tag = allTags?.find((t) => t._id === tagId) ||
                   allTagsForDropdown?.find((t) => t._id === tagId);
                 if (!tag) return null;
+                const isRequired = requiredTagId && tagId === requiredTagId;
                 return (
                   <div
                     key={tagId}
@@ -976,13 +991,17 @@ function SubmissionFormContent({
                     {tag.isHidden && (
                       <span className="text-xs opacity-70">(Hidden)</span>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => toggleTag(tagId)}
-                      className="ml-1 hover:opacity-70"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
+                    {isRequired ? (
+                      <Lock className="w-3 h-3 ml-1 opacity-50" title="Required tag" />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => toggleTag(tagId)}
+                        className="ml-1 hover:opacity-70"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
                 );
               })}

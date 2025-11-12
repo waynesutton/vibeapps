@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
@@ -50,6 +50,7 @@ interface GroupSettings {
   submissionPageLinks: Array<{ label: string; url: string }>;
   submissionFormTitle: string;
   submissionFormSubtitle: string;
+  submissionFormRequiredTagId?: Id<"tags"> | null;
 }
 
 export function JudgingCriteriaEditor({
@@ -64,6 +65,7 @@ export function JudgingCriteriaEditor({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [error, setError] = useState("");
+  const draggingCriteriaIndexRef = useRef<number | null>(null);
 
   // Group settings state
   const [groupSettings, setGroupSettings] = useState<GroupSettings>({
@@ -80,6 +82,7 @@ export function JudgingCriteriaEditor({
     submissionPageLinks: [],
     submissionFormTitle: "",
     submissionFormSubtitle: "",
+    submissionFormRequiredTagId: null,
   });
   const [hasGroupChanges, setHasGroupChanges] = useState(false);
   const [submissionPageImage, setSubmissionPageImage] = useState<File | null>(
@@ -93,6 +96,7 @@ export function JudgingCriteriaEditor({
   const groupDetails = useQuery(api.judgingGroups.getGroupWithDetails, {
     groupId,
   });
+  const allTags = useQuery(api.tags.list);
   const saveCriteria = useMutation(api.judgingCriteria.saveCriteria);
   const updateGroup = useMutation(api.judgingGroups.updateGroup);
   const generateUploadUrl = useMutation(api.stories.generateUploadUrl);
@@ -129,6 +133,7 @@ export function JudgingCriteriaEditor({
         submissionPageLinks: groupDetails.submissionPageLinks || [],
         submissionFormTitle: groupDetails.submissionFormTitle || "",
         submissionFormSubtitle: groupDetails.submissionFormSubtitle || "",
+        submissionFormRequiredTagId: groupDetails.submissionFormRequiredTagId || null,
       });
       
       // Load existing image URL if available
@@ -193,6 +198,38 @@ export function JudgingCriteriaEditor({
     setHasChanges(true);
   };
 
+  // Drag and drop handlers for criteria
+  const handleCriteriaDragStart = (index: number) => {
+    draggingCriteriaIndexRef.current = index;
+  };
+
+  const handleCriteriaDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleCriteriaDrop = (targetIndex: number) => {
+    const draggedIndex = draggingCriteriaIndexRef.current;
+    draggingCriteriaIndexRef.current = null;
+
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      return;
+    }
+
+    setCriteria((prev) => {
+      const newCriteria = [...prev];
+      const [draggedItem] = newCriteria.splice(draggedIndex, 1);
+      newCriteria.splice(targetIndex, 0, draggedItem);
+
+      // Update order values
+      newCriteria.forEach((item, i) => {
+        item.order = i + 1;
+      });
+
+      return newCriteria;
+    });
+    setHasChanges(true);
+  };
+
   const updateGroupSetting = (field: keyof GroupSettings, value: any) => {
     setGroupSettings((prev) => ({
       ...prev,
@@ -234,6 +271,7 @@ export function JudgingCriteriaEditor({
           groupSettings.submissionFormTitle.trim() || undefined,
         submissionFormSubtitle:
           groupSettings.submissionFormSubtitle.trim() || undefined,
+        submissionFormRequiredTagId: groupSettings.submissionFormRequiredTagId || undefined,
       };
 
       // Only include password if it's provided
@@ -476,7 +514,11 @@ export function JudgingCriteriaEditor({
                 {criteria.map((criterion, index) => (
                   <div
                     key={index}
-                    className="bg-white border border-gray-200 rounded-lg p-4 space-y-4"
+                    draggable
+                    onDragStart={() => handleCriteriaDragStart(index)}
+                    onDragOver={handleCriteriaDragOver}
+                    onDrop={() => handleCriteriaDrop(index)}
+                    className="bg-white border border-gray-200 rounded-lg p-4 space-y-4 cursor-move hover:border-gray-300 transition-colors"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
@@ -1008,6 +1050,34 @@ export function JudgingCriteriaEditor({
                       rows={2}
                     />
                   </div>
+
+                  {/* Required Tag for Submission Form */}
+                  <div>
+                    <Label htmlFor="submissionFormRequiredTagId">
+                      Required Tag (Optional)
+                    </Label>
+                    <select
+                      id="submissionFormRequiredTagId"
+                      value={groupSettings.submissionFormRequiredTagId || ""}
+                      onChange={(e) =>
+                        updateGroupSetting(
+                          "submissionFormRequiredTagId",
+                          e.target.value || null,
+                        )
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">None</option>
+                      {allTags?.map((tag) => (
+                        <option key={tag._id} value={tag._id}>
+                          {tag.emoji ? `${tag.emoji} ` : ""}{tag.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      This tag will be automatically selected and locked on the submission form. Users cannot unselect it.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -1032,7 +1102,17 @@ export function JudgingCriteriaEditor({
                             isPublic: groupDetails.isPublic,
                             password: "",
                             isActive: groupDetails.isActive,
+                            hasCustomSubmissionPage: groupDetails.hasCustomSubmissionPage || false,
+                            submissionPageImageSize: groupDetails.submissionPageImageSize || 400,
+                            submissionPageLayout: groupDetails.submissionPageLayout || "two-column",
+                            submissionPageTitle: groupDetails.submissionPageTitle || "",
+                            submissionPageDescription: groupDetails.submissionPageDescription || "",
+                            submissionPageLinks: groupDetails.submissionPageLinks || [],
+                            submissionFormTitle: groupDetails.submissionFormTitle || "",
+                            submissionFormSubtitle: groupDetails.submissionFormSubtitle || "",
+                            submissionFormRequiredTagId: groupDetails.submissionFormRequiredTagId || null,
                           });
+                          setSubmissionPageImage(null);
                           setHasGroupChanges(false);
                         }
                       }}

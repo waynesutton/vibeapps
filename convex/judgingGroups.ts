@@ -185,6 +185,7 @@ export const updateGroup = mutation({
     ),
     submissionFormTitle: v.optional(v.string()),
     submissionFormSubtitle: v.optional(v.string()),
+    submissionFormRequiredTagId: v.optional(v.id("tags")),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -340,6 +341,7 @@ export const getGroupWithDetails = query({
       ),
       submissionFormTitle: v.optional(v.string()),
       submissionFormSubtitle: v.optional(v.string()),
+      submissionFormRequiredTagId: v.optional(v.id("tags")),
       criteria: v.array(
         v.object({
           _id: v.id("judgingCriteria"),
@@ -549,6 +551,7 @@ export const getSubmissionPage = query({
       ),
       submissionFormTitle: v.optional(v.string()),
       submissionFormSubtitle: v.optional(v.string()),
+      submissionFormRequiredTagId: v.optional(v.id("tags")),
     }),
   ),
   handler: async (ctx, args) => {
@@ -589,6 +592,7 @@ export const getSubmissionPage = query({
       submissionPageLinks: group.submissionPageLinks,
       submissionFormTitle: group.submissionFormTitle,
       submissionFormSubtitle: group.submissionFormSubtitle,
+      submissionFormRequiredTagId: group.submissionFormRequiredTagId,
     };
   },
 });

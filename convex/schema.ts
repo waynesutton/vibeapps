@@ -364,6 +364,7 @@ export default defineSchema({
     ), // External links to display
     submissionFormTitle: v.optional(v.string()), // Custom title for submission form (default: "Submit Your App")
     submissionFormSubtitle: v.optional(v.string()), // Optional subtitle text below form title
+    submissionFormRequiredTagId: v.optional(v.id("tags")), // Required tag that will be auto-selected and locked in submission form
   })
     .index("by_slug", ["slug"])
     .index("by_isPublic", ["isPublic"])
