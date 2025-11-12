@@ -342,6 +342,8 @@ export default defineSchema({
     resultsIsPublic: v.optional(v.boolean()), // Whether results page is public (defaults to private)
     resultsPassword: v.optional(v.string()), // Password for private results pages
     isActive: v.boolean(), // Whether judging is currently active (controlled by admin)
+    startDate: v.optional(v.number()), // Optional start date timestamp for judging period
+    endDate: v.optional(v.number()), // Optional end date timestamp for judging period
     createdBy: v.id("users"), // Admin who created the group
     // Custom submission page settings
     hasCustomSubmissionPage: v.optional(v.boolean()), // Enable custom submission page
