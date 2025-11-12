@@ -280,7 +280,7 @@ export const listAllCommentsAdmin = query({
   },
 });
 
-// Mutation to add a new comment or reply
+// Mutation to add a new comment or reply - Fixed: Minimized read window before writes
 export const add = mutation({
   args: {
     storyId: v.id("stories"),
@@ -290,42 +290,36 @@ export const add = mutation({
   handler: async (ctx, args) => {
     await ensureUserNotBanned(ctx);
     const userId = await getAuthenticatedUserId(ctx);
+    
+    // Validate story exists and get parent comment if needed (read operations first)
     const story = await ctx.db.get(args.storyId);
     if (!story) {
       throw new Error("Story not found");
     }
-    // TODO: Check if story is approved? Allow comments only on approved stories?
-    // if (story.status !== 'approved') {
-    //     throw new Error("Cannot comment on a story that is not approved.");
-    // }
 
+    let parentComment = null;
     if (args.parentId) {
-      const parentComment = await ctx.db.get(args.parentId);
+      parentComment = await ctx.db.get(args.parentId);
       if (!parentComment || parentComment.storyId !== args.storyId) {
         throw new Error(
           "Parent comment not found or doesn't belong to this story",
         );
       }
-      // TODO: Check if parent comment is approved?
-      // if (parentComment.status !== 'approved') {
-      //     throw new Error("Cannot reply to a comment that is not approved.");
-      // }
     }
 
+    // All validation complete - now perform writes
     const commentId = await ctx.db.insert("comments", {
       storyId: args.storyId,
       content: args.content,
-      userId: userId, // Use authenticated user's ID
+      userId: userId,
       parentId: args.parentId,
       votes: 0,
-      status: "approved", // Changed from "pending"
+      status: "approved",
     });
 
-    // TODO: Only increment commentCount when a comment is APPROVED?
-    // This depends on whether commentCount should reflect pending or approved comments.
-    // For simplicity now, we increment immediately. Revisit if needed.
+    // Increment comment count using previously read value
     await ctx.db.patch(args.storyId, {
-      commentCount: (story.commentCount || 0) + 1, // Use || 0 for safety
+      commentCount: (story.commentCount || 0) + 1,
     });
 
     // Create alert for story owner (non-blocking)
@@ -339,42 +333,30 @@ export const add = mutation({
       });
     }
 
-    // If this is a reply to another comment, alert the original comment author (non-blocking)
-    if (args.parentId) {
-      const parentComment = await ctx.db.get(args.parentId);
-      if (
-        parentComment &&
-        parentComment.userId &&
-        parentComment.userId !== userId
-      ) {
-        await ctx.scheduler.runAfter(0, internal.alerts.createAlert, {
-          recipientUserId: parentComment.userId,
-          actorUserId: userId,
-          type: "reply",
-          storyId: args.storyId,
-          commentId: commentId,
-        });
-      }
+    // If this is a reply, alert the original comment author (non-blocking)
+    if (parentComment && parentComment.userId && parentComment.userId !== userId) {
+      await ctx.scheduler.runAfter(0, internal.alerts.createAlert, {
+        recipientUserId: parentComment.userId,
+        actorUserId: userId,
+        type: "reply",
+        storyId: args.storyId,
+        commentId: commentId,
+      });
     }
 
     // Process mentions in comment content (non-blocking)
     try {
-      // Extract @username handles from content
       const handles = await ctx.runQuery(internal.mentions.extractHandles, {
         text: args.content,
       });
 
       if (handles.length > 0) {
-        // Resolve handles to user documents
         const resolvedTargets = await ctx.runQuery(
           internal.mentions.resolveHandlesToUsers,
-          {
-            handles,
-          },
+          { handles },
         );
 
         if (resolvedTargets.length > 0) {
-          // Record mentions with quota enforcement
           const contentExcerpt = args.content.slice(0, 240);
           const date = new Date().toISOString().split("T")[0];
 
@@ -384,7 +366,7 @@ export const add = mutation({
             context: "comment",
             sourceId: commentId,
             storyId: args.storyId,
-            groupId: undefined, // Not applicable for comments
+            groupId: undefined,
             contentExcerpt,
             date,
           });
@@ -404,7 +386,6 @@ export const add = mutation({
         }
       }
     } catch (error) {
-      // Log mention processing errors but don't fail the comment creation
       console.error("Error processing mentions in comment:", error);
     }
   },
@@ -467,23 +448,23 @@ export const showComment = mutation({
   },
 });
 
-// Mutation to permanently delete a comment
+// Mutation to permanently delete a comment - Fixed: Minimized read window
 export const deleteComment = mutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, args) => {
     await requireAdminRole(ctx);
-    // We will add a new mutation for users to delete their OWN comments
     const comment = await ctx.db.get(args.commentId);
     if (!comment) {
       console.warn(`Comment ${args.commentId} not found for deletion.`);
       return;
     }
-    // TODO: Decrement story.commentCount, handle replies, etc.
+    // Delete immediately after reading
     await ctx.db.delete(args.commentId);
+    // TODO: Consider decrementing story.commentCount if needed
   },
 });
 
-// Mutation for a user to delete their own comment
+// Mutation for a user to delete their own comment - Fixed: Reduced read operations
 export const deleteOwnComment = mutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, args) => {
@@ -500,37 +481,30 @@ export const deleteOwnComment = mutation({
       );
     }
 
-    const story = await ctx.db.get(comment.storyId);
-    if (story) {
-      // Decrement comment count on the story if the comment was approved
-      // (Assuming commentCount reflects approved comments)
-      if (comment.status === "approved") {
-        // You might need to define what status means for comment count
-        await ctx.db.patch(story._id, {
-          commentCount: Math.max(0, (story.commentCount || 0) - 1),
-        });
-      }
-    }
-
-    // TODO: Handle deletion of replies to this comment.
-    // This could be complex. For now, replies will be orphaned or you might prevent deletion if replies exist.
-    // Example: Check for replies
+    // Check for replies before deletion
     const replies = await ctx.db
       .query("comments")
       .filter((q) => q.eq(q.field("parentId"), args.commentId))
       .collect();
+    
     if (replies.length > 0) {
-      // Option 1: Prevent deletion
-      // throw new Error("Cannot delete this comment as it has replies. Please delete replies first.");
-      // Option 2: Delete replies (recursive or iterative - can be complex)
-      // console.warn(`Comment ${args.commentId} has ${replies.length} replies that will also be deleted.`);
-      // for (const reply of replies) {
-      //   await ctx.runMutation(api.comments.deleteOwnComment, { commentId: reply._id }); // Risky if not handled well
-      // }
-      // For now, we allow deletion and replies will be orphaned.
+      // For now, allow deletion and replies will be orphaned
+      // Alternative: throw new Error("Cannot delete comment with replies");
     }
 
+    // Get story for comment count update
+    const story = await ctx.db.get(comment.storyId);
+    
+    // Perform deletes
     await ctx.db.delete(args.commentId);
+    
+    // Update story comment count if story exists and comment was approved
+    if (story && comment.status === "approved") {
+      await ctx.db.patch(story._id, {
+        commentCount: Math.max(0, (story.commentCount || 0) - 1),
+      });
+    }
+
     return { success: true };
   },
 });

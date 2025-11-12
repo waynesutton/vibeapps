@@ -341,10 +341,27 @@ export default defineSchema({
     password: v.optional(v.string()), // Password for private groups (hashed)
     resultsIsPublic: v.optional(v.boolean()), // Whether results page is public (defaults to private)
     resultsPassword: v.optional(v.string()), // Password for private results pages
-    isActive: v.boolean(), // Whether judging is currently active
-    startDate: v.optional(v.number()), // Optional judging start time
-    endDate: v.optional(v.number()), // Optional judging end time
+    isActive: v.boolean(), // Whether judging is currently active (controlled by admin)
     createdBy: v.id("users"), // Admin who created the group
+    // Custom submission page settings
+    hasCustomSubmissionPage: v.optional(v.boolean()), // Enable custom submission page
+    submissionPageImageId: v.optional(v.id("_storage")), // Header image for submission page
+    submissionPageImageSize: v.optional(v.number()), // Image size in pixels (square)
+    submissionPageLayout: v.optional(
+      v.union(v.literal("two-column"), v.literal("one-third")),
+    ), // Layout style: two-column (50/50) or one-third (33/67)
+    submissionPageTitle: v.optional(v.string()), // Custom title for submission page
+    submissionPageDescription: v.optional(v.string()), // Rich text description
+    submissionPageLinks: v.optional(
+      v.array(
+        v.object({
+          label: v.string(),
+          url: v.string(),
+        }),
+      ),
+    ), // External links to display
+    submissionFormTitle: v.optional(v.string()), // Custom title for submission form (default: "Submit Your App")
+    submissionFormSubtitle: v.optional(v.string()), // Optional subtitle text below form title
   })
     .index("by_slug", ["slug"])
     .index("by_isPublic", ["isPublic"])

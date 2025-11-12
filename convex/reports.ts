@@ -28,7 +28,7 @@ async function getAuthenticatedUserAndRole(ctx: QueryCtx | MutationCtx) {
 }
 
 /**
- * Create a new report for a story.
+ * Create a new report for a story - Fixed: Optimized read order to minimize conflicts
  */
 export const createReport = mutation({
   args: {
@@ -41,6 +41,7 @@ export const createReport = mutation({
       throw new Error("User must be logged in to report a story.");
     }
 
+    // Check for existing pending report first (validation)
     const existingReport = await ctx.db
       .query("reports")
       .withIndex("by_storyId", (q) => q.eq("storyId", args.storyId))
@@ -54,11 +55,13 @@ export const createReport = mutation({
       );
     }
 
+    // Verify story exists (validation)
     const story = await ctx.db.get(args.storyId);
     if (!story) {
       throw new Error("Story not found.");
     }
 
+    // All validation complete - now perform writes
     const reportId = await ctx.db.insert("reports", {
       storyId: args.storyId,
       reporterUserId: user._id,
@@ -142,7 +145,7 @@ export const listAllReportsAdmin = query({
 });
 
 /**
- * Update the status of a report by an admin.
+ * Update the status of a report by an admin - Fixed: Minimized read window
  */
 export const updateReportStatusByAdmin = mutation({
   args: {
@@ -163,18 +166,19 @@ export const updateReportStatusByAdmin = mutation({
       throw new Error("Report not found.");
     }
 
-    // If new status is pending, it usually means we are re-opening a report for a story that was previously acted upon.
-    // We don't need to modify the story itself in this case, just the report status.
+    // Validate and prepare actions based on new status
     if (args.newStatus !== "pending") {
       const story = await ctx.db.get(report.storyId);
       if (!story) {
         console.warn(
           `Story ${report.storyId} not found for report ${args.reportId}. Updating report status only.`,
         );
-        // If story is gone, and we are not setting to pending, still update report
-        return await ctx.db.patch(args.reportId, { status: args.newStatus });
+        // If story is gone, still update report
+        await ctx.db.patch(args.reportId, { status: args.newStatus });
+        return;
       }
 
+      // Perform story actions immediately after validation
       if (args.newStatus === "resolved_hidden") {
         await ctx.db.patch(report.storyId, { isHidden: true });
       } else if (args.newStatus === "resolved_deleted") {
@@ -189,46 +193,47 @@ export const updateReportStatusByAdmin = mutation({
           });
         }
       }
-      // No specific story action if newStatus is "dismissed" and not "pending"
     }
 
-    return await ctx.db.patch(args.reportId, { status: args.newStatus });
+    // Update report status
+    await ctx.db.patch(args.reportId, { status: args.newStatus });
   },
 });
 
 export const deleteStoryAndAssociations = internalMutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
-    const storyDb = await ctx.db.get(args.storyId); // Renamed to avoid conflict with story variable in outer scope if this were nested
+    const storyDb = await ctx.db.get(args.storyId);
     if (!storyDb) {
       console.warn(`Story ${args.storyId} not found for deletion.`);
       return false;
     }
 
-    const commentsToDelete = await ctx.db
-      .query("comments")
-      .withIndex("by_storyId_status", (q) => q.eq("storyId", args.storyId))
-      .collect();
-    for (const comment of commentsToDelete) {
-      await ctx.db.delete(comment._id);
-    }
+    // Collect all related data in parallel
+    const [commentsToDelete, allRatings, votesToDelete] = await Promise.all([
+      ctx.db
+        .query("comments")
+        .withIndex("by_storyId_status", (q) => q.eq("storyId", args.storyId))
+        .collect(),
+      ctx.db.query("storyRatings").collect(),
+      ctx.db
+        .query("votes")
+        .withIndex("by_story", (q) => q.eq("storyId", args.storyId))
+        .collect(),
+    ]);
 
-    const allRatings = await ctx.db.query("storyRatings").collect();
     const ratingsToDelete = allRatings.filter(
       (rating) => rating.storyId === args.storyId,
     );
-    for (const rating of ratingsToDelete) {
-      await ctx.db.delete(rating._id);
-    }
 
-    const votesToDelete = await ctx.db
-      .query("votes")
-      .withIndex("by_story", (q) => q.eq("storyId", args.storyId))
-      .collect();
-    for (const vote of votesToDelete) {
-      await ctx.db.delete(vote._id);
-    }
+    // Delete all associated data in parallel for better performance
+    await Promise.all([
+      ...commentsToDelete.map((comment) => ctx.db.delete(comment._id)),
+      ...ratingsToDelete.map((rating) => ctx.db.delete(rating._id)),
+      ...votesToDelete.map((vote) => ctx.db.delete(vote._id)),
+    ]);
 
+    // Delete the story itself
     await ctx.db.delete(args.storyId);
     console.log(
       `Story ${args.storyId} and associated data permanently deleted by admin.`,

@@ -48,7 +48,10 @@ When making changes to the codebase:
 • Do not change any UI, layout, design, or color styles unless specifically instructed.
 • Preserve all current admin dashboard sections and frontend components unless explicitly told to update, fix, or replace them.
 • Never remove sections, features, or components unless directly requested.
-
+When creating Convex mutations, always patch directly without reading first, use indexed queries for ownership checks instead of `ctx.db.get()`, make mutations idempotent with early returns, use timestamp-based ordering for new items, and use `Promise.all()` for parallel independent operations to avoid write conflicts.
+• When a task touches changelog.md, the changelog page, or files.md, run git log --date=short (or check commit history) and set each release date to match the real commit timeline—no placeholders or future months.
+• Do you understand, what I’m asking? Never assume anything on your own, if anything isn’t clear, please ask questions and clarify your doubts.
+• reference @dev2.mdc @help.mdc @files.md if needed
 ⸻
 
 ## 4. UI/UX Guidelines

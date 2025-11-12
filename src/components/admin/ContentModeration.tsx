@@ -44,6 +44,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { debounce } from "lodash-es";
 import { toast } from "sonner";
+import { useDialog } from "@/hooks/useDialog";
 
 type Comment = Doc<"comments"> & {
   authorName?: string;
@@ -64,6 +65,7 @@ type StatusFilter =
 
 export function ContentModeration() {
   const navigate = useNavigate();
+  const { showMessage, showConfirm, DialogComponents } = useDialog();
   const [activeItemType, setActiveItemType] = useState<
     "submissions" | "comments"
   >("submissions");
@@ -368,8 +370,15 @@ export function ContentModeration() {
           toast.success("Story unarchived");
           break;
         case "delete":
-          if (window.confirm("Delete story? This cannot be undone."))
-            deleteStory({ storyId });
+          showConfirm(
+            "Delete Story",
+            "Delete story? This cannot be undone.",
+            () => deleteStory({ storyId }),
+            {
+              confirmButtonText: "Delete",
+              confirmButtonVariant: "destructive",
+            }
+          );
           break;
         case "togglePin":
           togglePin({ storyId });
@@ -478,23 +487,25 @@ export function ContentModeration() {
     groupId: Id<"judgingGroups">,
     groupName: string,
   ) => {
-    if (
-      !window.confirm(
-        `Remove this submission from "${groupName}"? This will also delete all associated judge scores.`,
-      )
-    ) {
-      return;
-    }
-
-    try {
-      await removeSubmissionFromJudgingGroup({
-        groupId,
-        storyId,
-      });
-      console.log(`Successfully removed submission from ${groupName}`);
-    } catch (error) {
-      console.error("Failed to remove from judging group:", error);
-    }
+    showConfirm(
+      "Remove Submission",
+      `Remove this submission from "${groupName}"? This will also delete all associated judge scores.`,
+      async () => {
+        try {
+          await removeSubmissionFromJudgingGroup({
+            groupId,
+            storyId,
+          });
+          console.log(`Successfully removed submission from ${groupName}`);
+        } catch (error) {
+          console.error("Failed to remove from judging group:", error);
+        }
+      },
+      {
+        confirmButtonText: "Remove",
+        confirmButtonVariant: "destructive",
+      }
+    );
   };
 
   // Handler for edit story - show inline edit form
@@ -770,25 +781,27 @@ export function ContentModeration() {
   const handleBulkDelete = async () => {
     if (selectedStoryIds.size === 0) return;
 
-    if (
-      !window.confirm(
-        `Delete ${selectedStoryIds.size} submissions? This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
-
-    try {
-      const deletePromises = Array.from(selectedStoryIds).map((storyId) =>
-        deleteStory({ storyId }),
-      );
-      await Promise.all(deletePromises);
-      toast.success(`Deleted ${selectedStoryIds.size} submissions`);
-      clearSelections();
-    } catch (error) {
-      console.error("Failed to delete submissions:", error);
-      toast.error("Failed to delete some submissions");
-    }
+    showConfirm(
+      "Bulk Delete Submissions",
+      `Delete ${selectedStoryIds.size} submissions? This cannot be undone.`,
+      async () => {
+        try {
+          const deletePromises = Array.from(selectedStoryIds).map((storyId) =>
+            deleteStory({ storyId }),
+          );
+          await Promise.all(deletePromises);
+          toast.success(`Deleted ${selectedStoryIds.size} submissions`);
+          clearSelections();
+        } catch (error) {
+          console.error("Failed to delete submissions:", error);
+          toast.error("Failed to delete some submissions");
+        }
+      },
+      {
+        confirmButtonText: "Delete",
+        confirmButtonVariant: "destructive",
+      }
+    );
   };
 
   const handleBulkAddTag = async () => {
@@ -1421,11 +1434,11 @@ export function ContentModeration() {
                           const validFiles: File[] = [];
                           for (const file of files) {
                             if (file.size > 5 * 1024 * 1024) {
-                              alert(`File ${file.name} exceeds 5MB limit.`);
+                              showMessage("File Too Large", `File ${file.name} exceeds 5MB limit.`, "error");
                               continue;
                             }
                             if (!file.type.startsWith("image/")) {
-                              alert(`File ${file.name} is not an image.`);
+                              showMessage("Invalid File Type", `File ${file.name} is not an image.`, "error");
                               continue;
                             }
                             validFiles.push(file);
@@ -1437,7 +1450,7 @@ export function ContentModeration() {
                             (item.additionalImageUrls?.length || 0) +
                             validFiles.length;
                           if (totalImages > 4) {
-                            alert("Maximum of 4 additional images allowed.");
+                            showMessage("Too Many Images", "Maximum of 4 additional images allowed.", "warning");
                             return;
                           }
 
@@ -1474,7 +1487,7 @@ export function ContentModeration() {
                               additionalImageIds: allImageIds,
                             }));
                           } catch (error) {
-                            alert(`Failed to upload images: ${error}`);
+                            showMessage("Upload Failed", `Failed to upload images: ${error}`, "error");
                           }
                         }}
                         className="file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
@@ -1901,9 +1914,11 @@ export function ContentModeration() {
     activeItemType === "submissions" ? loadMoreStories : loadMoreComments;
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200">
-        <h2 className="text-xl font-medium text-[#525252] mb-6">
+    <>
+      <DialogComponents />
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200">
+          <h2 className="text-xl font-medium text-[#525252] mb-6">
           Content Moderation
         </h2>
 
@@ -2487,6 +2502,7 @@ export function ContentModeration() {
         </div>
       )}
     </div>
+    </>
   );
 }
 

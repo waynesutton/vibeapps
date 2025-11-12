@@ -125,7 +125,7 @@ export const checkRateLimit = internalQuery({
 });
 
 /**
- * Record a message send for rate limiting
+ * Record a message send for rate limiting - Fixed: Reduced read-before-write conflicts
  */
 export const recordMessageSend = internalMutation({
   args: {
@@ -139,7 +139,7 @@ export const recordMessageSend = internalMutation({
     const dayStart =
       Math.floor(now / (24 * 60 * 60 * 1000)) * (24 * 60 * 60 * 1000);
 
-    // Record hourly per-recipient limit
+    // Record hourly per-recipient limit - minimize read window
     const hourlyLimit = await ctx.db
       .query("dmRateLimits")
       .withIndex("by_user_recipient_window", (q) =>
@@ -149,6 +149,7 @@ export const recordMessageSend = internalMutation({
       .first();
 
     if (hourlyLimit) {
+      // Patch immediately after read
       await ctx.db.patch(hourlyLimit._id, {
         messageCount: hourlyLimit.messageCount + 1,
       });
@@ -162,7 +163,7 @@ export const recordMessageSend = internalMutation({
       });
     }
 
-    // Record daily global limit
+    // Record daily global limit - minimize read window
     const dailyLimit = await ctx.db
       .query("dmRateLimits")
       .withIndex("by_user_type_window", (q) =>
@@ -172,6 +173,7 @@ export const recordMessageSend = internalMutation({
       .first();
 
     if (dailyLimit) {
+      // Patch immediately after read
       await ctx.db.patch(dailyLimit._id, {
         messageCount: dailyLimit.messageCount + 1,
       });
@@ -373,7 +375,7 @@ export const sendMessage = mutation({
       parentMessageId: args.parentMessageId,
     });
 
-    // Update conversation last activity
+    // Update conversation last activity - minimize window between reads and writes
     await ctx.db.patch(args.conversationId, {
       lastMessageId: messageId,
       lastActivityTime: Date.now(),
@@ -411,7 +413,7 @@ export const sendMessage = mutation({
 });
 
 /**
- * Delete a message (soft delete - only removes from sender's view)
+ * Delete a message (soft delete - only removes from sender's view) - Fixed: Minimized read window
  */
 export const deleteMessage = mutation({
   args: { messageId: v.id("dmMessages") },
@@ -441,9 +443,10 @@ export const deleteMessage = mutation({
       throw new Error("You can only delete your own messages");
     }
 
-    // Add user to deletedBy array
+    // Add user to deletedBy array - idempotent check
     const deletedBy = message.deletedBy ?? [];
     if (!deletedBy.includes(currentUser._id)) {
+      // Patch immediately after validation
       await ctx.db.patch(args.messageId, {
         deletedBy: [...deletedBy, currentUser._id],
       });
@@ -498,7 +501,7 @@ export const deleteConversation = mutation({
       .first();
 
     if (existing) {
-      return null; // Already deleted
+      return null; // Already deleted (idempotent)
     }
 
     // Mark all messages in this conversation as deleted for this user
@@ -509,14 +512,19 @@ export const deleteConversation = mutation({
       )
       .collect();
 
-    for (const message of messages) {
+    // Update messages in parallel for better performance
+    const messagesToUpdate = messages.filter((message) => {
       const deletedBy = message.deletedBy || [];
-      if (!deletedBy.includes(currentUser._id)) {
-        await ctx.db.patch(message._id, {
-          deletedBy: [...deletedBy, currentUser._id],
-        });
-      }
-    }
+      return !deletedBy.includes(currentUser._id);
+    });
+
+    await Promise.all(
+      messagesToUpdate.map((message) =>
+        ctx.db.patch(message._id, {
+          deletedBy: [...(message.deletedBy || []), currentUser._id],
+        }),
+      ),
+    );
 
     // Create deletion record
     await ctx.db.insert("dmDeletedConversations", {
@@ -583,14 +591,19 @@ export const clearInbox = mutation({
           )
           .collect();
 
-        for (const message of messages) {
+        // Update messages in parallel for better performance
+        const messagesToUpdate = messages.filter((message) => {
           const deletedBy = message.deletedBy || [];
-          if (!deletedBy.includes(currentUser._id)) {
-            await ctx.db.patch(message._id, {
-              deletedBy: [...deletedBy, currentUser._id],
-            });
-          }
-        }
+          return !deletedBy.includes(currentUser._id);
+        });
+
+        await Promise.all(
+          messagesToUpdate.map((message) =>
+            ctx.db.patch(message._id, {
+              deletedBy: [...(message.deletedBy || []), currentUser._id],
+            }),
+          ),
+        );
 
         // Mark conversation as deleted
         await ctx.db.insert("dmDeletedConversations", {

@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { useDialog } from "../hooks/useDialog";
 
 // Placeholder for loading and error states
 const Loading = () => <div className="text-center p-8"> </div>;
@@ -135,6 +136,7 @@ export default function UserProfilePage() {
   const { user: authUser, isLoaded: isClerkLoaded } = useUser();
   const { signOut } = useClerk();
   const navigate = useNavigate();
+  const { showMessage, DialogComponents } = useDialog();
 
   const submissionsSectionRef = useRef<HTMLElement>(null);
   const tabContentAreaRef = useRef<HTMLDivElement>(null);
@@ -637,10 +639,10 @@ export default function UserProfilePage() {
     try {
       const result = await toggleInboxMutation({});
       const newState = result.inboxEnabled ? "enabled" : "disabled";
-      alert(`Inbox ${newState}`);
+      showMessage("Inbox Updated", `Inbox ${newState}`, "success");
     } catch (error: any) {
       console.error("Inbox toggle failed:", error);
-      alert(error.message || "Failed to toggle inbox");
+      showMessage("Error", error.message || "Failed to toggle inbox", "error");
     } finally {
       setIsTogglingInbox(false);
     }
@@ -658,7 +660,7 @@ export default function UserProfilePage() {
       navigate(`/inbox?conversation=${conversationId}`);
     } catch (error: any) {
       console.error("Failed to create conversation:", error);
-      alert(error.message || "Failed to start conversation");
+      showMessage("Error", error.message || "Failed to start conversation", "error");
     } finally {
       setIsSendingMessage(false);
     }
@@ -915,7 +917,7 @@ export default function UserProfilePage() {
         reportedUserId: loadedProfileUser._id,
         reason: reportUserReason,
       });
-      alert("User reported successfully. An admin will review it.");
+      showMessage("Report Submitted", "User reported successfully. An admin will review it.", "success");
       setIsReportUserModalOpen(false);
       setReportUserReason("");
     } catch (error: any) {
@@ -947,9 +949,11 @@ export default function UserProfilePage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 from-slate-50 to-gray-100 min-h-screen">
-      <header
-        className="mb-4 p-6 bg-[#ffffff] rounded-lg border border-gray-200"
+    <>
+      <DialogComponents />
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 from-slate-50 to-gray-100 min-h-screen">
+        <header
+          className="mb-4 p-6 bg-[#ffffff] rounded-lg border border-gray-200"
         style={{ fontFamily: "Inter, sans-serif" }}
       >
         <div className="flex flex-col sm:flex-row items-start sm:items-start">
@@ -2202,5 +2206,6 @@ export default function UserProfilePage() {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 }

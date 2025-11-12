@@ -146,15 +146,6 @@ export const registerJudge = mutation({
       throw new Error("Judging for this group is not currently active");
     }
 
-    // Check if judging period is valid
-    if (group.startDate && now < group.startDate) {
-      throw new Error("Judging has not started yet");
-    }
-
-    if (group.endDate && now > group.endDate) {
-      throw new Error("Judging period has ended");
-    }
-
     // Check if user is authenticated
     const identity = await ctx.auth.getUserIdentity();
     let userId: Id<"users"> | undefined = undefined;
@@ -265,8 +256,6 @@ export const getJudgeSession = query({
         slug: v.string(),
         description: v.optional(v.string()),
         isActive: v.boolean(),
-        startDate: v.optional(v.number()),
-        endDate: v.optional(v.number()),
       }),
     }),
   ),
@@ -298,8 +287,6 @@ export const getJudgeSession = query({
         slug: group.slug,
         description: group.description,
         isActive: group.isActive,
-        startDate: group.startDate,
-        endDate: group.endDate,
       },
     };
   },
@@ -509,16 +496,6 @@ export const validateSession = query({
       return false;
     }
 
-    // Check if judging period is valid
-    const now = Date.now();
-    if (group.startDate && now < group.startDate) {
-      return false;
-    }
-
-    if (group.endDate && now > group.endDate) {
-      return false;
-    }
-
     return true;
   },
 });
@@ -551,15 +528,6 @@ export const isSessionValid = query({
     // Check if group is still active
     const group = await ctx.db.get(judge.groupId);
     if (!group || !group.isActive) {
-      return false;
-    }
-
-    // Check if judging period is valid
-    if (group.startDate && now < group.startDate) {
-      return false;
-    }
-
-    if (group.endDate && now > group.endDate) {
       return false;
     }
 

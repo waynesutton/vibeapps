@@ -17,6 +17,7 @@ import { api } from "../../convex/_generated/api";
 import { useAuth } from "@clerk/clerk-react";
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
 import { ProfileHoverCard } from "./ui/ProfileHoverCard";
+import { useDialog } from "../hooks/useDialog";
 
 interface StoryListProps {
   stories: Story[];
@@ -29,9 +30,11 @@ interface StoryListProps {
 const BookmarkButton = ({
   storyId,
   onAuthRequired,
+  showMessage,
 }: {
   storyId: Id<"stories">;
   onAuthRequired: () => void;
+  showMessage: (title: string, message: string, variant: "info" | "success" | "warning" | "error") => void;
 }) => {
   const { isSignedIn } = useAuth();
   const isBookmarked = useQuery(
@@ -51,7 +54,7 @@ const BookmarkButton = ({
       await addOrRemoveBookmarkMutation({ storyId });
     } catch (error) {
       console.error("Failed to update bookmark:", error);
-      alert("Failed to update bookmark. Please try again.");
+      showMessage("Bookmark Error", "Failed to update bookmark. Please try again.", "error");
     }
   };
 
@@ -90,6 +93,7 @@ export function StoryList({
 }: StoryListProps) {
   const { isSignedIn, isLoaded: isClerkLoaded } = useAuth();
   const voteStory = useMutation(api.stories.voteStory);
+  const { showMessage, DialogComponents } = useDialog();
 
   // Auth required dialog state
   const [showAuthDialog, setShowAuthDialog] = React.useState(false);
@@ -127,9 +131,11 @@ export function StoryList({
     viewMode === "vibe" ? "flex-grow" : "w-full";
 
   return (
-    <div
-      className={`flex ${viewMode === "vibe" ? "flex-row gap-6" : "flex-col"}`}
-    >
+    <>
+      <DialogComponents />
+      <div
+        className={`flex ${viewMode === "vibe" ? "flex-row gap-6" : "flex-col"}`}
+      >
       <div className={mainContentContainerClass}>
         <div className="space-y-8">
           <div className={containerClass}>
@@ -323,6 +329,7 @@ export function StoryList({
                     </Link>
                     <BookmarkButton
                       storyId={story._id}
+                      showMessage={showMessage}
                       onAuthRequired={() => {
                         setAuthDialogAction("bookmark");
                         setShowAuthDialog(true);
@@ -380,12 +387,13 @@ export function StoryList({
         </aside>
       )} */}
 
-      {/* Auth Required Dialog */}
-      <AuthRequiredDialog
-        isOpen={showAuthDialog}
-        onClose={() => setShowAuthDialog(false)}
-        action={authDialogAction}
-      />
-    </div>
+        {/* Auth Required Dialog */}
+        <AuthRequiredDialog
+          isOpen={showAuthDialog}
+          onClose={() => setShowAuthDialog(false)}
+          action={authDialogAction}
+        />
+      </div>
+    </>
   );
 }

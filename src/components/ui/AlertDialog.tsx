@@ -46,7 +46,7 @@ const AlertDialog: React.FC<AlertDialogProps> = ({
       aria-labelledby="alert-dialog-title"
       aria-describedby="alert-dialog-description"
       role="alertdialog">
-      <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md m-4 transform transition-all duration-300 ease-in-out scale-100">
+      <div className="bg-[#F2F4F7] rounded-lg shadow-xl p-6 w-full max-w-md m-4 transform transition-all duration-300 ease-in-out scale-100">
         <h2 id="alert-dialog-title" className="text-lg font-semibold text-gray-900 mb-2">
           {title}
         </h2>

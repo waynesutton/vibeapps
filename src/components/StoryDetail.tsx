@@ -37,6 +37,7 @@ import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
 import { ImageGallery } from "./ImageGallery";
 import { ProfileHoverCard } from "./ui/ProfileHoverCard";
 import { Markdown } from "./Markdown";
+import { useDialog } from "../hooks/useDialog";
 
 // Removed MOCK_COMMENTS
 
@@ -119,6 +120,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
   const navigate = useNavigate(); // Initialize navigate
   const { isSignedIn, isLoaded: isClerkLoaded } = useAuth(); // Get auth state
   const { user } = useUser(); // Get current user data
+  const { showMessage, DialogComponents } = useDialog();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Immediately update meta tags on component load (before useEffect)
@@ -413,7 +415,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
     }
     if (hasRated) {
       // User has already rated, prevent re-rating (or allow update if implemented)
-      alert("You have already rated this app.");
+      showMessage("Already Rated", "You have already rated this app.", "info");
       return;
     }
     rateStory({ storyId: story._id, rating: value })
@@ -424,7 +426,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
       })
       .catch((error) => {
         console.error("Error rating:", error);
-        alert(`Error rating: ${error.data?.message || error.message}`);
+        showMessage("Rating Error", `Error rating: ${error.data?.message || error.message}`, "error");
       });
   };
 
@@ -470,7 +472,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
     setReportModalError(null);
     try {
       await createReportMutation({ storyId: story._id, reason: reportReason });
-      alert("Story reported successfully. An admin will review it.");
+      showMessage("Report Submitted", "Story reported successfully. An admin will review it.", "success");
       setIsReportModalOpen(false);
       setReportReason("");
     } catch (error: any) {
@@ -904,9 +906,11 @@ export function StoryDetail({ story }: StoryDetailProps) {
   // const reportUrl = `https://github.com/waynesutton/vibeapps/issues/new?q=is%3Aissue+state%3Aopen+Flagged&labels=flagged&title=Flagged+Content%3A+${encodeURIComponent(story.title)}&body=Reporting+issue+for+story%3A+%0A-+Title%3A+${encodeURIComponent(story.title)}%0A-+Slug%3A+${storySlug}%0A-+URL%3A+${encodeURIComponent(story.url)}%0A-+Reason%3A+`;
 
   return (
-    <div className="max-w-7xl mx-auto pb-10">
-      <div className="flex gap-8">
-        {/* Main Content */}
+    <>
+      <DialogComponents />
+      <div className="max-w-7xl mx-auto pb-10">
+        <div className="flex gap-8">
+          {/* Main Content */}
         <div className="flex-1 min-w-0">
           <article className="bg-white rounded-lg p-4 sm:p-6 border border-[#D8E1EC]">
             <div className="flex gap-4">
@@ -2979,5 +2983,6 @@ export function StoryDetail({ story }: StoryDetailProps) {
         action={authDialogAction}
       />
     </div>
+    </>
   );
 }

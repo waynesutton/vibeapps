@@ -43,6 +43,7 @@ import JudgingGroupPage from "./pages/JudgingGroupPage";
 import JudgingInterfacePage from "./pages/JudgingInterfacePage";
 import PublicJudgingResultsPage from "./pages/PublicJudgingResultsPage";
 import JudgeTrackingPage from "./pages/JudgeTrackingPage";
+import { JudgingGroupSubmitPage } from "./pages/JudgingGroupSubmitPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { LeaderboardPage } from "./pages/LeaderboardPage";
 import InboxPage from "./pages/InboxPage";
@@ -173,6 +174,10 @@ function App() {
           <Route path="/inbox" element={<InboxPage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="/judging/:slug" element={<JudgingGroupPage />} />
+          <Route
+            path="/judging/:slug/submit"
+            element={<JudgingGroupSubmitPage />}
+          />
           <Route
             path="/judging/:slug/judge"
             element={<JudgingInterfacePage />}

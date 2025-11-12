@@ -196,7 +196,7 @@ export const create = mutation({
   },
 });
 
-// Mutation to update a tag - Requires Auth
+// Mutation to update a tag - Fixed: Validation reads done before write
 export const update = mutation({
   args: {
     tagId: v.id("tags"),
@@ -218,6 +218,8 @@ export const update = mutation({
     await requireAdminRole(ctx);
     const { tagId, iconStorageId, clearIcon, ...rest } = args;
     const updateData: Partial<Omit<Doc<"tags">, "_id" | "_creationTime">> = {};
+    
+    // Perform all validation reads first
     if (rest.name !== undefined) {
       const newName = rest.name.trim();
       if (newName === "") {
@@ -252,6 +254,8 @@ export const update = mutation({
       updateData.name = newName;
       updateData.slug = newSlug;
     }
+    
+    // Build update payload
     if (rest.showInHeader !== undefined)
       updateData.showInHeader = rest.showInHeader;
     if (rest.isHidden !== undefined) updateData.isHidden = rest.isHidden;
@@ -287,6 +291,7 @@ export const update = mutation({
       updateData.createdByAdmin = rest.createdByAdmin;
     }
 
+    // All validation complete - perform single write
     if (Object.keys(updateData).length > 0) {
       await ctx.db.patch(tagId, updateData);
     }
@@ -308,8 +313,7 @@ export const deleteTag = mutation({
 
 /**
  * Takes an array of tag names, finds existing ones, creates new ones,
- * and returns an array of corresponding tag IDs.
- * This should be called internally, likely from the story submission mutation.
+ * and returns an array of corresponding tag IDs - Fixed: Reduced sequential operations
  */
 export const ensureTags = internalMutation({
   args: {
@@ -317,76 +321,84 @@ export const ensureTags = internalMutation({
   },
   handler: async (ctx, args): Promise<Id<"tags">[]> => {
     const tagIds: Id<"tags">[] = [];
-    const namesToCreate: string[] = [];
+    const trimmedNames = args.tagNames
+      .map((name) => name.trim())
+      .filter((name) => name !== "");
+    
+    if (trimmedNames.length === 0) return [];
 
-    for (const name of args.tagNames) {
-      const trimmedName = name.trim();
-      if (!trimmedName) continue; // Skip empty names
-
+    // Check all tags at once to reduce sequential operations
+    const uniqueNames = Array.from(new Set(trimmedNames));
+    const existingTagsMap = new Map<string, Id<"tags">>();
+    
+    // Read all existing tags in one pass
+    for (const name of uniqueNames) {
       const existing = await ctx.db
         .query("tags")
-        .withIndex("by_name", (q) => q.eq("name", trimmedName))
+        .withIndex("by_name", (q) => q.eq("name", name))
         .first();
-
       if (existing) {
-        tagIds.push(existing._id);
-      } else {
-        // Collect names to create in bulk later if needed, or create one by one
-        // For simplicity here, we create immediately if not found.
-        // Avoid creating duplicates if the same new name appears multiple times in input.
-        if (!namesToCreate.includes(trimmedName)) {
-          namesToCreate.push(trimmedName);
-        }
+        existingTagsMap.set(name, existing._id);
       }
     }
 
-    // Create any new tags found
+    // Collect names that need to be created
+    const namesToCreate = uniqueNames.filter(
+      (name) => !existingTagsMap.has(name)
+    );
+
+    // Prepare all new tags with slugs
+    const tagsToInsert: Array<{
+      name: string;
+      slug: string;
+    }> = [];
+
     for (const nameToCreate of namesToCreate) {
-      // Check again *just before* inserting in case of race conditions
-      // although less likely in internal mutations called sequentially.
-      const existingCheck = await ctx.db
+      const slug = generateSlug(nameToCreate);
+      if (!slug) {
+        console.error(`Could not generate slug for new tag: ${nameToCreate}`);
+        continue;
+      }
+
+      // Check if generated slug already exists to avoid collision
+      const slugCheck = await ctx.db
         .query("tags")
-        .withIndex("by_name", (q) => q.eq("name", nameToCreate))
+        .withIndex("by_slug", (q) => q.eq("slug", slug))
         .first();
-      if (existingCheck) {
-        tagIds.push(existingCheck._id);
-      } else {
-        const slug = generateSlug(nameToCreate); // Generate slug
-        if (!slug) {
-          // This case should ideally not happen if nameToCreate is valid
-          // but as a fallback, we could skip or use a timestamped slug.
-          // For now, we'll log an error and skip, or throw.
-          console.error(`Could not generate slug for new tag: ${nameToCreate}`);
-          // Or: throw new Error(`Could not generate slug for new tag: ${nameToCreate}`);
-          continue; // Skip this tag if slug generation fails
-        }
 
-        // Check if generated slug already exists to avoid collision
-        const slugCheck = await ctx.db
-          .query("tags")
-          .withIndex("by_slug", (q) => q.eq("slug", slug))
-          .first();
+      if (slugCheck) {
+        console.warn(
+          `Slug collision for new tag "${nameToCreate}" (slug: "${slug}"). Skipping.`,
+        );
+        continue;
+      }
 
-        if (slugCheck) {
-          // Handle slug collision. For now, we'll log and skip, or throw.
-          // A more robust solution might append a short unique hash or number.
-          console.warn(
-            `Slug collision for new tag "${nameToCreate}" (slug: "${slug}"). Skipping.`,
-          );
-          // Or: throw new Error(`Slug collision for tag: ${nameToCreate}`);
-          continue;
-        }
+      tagsToInsert.push({ name: nameToCreate, slug });
+    }
 
-        // New tags default to NOT visible in header and not hidden initially
-        const newTagId = await ctx.db.insert("tags", {
-          name: nameToCreate,
-          slug: slug, // Add slug here
-          showInHeader: false, // Set to false by default
+    // Insert all new tags
+    const newTagIds = await Promise.all(
+      tagsToInsert.map(({ name, slug }) =>
+        ctx.db.insert("tags", {
+          name,
+          slug,
+          showInHeader: false,
           isHidden: false,
-          createdByAdmin: false, // User-created tags
-          // Default colors or leave undefined? Let's leave undefined.
-        });
-        tagIds.push(newTagId);
+          createdByAdmin: false,
+        })
+      )
+    );
+
+    // Build the final tagIds array in the original order
+    for (const name of trimmedNames) {
+      const existingId = existingTagsMap.get(name);
+      if (existingId) {
+        tagIds.push(existingId);
+      } else {
+        const idx = tagsToInsert.findIndex((t) => t.name === name);
+        if (idx !== -1) {
+          tagIds.push(newTagIds[idx]);
+        }
       }
     }
 

@@ -141,6 +141,20 @@ function generateStoryHTML(story: {
   const siteName = "Vibe Apps";
   const twitterHandle = "@waynesutton";
 
+  // Escape HTML characters in dynamic content to prevent XSS
+  const escapeHtml = (text: string) => {
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  };
+
+  const safeTitle = escapeHtml(story.title);
+  const safeDescription = escapeHtml(story.description);
+  const safeAuthorName = story.authorName ? escapeHtml(story.authorName) : "";
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -148,13 +162,13 @@ function generateStoryHTML(story: {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <!-- Basic SEO -->
-  <title>${story.title} | ${siteName}</title>
-  <meta name="description" content="${story.description}">
+  <title>${safeTitle} | ${siteName}</title>
+  <meta name="description" content="${safeDescription}">
   <link rel="canonical" href="${canonicalUrl}">
   
   <!-- Open Graph -->
-  <meta property="og:title" content="${story.title} | ${siteName}">
-  <meta property="og:description" content="${story.description}">
+  <meta property="og:title" content="${safeTitle} | ${siteName}">
+  <meta property="og:description" content="${safeDescription}">
   <meta property="og:image" content="${imageUrl}">
   <meta property="og:url" content="${canonicalUrl}">
   <meta property="og:type" content="website">
@@ -164,8 +178,8 @@ function generateStoryHTML(story: {
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="${twitterHandle}">
   <meta name="twitter:creator" content="${twitterHandle}">
-  <meta name="twitter:title" content="${story.title} | ${siteName}">
-  <meta name="twitter:description" content="${story.description}">
+  <meta name="twitter:title" content="${safeTitle} | ${siteName}">
+  <meta name="twitter:description" content="${safeDescription}">
   <meta name="twitter:image" content="${imageUrl}">
   
   <!-- Redirect to actual app after a brief delay for crawlers -->
@@ -177,9 +191,9 @@ function generateStoryHTML(story: {
 </head>
 <body>
   <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px;">
-    <h1>${story.title}</h1>
-    <p>${story.description}</p>
-    ${story.authorName ? `<p>By ${story.authorName}</p>` : ""}
+    <h1>${safeTitle}</h1>
+    <p>${safeDescription}</p>
+    ${safeAuthorName ? `<p>By ${safeAuthorName}</p>` : ""}
     <p><a href="${story.url}" target="_blank" rel="noopener noreferrer">Visit App →</a></p>
     <p><small>Redirecting to full page...</small></p>
   </div>
@@ -258,13 +272,14 @@ path = "/s/*"
 function = "botMeta"
 ```
 
-- Edge function logic (summary):
-  - Detect crawler UAs: facebookexternalhit, Twitterbot, LinkedInBot, Slackbot, Discordbot, TelegramBot, WhatsApp, Pinterest, opengraph/opengraphbot
-  - For bots, rewrite to PROD Convex meta endpoint:
-    - https://whimsical-dalmatian-205.convex.site/meta/s?slug={slug}
+- Edge function implementation (`netlify/edge-functions/botMeta.ts`):
+  - Detects crawler User-Agents: `facebookexternalhit`, `Twitterbot`, `LinkedInBot`, `Slackbot`, `Discordbot`, `TelegramBot`, `WhatsApp`, `Pinterest`, `opengraph`, `opengraphbot`, `bot`, `crawler`, `embedly`, `vkshare`, `quora link preview`
+  - For bots: Rewrites request to PROD Convex meta endpoint:
+    - `https://whimsical-dalmatian-205.convex.site/meta/s?slug={slug}`
     - Fallback to DEV Convex if PROD returns 404:
-      - https://acoustic-goldfinch-461.convex.site/meta/s?slug={slug}
-  - For browsers, `context.next()` → SPA serves `/s/{slug}`
+      - `https://acoustic-goldfinch-461.convex.site/meta/s?slug={slug}`
+  - For browsers: Calls `context.next()` → SPA serves `/s/{slug}` normally
+  - On errors: Falls back to SPA to ensure users always get content
 
 - Homepage meta tags (index.html): Use absolute URLs for images:
   - `og:image` and `twitter:image` set to `https://vibeapps.dev/vibe-apps-open-graphi-image.png`
@@ -514,9 +529,25 @@ Success will be measured through improved social media engagement, proper Open G
 
 ### How It Works:
 
-- **For Browsers**: `/s/{slug}` loads React app with dynamic meta tag updates
-- **For Social Crawlers**: JavaScript meta tag updates provide story-specific data
-- **Meta Endpoint**: Available at `/meta/s/{slug}` for testing and validation
+The implementation uses a three-layer approach:
+
+1. **Edge Function (Bot Detection)**: `netlify/edge-functions/botMeta.ts` intercepts requests to `/s/*`
+   - Detects social media crawlers via User-Agent strings
+   - For bots: Rewrites request to Convex meta endpoint (`/meta/s?slug=...`)
+   - For browsers: Passes through to SPA (`context.next()`)
+
+2. **Convex HTTP Route**: `/meta/s` endpoint generates server-rendered HTML
+   - Uses `getStoryMetadata` internal query to fetch story data
+   - Generates complete HTML with Open Graph and Twitter Card meta tags
+   - Includes HTML escaping for security (prevents XSS)
+   - Returns cached HTML response
+
+3. **React SPA**: Continues to work normally for browser users
+   - Client-side meta tag updates via `StoryDetail.tsx` still function
+   - Provides immediate updates during SPA navigation
+   - No changes required to existing React components
+
+**Meta Endpoint**: Available at `/meta/s/{slug}` for direct testing and validation
 
 ### Test URLs (Examples):
 
@@ -531,3 +562,282 @@ Success will be measured through improved social media engagement, proper Open G
 - **LinkedIn**: https://www.linkedin.com/post-inspector/
 
 **Status**: ✅ Ready for production. Social media sharing now works properly with story-specific metadata!
+
+---
+
+## Tips for Other React SPAs with Convex
+
+This implementation pattern works well for any React SPA using Convex that needs dynamic Open Graph metadata. Here are key learnings and tips:
+
+### Architecture Pattern
+
+The three-layer approach (Edge Function → Convex HTTP Action → React SPA) provides:
+
+1. **Zero impact on user experience**: Browsers never see the meta endpoint
+2. **Proper crawler support**: Social bots get server-rendered HTML
+3. **Type safety**: Convex validators ensure correct data structures
+4. **Performance**: Edge functions run at the edge, Convex queries are optimized
+
+### Key Implementation Details
+
+#### 1. Edge Function Bot Detection
+
+Always detect bots via User-Agent strings. Common crawlers to handle:
+
+```typescript
+const bots = [
+  "facebookexternalhit",  // Facebook
+  "twitterbot",           // Twitter/X
+  "linkedinbot",          // LinkedIn
+  "slackbot",             // Slack
+  "discordbot",           // Discord
+  "telegrambot",          // Telegram
+  "whatsapp",             // WhatsApp
+  "pinterest",            // Pinterest
+  "opengraph",            // Generic Open Graph crawlers
+  "opengraphbot",
+  "bot ",                 // Generic bot pattern
+  "crawler",
+  "embedly",              // Embedly
+  "vkshare",              // VKontakte
+  "quora link preview",   // Quora
+];
+```
+
+**Important**: Always fall back to SPA on errors. Never break user experience.
+
+#### 2. Convex HTTP Actions
+
+Convex HTTP routes use exact path matching, not parameterized routes:
+
+- ✅ Good: `/meta/s` with slug from query param or path parsing
+- ❌ Bad: `/meta/s/:slug` (not supported)
+
+Always parse parameters from the URL manually:
+
+```typescript
+const url = new URL(request.url);
+let slug = url.searchParams.get("slug");
+if (!slug) {
+  const parts = url.pathname.split("/");
+  slug = parts[parts.length - 1] || "";
+}
+```
+
+#### 3. HTML Escaping
+
+**Critical**: Always escape user-generated content in HTML templates to prevent XSS:
+
+```typescript
+const escapeHtml = (text: string) => {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+};
+```
+
+Apply escaping to all dynamic content: titles, descriptions, author names, etc.
+
+#### 4. Image URLs
+
+Use absolute URLs for Open Graph images. Convex storage URLs are already absolute, but always provide a fallback:
+
+```typescript
+const imageUrl = story.screenshotUrl || 
+  "https://yourdomain.com/default-og-image.png";
+```
+
+**Image dimensions**: Open Graph images work best at 1200x630px. Twitter Cards support up to 1200x675px.
+
+#### 5. Caching Strategy
+
+Set appropriate cache headers for meta endpoints:
+
+```typescript
+headers: {
+  "Content-Type": "text/html; charset=utf-8",
+  "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=600",
+}
+```
+
+- `max-age=60`: Browser cache for 60 seconds
+- `s-maxage=300`: CDN cache for 5 minutes
+- `stale-while-revalidate=600`: Serve stale content while revalidating for up to 10 minutes
+
+This balances freshness with performance.
+
+#### 6. Internal Queries for Metadata
+
+Create lightweight internal queries that only fetch what's needed:
+
+```typescript
+export const getStoryMetadata = internalQuery({
+  args: { slug: v.string() },
+  returns: v.union(
+    v.object({
+      title: v.string(),
+      description: v.string(),
+      screenshotUrl: v.union(v.string(), v.null()),
+      // ... only essential fields
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    // Use indexed queries for performance
+    const story = await ctx.db
+      .query("stories")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    
+    // Resolve storage URLs
+    const screenshotUrl = story.screenshotId
+      ? await ctx.storage.getUrl(story.screenshotId)
+      : null;
+    
+    return { /* minimal data */ };
+  },
+});
+```
+
+**Don't fetch**: Comments, ratings, full user objects, or other heavy data.
+
+#### 7. Deployment Configuration
+
+For Netlify, configure edge functions in `netlify.toml`:
+
+```toml
+[[edge_functions]]
+path = "/s/*"
+function = "botMeta"
+```
+
+Keep SPA fallback in `_redirects`:
+
+```
+/* /index.html 200
+```
+
+Edge functions run before redirects, so bot detection happens first.
+
+#### 8. Testing Strategy
+
+Test with real crawler User-Agents:
+
+```bash
+# Test Facebook crawler
+curl -H "User-Agent: facebookexternalhit/1.1" \
+  https://yourdomain.com/s/your-slug
+
+# Test Twitter crawler
+curl -H "User-Agent: Twitterbot/1.0" \
+  https://yourdomain.com/s/your-slug
+```
+
+Use validation tools:
+- Facebook: https://developers.facebook.com/tools/debug/
+- Twitter: https://cards-dev.twitter.com/validator
+- LinkedIn: https://www.linkedin.com/post-inspector/
+- Generic: https://www.opengraph.xyz/
+
+#### 9. Error Handling
+
+Always handle errors gracefully:
+
+```typescript
+try {
+  const story = await ctx.runQuery(internal.stories.getStoryMetadata, { slug });
+  if (!story) {
+    return new Response("Story not found", { status: 404 });
+  }
+  return new Response(generateStoryHTML(story), { /* headers */ });
+} catch (error) {
+  console.error("Error generating story metadata:", error);
+  return new Response("Internal server error", { status: 500 });
+}
+```
+
+In edge functions, fall back to SPA:
+
+```typescript
+try {
+  // ... bot detection and meta fetch
+} catch (e) {
+  return context.next(); // Always fall back to SPA
+}
+```
+
+#### 10. Type Safety
+
+Use Convex validators throughout:
+
+```typescript
+// ✅ Good: Type-safe with validators
+export const getStoryMetadata = internalQuery({
+  args: { slug: v.string() },
+  returns: v.union(
+    v.object({
+      title: v.string(),
+      description: v.string(),
+      // ...
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    // TypeScript knows args.slug is string
+    // Return type is validated
+  },
+});
+```
+
+### Common Pitfalls to Avoid
+
+1. **Don't use client-side meta tag updates for crawlers**: They don't execute JavaScript
+2. **Don't skip HTML escaping**: User content can contain XSS vectors
+3. **Don't fetch heavy data**: Only get what's needed for meta tags
+4. **Don't break user experience**: Always fall back to SPA on errors
+5. **Don't use relative image URLs**: Always use absolute URLs for Open Graph
+6. **Don't forget cache headers**: Set appropriate caching for performance
+7. **Don't hardcode deployment URLs**: Use environment variables or config
+
+### Alternative Approaches
+
+If you're not using Netlify, you can:
+
+- **Vercel**: Use Edge Middleware instead of Edge Functions
+- **Cloudflare Pages**: Use Cloudflare Workers for bot detection
+- **AWS Amplify**: Use Lambda@Edge functions
+- **Direct Convex**: Skip edge function and proxy all `/s/*` requests (less efficient)
+
+The edge function approach is preferred because it:
+- Keeps user experience fast (no extra hop for browsers)
+- Reduces Convex function calls (only bots hit Convex)
+- Provides better caching (edge caching)
+
+### Performance Considerations
+
+- Edge functions run at the edge (low latency)
+- Convex queries are optimized with indexes
+- HTML generation is fast (simple string templating)
+- Caching reduces load on Convex
+
+Expected performance:
+- Edge function: < 10ms
+- Convex query: 50-200ms (depending on data)
+- HTML generation: < 5ms
+- Total: < 250ms for bot requests
+
+### Maintenance
+
+Keep the bot User-Agent list updated as new crawlers emerge. Monitor:
+- Social media platform updates
+- New sharing platforms
+- Search engine crawlers (if needed)
+
+Check Convex logs for 404s or errors in meta route requests. Monitor edge function execution times.
+
+---
+
+**Summary**: This pattern provides a production-ready solution for dynamic Open Graph metadata in React SPAs using Convex. The key is separating bot traffic (server-rendered HTML) from browser traffic (SPA) while maintaining type safety and performance.

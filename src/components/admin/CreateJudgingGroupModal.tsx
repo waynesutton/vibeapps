@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { X, Calendar, Lock, Eye, BarChart2 } from "lucide-react";
+import { X, Lock, Eye, BarChart2, ToggleLeft, ToggleRight } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -27,8 +27,6 @@ export function CreateJudgingGroupModal({
     resultsIsPublic: false,
     resultsPassword: "",
     isActive: true,
-    startDate: "",
-    endDate: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -44,8 +42,6 @@ export function CreateJudgingGroupModal({
       resultsIsPublic: false,
       resultsPassword: "",
       isActive: true,
-      startDate: "",
-      endDate: "",
     });
     setError("");
     setIsSubmitting(false);
@@ -81,20 +77,6 @@ export function CreateJudgingGroupModal({
     }
 
     try {
-      const startDate = formData.startDate
-        ? new Date(formData.startDate).getTime()
-        : undefined;
-      const endDate = formData.endDate
-        ? new Date(formData.endDate).getTime()
-        : undefined;
-
-      // Validate date range
-      if (startDate && endDate && startDate >= endDate) {
-        setError("End date must be after start date");
-        setIsSubmitting(false);
-        return;
-      }
-
       await createGroup({
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
@@ -105,8 +87,6 @@ export function CreateJudgingGroupModal({
           ? formData.resultsPassword.trim()
           : undefined,
         isActive: formData.isActive,
-        startDate,
-        endDate,
       });
 
       // Success
@@ -306,68 +286,37 @@ export function CreateJudgingGroupModal({
             )}
           </div>
 
-          {/* Timing Settings */}
+          {/* Status Toggle */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
-              <Calendar className="w-5 h-5" />
-              Timing (Optional)
+            <h3 className="text-lg font-medium text-gray-900">
+              Group Status
             </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="startDate">Start Date</Label>
-                <Input
-                  id="startDate"
-                  type="datetime-local"
-                  value={formData.startDate}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      startDate: e.target.value,
-                    }))
-                  }
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div>
-                <Label htmlFor="endDate">End Date</Label>
-                <Input
-                  id="endDate"
-                  type="datetime-local"
-                  value={formData.endDate}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      endDate: e.target.value,
-                    }))
-                  }
-                  disabled={isSubmitting}
-                />
-              </div>
-            </div>
-            <p className="text-sm text-gray-500">
-              Leave blank to allow unlimited judging time
-            </p>
-          </div>
-
-          {/* Status */}
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="isActive"
-                checked={formData.isActive}
-                onCheckedChange={(checked) =>
-                  setFormData((prev) => ({ ...prev, isActive: !!checked }))
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData((prev) => ({ ...prev, isActive: !prev.isActive }))
                 }
                 disabled={isSubmitting}
-              />
-              <Label htmlFor="isActive">Start Active</Label>
+                className={`flex items-center gap-2 px-4 py-2 rounded-md border transition-colors ${
+                  formData.isActive
+                    ? "bg-green-50 border-green-200 text-green-700"
+                    : "bg-gray-50 border-gray-200 text-gray-600"
+                }`}
+              >
+                {formData.isActive ? (
+                  <ToggleRight className="w-5 h-5" />
+                ) : (
+                  <ToggleLeft className="w-5 h-5" />
+                )}
+                {formData.isActive ? "Active" : "Inactive"}
+              </button>
+              <span className="text-sm text-gray-500">
+                {formData.isActive
+                  ? "Judges can immediately start scoring submissions"
+                  : "Group will be created but judges cannot access it yet"}
+              </span>
             </div>
-            <p className="text-sm text-gray-500 ml-6">
-              {formData.isActive
-                ? "Judges can immediately start scoring submissions"
-                : "Group will be created but judges cannot access it yet"}
-            </p>
           </div>
 
           {/* Actions */}

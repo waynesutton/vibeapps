@@ -15,6 +15,7 @@ import {
   PlayCircle,
   PauseCircle,
   Edit,
+  FileText,
 } from "lucide-react";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -86,35 +87,17 @@ export function Judging() {
   };
 
   const getStatusBadge = (group: any) => {
-    const now = Date.now();
-
-    if (!group.isActive) {
+    if (group.isActive) {
       return (
-        <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
-          Inactive
-        </span>
-      );
-    }
-
-    if (group.startDate && now < group.startDate) {
-      return (
-        <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
-          Upcoming
-        </span>
-      );
-    }
-
-    if (group.endDate && now > group.endDate) {
-      return (
-        <span className="px-2 py-1 text-xs bg-orange-100 text-orange-700 rounded-full">
-          Ended
+        <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
+          Active
         </span>
       );
     }
 
     return (
-      <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
-        Active
+      <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+        Inactive
       </span>
     );
   };
@@ -312,6 +295,21 @@ export function Judging() {
                             Edit Criteria
                           </span>
                         </button>
+
+                        {group.hasCustomSubmissionPage && (
+                          <a
+                            href={`/judging/${group.slug}/submit`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors min-w-[60px]"
+                            title="Open custom submission page"
+                          >
+                            <FileText className="w-3 h-3 mx-auto" />
+                            <span className="text-[10px] leading-tight mt-0.5">
+                              Submit Page
+                            </span>
+                          </a>
+                        )}
 
                         {group.resultsIsPublic ? (
                           <a

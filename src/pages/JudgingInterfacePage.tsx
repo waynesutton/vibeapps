@@ -32,10 +32,12 @@ import { ImageGallery } from "../components/ImageGallery";
 import { renderTextWithMentions } from "../utils/mentions";
 import { MentionTextarea } from "../components/ui/MentionTextarea";
 import { Markdown } from "../components/Markdown";
+import { useDialog } from "../hooks/useDialog";
 
 export default function JudgingInterfacePage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const { showMessage, DialogComponents } = useDialog();
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [currentSubmissionIndex, setCurrentSubmissionIndex] = useState(0);
@@ -191,7 +193,7 @@ export default function JudgingInterfacePage() {
       }));
     } catch (error) {
       console.error("Error submitting score:", error);
-      alert("Failed to save score. Please try again.");
+      showMessage("Error", "Failed to save score. Please try again.", "error");
     }
   };
 
@@ -211,7 +213,7 @@ export default function JudgingInterfacePage() {
       });
     } catch (error) {
       console.error("Error updating status:", error);
-      alert("Failed to update status. Please try again.");
+      showMessage("Error", "Failed to update status. Please try again.", "error");
     }
   };
 
@@ -224,7 +226,11 @@ export default function JudgingInterfacePage() {
     );
 
     if (!allCriteriaScored) {
-      alert("Please score all criteria before marking as completed.");
+      showMessage(
+        "Incomplete Scoring",
+        "Please score all criteria before marking as completed.",
+        "warning"
+      );
       return;
     }
 
@@ -251,7 +257,7 @@ export default function JudgingInterfacePage() {
       setNewNote("");
     } catch (error) {
       console.error("Error adding note:", error);
-      alert("Failed to add note. Please try again.");
+      showMessage("Error", "Failed to add note. Please try again.", "error");
     }
   };
 
@@ -272,7 +278,7 @@ export default function JudgingInterfacePage() {
       setReplyingTo(null);
     } catch (error) {
       console.error("Error adding reply:", error);
-      alert("Failed to add reply. Please try again.");
+      showMessage("Error", "Failed to add reply. Please try again.", "error");
     }
   };
 
@@ -434,8 +440,10 @@ export default function JudgingInterfacePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+    <>
+      <DialogComponents />
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -1528,5 +1536,6 @@ export default function JudgingInterfacePage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

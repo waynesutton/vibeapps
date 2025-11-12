@@ -6,6 +6,7 @@ import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react"; // Assuming U
 // import { api } from "../../convex/_generated/api"; // Mocking data
 import type { Id } from "../../convex/_generated/dataModel"; // For Tag type
 import { UserSyncer } from "../components/UserSyncer"; // UserSyncer is in the header
+import { useDialog } from "../hooks/useDialog";
 
 // Define SortPeriod type locally or import if it's in a shared types file
 type SortPeriod =
@@ -29,6 +30,7 @@ interface MockTag {
 const NavTestPage: React.FC = () => {
   const navigate = useNavigate(); // Included for potential link testing
   const { user: clerkUser, isSignedIn } = useUser();
+  const { showMessage, DialogComponents } = useDialog();
 
   // Mimic state and props from Layout.tsx needed for the header
   const [siteTitle, setSiteTitle] = useState("Test Site Title");
@@ -61,7 +63,7 @@ const NavTestPage: React.FC = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      alert(`Searching for: ${searchQuery.trim()}`);
+      showMessage("Search", `Searching for: ${searchQuery.trim()}`, "info");
       // navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setSearchQuery("");
       setIsSearchExpanded(false);
@@ -90,9 +92,11 @@ const NavTestPage: React.FC = () => {
   }, [showProfileMenu]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100">
-      {/* Copied Header from Layout.tsx */}
-      <header className="pt-5 pb-0 bg-[#F2F4F7] sticky top-0 z-50">
+    <>
+      <DialogComponents />
+      <div className="flex flex-col min-h-screen bg-gray-100">
+        {/* Copied Header from Layout.tsx */}
+        <header className="pt-5 pb-0 bg-[#F2F4F7] sticky top-0 z-50">
         <div className="container mx-auto px-4">
           <div className="flex flex-col gap-y-2 md:flex-row md:justify-between md:items-center">
             <div className="flex w-full justify-between items-center md:contents">
@@ -140,7 +144,7 @@ const NavTestPage: React.FC = () => {
                         </Link>
                         <button
                           onClick={() => {
-                            alert("Signing out...");
+                            showMessage("Sign Out", "Signing out...", "info");
                             setShowProfileMenu(false);
                           }}
                           className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
@@ -268,6 +272,7 @@ const NavTestPage: React.FC = () => {
         <p className="text-sm text-gray-600">Simplified Footer for Test Page</p>
       </footer>
     </div>
+    </>
   );
 };
 

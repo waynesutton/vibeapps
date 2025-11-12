@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, CheckCircle, XCircle, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useDialog } from "../../hooks/useDialog";
 
 type UserReportStatus =
   | "pending"
@@ -25,6 +26,7 @@ export function UserReportManagement() {
   const [statusFilter, setStatusFilter] = useState<UserReportStatus | "all">(
     "pending",
   );
+  const { showMessage, DialogComponents } = useDialog();
 
   const allUserReports = useQuery(api.reports.listAllUserReportsAdmin, {});
 
@@ -49,7 +51,7 @@ export function UserReportManagement() {
       });
     } catch (error) {
       console.error("Failed to update user report status:", error);
-      alert("Failed to update user report status. Please try again.");
+      showMessage("Error", "Failed to update user report status. Please try again.", "error");
     }
   };
 
@@ -95,9 +97,11 @@ export function UserReportManagement() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200">
-        <div className="flex items-center justify-between mb-6">
+    <>
+      <DialogComponents />
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-medium text-[#525252]">
             User Report Management
           </h2>
@@ -271,5 +275,6 @@ export function UserReportManagement() {
         )}
       </div>
     </div>
+    </>
   );
 }

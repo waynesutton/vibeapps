@@ -13,7 +13,10 @@ import {
   List,
   Lock,
   Unlock,
-  Calendar,
+  ToggleLeft,
+  ToggleRight,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -38,8 +41,15 @@ interface GroupSettings {
   description: string;
   isPublic: boolean;
   password: string;
-  startDate: string;
-  endDate: string;
+  isActive: boolean;
+  hasCustomSubmissionPage: boolean;
+  submissionPageImageSize: number;
+  submissionPageLayout: "two-column" | "one-third";
+  submissionPageTitle: string;
+  submissionPageDescription: string;
+  submissionPageLinks: Array<{ label: string; url: string }>;
+  submissionFormTitle: string;
+  submissionFormSubtitle: string;
 }
 
 export function JudgingCriteriaEditor({
@@ -61,10 +71,21 @@ export function JudgingCriteriaEditor({
     description: "",
     isPublic: true,
     password: "",
-    startDate: "",
-    endDate: "",
+    isActive: true,
+    hasCustomSubmissionPage: false,
+    submissionPageImageSize: 400,
+    submissionPageLayout: "two-column",
+    submissionPageTitle: "",
+    submissionPageDescription: "",
+    submissionPageLinks: [],
+    submissionFormTitle: "",
+    submissionFormSubtitle: "",
   });
   const [hasGroupChanges, setHasGroupChanges] = useState(false);
+  const [submissionPageImage, setSubmissionPageImage] = useState<File | null>(
+    null,
+  );
+  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
 
   const existingCriteria = useQuery(api.judgingCriteria.listByGroup, {
     groupId,
@@ -74,6 +95,7 @@ export function JudgingCriteriaEditor({
   });
   const saveCriteria = useMutation(api.judgingCriteria.saveCriteria);
   const updateGroup = useMutation(api.judgingGroups.updateGroup);
+  const generateUploadUrl = useMutation(api.stories.generateUploadUrl);
 
   // Load existing criteria
   useEffect(() => {
@@ -98,13 +120,23 @@ export function JudgingCriteriaEditor({
         description: groupDetails.description || "",
         isPublic: groupDetails.isPublic,
         password: "", // Don't load password for security
-        startDate: groupDetails.startDate
-          ? new Date(groupDetails.startDate).toISOString().slice(0, 16)
-          : "",
-        endDate: groupDetails.endDate
-          ? new Date(groupDetails.endDate).toISOString().slice(0, 16)
-          : "",
+        isActive: groupDetails.isActive,
+        hasCustomSubmissionPage: groupDetails.hasCustomSubmissionPage || false,
+        submissionPageImageSize: groupDetails.submissionPageImageSize || 400,
+        submissionPageLayout: groupDetails.submissionPageLayout || "two-column",
+        submissionPageTitle: groupDetails.submissionPageTitle || "",
+        submissionPageDescription: groupDetails.submissionPageDescription || "",
+        submissionPageLinks: groupDetails.submissionPageLinks || [],
+        submissionFormTitle: groupDetails.submissionFormTitle || "",
+        submissionFormSubtitle: groupDetails.submissionFormSubtitle || "",
       });
+      
+      // Load existing image URL if available
+      if (groupDetails.submissionPageImageId) {
+        // The image URL will be fetched separately if needed
+        setExistingImageUrl("(image set)"); // Placeholder since we can't get URL directly
+      }
+      
       setHasGroupChanges(false);
     }
   }, [groupDetails]);
@@ -186,12 +218,22 @@ export function JudgingCriteriaEditor({
         name: groupSettings.name.trim(),
         description: groupSettings.description.trim() || undefined,
         isPublic: groupSettings.isPublic,
-        startDate: groupSettings.startDate
-          ? new Date(groupSettings.startDate).getTime()
-          : undefined,
-        endDate: groupSettings.endDate
-          ? new Date(groupSettings.endDate).getTime()
-          : undefined,
+        isActive: groupSettings.isActive,
+        hasCustomSubmissionPage: groupSettings.hasCustomSubmissionPage,
+        submissionPageImageSize: groupSettings.submissionPageImageSize,
+        submissionPageLayout: groupSettings.submissionPageLayout,
+        submissionPageTitle:
+          groupSettings.submissionPageTitle.trim() || undefined,
+        submissionPageDescription:
+          groupSettings.submissionPageDescription.trim() || undefined,
+        submissionPageLinks:
+          groupSettings.submissionPageLinks.length > 0
+            ? groupSettings.submissionPageLinks
+            : undefined,
+        submissionFormTitle:
+          groupSettings.submissionFormTitle.trim() || undefined,
+        submissionFormSubtitle:
+          groupSettings.submissionFormSubtitle.trim() || undefined,
       };
 
       // Only include password if it's provided
@@ -199,9 +241,22 @@ export function JudgingCriteriaEditor({
         updateData.password = groupSettings.password.trim();
       }
 
+      // Upload submission page image if provided
+      if (submissionPageImage) {
+        const uploadUrl = await generateUploadUrl();
+        const result = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": submissionPageImage.type },
+          body: submissionPageImage,
+        });
+        const { storageId } = await result.json();
+        updateData.submissionPageImageId = storageId;
+      }
+
       await updateGroup(updateData);
 
       setHasGroupChanges(false);
+      setSubmissionPageImage(null);
       console.log("Group settings saved successfully");
     } catch (error) {
       console.error("Error saving group settings:", error);
@@ -633,47 +688,328 @@ export function JudgingCriteriaEditor({
               </div>
             </div>
 
-            {/* Timing Settings */}
+            {/* Group Status */}
             <div className="bg-white border border-gray-200 rounded-lg p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Timing Settings
+                Group Status
               </h3>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="startDate">Start Date (Optional)</Label>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                    <Input
-                      id="startDate"
-                      type="datetime-local"
-                      value={groupSettings.startDate}
-                      onChange={(e) =>
-                        updateGroupSetting("startDate", e.target.value)
-                      }
-                    />
-                  </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    When judging should begin
-                  </p>
-                </div>
-                <div>
-                  <Label htmlFor="endDate">End Date (Optional)</Label>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                    <Input
-                      id="endDate"
-                      type="datetime-local"
-                      value={groupSettings.endDate}
-                      onChange={(e) =>
-                        updateGroupSetting("endDate", e.target.value)
-                      }
-                    />
-                  </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    When judging should end
-                  </p>
-                </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateGroupSetting("isActive", !groupSettings.isActive)
+                  }
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md border transition-colors ${
+                    groupSettings.isActive
+                      ? "bg-green-50 border-green-200 text-green-700"
+                      : "bg-gray-50 border-gray-200 text-gray-600"
+                  }`}
+                >
+                  {groupSettings.isActive ? (
+                    <ToggleRight className="w-5 h-5" />
+                  ) : (
+                    <ToggleLeft className="w-5 h-5" />
+                  )}
+                  {groupSettings.isActive ? "Active" : "Inactive"}
+                </button>
+                <span className="text-sm text-gray-500">
+                  {groupSettings.isActive
+                    ? "Judges can access and score submissions"
+                    : "Group is inactive and judges cannot access it"}
+                </span>
               </div>
+            </div>
+
+            {/* Custom Submission Page */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">
+                    Custom Submission Page
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Create a custom page where users can submit directly to this
+                    judging group
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateGroupSetting(
+                      "hasCustomSubmissionPage",
+                      !groupSettings.hasCustomSubmissionPage,
+                    )
+                  }
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md border transition-colors ${
+                    groupSettings.hasCustomSubmissionPage
+                      ? "bg-green-50 border-green-200 text-green-700"
+                      : "bg-gray-50 border-gray-200 text-gray-600"
+                  }`}
+                >
+                  {groupSettings.hasCustomSubmissionPage ? (
+                    <ToggleRight className="w-5 h-5" />
+                  ) : (
+                    <ToggleLeft className="w-5 h-5" />
+                  )}
+                  {groupSettings.hasCustomSubmissionPage ? "Enabled" : "Disabled"}
+                </button>
+              </div>
+
+              {groupSettings.hasCustomSubmissionPage && (
+                <div className="space-y-4 mt-4 pt-4 border-t border-gray-200">
+                  {/* Submission Page URL */}
+                  {groupDetails && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm text-blue-800 flex-1">
+                          <strong>Submission Page URL:</strong>{" "}
+                          <code className="bg-blue-100 px-2 py-1 rounded text-xs">
+                            /judging/{groupDetails.slug}/submit
+                          </code>
+                        </p>
+                        <div className="flex items-center gap-2">
+                          {/* Copy URL Button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const fullUrl = `${window.location.origin}/judging/${groupDetails.slug}/submit`;
+                              navigator.clipboard.writeText(fullUrl);
+                              // Optional: Add toast notification
+                            }}
+                            className="p-1.5 text-blue-700 hover:text-blue-900 hover:bg-blue-100 rounded transition-colors"
+                            title="Copy URL"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                          {/* Open URL Button */}
+                          <a
+                            href={`/judging/${groupDetails.slug}/submit`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 text-blue-700 hover:text-blue-900 hover:bg-blue-100 rounded transition-colors"
+                            title="Open in new tab"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Header Image */}
+                  <div>
+                    <Label htmlFor="submissionImage">Header Image</Label>
+                    <input
+                      type="file"
+                      id="submissionImage"
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setSubmissionPageImage(e.target.files[0]);
+                          setHasGroupChanges(true);
+                        }
+                      }}
+                      className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+                    />
+                    {existingImageUrl && !submissionPageImage && (
+                      <p className="text-sm text-gray-500 mt-1">
+                        ✓ Image already uploaded
+                      </p>
+                    )}
+                    {submissionPageImage && (
+                      <p className="text-sm text-green-600 mt-1">
+                        ✓ New image selected: {submissionPageImage.name}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Image Size */}
+                  <div>
+                    <Label htmlFor="imageSize">
+                      Image Size (square, in pixels)
+                    </Label>
+                    <Input
+                      id="imageSize"
+                      type="number"
+                      min="100"
+                      max="1000"
+                      value={groupSettings.submissionPageImageSize}
+                      onChange={(e) =>
+                        updateGroupSetting(
+                          "submissionPageImageSize",
+                          parseInt(e.target.value) || 400,
+                        )
+                      }
+                      placeholder="400"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Default: 400px. Range: 100-1000px
+                    </p>
+                  </div>
+
+                  {/* Layout Selection */}
+                  <div>
+                    <Label htmlFor="layoutSelect">Page Layout</Label>
+                    <select
+                      id="layoutSelect"
+                      value={groupSettings.submissionPageLayout}
+                      onChange={(e) =>
+                        updateGroupSetting(
+                          "submissionPageLayout",
+                          e.target.value as "two-column" | "one-third",
+                        )
+                      }
+                      className="w-full px-3 py-2 bg-white rounded-md text-gray-700 border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                    >
+                      <option value="two-column">
+                        Two Column (50/50) - Balanced layout
+                      </option>
+                      <option value="one-third">
+                        One Third (33/67) - Larger submission form
+                      </option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Choose how content and form are displayed side by side
+                    </p>
+                  </div>
+
+                  {/* Page Title */}
+                  <div>
+                    <Label htmlFor="submissionTitle">Page Title</Label>
+                    <Input
+                      id="submissionTitle"
+                      value={groupSettings.submissionPageTitle}
+                      onChange={(e) =>
+                        updateGroupSetting(
+                          "submissionPageTitle",
+                          e.target.value,
+                        )
+                      }
+                      placeholder="e.g., Submit to Winter 2025 Hackathon"
+                    />
+                  </div>
+
+                  {/* Page Description */}
+                  <div>
+                    <Label htmlFor="submissionDescription">
+                      Page Description
+                    </Label>
+                    <Textarea
+                      id="submissionDescription"
+                      value={groupSettings.submissionPageDescription}
+                      onChange={(e) =>
+                        updateGroupSetting(
+                          "submissionPageDescription",
+                          e.target.value,
+                        )
+                      }
+                      placeholder="Describe your event, hackathon, or judging criteria..."
+                      rows={4}
+                    />
+                  </div>
+
+                  {/* External Links */}
+                  <div>
+                    <Label>External Links</Label>
+                    <div className="space-y-2">
+                      {groupSettings.submissionPageLinks.map((link, index) => (
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            placeholder="Label"
+                            value={link.label}
+                            onChange={(e) => {
+                              const newLinks = [
+                                ...groupSettings.submissionPageLinks,
+                              ];
+                              newLinks[index].label = e.target.value;
+                              updateGroupSetting("submissionPageLinks", newLinks);
+                            }}
+                            className="flex-1"
+                          />
+                          <Input
+                            placeholder="URL"
+                            value={link.url}
+                            onChange={(e) => {
+                              const newLinks = [
+                                ...groupSettings.submissionPageLinks,
+                              ];
+                              newLinks[index].url = e.target.value;
+                              updateGroupSetting("submissionPageLinks", newLinks);
+                            }}
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const newLinks =
+                                groupSettings.submissionPageLinks.filter(
+                                  (_, i) => i !== index,
+                                );
+                              updateGroupSetting("submissionPageLinks", newLinks);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          updateGroupSetting("submissionPageLinks", [
+                            ...groupSettings.submissionPageLinks,
+                            { label: "", url: "" },
+                          ]);
+                        }}
+                        className="w-full"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Link
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Submission Form Title */}
+                  <div>
+                    <Label htmlFor="submissionFormTitle">
+                      Submission Form Title
+                    </Label>
+                    <Input
+                      id="submissionFormTitle"
+                      value={groupSettings.submissionFormTitle}
+                      onChange={(e) =>
+                        updateGroupSetting("submissionFormTitle", e.target.value)
+                      }
+                      placeholder="Submit Your App"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Default: "Submit Your App"
+                    </p>
+                  </div>
+
+                  {/* Submission Form Subtitle */}
+                  <div>
+                    <Label htmlFor="submissionFormSubtitle">
+                      Submission Form Subtitle (Optional)
+                    </Label>
+                    <Textarea
+                      id="submissionFormSubtitle"
+                      value={groupSettings.submissionFormSubtitle}
+                      onChange={(e) =>
+                        updateGroupSetting(
+                          "submissionFormSubtitle",
+                          e.target.value,
+                        )
+                      }
+                      placeholder="Add a subtitle or description below the form title"
+                      rows={2}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Save Actions for Group Settings */}
@@ -695,16 +1031,7 @@ export function JudgingCriteriaEditor({
                             description: groupDetails.description || "",
                             isPublic: groupDetails.isPublic,
                             password: "",
-                            startDate: groupDetails.startDate
-                              ? new Date(groupDetails.startDate)
-                                  .toISOString()
-                                  .slice(0, 16)
-                              : "",
-                            endDate: groupDetails.endDate
-                              ? new Date(groupDetails.endDate)
-                                  .toISOString()
-                                  .slice(0, 16)
-                              : "",
+                            isActive: groupDetails.isActive,
                           });
                           setHasGroupChanges(false);
                         }

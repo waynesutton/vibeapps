@@ -14,6 +14,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { Button } from "../ui/button";
+import { useDialog } from "../../hooks/useDialog";
 
 interface JudgingResultsDashboardProps {
   groupId: Id<"judgingGroups">;
@@ -28,6 +29,7 @@ export function JudgingResultsDashboard({
 }: JudgingResultsDashboardProps) {
   const [exportLoading, setExportLoading] = useState(false);
   const [selectedJudgeIndex, setSelectedJudgeIndex] = useState(0);
+  const { showMessage, DialogComponents } = useDialog();
 
   const groupScores = useQuery(api.judgeScores.getGroupScores, { groupId });
   const judgeDetails = useQuery(api.judgeScores.getGroupJudgeDetails, {
@@ -45,7 +47,7 @@ export function JudgingResultsDashboard({
 
   const handleExport = async () => {
     if (!exportScores) {
-      alert("Export data not ready. Please try again.");
+      showMessage("Not Ready", "Export data not ready. Please try again.", "warning");
       return;
     }
 
@@ -88,7 +90,7 @@ export function JudgingResultsDashboard({
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Export failed:", error);
-      alert("Failed to export results. Please try again.");
+      showMessage("Export Failed", "Failed to export results. Please try again.", "error");
     } finally {
       setExportLoading(false);
     }
@@ -132,9 +134,11 @@ export function JudgingResultsDashboard({
   } = groupScores;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <>
+      <DialogComponents />
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button
             variant="outline"
@@ -552,5 +556,6 @@ export function JudgingResultsDashboard({
         </>
       )}
     </div>
+    </>
   );
 }

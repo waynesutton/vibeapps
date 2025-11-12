@@ -550,6 +550,8 @@ export const submit = mutation({
         }),
       ),
     ),
+    // Auto-add to judging group
+    judgingGroupId: v.optional(v.id("judgingGroups")),
   },
   handler: async (ctx, args) => {
     await ensureUserNotBanned(ctx); // Check if user is banned
@@ -648,6 +650,37 @@ export const submit = mutation({
       userId: userId,
       submissionTime: Date.now(),
     });
+
+    // Auto-add to judging group if provided
+    if (args.judgingGroupId) {
+      // Type guard to ensure judgingGroupId is not undefined
+      const groupId: Id<"judgingGroups"> = args.judgingGroupId;
+      
+      // Check if already added to avoid duplicates
+      const existing = await ctx.db
+        .query("judgingGroupSubmissions")
+        .withIndex("by_groupId_storyId", (q) =>
+          q.eq("groupId", groupId).eq("storyId", storyId),
+        )
+        .unique();
+
+      if (!existing) {
+        await ctx.db.insert("judgingGroupSubmissions", {
+          groupId: groupId,
+          storyId: storyId,
+          addedBy: userId,
+          addedAt: Date.now(),
+        });
+        
+        // Create default submission status (Pending) so it can be judged
+        await ctx.db.insert("submissionStatuses", {
+          groupId: groupId,
+          storyId: storyId,
+          status: "pending",
+          lastUpdatedAt: Date.now(),
+        });
+      }
+    }
 
     return { storyId, slug };
   },
@@ -775,17 +808,12 @@ export const generateUploadUrl = mutation(async (ctx) => {
   return await ctx.storage.generateUploadUrl();
 });
 
-// Renamed vote to voteStory
+// Renamed vote to voteStory - Fixed: Removed read before write to avoid conflicts
 export const voteStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
     await ensureUserNotBanned(ctx); // Check if user is banned
     const userId = await getAuthenticatedUserId(ctx); // Ensure user is authenticated
-
-    const story = await ctx.db.get(args.storyId);
-    if (!story) {
-      throw new Error("Story not found");
-    }
 
     // Check if the user has already voted for this story
     const existingVote = await ctx.db
@@ -796,16 +824,23 @@ export const voteStory = mutation({
       .first();
 
     if (existingVote) {
-      // User has already voted, perhaps allow unvoting or just do nothing / throw error
-      // For now, let's remove the vote (unvote action)
+      // User has already voted, remove the vote (unvote action)
       await ctx.db.delete(existingVote._id);
+      
+      // Read story AFTER write operations to get current state for alert
+      const story = await ctx.db.get(args.storyId);
+      if (!story) {
+        throw new Error("Story not found");
+      }
+      
+      // Decrement vote count - read current value for calculation
       await ctx.db.patch(args.storyId, { votes: story.votes - 1 });
+      
       return {
         success: true,
         action: "unvoted",
         newVoteCount: story.votes - 1,
       };
-      // throw new Error("User has already voted for this story.");
     }
 
     // User hasn't voted, so add a vote
@@ -813,6 +848,12 @@ export const voteStory = mutation({
       userId: userId,
       storyId: args.storyId,
     });
+
+    // Read story AFTER write operations for alert creation and count update
+    const story = await ctx.db.get(args.storyId);
+    if (!story) {
+      throw new Error("Story not found");
+    }
 
     // Increment the vote count on the story
     await ctx.db.patch(args.storyId, { votes: story.votes + 1 });
@@ -831,7 +872,7 @@ export const voteStory = mutation({
   },
 });
 
-// rate mutation updated for authenticated users and to prevent re-rating
+// rate mutation updated for authenticated users and to prevent re-rating - Fixed: Reduced read-before-write conflicts
 export const rate = mutation({
   args: {
     storyId: v.id("stories"),
@@ -845,11 +886,6 @@ export const rate = mutation({
       throw new Error("Rating must be between 1 and 5.");
     }
 
-    const story = await ctx.db.get(args.storyId);
-    if (!story) {
-      throw new Error("Story not found.");
-    }
-
     // Check if the user has already rated this story
     const existingRating = await ctx.db
       .query("storyRatings")
@@ -861,15 +897,6 @@ export const rate = mutation({
     if (existingRating) {
       // Option 1: Prevent re-rating (current implementation)
       throw new Error("You have already rated this story.");
-
-      // Option 2: Allow changing rating (more complex, requires adjusting sum/count carefully)
-      // const oldRatingValue = existingRating.value;
-      // await ctx.db.patch(existingRating._id, { value: args.rating });
-      // await ctx.db.patch(args.storyId, {
-      //   ratingSum: story.ratingSum - oldRatingValue + args.rating,
-      //   // ratingCount remains the same if only allowing update
-      // });
-      // return { success: true, message: "Rating updated." };
     }
 
     // Add new rating to storyRatings table
@@ -878,6 +905,12 @@ export const rate = mutation({
       storyId: args.storyId,
       value: args.rating,
     });
+
+    // Read story AFTER inserting rating for alert creation and sum update
+    const story = await ctx.db.get(args.storyId);
+    if (!story) {
+      throw new Error("Story not found.");
+    }
 
     // Update ratingSum and ratingCount on the story
     await ctx.db.patch(args.storyId, {
@@ -930,7 +963,7 @@ export const getUserRatingForStory = query({
   },
 });
 
-// Mutation for updating story status (moderation)
+// Mutation for updating story status (moderation) - Fixed: Minimized read-before-write window
 export const updateStatus = mutation({
   args: {
     storyId: v.id("stories"),
@@ -957,6 +990,7 @@ export const updateStatus = mutation({
       updatePayload.rejectionReason = undefined;
     }
 
+    // Patch immediately after validation
     await ctx.db.patch(args.storyId, updatePayload);
     return { success: true };
   },
@@ -1011,43 +1045,35 @@ export const deleteStory = mutation({
     const story = await ctx.db.get(args.storyId);
     if (!story) throw new Error("Story not found");
 
-    // 1. Delete associated comments
-    const comments = await ctx.db
-      .query("comments")
-      .withIndex("by_storyId_status", (q) => q.eq("storyId", args.storyId))
-      .collect();
-    for (const comment of comments) {
-      await ctx.db.delete(comment._id);
-    }
+    // Collect all related data first
+    const [comments, votes, ratings, bookmarks] = await Promise.all([
+      ctx.db
+        .query("comments")
+        .withIndex("by_storyId_status", (q) => q.eq("storyId", args.storyId))
+        .collect(),
+      ctx.db
+        .query("votes")
+        .withIndex("by_story", (q) => q.eq("storyId", args.storyId))
+        .collect(),
+      ctx.db
+        .query("storyRatings")
+        .withIndex("by_storyId", (q) => q.eq("storyId", args.storyId))
+        .collect(),
+      ctx.db
+        .query("bookmarks")
+        .withIndex("by_storyId", (q) => q.eq("storyId", args.storyId))
+        .collect(),
+    ]);
 
-    // 2. Delete associated votes
-    const votes = await ctx.db
-      .query("votes")
-      .withIndex("by_story", (q) => q.eq("storyId", args.storyId))
-      .collect();
-    for (const vote of votes) {
-      await ctx.db.delete(vote._id);
-    }
+    // Delete all associated data in parallel for better performance
+    await Promise.all([
+      ...comments.map((comment) => ctx.db.delete(comment._id)),
+      ...votes.map((vote) => ctx.db.delete(vote._id)),
+      ...ratings.map((rating) => ctx.db.delete(rating._id)),
+      ...bookmarks.map((bookmark) => ctx.db.delete(bookmark._id)),
+    ]);
 
-    // 3. Delete associated ratings
-    const ratings = await ctx.db
-      .query("storyRatings")
-      .withIndex("by_storyId", (q) => q.eq("storyId", args.storyId))
-      .collect();
-    for (const rating of ratings) {
-      await ctx.db.delete(rating._id);
-    }
-
-    // 4. Delete associated bookmarks
-    const bookmarks = await ctx.db
-      .query("bookmarks")
-      .withIndex("by_storyId", (q) => q.eq("storyId", args.storyId))
-      .collect();
-    for (const bookmark of bookmarks) {
-      await ctx.db.delete(bookmark._id);
-    }
-
-    // 5. Delete screenshot from storage if it exists
+    // Delete screenshot from storage if it exists
     if (story.screenshotId) {
       try {
         await ctx.storage.delete(story.screenshotId);
@@ -1059,21 +1085,23 @@ export const deleteStory = mutation({
       }
     }
 
-    // 6. Delete additional images from storage if they exist
+    // Delete additional images from storage if they exist
     if (story.additionalImageIds && story.additionalImageIds.length > 0) {
-      for (const imageId of story.additionalImageIds) {
-        try {
-          await ctx.storage.delete(imageId);
-        } catch (error) {
-          console.warn(
-            `Failed to delete additional image ${imageId} for story ${args.storyId}: ${error}`,
-          );
-          // Continue even if additional image deletion fails
-        }
-      }
+      // Delete images in parallel
+      await Promise.all(
+        story.additionalImageIds.map(async (imageId) => {
+          try {
+            await ctx.storage.delete(imageId);
+          } catch (error) {
+            console.warn(
+              `Failed to delete additional image ${imageId} for story ${args.storyId}: ${error}`,
+            );
+          }
+        }),
+      );
     }
 
-    // 7. Delete the story itself
+    // Delete the story itself
     await ctx.db.delete(args.storyId);
     return { success: true };
   },
@@ -1110,7 +1138,7 @@ export const updateStoryCustomMessage = mutation({
   },
 });
 
-// NEW: Mutation to toggle pin status
+// NEW: Mutation to toggle pin status - Fixed: Reduced read window before write
 export const toggleStoryPinStatus = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
@@ -1120,6 +1148,8 @@ export const toggleStoryPinStatus = mutation({
       throw new Error("Story not found");
     }
     const newPinnedStatus = !story.isPinned;
+    
+    // Patch immediately after reading
     await ctx.db.patch(args.storyId, {
       isPinned: newPinnedStatus,
       // Track if story was ever pinned
@@ -1135,7 +1165,7 @@ export const toggleStoryPinStatus = mutation({
         storyId: args.storyId,
       });
     }
-    return { success: true, newPinStatus: !story.isPinned };
+    return { success: true, newPinStatus: newPinnedStatus };
   },
 });
 

@@ -34,6 +34,7 @@ import { Textarea } from "../ui/textarea";
 import { ProfileHoverCard } from "../ui/ProfileHoverCard";
 import { MentionTextarea } from "../ui/MentionTextarea";
 import { renderTextWithMentions } from "../../utils/mentions";
+import { useDialog } from "../../hooks/useDialog";
 
 interface JudgeTrackingProps {
   groupId: Id<"judgingGroups">;
@@ -47,6 +48,7 @@ export function JudgeTracking({
   onBack,
 }: JudgeTrackingProps) {
   const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
+  const { showMessage, DialogComponents } = useDialog();
 
   const trackingData = useQuery(
     api.adminJudgeTracking.getGroupJudgeTracking,
@@ -172,7 +174,7 @@ export function JudgeTracking({
       setEditingScore(null);
     } catch (error) {
       console.error("Error updating score:", error);
-      alert("Failed to update score. Please try again.");
+      showMessage("Error", "Failed to update score. Please try again.", "error");
     }
   };
 
@@ -184,7 +186,7 @@ export function JudgeTracking({
       await toggleScoreVisibility({ scoreId, isHidden });
     } catch (error) {
       console.error("Error toggling score visibility:", error);
-      alert("Failed to update score visibility. Please try again.");
+      showMessage("Error", "Failed to update score visibility. Please try again.", "error");
     }
   };
 
@@ -194,7 +196,7 @@ export function JudgeTracking({
       setDeleteConfirmScore(null);
     } catch (error) {
       console.error("Error deleting score:", error);
-      alert("Failed to delete score. Please try again.");
+      showMessage("Error", "Failed to delete score. Please try again.", "error");
     }
   };
 
@@ -205,7 +207,7 @@ export function JudgeTracking({
       setExpandedJudges(new Set()); // Collapse any expanded judges
     } catch (error) {
       console.error("Error deleting judge:", error);
-      alert("Failed to delete judge. Please try again.");
+      showMessage("Error", "Failed to delete judge. Please try again.", "error");
     }
   };
 
@@ -230,14 +232,14 @@ export function JudgeTracking({
       setReplyingToNote(null);
     } catch (error) {
       console.error("Error adding reply:", error);
-      alert("Failed to add reply. Please try again.");
+      showMessage("Error", "Failed to add reply. Please try again.", "error");
     }
   };
 
   // CSV export handler
   const handleExportCSV = () => {
     if (!exportData || exportData.length === 0) {
-      alert("No data available to export");
+      showMessage("No Data", "No data available to export", "warning");
       return;
     }
 
@@ -353,9 +355,11 @@ export function JudgeTracking({
   const { group, judges } = trackingData;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap justify-between items-center gap-4">
+    <>
+      <DialogComponents />
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
           <button
             onClick={onBack}
@@ -1187,5 +1191,6 @@ export function JudgeTracking({
         </div>
       )}
     </div>
+    </>
   );
 }

@@ -15,11 +15,13 @@ import AlertDialog from "../ui/AlertDialog";
 import MessageDialog from "../ui/MessageDialog";
 import PromptDialog from "../ui/PromptDialog";
 import { EmailTestingPanel } from "./EmailTestingPanel";
+import { useDialog } from "../../hooks/useDialog";
 
 export function EmailManagement() {
   const [emailToggling, setEmailToggling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const { showMessage, showConfirm, DialogComponents } = useDialog();
 
   // Broadcast email state
   const [broadcastSubject, setBroadcastSubject] = useState("");
@@ -201,9 +203,11 @@ export function EmailManagement() {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Global Email Toggle */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+    <>
+      <DialogComponents />
+      <div className="space-y-8">
+        {/* Global Email Toggle */}
+        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
         <div className="flex items-center gap-3 mb-6">
           <Mail className="w-6 h-6 text-[#525252]" />
           <h2 className="text-xl font-medium text-[#525252]">
@@ -342,32 +346,15 @@ export function EmailManagement() {
                     (u) => !u.hasEmail,
                   ).length;
 
-                  alert(`📧 Email System Status Report
-
-✅ SYSTEM IS WORKING CORRECTLY
-
-📊 Current Statistics:
-• Total users: ${debugUsers.length}
-• Users with emails: ${usersWithEmail}
-• Users needing email sync: ${usersWithoutEmail}
-
-🔧 What's Fixed:
-• Email extraction from Clerk identity ✅
-• New user email sync ✅  
-• User search functionality ✅
-• Broadcast email system ✅
-
-📋 Next Steps:
-${
+                  showMessage(
+                    "Email System Status",
+                    `SYSTEM IS WORKING CORRECTLY\n\nCurrent Statistics:\n• Total users: ${debugUsers.length}\n• Users with emails: ${usersWithEmail}\n• Users needing email sync: ${usersWithoutEmail}\n\nWhat's Fixed:\n• Email extraction from Clerk identity\n• New user email sync\n• User search functionality\n• Broadcast email system\n\nNext Steps:\n${
   usersWithoutEmail > 0
-    ? `• ${usersWithoutEmail} users need to log out and log back in
-• This will automatically sync their emails
-• No admin action required`
-    : `• All users have emails synced!
-• System is fully operational`
-}
-
-The email system is ready for production use!`);
+    ? `• ${usersWithoutEmail} users need to log out and log back in\n• This will automatically sync their emails\n• No admin action required`
+    : `• All users have emails synced!\n• System is fully operational`
+}\n\nThe email system is ready for production use!`,
+                    "success"
+                  );
                 }}
                 className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
               >
@@ -378,13 +365,17 @@ The email system is ready for production use!`);
                 onClick={async () => {
                   try {
                     const result = await forceRefreshUserMutation({});
-                    alert(
-                      `${result.success ? "Success" : "Error"}: ${result.message}`,
+                    showMessage(
+                      result.success ? "Success" : "Error",
+                      result.message,
+                      result.success ? "success" : "error"
                     );
-                    window.location.reload();
+                    if (result.success) window.location.reload();
                   } catch (error) {
-                    alert(
-                      `Error: ${error instanceof Error ? error.message : "Failed to refresh user"}`,
+                    showMessage(
+                      "Error",
+                      error instanceof Error ? error.message : "Failed to refresh user",
+                      "error"
                     );
                   }
                 }}
@@ -399,39 +390,17 @@ The email system is ready for production use!`);
                     (u) => !u.hasEmail,
                   ).length;
 
-                  if (
-                    confirm(`🚨 Force All Users to Re-login?
-
-This will help sync emails for ${usersWithoutEmail} users who don't have emails yet.
-
-Options:
-1. Use Clerk Dashboard (Recommended)
-2. Add app-level session invalidation
-
-Do you want to see the instructions?`)
-                  ) {
-                    alert(`🔐 How to Force User Re-login:
-
-📋 OPTION 1: Clerk Dashboard (Recommended)
-1. Go to https://dashboard.clerk.com
-2. Navigate to "Users" 
-3. For each user without email, click on them
-4. Go to "Sessions" tab
-5. Click "Revoke" on active sessions
-
-📋 OPTION 2: Clerk API (Bulk)
-Use Clerk's API to revoke all sessions:
-• POST /v1/sessions/{session_id}/revoke
-• Or use Clerk's admin SDK
-
-📋 OPTION 3: App-Level (Future)
-We could add a feature to:
-• Set a "force_reauth" flag in database
-• Check this flag on app load
-• Force users to re-authenticate
-
-The Clerk Dashboard method is the most reliable and immediate.`);
-                  }
+                  showConfirm(
+                    "Force All Users to Re-login?",
+                    `This will help sync emails for ${usersWithoutEmail} users who don't have emails yet.\n\nOptions:\n1. Use Clerk Dashboard (Recommended)\n2. Add app-level session invalidation\n\nDo you want to see the instructions?`,
+                    () => {
+                      showMessage(
+                        "How to Force User Re-login",
+                        `OPTION 1: Clerk Dashboard (Recommended)\n1. Go to https://dashboard.clerk.com\n2. Navigate to "Users"\n3. For each user without email, click on them\n4. Go to "Sessions" tab\n5. Click "Revoke" on active sessions\n\nOPTION 2: Clerk API (Bulk)\nUse Clerk's API to revoke all sessions:\n• POST /v1/sessions/{session_id}/revoke\n• Or use Clerk's admin SDK\n\nOPTION 3: App-Level (Future)\nWe could add a feature to:\n• Set a "force_reauth" flag in database\n• Check this flag on app load\n• Force users to re-authenticate\n\nThe Clerk Dashboard method is the most reliable and immediate.`,
+                        "info"
+                      );
+                    }
+                  );
                 }}
                 className="px-3 py-1 bg-orange-600 text-white text-xs rounded hover:bg-orange-700"
               >
@@ -444,30 +413,32 @@ The Clerk Dashboard method is the most reliable and immediate.`);
                     (u) => !u.hasEmail,
                   ).length;
 
-                  if (
-                    confirm(`⚠️ FORCE LOGOUT ALL USERS?
-
-This will immediately log out all ${debugUsers.length} users from the app.
-${usersWithoutEmail} users will get their emails synced when they log back in.
-
-⚠️ WARNING: This action cannot be undone!
-All users will need to log back in.
-
-Are you sure you want to proceed?`)
-                  ) {
-                    try {
-                      const result = await forceLogoutAllMutation({
-                        reason: "Email sync - admin forced re-authentication",
-                      });
-                      alert(
-                        `${result.success ? "✅ Success" : "❌ Error"}: ${result.message}`,
-                      );
-                    } catch (error) {
-                      alert(
-                        `❌ Error: ${error instanceof Error ? error.message : "Failed to force logout users"}`,
-                      );
+                  showConfirm(
+                    "FORCE LOGOUT ALL USERS?",
+                    `This will immediately log out all ${debugUsers.length} users from the app.\n${usersWithoutEmail} users will get their emails synced when they log back in.\n\nWARNING: This action cannot be undone!\nAll users will need to log back in.\n\nAre you sure you want to proceed?`,
+                    async () => {
+                      try {
+                        const result = await forceLogoutAllMutation({
+                          reason: "Email sync - admin forced re-authentication",
+                        });
+                        showMessage(
+                          result.success ? "Success" : "Error",
+                          result.message,
+                          result.success ? "success" : "error"
+                        );
+                      } catch (error) {
+                        showMessage(
+                          "Error",
+                          error instanceof Error ? error.message : "Failed to force logout users",
+                          "error"
+                        );
+                      }
+                    },
+                    {
+                      confirmButtonText: "Force Logout All",
+                      confirmButtonVariant: "destructive"
                     }
-                  }
+                  );
                 }}
                 className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
               >
@@ -549,18 +520,26 @@ Are you sure you want to proceed?`)
 
               <button
                 onClick={async () => {
-                  if (confirm("Send test daily user engagement emails now?")) {
-                    try {
-                      const result = await testDailyUserEmailsMutation({});
-                      alert(
-                        `${result.success ? "✅" : "❌"} ${result.message}`,
-                      );
-                    } catch (error) {
-                      alert(
-                        `❌ Error: ${error instanceof Error ? error.message : "Failed to send daily user emails"}`,
-                      );
+                  showConfirm(
+                    "Send Test Emails",
+                    "Send test daily user engagement emails now?",
+                    async () => {
+                      try {
+                        const result = await testDailyUserEmailsMutation({});
+                        showMessage(
+                          result.success ? "Success" : "Error",
+                          result.message,
+                          result.success ? "success" : "error"
+                        );
+                      } catch (error) {
+                        showMessage(
+                          "Error",
+                          error instanceof Error ? error.message : "Failed to send daily user emails",
+                          "error"
+                        );
+                      }
                     }
-                  }
+                  );
                 }}
                 className="px-3 py-1 bg-teal-600 text-white text-xs rounded hover:bg-teal-700"
               >
@@ -569,18 +548,26 @@ Are you sure you want to proceed?`)
 
               <button
                 onClick={async () => {
-                  if (confirm("Send test weekly digest email now?")) {
-                    try {
-                      const result = await testWeeklyDigestMutation({});
-                      alert(
-                        `${result.success ? "✅" : "❌"} ${result.message}`,
-                      );
-                    } catch (error) {
-                      alert(
-                        `❌ Error: ${error instanceof Error ? error.message : "Failed to send weekly digest"}`,
-                      );
+                  showConfirm(
+                    "Send Test Email",
+                    "Send test weekly digest email now?",
+                    async () => {
+                      try {
+                        const result = await testWeeklyDigestMutation({});
+                        showMessage(
+                          result.success ? "Success" : "Error",
+                          result.message,
+                          result.success ? "success" : "error"
+                        );
+                      } catch (error) {
+                        showMessage(
+                          "Error",
+                          error instanceof Error ? error.message : "Failed to send weekly digest",
+                          "error"
+                        );
+                      }
                     }
-                  }
+                  );
                 }}
                 className="px-3 py-1 bg-pink-600 text-white text-xs rounded hover:bg-pink-700"
               >
@@ -589,18 +576,26 @@ Are you sure you want to proceed?`)
 
               <button
                 onClick={async () => {
-                  if (confirm("Send test welcome email to yourself now?")) {
-                    try {
-                      const result = await testWelcomeEmailMutation({});
-                      alert(
-                        `${result.success ? "✅" : "❌"} ${result.message}`,
-                      );
-                    } catch (error) {
-                      alert(
-                        `❌ Error: ${error instanceof Error ? error.message : "Failed to send test welcome email"}`,
-                      );
+                  showConfirm(
+                    "Send Test Email",
+                    "Send test welcome email to yourself now?",
+                    async () => {
+                      try {
+                        const result = await testWelcomeEmailMutation({});
+                        showMessage(
+                          result.success ? "Success" : "Error",
+                          result.message,
+                          result.success ? "success" : "error"
+                        );
+                      } catch (error) {
+                        showMessage(
+                          "Error",
+                          error instanceof Error ? error.message : "Failed to send test welcome email",
+                          "error"
+                        );
+                      }
                     }
-                  }
+                  );
                 }}
                 className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
               >
@@ -609,22 +604,30 @@ Are you sure you want to proceed?`)
 
               <button
                 onClick={async () => {
-                  if (
-                    confirm(
-                      "Clear today's email logs? This will allow you to re-test daily/weekly emails that were already sent today.",
-                    )
-                  ) {
-                    try {
-                      const result = await clearTodaysEmailLogsMutation({});
-                      alert(
-                        `${result.success ? "✅" : "❌"} ${result.message} (${result.deletedCount} logs cleared)`,
-                      );
-                    } catch (error) {
-                      alert(
-                        `❌ Error: ${error instanceof Error ? error.message : "Failed to clear email logs"}`,
-                      );
+                  showConfirm(
+                    "Clear Email Logs",
+                    "Clear today's email logs? This will allow you to re-test daily/weekly emails that were already sent today.",
+                    async () => {
+                      try {
+                        const result = await clearTodaysEmailLogsMutation({});
+                        showMessage(
+                          result.success ? "Success" : "Error",
+                          `${result.message} (${result.deletedCount} logs cleared)`,
+                          result.success ? "success" : "error"
+                        );
+                      } catch (error) {
+                        showMessage(
+                          "Error",
+                          error instanceof Error ? error.message : "Failed to clear email logs",
+                          "error"
+                        );
+                      }
+                    },
+                    {
+                      confirmButtonText: "Clear Logs",
+                      confirmButtonVariant: "destructive"
                     }
-                  }
+                  );
                 }}
                 className="px-3 py-1 bg-orange-600 text-white text-xs rounded hover:bg-orange-700"
               >
@@ -913,5 +916,6 @@ Are you sure you want to proceed?`)
         defaultValue={promptDialog.defaultValue}
       />
     </div>
+    </>
   );
 }

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import "@fontsource/inter/400.css";
 import "@fontsource/inter/500.css";
+import { useDialog } from "../hooks/useDialog";
 
 // Define predefined emoji reactions
 const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "👏"];
@@ -53,6 +54,7 @@ export default function InboxPage() {
   const selectedConversationId = searchParams.get(
     "conversation",
   ) as Id<"dmConversations"> | null;
+  const { showMessage, showConfirm, DialogComponents } = useDialog();
 
   // Queries
   const currentUser = useQuery(api.users.getMyUserDocument);
@@ -198,42 +200,52 @@ export default function InboxPage() {
   const handleDeleteConversation = async () => {
     if (!selectedConversationId || isDeleting) return;
 
-    const confirmed = window.confirm(
+    showConfirm(
+      "Delete Conversation",
       "Delete this conversation? Messages will be removed from your view.",
+      async () => {
+        setIsDeleting(true);
+        const conversationToDelete = selectedConversationId;
+        try {
+          await deleteConversationMutation({
+            conversationId: conversationToDelete,
+          });
+          // Clear the URL parameter and navigate to inbox without selection
+          navigate("/inbox", { replace: true });
+        } catch (error: any) {
+          showMessage("Error", error.message || "Failed to delete conversation", "error");
+        } finally {
+          setIsDeleting(false);
+        }
+      },
+      {
+        confirmButtonText: "Delete",
+        confirmButtonVariant: "destructive",
+      }
     );
-    if (!confirmed) return;
-
-    setIsDeleting(true);
-    const conversationToDelete = selectedConversationId;
-    try {
-      await deleteConversationMutation({
-        conversationId: conversationToDelete,
-      });
-      // Clear the URL parameter and navigate to inbox without selection
-      navigate("/inbox", { replace: true });
-    } catch (error: any) {
-      alert(error.message || "Failed to delete conversation");
-    } finally {
-      setIsDeleting(false);
-    }
   };
 
   // Handle clear inbox
   const handleClearInbox = async () => {
-    const confirmed = window.confirm(
+    showConfirm(
+      "Clear Inbox",
       "Clear entire inbox? All conversations will be removed from your view.",
+      async () => {
+        setIsClearingInbox(true);
+        try {
+          const result = await clearInboxMutation({});
+          showMessage("Success", `Cleared ${result.deletedCount} conversations`, "success");
+        } catch (error: any) {
+          showMessage("Error", error.message || "Failed to clear inbox", "error");
+        } finally {
+          setIsClearingInbox(false);
+        }
+      },
+      {
+        confirmButtonText: "Clear Inbox",
+        confirmButtonVariant: "destructive",
+      }
     );
-    if (!confirmed) return;
-
-    setIsClearingInbox(true);
-    try {
-      const result = await clearInboxMutation({});
-      alert(`Cleared ${result.deletedCount} conversations`);
-    } catch (error: any) {
-      alert(error.message || "Failed to clear inbox");
-    } finally {
-      setIsClearingInbox(false);
-    }
   };
 
   // Handle report user - open modal
@@ -336,11 +348,13 @@ export default function InboxPage() {
   }
 
   return (
-    <div
-      className="container mx-auto "
-      style={{ fontFamily: "Inter, sans-serif" }}
-    >
-      <div className="flex gap-6 h-[calc(100vh-12rem)]">
+    <>
+      <DialogComponents />
+      <div
+        className="container mx-auto "
+        style={{ fontFamily: "Inter, sans-serif" }}
+      >
+        <div className="flex gap-6 h-[calc(100vh-12rem)]">
         {/* Conversations List */}
         <div
           className={`${
@@ -786,5 +800,6 @@ export default function InboxPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

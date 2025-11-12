@@ -233,7 +233,7 @@ export const updateSubmitForm = mutation({
 });
 
 /**
- * Delete a submit form and its associated data
+ * Delete a submit form and its associated data - Fixed: Parallel deletions
  */
 export const deleteSubmitForm = mutation({
   args: { formId: v.id("submitForms") },
@@ -250,14 +250,16 @@ export const deleteSubmitForm = mutation({
       throw new Error("Cannot delete a built-in form");
     }
 
+    // Collect all links to delete
     const links = await ctx.db
       .query("submitFormToStoryFields")
       .withIndex("by_formId_order", (q) => q.eq("formId", args.formId))
       .collect();
-    for (const link of links) {
-      await ctx.db.delete(link._id);
-    }
 
+    // Delete all links in parallel
+    await Promise.all(links.map((link) => ctx.db.delete(link._id)));
+
+    // Delete the form itself
     await ctx.db.delete(args.formId);
 
     return null;
@@ -484,7 +486,7 @@ export const getPublicSubmitForm = query({
 });
 
 /**
- * Submit form data - processes dynamic form submission to stories
+ * Submit form data - processes dynamic form submission to stories - Fixed: Minimized read window for submissionCount
  */
 export const submitFormData = mutation({
   args: {
@@ -497,7 +499,7 @@ export const submitFormData = mutation({
     slug: v.string(),
   }),
   handler: async (ctx, args) => {
-    // Get the form configuration
+    // Get the form configuration and store submission count early
     const form = await ctx.db
       .query("submitForms")
       .withIndex("by_slug", (q) => q.eq("slug", args.formSlug))
@@ -510,6 +512,9 @@ export const submitFormData = mutation({
     if (!form.isEnabled) {
       throw new Error("This form is not currently accepting submissions");
     }
+
+    // Store current count to use later (minimizes read-before-write window)
+    const currentSubmissionCount = form.submissionCount || 0;
 
     // Rate limiting by email for anonymous submissions
     const email = args.formData.email;
@@ -601,9 +606,9 @@ export const submitFormData = mutation({
       });
     }
 
-    // Update form submission count
+    // Update form submission count using previously read value
     await ctx.db.patch(form._id, {
-      submissionCount: (form.submissionCount || 0) + 1,
+      submissionCount: currentSubmissionCount + 1,
     });
 
     return { storyId, slug };

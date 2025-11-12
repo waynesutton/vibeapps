@@ -5,11 +5,13 @@ import { api } from "../../convex/_generated/api";
 import { Lock, Calendar, ExternalLink } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { useDialog } from "../hooks/useDialog";
 import { Label } from "../components/ui/label";
 
 export default function JudgingGroupPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const { showMessage, DialogComponents } = useDialog();
 
   const [password, setPassword] = useState("");
   const [judgeName, setJudgeName] = useState("");
@@ -63,7 +65,7 @@ export default function JudgingGroupPage() {
       navigate(`/judging/${slug}/judge`);
     } catch (error) {
       console.error("Error registering judge:", error);
-      alert("Failed to register. Please try again.");
+      showMessage("Error", "Failed to register. Please try again.", "error");
     }
   };
 
@@ -153,9 +155,11 @@ export default function JudgingGroupPage() {
 
   // Show judge registration form
   return (
-    <div className="min-h-screen bg-[#F5F7F9] flex items-center justify-center p-4">
-      <div className="max-w-lg w-full bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="text-center mb-6">
+    <>
+      <DialogComponents />
+      <div className="min-h-screen bg-[#F5F7F9] flex items-center justify-center p-4">
+        <div className="max-w-lg w-full bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="text-center mb-6">
           <h1 className="text-2xl font-medium text-gray-900 mb-2">
             {group.name}
           </h1>
@@ -240,5 +244,6 @@ export default function JudgingGroupPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

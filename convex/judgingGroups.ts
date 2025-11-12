@@ -41,11 +41,10 @@ export const listGroups = query({
       slug: v.string(),
       description: v.optional(v.string()),
       isPublic: v.boolean(),
-      resultsIsPublic: v.optional(v.boolean()), // Added
+      resultsIsPublic: v.optional(v.boolean()),
       isActive: v.boolean(),
-      startDate: v.optional(v.number()),
-      endDate: v.optional(v.number()),
       createdBy: v.id("users"),
+      hasCustomSubmissionPage: v.optional(v.boolean()),
       submissionCount: v.number(),
       judgeCount: v.number(),
     }),
@@ -79,9 +78,8 @@ export const listGroups = query({
           isPublic: group.isPublic,
           resultsIsPublic: group.resultsIsPublic,
           isActive: group.isActive,
-          startDate: group.startDate,
-          endDate: group.endDate,
           createdBy: group.createdBy,
+          hasCustomSubmissionPage: group.hasCustomSubmissionPage,
           submissionCount,
           judgeCount,
         };
@@ -104,8 +102,6 @@ export const createGroup = mutation({
     resultsIsPublic: v.optional(v.boolean()),
     resultsPassword: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
-    startDate: v.optional(v.number()),
-    endDate: v.optional(v.number()),
   },
   returns: v.id("judgingGroups"),
   handler: async (ctx, args) => {
@@ -153,8 +149,6 @@ export const createGroup = mutation({
       resultsIsPublic: args.resultsIsPublic ?? false, // Default to private
       resultsPassword: hashedResultsPassword,
       isActive: args.isActive ?? true,
-      startDate: args.startDate,
-      endDate: args.endDate,
       createdBy: user._id,
     });
   },
@@ -173,8 +167,24 @@ export const updateGroup = mutation({
     resultsIsPublic: v.optional(v.boolean()),
     resultsPassword: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
-    startDate: v.optional(v.number()),
-    endDate: v.optional(v.number()),
+    hasCustomSubmissionPage: v.optional(v.boolean()),
+    submissionPageImageId: v.optional(v.id("_storage")),
+    submissionPageImageSize: v.optional(v.number()),
+    submissionPageLayout: v.optional(
+      v.union(v.literal("two-column"), v.literal("one-third")),
+    ),
+    submissionPageTitle: v.optional(v.string()),
+    submissionPageDescription: v.optional(v.string()),
+    submissionPageLinks: v.optional(
+      v.array(
+        v.object({
+          label: v.string(),
+          url: v.string(),
+        }),
+      ),
+    ),
+    submissionFormTitle: v.optional(v.string()),
+    submissionFormSubtitle: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -266,8 +276,6 @@ export const getGroupBySlug = query({
       description: v.optional(v.string()),
       isPublic: v.boolean(),
       isActive: v.boolean(),
-      startDate: v.optional(v.number()),
-      endDate: v.optional(v.number()),
       createdBy: v.id("users"),
     }),
   ),
@@ -291,8 +299,6 @@ export const getGroupBySlug = query({
       description: group.description,
       isPublic: group.isPublic,
       isActive: group.isActive,
-      startDate: group.startDate,
-      endDate: group.endDate,
       createdBy: group.createdBy,
     };
   },
@@ -316,10 +322,24 @@ export const getGroupWithDetails = query({
       resultsIsPublic: v.optional(v.boolean()),
       resultsPassword: v.optional(v.string()),
       isActive: v.boolean(),
-      startDate: v.optional(v.number()),
-      endDate: v.optional(v.number()),
       createdBy: v.id("users"),
       hasPassword: v.boolean(),
+      hasCustomSubmissionPage: v.optional(v.boolean()),
+      submissionPageImageId: v.optional(v.id("_storage")),
+      submissionPageImageSize: v.optional(v.number()),
+      submissionPageLayout: v.optional(v.union(v.literal("two-column"), v.literal("one-third"))),
+      submissionPageTitle: v.optional(v.string()),
+      submissionPageDescription: v.optional(v.string()),
+      submissionPageLinks: v.optional(
+        v.array(
+          v.object({
+            label: v.string(),
+            url: v.string(),
+          }),
+        ),
+      ),
+      submissionFormTitle: v.optional(v.string()),
+      submissionFormSubtitle: v.optional(v.string()),
       criteria: v.array(
         v.object({
           _id: v.id("judgingCriteria"),
@@ -387,8 +407,6 @@ export const getPublicGroup = query({
       description: v.optional(v.string()),
       isPublic: v.boolean(),
       isActive: v.boolean(),
-      startDate: v.optional(v.number()),
-      endDate: v.optional(v.number()),
       hasPassword: v.boolean(),
     }),
   ),
@@ -418,8 +436,6 @@ export const getPublicGroup = query({
       description: group.description,
       isPublic: group.isPublic,
       isActive: group.isActive,
-      startDate: group.startDate,
-      endDate: group.endDate,
       hasPassword: !!group.password,
     };
   },
@@ -497,6 +513,82 @@ export const getPublicGroupForResults = query({
       description: group.description,
       resultsIsPublic: group.resultsIsPublic ?? false,
       isActive: group.isActive,
+    };
+  },
+});
+
+/**
+ * Get submission page data by slug (public endpoint)
+ */
+export const getSubmissionPage = query({
+  args: { slug: v.string() },
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("judgingGroups"),
+      name: v.string(),
+      slug: v.string(),
+      description: v.optional(v.string()),
+      isPublic: v.boolean(),
+      hasPassword: v.boolean(),
+      hasCustomSubmissionPage: v.optional(v.boolean()),
+      submissionPageImageUrl: v.optional(v.string()),
+      submissionPageImageSize: v.optional(v.number()),
+      submissionPageLayout: v.optional(
+        v.union(v.literal("two-column"), v.literal("one-third")),
+      ),
+      submissionPageTitle: v.optional(v.string()),
+      submissionPageDescription: v.optional(v.string()),
+      submissionPageLinks: v.optional(
+        v.array(
+          v.object({
+            label: v.string(),
+            url: v.string(),
+          }),
+        ),
+      ),
+      submissionFormTitle: v.optional(v.string()),
+      submissionFormSubtitle: v.optional(v.string()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const group = await ctx.db
+      .query("judgingGroups")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+
+    if (!group) {
+      return null;
+    }
+
+    // Only return submission page if it's enabled
+    if (!group.hasCustomSubmissionPage) {
+      return null;
+    }
+
+    // Get image URL if image is set
+    let submissionPageImageUrl: string | undefined = undefined;
+    if (group.submissionPageImageId) {
+      submissionPageImageUrl =
+        (await ctx.storage.getUrl(group.submissionPageImageId)) ?? undefined;
+    }
+
+    return {
+      _id: group._id,
+      name: group.name,
+      slug: group.slug,
+      description: group.description,
+      isPublic: group.isPublic,
+      hasPassword: !!group.password,
+      hasCustomSubmissionPage: group.hasCustomSubmissionPage,
+      submissionPageImageUrl,
+      submissionPageImageSize: group.submissionPageImageSize,
+      submissionPageLayout: group.submissionPageLayout || "two-column", // Default to two-column
+      submissionPageTitle: group.submissionPageTitle,
+      submissionPageDescription: group.submissionPageDescription,
+      submissionPageLinks: group.submissionPageLinks,
+      submissionFormTitle: group.submissionFormTitle,
+      submissionFormSubtitle: group.submissionFormSubtitle,
     };
   },
 });
