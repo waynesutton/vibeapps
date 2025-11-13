@@ -149,7 +149,9 @@ export function JudgingGroupSubmitPage() {
               <div className="rounded-lg overflow-hidden">
                 <img
                   src={submissionPage.submissionPageImageUrl}
-                  alt={submissionPage.submissionPageTitle || submissionPage.name}
+                  alt={
+                    submissionPage.submissionPageTitle || submissionPage.name
+                  }
                   style={{
                     width: `${imageSize}px`,
                     height: `${imageSize}px`,
@@ -243,13 +245,23 @@ export function JudgingGroupSubmitPage() {
 
                   {/* Notice about authentication */}
                   {!isSignedIn && (
-                    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-                      <p className="text-sm text-blue-800">
+                    <div className="mb-6 p-4 bg-[#F2F4F7] border border-[#D8E1EC] rounded-md">
+                      <p className="text-sm text-[#525252]">
                         You need to{" "}
-                        <Link to="/sign-in" className="underline font-medium">
+                        <Link
+                          to="/sign-up"
+                          className="underline font-medium text-[#292929] hover:text-[#525252]"
+                        >
+                          sign up
+                        </Link>{" "}
+                        or{" "}
+                        <Link
+                          to="/sign-in"
+                          className="underline font-medium text-[#292929] hover:text-[#525252]"
+                        >
                           sign in
                         </Link>{" "}
-                        to submit your app to this judging group.
+                        to submit your app to the hackathon.
                       </p>
                     </div>
                   )}
@@ -269,13 +281,21 @@ export function JudgingGroupSubmitPage() {
                   ) : (
                     <div className="text-center py-8">
                       <p className="text-[#525252] mb-4">
-                        Sign in to submit your app
+                        You need to sign up or sign in to submit your app to the
+                        hackathon.
                       </p>
-                      <Link to="/sign-in">
-                        <Button className="bg-[#292929] hover:bg-[#525252]">
-                          Sign In
-                        </Button>
-                      </Link>
+                      <div className="flex items-center justify-center gap-3">
+                        <Link to="/sign-up">
+                          <Button className="bg-[#292929] hover:bg-[#525252]">
+                            Sign Up
+                          </Button>
+                        </Link>
+                        <Link to="/sign-in">
+                          <Button className="bg-[#292929] hover:bg-[#525252]">
+                            Sign In
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   )}
                 </>
@@ -327,7 +347,9 @@ function SubmissionFormContent({
     teamMembers: [{ name: "", email: "" }],
   });
 
-  const [dynamicFormData, setDynamicFormData] = useState<Record<string, string>>({});
+  const [dynamicFormData, setDynamicFormData] = useState<
+    Record<string, string>
+  >({});
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [additionalImages, setAdditionalImages] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -347,7 +369,10 @@ function SubmissionFormContent({
   // Click outside handler for dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setShowDropdown(false);
       }
     };
@@ -361,7 +386,9 @@ function SubmissionFormContent({
     }
   };
 
-  const handleAdditionalImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAdditionalImagesChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
       const totalImages = additionalImages.length + filesArray.length;
@@ -389,7 +416,9 @@ function SubmissionFormContent({
     if (
       tagName &&
       !newTagNames.some((t) => t.toLowerCase() === tagName.toLowerCase()) &&
-      !availableTags?.some((t) => t.name.toLowerCase() === tagName.toLowerCase()) &&
+      !availableTags?.some(
+        (t) => t.name.toLowerCase() === tagName.toLowerCase(),
+      ) &&
       !allTags?.some((t) => t.name.toLowerCase() === tagName.toLowerCase())
     ) {
       setNewTagNames((prev) => [...prev, tagName]);
@@ -420,7 +449,9 @@ function SubmissionFormContent({
       return;
     }
     setSelectedTagIds((prev) =>
-      prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId],
+      prev.includes(tagId)
+        ? prev.filter((id) => id !== tagId)
+        : [...prev, tagId],
     );
   };
 
@@ -468,7 +499,8 @@ function SubmissionFormContent({
         tagIds: selectedTagIds,
         newTagNames,
         screenshotId,
-        additionalImageIds: additionalImageIds.length > 0 ? additionalImageIds : undefined,
+        additionalImageIds:
+          additionalImageIds.length > 0 ? additionalImageIds : undefined,
         judgingGroupId, // Auto-add to judging group
         // Dynamic form fields
         linkedinUrl: dynamicFormData.linkedinUrl || undefined,
@@ -482,9 +514,7 @@ function SubmissionFormContent({
           ? parseInt(teamData.teamSize) || undefined
           : undefined,
         teamMembers: teamData.teamName
-          ? teamData.teamMembers.filter(
-              (m) => m.name.trim() || m.email.trim(),
-            )
+          ? teamData.teamMembers.filter((m) => m.name.trim() || m.email.trim())
           : undefined,
       });
 
@@ -502,7 +532,9 @@ function SubmissionFormContent({
       (tag) =>
         tag.name.toLowerCase().includes(dropdownSearchValue.toLowerCase()) &&
         !selectedTagIds.includes(tag._id) &&
-        !newTagNames.some((name) => name.toLowerCase() === tag.name.toLowerCase()),
+        !newTagNames.some(
+          (name) => name.toLowerCase() === tag.name.toLowerCase(),
+        ),
     )
     .slice(0, 10);
 
@@ -564,7 +596,10 @@ function SubmissionFormContent({
         <textarea
           value={formData.longDescription}
           onChange={(e) =>
-            setFormData((prev) => ({ ...prev, longDescription: e.target.value }))
+            setFormData((prev) => ({
+              ...prev,
+              longDescription: e.target.value,
+            }))
           }
           placeholder="- Problem you're solving&#10;- How the app works&#10;- Notable features&#10;- Why did you build this&#10;- Tech stack list&#10;- Challenges we ran into&#10;- Any success stories or metrics&#10;"
           rows={8}
@@ -717,7 +752,10 @@ function SubmissionFormContent({
         {additionalImages.length > 0 && (
           <div className="mt-2 space-y-1">
             {additionalImages.map((file, index) => (
-              <div key={index} className="flex items-center justify-between text-sm text-[#525252] bg-gray-50 p-2 rounded">
+              <div
+                key={index}
+                className="flex items-center justify-between text-sm text-[#525252] bg-gray-50 p-2 rounded"
+              >
                 <span className="truncate">{file.name}</span>
                 <button
                   type="button"
@@ -930,7 +968,9 @@ function SubmissionFormContent({
               key={tag._id}
               type="button"
               onClick={() => toggleTag(tag._id)}
-              disabled={isSubmitting || (requiredTagId && tag._id === requiredTagId)}
+              disabled={
+                isSubmitting || (requiredTagId && tag._id === requiredTagId)
+              }
               className={`px-3 py-1 rounded-md text-sm transition-colors border flex items-center gap-1 ${
                 selectedTagIds.includes(tag._id)
                   ? "bg-[#F4F0ED] text-[#292929] border-[#D5D3D0]"
@@ -944,7 +984,8 @@ function SubmissionFormContent({
                   ? tag.textColor || "#292929"
                   : "#545454",
                 borderColor: selectedTagIds.includes(tag._id)
-                  ? tag.borderColor || (tag.backgroundColor ? "transparent" : "#D5D3D0")
+                  ? tag.borderColor ||
+                    (tag.backgroundColor ? "transparent" : "#D5D3D0")
                   : "#D5D3D0",
               }}
             >
@@ -982,7 +1023,7 @@ function SubmissionFormContent({
               disabled={isSubmitting}
               className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
             />
-            
+
             {/* Dropdown Results */}
             {showDropdown && allTags && (
               <div className="absolute z-10 w-full mt-1 bg-white border border-[#D8E1EC] rounded-md shadow-lg max-h-48 overflow-y-auto">
@@ -1016,7 +1057,9 @@ function SubmissionFormContent({
                       disabled={isSubmitting}
                       className="w-full px-3 py-2 text-left text-sm hover:bg-[#F4F0ED] focus:bg-[#F4F0ED] focus:outline-none flex items-center gap-2"
                     >
-                      {tag.emoji && <span className="text-sm">{tag.emoji}</span>}
+                      {tag.emoji && (
+                        <span className="text-sm">{tag.emoji}</span>
+                      )}
                       {tag.iconUrl && !tag.emoji && (
                         <img
                           src={tag.iconUrl}
@@ -1065,7 +1108,9 @@ function SubmissionFormContent({
                 ? "Maximum 10 tags reached"
                 : "Enter new tag name..."
             }
-            disabled={isSubmitting || selectedTagIds.length + newTagNames.length >= 10}
+            disabled={
+              isSubmitting || selectedTagIds.length + newTagNames.length >= 10
+            }
             className="flex-1 px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
           />
           <button
@@ -1100,7 +1145,7 @@ function SubmissionFormContent({
         <div className="text-sm font-medium text-[#525252] mb-3">
           Selected Tags ({selectedTagIds.length + newTagNames.length}/10)
         </div>
-        {(selectedTagIds.length > 0 || newTagNames.length > 0) ? (
+        {selectedTagIds.length > 0 || newTagNames.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {/* Show selected existing tags */}
             {allTags &&
@@ -1118,7 +1163,9 @@ function SubmissionFormContent({
                     style={{
                       backgroundColor: tag.backgroundColor || "#F4F0ED",
                       color: tag.textColor || "#292929",
-                      borderColor: tag.backgroundColor ? "transparent" : "#D5D3D0",
+                      borderColor: tag.backgroundColor
+                        ? "transparent"
+                        : "#D5D3D0",
                     }}
                   >
                     {tag.emoji && <span className="text-sm">{tag.emoji}</span>}
@@ -1134,7 +1181,10 @@ function SubmissionFormContent({
                       <span className="text-xs opacity-70">(Hidden)</span>
                     )}
                     {isRequired && (
-                      <Lock className="w-3 h-3 ml-1 opacity-50" title="Required tag" />
+                      <Lock
+                        className="w-3 h-3 ml-1 opacity-50"
+                        title="Required tag"
+                      />
                     )}
                   </span>
                 );
