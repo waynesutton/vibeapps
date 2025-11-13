@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { requireAdminRole, isUserAdmin } from "./users";
@@ -593,6 +593,49 @@ export const getSubmissionPage = query({
       submissionFormTitle: group.submissionFormTitle,
       submissionFormSubtitle: group.submissionFormSubtitle,
       submissionFormRequiredTagId: group.submissionFormRequiredTagId,
+    };
+  },
+});
+
+/**
+ * Get submission page metadata for OpenGraph/social media sharing
+ * Internal query for HTTP action use only
+ */
+export const getSubmissionPageMetadata = internalQuery({
+  args: { slug: v.string() },
+  returns: v.union(
+    v.object({
+      title: v.string(),
+      description: v.string(),
+      imageUrl: v.union(v.string(), v.null()),
+      slug: v.string(),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const group = await ctx.db
+      .query("judgingGroups")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .unique();
+
+    if (!group || !group.hasCustomSubmissionPage) {
+      return null;
+    }
+
+    // Resolve image URL for OpenGraph
+    const imageUrl = group.submissionPageImageId
+      ? await ctx.storage.getUrl(group.submissionPageImageId)
+      : null;
+
+    return {
+      title: group.submissionPageTitle || group.name,
+      description:
+        group.submissionPageDescription ||
+        group.description ||
+        `Submit your app to ${group.name}`,
+      imageUrl,
+      slug: group.slug,
     };
   },
 });

@@ -172,6 +172,120 @@ http.route({
   }),
 });
 
+// HTML generation function for submission page metadata
+function generateSubmissionPageHTML(page: {
+  title: string;
+  description: string;
+  imageUrl: string | null;
+  slug: string;
+}) {
+  const imageUrl =
+    page.imageUrl || "https://vibeapps.dev/vibe-apps-open-graphi-image.png";
+  const canonicalUrl = `https://vibeapps.dev/submit/${page.slug}`;
+  const siteName = "Vibe Apps";
+  const twitterHandle = "@waynesutton";
+
+  // Escape HTML characters in dynamic content
+  const escapeHtml = (text: string) => {
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  };
+
+  const safeTitle = escapeHtml(page.title);
+  const safeDescription = escapeHtml(page.description);
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Basic SEO -->
+  <title>${safeTitle} | ${siteName}</title>
+  <meta name="description" content="${safeDescription}">
+  <link rel="canonical" href="${canonicalUrl}">
+  
+  <!-- Open Graph -->
+  <meta property="og:title" content="${safeTitle} | ${siteName}">
+  <meta property="og:description" content="${safeDescription}">
+  <meta property="og:image" content="${imageUrl}">
+  <meta property="og:url" content="${canonicalUrl}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="${siteName}">
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="${twitterHandle}">
+  <meta name="twitter:creator" content="${twitterHandle}">
+  <meta name="twitter:title" content="${safeTitle} | ${siteName}">
+  <meta name="twitter:description" content="${safeDescription}">
+  <meta name="twitter:image" content="${imageUrl}">
+  
+  <!-- Redirect to actual app after a brief delay for crawlers -->
+  <script>
+    setTimeout(() => {
+      window.location.href = "${canonicalUrl}";
+    }, 100);
+  </script>
+</head>
+<body>
+  <div style="font-family: system-ui, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px;">
+    <h1>${safeTitle}</h1>
+    <p>${safeDescription}</p>
+    <p><small>Redirecting to submission page...</small></p>
+  </div>
+</body>
+</html>`;
+}
+
+// Route for serving submission page metadata for social media crawlers
+http.route({
+  path: "/meta/submit",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const url = new URL(request.url);
+
+    // Prefer explicit query param, fall back to last path segment
+    let slug = url.searchParams.get("slug");
+    if (!slug) {
+      const parts = url.pathname.split("/");
+      slug = parts[parts.length - 1] || "";
+    }
+
+    if (!slug) {
+      return new Response("Missing slug parameter", { status: 400 });
+    }
+
+    try {
+      const page = await ctx.runQuery(
+        internal.judgingGroups.getSubmissionPageMetadata,
+        { slug },
+      );
+
+      if (!page) {
+        return new Response("Submission page not found", { status: 404 });
+      }
+
+      const html = generateSubmissionPageHTML(page);
+      return new Response(html, {
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          // Cache for browsers and CDNs while allowing quick refreshes
+          "Cache-Control":
+            "public, max-age=60, s-maxage=300, stale-while-revalidate=600",
+        },
+      });
+    } catch (error) {
+      console.error("Error generating submission page metadata:", error);
+      return new Response("Internal server error", { status: 500 });
+    }
+  }),
+});
+
 // Export router at bottom after routes are defined
 // New routes for robots.txt and llms.txt
 http.route({

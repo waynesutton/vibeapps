@@ -143,7 +143,7 @@ export function JudgingGroupSubmitPage() {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className={`grid grid-cols-1 ${layoutClass} gap-8`}>
           {/* Left Column - Event Info */}
-          <div className="space-y-6 lg:sticky lg:top-4 self-start max-h-screen overflow-y-auto">
+          <div className="space-y-6 lg:sticky lg:top-8 lg:h-[calc(100vh-4rem)] lg:overflow-y-auto self-start">
             {/* Header Image */}
             {submissionPage.submissionPageImageUrl && (
               <div className="rounded-lg overflow-hidden">

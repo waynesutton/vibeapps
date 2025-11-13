@@ -6,3 +6,7 @@
 path = "/s/*"
 function = "botMeta"
 
+[[edge_functions]]
+path = "/judging/*/submit"
+function = "submitMeta"
+
