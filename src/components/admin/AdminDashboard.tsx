@@ -13,7 +13,6 @@ import { NumbersView } from "./NumbersView";
 import { UserModeration } from "./UserModeration";
 import { FormFieldManagement } from "./FormFieldManagement";
 import { Judging } from "./Judging";
-import { SubmitFormManagement } from "./SubmitFormManagement";
 import { EmailManagement } from "./EmailManagement";
 import { UserReportManagement } from "./UserReportManagement";
 // FormResults is typically viewed via a specific form, not as a main tab.
@@ -31,7 +30,7 @@ type MainAdminTab =
   | "settings";
 
 // Define sub-tabs
-type SubmitSubTab = "submit-forms-list" | "form-fields" | "forms";
+type SubmitSubTab = "form-fields" | "forms";
 type UserSubTab = "user-moderation" | "reports";
 
 export function AdminDashboard() {
@@ -41,7 +40,7 @@ export function AdminDashboard() {
     useState<MainAdminTab>(initialMainTab);
 
   const initialSubmitSubTab =
-    (searchParams.get("subtab") as SubmitSubTab) || "submit-forms-list";
+    (searchParams.get("subtab") as SubmitSubTab) || "form-fields";
   const [activeSubmitSubTab, setActiveSubmitSubTab] =
     useState<SubmitSubTab>(initialSubmitSubTab);
 
@@ -149,12 +148,6 @@ export function AdminDashboard() {
           >
             <Tabs.List className="flex flex-wrap gap-1 sm:gap-4 border-b border-gray-200">
               <Tabs.Trigger
-                value="submit-forms-list"
-                className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-[#292929] data-[state=active]:border-b-2 data-[state=active]:border-[#292929] focus:outline-none focus:z-10 whitespace-nowrap"
-              >
-                Submit Forms
-              </Tabs.Trigger>
-              <Tabs.Trigger
                 value="form-fields"
                 className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-[#292929] data-[state=active]:border-b-2 data-[state=active]:border-[#292929] focus:outline-none focus:z-10 whitespace-nowrap"
               >
@@ -167,12 +160,6 @@ export function AdminDashboard() {
                 Custom Forms
               </Tabs.Trigger>
             </Tabs.List>
-            <Tabs.Content
-              value="submit-forms-list"
-              className="focus:outline-none"
-            >
-              <SubmitFormManagement />
-            </Tabs.Content>
             <Tabs.Content value="form-fields" className="focus:outline-none">
               <FormFieldManagement />
             </Tabs.Content>

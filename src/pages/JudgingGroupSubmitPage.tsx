@@ -300,8 +300,8 @@ function SubmissionFormContent({
 }) {
   const submit = useMutation(api.stories.submit);
   const generateUploadUrl = useMutation(api.stories.generateUploadUrl);
-  const allTags = useQuery(api.tags.list);
-  const allTagsForDropdown = useQuery(api.tags.listAllForDropdown);
+  const availableTags = useQuery(api.tags.listHeader); // Only show header tags
+  const allTags = useQuery(api.tags.listAllForDropdown); // For dropdown search
   const formFields = useQuery(api.storyFormFields.listEnabled);
   const settings = useQuery(api.settings.get);
 
@@ -389,8 +389,8 @@ function SubmissionFormContent({
     if (
       tagName &&
       !newTagNames.some((t) => t.toLowerCase() === tagName.toLowerCase()) &&
-      !allTags?.some((t) => t.name.toLowerCase() === tagName.toLowerCase()) &&
-      !allTagsForDropdown?.some((t) => t.name.toLowerCase() === tagName.toLowerCase())
+      !availableTags?.some((t) => t.name.toLowerCase() === tagName.toLowerCase()) &&
+      !allTags?.some((t) => t.name.toLowerCase() === tagName.toLowerCase())
     ) {
       setNewTagNames((prev) => [...prev, tagName]);
       setNewTagInputValue("");
@@ -457,9 +457,6 @@ function SubmissionFormContent({
       }
 
       // Submit story with all fields
-      // Prepare team info if enabled
-      const showTeamInfo = settings?.showHackathonTeamInfo;
-      
       await submit({
         title: formData.title,
         tagline: formData.tagline,
@@ -479,19 +476,16 @@ function SubmissionFormContent({
         githubUrl: dynamicFormData.githubUrl || undefined,
         chefShowUrl: dynamicFormData.chefShowUrl || undefined,
         chefAppUrl: dynamicFormData.chefAppUrl || undefined,
-        // Team info (if enabled and provided)
-        teamName:
-          showTeamInfo && teamData.teamName ? teamData.teamName : undefined,
-        teamMemberCount:
-          showTeamInfo && teamData.teamName
-            ? parseInt(teamData.teamSize) || undefined
-            : undefined,
-        teamMembers:
-          showTeamInfo && teamData.teamName
-            ? teamData.teamMembers.filter(
-                (m) => m.name.trim() || m.email.trim(),
-              )
-            : undefined,
+        // Team info (always included if provided)
+        teamName: teamData.teamName ? teamData.teamName : undefined,
+        teamMemberCount: teamData.teamName
+          ? parseInt(teamData.teamSize) || undefined
+          : undefined,
+        teamMembers: teamData.teamName
+          ? teamData.teamMembers.filter(
+              (m) => m.name.trim() || m.email.trim(),
+            )
+          : undefined,
       });
 
       onSuccess();
@@ -503,7 +497,7 @@ function SubmissionFormContent({
   };
 
   // Filter tags for dropdown search
-  const filteredDropdownTags = allTagsForDropdown
+  const filteredDropdownTags = allTags
     ?.filter(
       (tag) =>
         tag.name.toLowerCase().includes(dropdownSearchValue.toLowerCase()) &&
@@ -608,6 +602,70 @@ function SubmissionFormContent({
         />
       </div>
 
+      {/* GitHub URL Field */}
+      <div>
+        <label
+          htmlFor="githubUrl"
+          className="block text-sm font-medium text-[#525252] mb-1"
+        >
+          GitHub Repo URL (Optional)
+        </label>
+        <div className="text-sm text-[#545454] mb-2">
+          GitHub repository URL for your project
+        </div>
+        <input
+          type="url"
+          id="githubUrl"
+          placeholder="https://github.com/username/repository"
+          value={dynamicFormData.githubUrl || ""}
+          onChange={(e) =>
+            setDynamicFormData((prev) => ({
+              ...prev,
+              githubUrl: e.target.value,
+            }))
+          }
+          className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+          disabled={isSubmitting}
+        />
+      </div>
+
+      {/* Dynamic Form Fields */}
+      {formFields
+        ?.filter((field) => field.key !== "githubUrl")
+        .map((field) => (
+          <div key={field.key}>
+            <label
+              htmlFor={field.key}
+              className="block text-sm font-medium text-[#525252] mb-1"
+            >
+              {field.label}
+            </label>
+            {field.description && (
+              <div className="text-sm text-[#545454] mb-2">
+                {field.description}
+              </div>
+            )}
+            <input
+              type={field.fieldType}
+              id={field.key}
+              placeholder={field.placeholder}
+              value={dynamicFormData[field.key] || ""}
+              onChange={(e) =>
+                setDynamicFormData((prev) => ({
+                  ...prev,
+                  [field.key]: e.target.value,
+                }))
+              }
+              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              required={field.isRequired}
+              disabled={isSubmitting}
+            />
+          </div>
+        ))}
+      {formFields === undefined && (
+        <div className="text-sm text-gray-500">Loading form fields...</div>
+      )}
+
       {/* Video URL */}
       <div>
         <label className="block text-sm font-medium text-[#525252] mb-1">
@@ -627,187 +685,6 @@ function SubmissionFormContent({
           disabled={isSubmitting}
         />
       </div>
-
-      {/* Submitter Name */}
-      <div>
-        <label className="block text-sm font-medium text-[#525252] mb-1">
-          Your Name*
-        </label>
-        <input
-          type="text"
-          value={formData.submitterName}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, submitterName: e.target.value }))
-          }
-          placeholder="Your name"
-          className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
-          required
-          disabled={isSubmitting}
-        />
-      </div>
-
-      {/* Email */}
-      <div>
-        <label className="block text-sm font-medium text-[#525252] mb-1">
-          Email (Optional)
-        </label>
-        <div className="text-sm text-[#545454] mb-2">
-          Hidden and for hackathon notifications
-        </div>
-        <input
-          type="email"
-          value={formData.email}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, email: e.target.value }))
-          }
-          placeholder="your@email.com"
-          className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
-          disabled={isSubmitting}
-        />
-      </div>
-
-      {/* Hackathon Team Info - Conditional */}
-      {settings?.showHackathonTeamInfo && (
-        <div className="bg-[#F2F4F7] p-4 rounded-md border border-[#D8E1EC]">
-          <h3 className="text-base font-medium text-[#292929] mb-3">
-            Hackathon Team Info (Optional)
-          </h3>
-
-          <div className="space-y-4">
-            {/* Team Name */}
-            <div>
-              <label
-                className="block text-sm font-medium text-[#525252] mb-1"
-                htmlFor="teamName"
-              >
-                Team Name (Optional)
-              </label>
-              <input
-                type="text"
-                id="teamName"
-                placeholder="e.g., The Code Wizards"
-                value={teamData.teamName}
-                onChange={(e) =>
-                  setTeamData((prev) => ({
-                    ...prev,
-                    teamName: e.target.value,
-                  }))
-                }
-                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
-                disabled={isSubmitting}
-              />
-            </div>
-
-            {/* Team Size */}
-            {teamData.teamName && (
-              <div>
-                <label
-                  className="block text-sm font-medium text-[#525252] mb-1"
-                  htmlFor="teamSize"
-                >
-                  Team Size
-                </label>
-                <input
-                  type="number"
-                  id="teamSize"
-                  min="1"
-                  max="20"
-                  placeholder="e.g., 4"
-                  value={teamData.teamSize}
-                  onChange={(e) =>
-                    setTeamData((prev) => ({
-                      ...prev,
-                      teamSize: e.target.value,
-                    }))
-                  }
-                  className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
-                  disabled={isSubmitting}
-                />
-              </div>
-            )}
-
-            {/* Team Members */}
-            {teamData.teamName && (
-              <div>
-                <label className="block text-sm font-medium text-[#525252] mb-2">
-                  Team Members (Optional)
-                </label>
-                <div className="space-y-2">
-                  {teamData.teamMembers.map((member, index) => (
-                    <div key={index} className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Name"
-                        value={member.name}
-                        onChange={(e) => {
-                          const newMembers = [...teamData.teamMembers];
-                          newMembers[index].name = e.target.value;
-                          setTeamData((prev) => ({
-                            ...prev,
-                            teamMembers: newMembers,
-                          }));
-                        }}
-                        className="flex-1 px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
-                        disabled={isSubmitting}
-                      />
-                      <input
-                        type="email"
-                        placeholder="Email"
-                        value={member.email}
-                        onChange={(e) => {
-                          const newMembers = [...teamData.teamMembers];
-                          newMembers[index].email = e.target.value;
-                          setTeamData((prev) => ({
-                            ...prev,
-                            teamMembers: newMembers,
-                          }));
-                        }}
-                        className="flex-1 px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
-                        disabled={isSubmitting}
-                      />
-                      {index > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newMembers = teamData.teamMembers.filter(
-                              (_, i) => i !== index,
-                            );
-                            setTeamData((prev) => ({
-                              ...prev,
-                              teamMembers: newMembers,
-                            }));
-                          }}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                          disabled={isSubmitting}
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTeamData((prev) => ({
-                        ...prev,
-                        teamMembers: [
-                          ...prev.teamMembers,
-                          { name: "", email: "" },
-                        ],
-                      }));
-                    }}
-                    className="w-full px-3 py-2 border border-[#D8E1EC] text-[#525252] hover:bg-[#F2F4F7] rounded-md transition-colors flex items-center justify-center gap-2"
-                    disabled={isSubmitting}
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add Team Member
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Screenshot */}
       <div>
@@ -855,86 +732,324 @@ function SubmissionFormContent({
         )}
       </div>
 
+      {/* Submitter Name */}
+      <div>
+        <label className="block text-sm font-medium text-[#525252] mb-1">
+          Your Name*
+        </label>
+        <input
+          type="text"
+          value={formData.submitterName}
+          onChange={(e) =>
+            setFormData((prev) => ({ ...prev, submitterName: e.target.value }))
+          }
+          placeholder="Your name"
+          className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+          required
+          disabled={isSubmitting}
+        />
+      </div>
+
+      {/* Email */}
+      <div>
+        <label className="block text-sm font-medium text-[#525252] mb-1">
+          Email (Optional)
+        </label>
+        <div className="text-sm text-[#545454] mb-2">
+          Hidden and for hackathon notifications
+        </div>
+        <input
+          type="email"
+          value={formData.email}
+          onChange={(e) =>
+            setFormData((prev) => ({ ...prev, email: e.target.value }))
+          }
+          placeholder="your@email.com"
+          className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+          disabled={isSubmitting}
+        />
+      </div>
+
+      {/* Hackathon Team Info - Always Shown */}
+      <div className="bg-[#F2F4F7] p-4 rounded-md border border-[#D8E1EC]">
+        <h3 className="text-base font-medium text-[#292929] mb-3">
+          Hackathon Team Info (Optional)
+        </h3>
+
+        <div className="space-y-4">
+          {/* Team Name */}
+          <div>
+            <label
+              className="block text-sm font-medium text-[#525252] mb-1"
+              htmlFor="teamName"
+            >
+              Team Name (Optional)
+            </label>
+            <input
+              type="text"
+              id="teamName"
+              placeholder="e.g., The Code Wizards"
+              value={teamData.teamName}
+              onChange={(e) =>
+                setTeamData((prev) => ({
+                  ...prev,
+                  teamName: e.target.value,
+                }))
+              }
+              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          {/* Team Size */}
+          {teamData.teamName && (
+            <div>
+              <label
+                className="block text-sm font-medium text-[#525252] mb-1"
+                htmlFor="teamSize"
+              >
+                Team Size
+              </label>
+              <input
+                type="number"
+                id="teamSize"
+                min="1"
+                max="20"
+                placeholder="e.g., 4"
+                value={teamData.teamSize}
+                onChange={(e) =>
+                  setTeamData((prev) => ({
+                    ...prev,
+                    teamSize: e.target.value,
+                  }))
+                }
+                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                disabled={isSubmitting}
+              />
+            </div>
+          )}
+
+          {/* Team Members */}
+          {teamData.teamName && (
+            <div>
+              <label className="block text-sm font-medium text-[#525252] mb-2">
+                Team Members (Optional)
+              </label>
+              <div className="space-y-2">
+                {teamData.teamMembers.map((member, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Name"
+                      value={member.name}
+                      onChange={(e) => {
+                        const newMembers = [...teamData.teamMembers];
+                        newMembers[index].name = e.target.value;
+                        setTeamData((prev) => ({
+                          ...prev,
+                          teamMembers: newMembers,
+                        }));
+                      }}
+                      className="flex-1 px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                      disabled={isSubmitting}
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={member.email}
+                      onChange={(e) => {
+                        const newMembers = [...teamData.teamMembers];
+                        newMembers[index].email = e.target.value;
+                        setTeamData((prev) => ({
+                          ...prev,
+                          teamMembers: newMembers,
+                        }));
+                      }}
+                      className="flex-1 px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                      disabled={isSubmitting}
+                    />
+                    {index > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newMembers = teamData.teamMembers.filter(
+                            (_, i) => i !== index,
+                          );
+                          setTeamData((prev) => ({
+                            ...prev,
+                            teamMembers: newMembers,
+                          }));
+                        }}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                        disabled={isSubmitting}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTeamData((prev) => ({
+                      ...prev,
+                      teamMembers: [
+                        ...prev.teamMembers,
+                        { name: "", email: "" },
+                      ],
+                    }));
+                  }}
+                  className="w-full px-3 py-2 border border-[#D8E1EC] text-[#525252] hover:bg-[#F2F4F7] rounded-md transition-colors flex items-center justify-center gap-2"
+                  disabled={isSubmitting}
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Team Member
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Tags Section */}
       <div>
         <label className="block text-sm font-medium text-[#525252] mb-2">
-          Tags (Select or create, max 10)
+          Select Tags *
         </label>
+        <span className="ml-2 text-xs text-gray-600">
+          Select tags that best describe your app or hackathon participation
+        </span>
 
-        {/* Visible Header Tags */}
-        {allTags && allTags.length > 0 && (
-          <div className="mb-3">
-            <div className="text-xs text-[#545454] mb-2">Quick Select:</div>
-            <div className="flex flex-wrap gap-2">
-              {allTags
-                .filter((tag) => !tag.isHidden)
-                .map((tag) => (
-                  <button
-                    key={tag._id}
-                    type="button"
-                    onClick={() => toggleTag(tag._id)}
-                    disabled={isSubmitting}
-                    className={`px-3 py-1 rounded-full text-sm border transition-colors ${
-                      selectedTagIds.includes(tag._id)
-                        ? "bg-[#292929] text-white border-[#292929]"
-                        : "bg-white text-[#525252] border-[#D8E1EC] hover:border-[#292929]"
-                    }`}
-                    style={
-                      selectedTagIds.includes(tag._id) && tag.backgroundColor
-                        ? {
-                            backgroundColor: tag.backgroundColor,
-                            color: tag.textColor || "#FFFFFF",
-                            borderColor: tag.borderColor || tag.backgroundColor,
-                          }
-                        : undefined
-                    }
-                  >
-                    {tag.emoji && <span className="mr-1">{tag.emoji}</span>}
-                    {tag.name}
-                  </button>
-                ))}
-            </div>
-          </div>
-        )}
+        {/* Quick Select - Header Tags */}
+        <div className="flex flex-wrap gap-2 mb-4 mt-3">
+          {availableTags === undefined && (
+            <span className="text-sm text-gray-500">Loading tags...</span>
+          )}
+          {availableTags?.map((tag) => (
+            <button
+              key={tag._id}
+              type="button"
+              onClick={() => toggleTag(tag._id)}
+              disabled={isSubmitting || (requiredTagId && tag._id === requiredTagId)}
+              className={`px-3 py-1 rounded-md text-sm transition-colors border flex items-center gap-1 ${
+                selectedTagIds.includes(tag._id)
+                  ? "bg-[#F4F0ED] text-[#292929] border-[#D5D3D0]"
+                  : "bg-white text-[#545454] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"
+              }`}
+              style={{
+                backgroundColor: selectedTagIds.includes(tag._id)
+                  ? tag.backgroundColor || "#F4F0ED"
+                  : "white",
+                color: selectedTagIds.includes(tag._id)
+                  ? tag.textColor || "#292929"
+                  : "#545454",
+                borderColor: selectedTagIds.includes(tag._id)
+                  ? tag.borderColor || (tag.backgroundColor ? "transparent" : "#D5D3D0")
+                  : "#D5D3D0",
+              }}
+            >
+              {tag.emoji && <span className="text-sm">{tag.emoji}</span>}
+              {tag.iconUrl && !tag.emoji && (
+                <img
+                  src={tag.iconUrl}
+                  alt=""
+                  className="w-4 h-4 rounded-sm object-cover"
+                />
+              )}
+              {tag.name}
+            </button>
+          ))}
+        </div>
 
         {/* Search All Tags Dropdown */}
-        <div className="mb-3" ref={dropdownRef}>
-          <div className="relative">
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-[#525252] mb-2">
+            Search All Available Tags
+          </label>
+          <span className="ml-2 text-xs text-gray-600 mb-2 block">
+            Find and select from all tags, including those not shown above
+          </span>
+          <div className="relative" ref={dropdownRef}>
             <input
               type="text"
               value={dropdownSearchValue}
               onChange={(e) => {
                 setDropdownSearchValue(e.target.value);
-                setShowDropdown(true);
+                setShowDropdown(e.target.value.length > 0);
               }}
-              onFocus={() => setShowDropdown(true)}
-              placeholder="Search all tags..."
-              disabled={isSubmitting || selectedTagIds.length + newTagNames.length >= 10}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              onFocus={() => setShowDropdown(dropdownSearchValue.length > 0)}
+              placeholder="Type to search for tags..."
+              disabled={isSubmitting}
+              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
             />
-            {showDropdown && filteredDropdownTags && filteredDropdownTags.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-[#D8E1EC] rounded-md shadow-lg max-h-60 overflow-y-auto">
-                {filteredDropdownTags.map((tag) => (
-                  <button
-                    key={tag._id}
-                    type="button"
-                    onClick={() => handleSelectFromDropdown(tag._id)}
-                    className="w-full text-left px-3 py-2 hover:bg-[#F2F4F7] flex items-center gap-2"
-                  >
-                    {tag.emoji && <span>{tag.emoji}</span>}
-                    <span className="flex-1">{tag.name}</span>
-                    {tag.isHidden && (
-                      <span className="text-xs text-gray-500">(Hidden)</span>
-                    )}
-                  </button>
-                ))}
+            
+            {/* Dropdown Results */}
+            {showDropdown && allTags && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-[#D8E1EC] rounded-md shadow-lg max-h-48 overflow-y-auto">
+                {(() => {
+                  const searchTerm = dropdownSearchValue.toLowerCase();
+                  const filteredTags = allTags
+                    .filter(
+                      (tag) =>
+                        tag.name.toLowerCase().includes(searchTerm) &&
+                        !selectedTagIds.includes(tag._id) &&
+                        !newTagNames.some(
+                          (newTag) =>
+                            newTag.toLowerCase() === tag.name.toLowerCase(),
+                        ),
+                    )
+                    .slice(0, 10);
+
+                  if (filteredTags.length === 0) {
+                    return (
+                      <div className="px-3 py-2 text-sm text-gray-500">
+                        No matching tags found
+                      </div>
+                    );
+                  }
+
+                  return filteredTags.map((tag) => (
+                    <button
+                      key={tag._id}
+                      type="button"
+                      onClick={() => handleSelectFromDropdown(tag._id)}
+                      disabled={isSubmitting}
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-[#F4F0ED] focus:bg-[#F4F0ED] focus:outline-none flex items-center gap-2"
+                    >
+                      {tag.emoji && <span className="text-sm">{tag.emoji}</span>}
+                      {tag.iconUrl && !tag.emoji && (
+                        <img
+                          src={tag.iconUrl}
+                          alt=""
+                          className="w-4 h-4 rounded-sm object-cover"
+                        />
+                      )}
+                      <span
+                        className="inline-block px-2 py-0.5 rounded text-xs font-medium"
+                        style={{
+                          backgroundColor: tag.backgroundColor || "#F4F0ED",
+                          color: tag.textColor || "#525252",
+                          border: `1px solid ${tag.backgroundColor ? "transparent" : "#D5D3D0"}`,
+                        }}
+                      >
+                        {tag.name}
+                      </span>
+                      {tag.isHidden && (
+                        <span className="text-xs text-gray-400">(Hidden)</span>
+                      )}
+                    </button>
+                  ));
+                })()}
               </div>
             )}
           </div>
         </div>
 
         {/* Create New Tag */}
-        <div className="flex gap-2 mb-3">
+        <label className="block text-sm font-medium text-[#525252] mb-2">
+          Add New Tags (optional)
+        </label>
+        <div className="flex gap-2 mb-2">
           <input
             type="text"
             value={newTagInputValue}
@@ -945,121 +1060,103 @@ function SubmissionFormContent({
                 handleAddNewTag();
               }
             }}
-            placeholder="Create new tag..."
+            placeholder={
+              selectedTagIds.length + newTagNames.length >= 10
+                ? "Maximum 10 tags reached"
+                : "Enter new tag name..."
+            }
             disabled={isSubmitting || selectedTagIds.length + newTagNames.length >= 10}
-            className="flex-1 px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+            className="flex-1 px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
           />
           <button
             type="button"
             onClick={handleAddNewTag}
-            disabled={isSubmitting || !newTagInputValue.trim() || selectedTagIds.length + newTagNames.length >= 10}
-            className="px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+            disabled={
+              !newTagInputValue.trim() ||
+              isSubmitting ||
+              selectedTagIds.length + newTagNames.length >= 10
+            }
+            className="px-3 py-1 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
           >
-            <Plus className="w-4 h-4" />
-            Create
+            <Plus className="w-4 h-4" /> Add
           </button>
         </div>
 
-        {/* Selected Tags Display */}
-        {(selectedTagIds.length > 0 || newTagNames.length > 0) && (
-          <div className="bg-[#F2F4F7] rounded-md p-3">
-            <div className="text-xs font-medium text-[#525252] mb-2">
-              Selected Tags ({selectedTagIds.length + newTagNames.length}/10)
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {selectedTagIds.map((tagId) => {
-                const tag = allTags?.find((t) => t._id === tagId) ||
-                  allTagsForDropdown?.find((t) => t._id === tagId);
-                if (!tag) return null;
-                const isRequired = requiredTagId && tagId === requiredTagId;
-                return (
-                  <div
-                    key={tagId}
-                    className="flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-white border border-[#D8E1EC]"
-                    style={
-                      tag.backgroundColor
-                        ? {
-                            backgroundColor: tag.backgroundColor,
-                            color: tag.textColor || "#FFFFFF",
-                            borderColor: tag.borderColor || tag.backgroundColor,
-                          }
-                        : undefined
-                    }
-                  >
-                    {tag.emoji && <span>{tag.emoji}</span>}
-                    <span>{tag.name}</span>
-                    {tag.isHidden && (
-                      <span className="text-xs opacity-70">(Hidden)</span>
-                    )}
-                    {isRequired ? (
-                      <Lock className="w-3 h-3 ml-1 opacity-50" title="Required tag" />
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => toggleTag(tagId)}
-                        className="ml-1 hover:opacity-70"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-              {newTagNames.map((tagName) => (
-                <div
-                  key={tagName}
-                  className="flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-green-50 border border-green-200 text-green-800"
-                >
-                  <span>{tagName}</span>
-                  <span className="text-xs">(New)</span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setNewTagNames((prev) => prev.filter((t) => t !== tagName))
-                    }
-                    className="ml-1 hover:opacity-70"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* Tag Selection Hints */}
+        {selectedTagIds.length === 0 && newTagNames.length === 0 && (
+          <p className="text-xs text-red-500 mt-1">
+            Please select or add at least one tag.
+          </p>
+        )}
+        {selectedTagIds.length + newTagNames.length >= 10 && (
+          <p className="text-xs text-amber-600 mt-1">
+            Maximum of 10 tags reached. Remove a tag to add another.
+          </p>
         )}
       </div>
 
-      {/* Dynamic Form Fields */}
-      {formFields && formFields.length > 0 && (
-        <div className="space-y-4">
-          {formFields.map((field) => (
-            <div key={field._id}>
-              <label className="block text-sm font-medium text-[#525252] mb-1">
-                {field.label}
-                {field.isRequired && "*"}
-              </label>
-              {field.helpText && (
-                <div className="text-sm text-[#545454] mb-2">
-                  {field.helpText}
-                </div>
-              )}
-              <input
-                type={field.type === "email" ? "email" : field.type === "url" ? "url" : "text"}
-                value={dynamicFormData[field.key] || ""}
-                onChange={(e) =>
-                  setDynamicFormData((prev) => ({
-                    ...prev,
-                    [field.key]: e.target.value,
-                  }))
-                }
-                placeholder={field.placeholder || ""}
-                required={field.key === "githubUrl" ? false : field.isRequired}
-                disabled={isSubmitting}
-                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
-              />
-            </div>
-          ))}
+      {/* Selected Tags - Always Visible */}
+      <div className="p-4">
+        <div className="text-sm font-medium text-[#525252] mb-3">
+          Selected Tags ({selectedTagIds.length + newTagNames.length}/10)
         </div>
-      )}
+        {(selectedTagIds.length > 0 || newTagNames.length > 0) ? (
+          <div className="flex flex-wrap gap-2">
+            {/* Show selected existing tags */}
+            {allTags &&
+              selectedTagIds.map((tagId) => {
+                const tag =
+                  availableTags?.find((t) => t._id === tagId) ||
+                  allTags.find((t) => t._id === tagId);
+                if (!tag) return null;
+                const isRequired = requiredTagId && tagId === requiredTagId;
+
+                return (
+                  <span
+                    key={tag._id}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm border transition-colors"
+                    style={{
+                      backgroundColor: tag.backgroundColor || "#F4F0ED",
+                      color: tag.textColor || "#292929",
+                      borderColor: tag.backgroundColor ? "transparent" : "#D5D3D0",
+                    }}
+                  >
+                    {tag.emoji && <span className="text-sm">{tag.emoji}</span>}
+                    {tag.iconUrl && !tag.emoji && (
+                      <img
+                        src={tag.iconUrl}
+                        alt=""
+                        className="w-4 h-4 rounded-sm object-cover"
+                      />
+                    )}
+                    {tag.name}
+                    {tag.isHidden && (
+                      <span className="text-xs opacity-70">(Hidden)</span>
+                    )}
+                    {isRequired && (
+                      <Lock className="w-3 h-3 ml-1 opacity-50" title="Required tag" />
+                    )}
+                  </span>
+                );
+              })}
+
+            {/* Show new tags being created */}
+            {newTagNames.map((tagName) => (
+              <span
+                key={tagName}
+                className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-sm border border-blue-200"
+              >
+                {tagName}
+                <span className="text-xs opacity-70">(New)</span>
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-[#787672]">
+            No tags selected yet. Please select tags above.
+          </p>
+        )}
+      </div>
 
       {/* Submit Button */}
       <Button
