@@ -98,7 +98,8 @@ export const createGroup = mutation({
     name: v.string(),
     description: v.optional(v.string()),
     isPublic: v.boolean(),
-    password: v.optional(v.string()),
+    judgePassword: v.optional(v.string()),
+    submissionPagePassword: v.optional(v.string()),
     resultsIsPublic: v.optional(v.boolean()),
     resultsPassword: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
@@ -133,8 +134,11 @@ export const createGroup = mutation({
     }
 
     // Hash passwords if provided
-    const hashedPassword = args.password
-      ? hashPassword(args.password)
+    const hashedJudgePassword = args.judgePassword
+      ? hashPassword(args.judgePassword)
+      : undefined;
+    const hashedSubmissionPassword = args.submissionPagePassword
+      ? hashPassword(args.submissionPagePassword)
       : undefined;
     const hashedResultsPassword = args.resultsPassword
       ? hashPassword(args.resultsPassword)
@@ -145,7 +149,8 @@ export const createGroup = mutation({
       slug,
       description: args.description,
       isPublic: args.isPublic,
-      password: hashedPassword,
+      judgePassword: hashedJudgePassword,
+      submissionPagePassword: hashedSubmissionPassword,
       resultsIsPublic: args.resultsIsPublic ?? false, // Default to private
       resultsPassword: hashedResultsPassword,
       isActive: args.isActive ?? true,
@@ -163,7 +168,8 @@ export const updateGroup = mutation({
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     isPublic: v.optional(v.boolean()),
-    password: v.optional(v.string()),
+    judgePassword: v.optional(v.string()),
+    submissionPagePassword: v.optional(v.string()),
     resultsIsPublic: v.optional(v.boolean()),
     resultsPassword: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
@@ -191,12 +197,17 @@ export const updateGroup = mutation({
   handler: async (ctx, args) => {
     await requireAdminRole(ctx);
 
-    const { groupId, password, resultsPassword, ...updates } = args;
+    const { groupId, judgePassword, submissionPagePassword, resultsPassword, ...updates } = args;
 
     // Hash passwords if provided
     const finalUpdates: any = { ...updates };
-    if (password !== undefined) {
-      finalUpdates.password = password ? hashPassword(password) : undefined;
+    if (judgePassword !== undefined) {
+      finalUpdates.judgePassword = judgePassword ? hashPassword(judgePassword) : undefined;
+    }
+    if (submissionPagePassword !== undefined) {
+      finalUpdates.submissionPagePassword = submissionPagePassword
+        ? hashPassword(submissionPagePassword)
+        : undefined;
     }
     if (resultsPassword !== undefined) {
       finalUpdates.resultsPassword = resultsPassword
@@ -319,12 +330,14 @@ export const getGroupWithDetails = query({
       slug: v.string(),
       description: v.optional(v.string()),
       isPublic: v.boolean(),
-      password: v.optional(v.string()),
+      judgePassword: v.optional(v.string()),
+      submissionPagePassword: v.optional(v.string()),
       resultsIsPublic: v.optional(v.boolean()),
       resultsPassword: v.optional(v.string()),
       isActive: v.boolean(),
       createdBy: v.id("users"),
-      hasPassword: v.boolean(),
+      hasJudgePassword: v.boolean(),
+      hasSubmissionPagePassword: v.boolean(),
       hasCustomSubmissionPage: v.optional(v.boolean()),
       submissionPageImageId: v.optional(v.id("_storage")),
       submissionPageImageSize: v.optional(v.number()),
@@ -385,7 +398,8 @@ export const getGroupWithDetails = query({
 
     return {
       ...group,
-      hasPassword: !!group.password,
+      hasJudgePassword: !!(group.judgePassword || (group as any).password), // Backward compatibility
+      hasSubmissionPagePassword: !!group.submissionPagePassword,
       criteria,
       submissionCount,
       judgeCount,
@@ -409,7 +423,7 @@ export const getPublicGroup = query({
       description: v.optional(v.string()),
       isPublic: v.boolean(),
       isActive: v.boolean(),
-      hasPassword: v.boolean(),
+      hasJudgePassword: v.boolean(),
     }),
   ),
   handler: async (ctx, args) => {
@@ -438,13 +452,13 @@ export const getPublicGroup = query({
       description: group.description,
       isPublic: group.isPublic,
       isActive: group.isActive,
-      hasPassword: !!group.password,
+      hasJudgePassword: !!(group.judgePassword || (group as any).password), // Backward compatibility
     };
   },
 });
 
 /**
- * Validate password for private group access
+ * Validate password for judge access to judging interface
  */
 export const validatePassword = mutation({
   args: {
@@ -454,11 +468,32 @@ export const validatePassword = mutation({
   returns: v.boolean(),
   handler: async (ctx, args) => {
     const group = await ctx.db.get(args.groupId);
-    if (!group || !group.password) {
+    // Backward compatibility: check both new judgePassword and old password fields
+    const storedPassword = group?.judgePassword || (group as any)?.password;
+    if (!group || !storedPassword) {
       return false;
     }
 
-    return verifyPassword(args.password, group.password);
+    return verifyPassword(args.password, storedPassword);
+  },
+});
+
+/**
+ * Validate password for submission page access
+ */
+export const validateSubmissionPagePassword = mutation({
+  args: {
+    groupId: v.id("judgingGroups"),
+    password: v.string(),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const group = await ctx.db.get(args.groupId);
+    if (!group || !group.submissionPagePassword) {
+      return false;
+    }
+
+    return verifyPassword(args.password, group.submissionPagePassword);
   },
 });
 
@@ -532,7 +567,7 @@ export const getSubmissionPage = query({
       slug: v.string(),
       description: v.optional(v.string()),
       isPublic: v.boolean(),
-      hasPassword: v.boolean(),
+      hasSubmissionPagePassword: v.boolean(),
       hasCustomSubmissionPage: v.optional(v.boolean()),
       submissionPageImageUrl: v.optional(v.string()),
       submissionPageImageSize: v.optional(v.number()),
@@ -582,7 +617,7 @@ export const getSubmissionPage = query({
       slug: group.slug,
       description: group.description,
       isPublic: group.isPublic,
-      hasPassword: !!group.password,
+      hasSubmissionPagePassword: !!group.submissionPagePassword,
       hasCustomSubmissionPage: group.hasCustomSubmissionPage,
       submissionPageImageUrl,
       submissionPageImageSize: group.submissionPageImageSize,

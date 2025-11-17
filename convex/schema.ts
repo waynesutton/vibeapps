@@ -338,9 +338,11 @@ export default defineSchema({
     slug: v.string(), // URL-friendly identifier
     description: v.optional(v.string()), // Optional description of the group
     isPublic: v.boolean(), // Public (shareable link) or private access
-    password: v.optional(v.string()), // Password for private groups (hashed)
+    password: v.optional(v.string()), // DEPRECATED: Old password field (kept for backward compatibility)
+    judgePassword: v.optional(v.string()), // Password for judge access to judging interface (hashed)
+    submissionPagePassword: v.optional(v.string()), // Password for custom submission page access (hashed)
     resultsIsPublic: v.optional(v.boolean()), // Whether results page is public (defaults to private)
-    resultsPassword: v.optional(v.string()), // Password for private results pages
+    resultsPassword: v.optional(v.string()), // Password for private results pages (hashed)
     isActive: v.boolean(), // Whether judging is currently active (controlled by admin)
     startDate: v.optional(v.number()), // Optional start date timestamp for judging period
     endDate: v.optional(v.number()), // Optional end date timestamp for judging period

@@ -24,7 +24,9 @@ export function JudgingGroupSubmitPage() {
     api.judgingGroups.getSubmissionPage,
     slug ? { slug } : "skip",
   );
-  const validatePassword = useMutation(api.judgingGroups.validatePassword);
+  const validateSubmissionPagePassword = useMutation(
+    api.judgingGroups.validateSubmissionPagePassword,
+  );
 
   // Handle password validation
   const handlePasswordSubmit = async (e: React.FormEvent) => {
@@ -32,7 +34,7 @@ export function JudgingGroupSubmitPage() {
     if (!submissionPage) return;
 
     try {
-      const isValid = await validatePassword({
+      const isValid = await validateSubmissionPagePassword({
         groupId: submissionPage._id,
         password,
       });
@@ -88,7 +90,7 @@ export function JudgingGroupSubmitPage() {
   }
 
   // Show password form if not authenticated
-  if (!isAuthenticated && submissionPage.hasPassword) {
+  if (!isAuthenticated && submissionPage.hasSubmissionPagePassword) {
     return (
       <div className="min-h-screen bg-[#F2F4F7] flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-md p-8 max-w-md w-full border border-[#D8E1EC]">
@@ -323,7 +325,6 @@ function SubmissionFormContent({
   const availableTags = useQuery(api.tags.listHeader); // Only show header tags
   const allTags = useQuery(api.tags.listAllForDropdown); // For dropdown search
   const formFields = useQuery(api.storyFormFields.listEnabled);
-  const settings = useQuery(api.settings.get);
 
   const [selectedTagIds, setSelectedTagIds] = React.useState<Id<"tags">[]>([]);
   const [newTagInputValue, setNewTagInputValue] = React.useState("");
@@ -525,18 +526,6 @@ function SubmissionFormContent({
       setIsSubmitting(false);
     }
   };
-
-  // Filter tags for dropdown search
-  const filteredDropdownTags = allTags
-    ?.filter(
-      (tag) =>
-        tag.name.toLowerCase().includes(dropdownSearchValue.toLowerCase()) &&
-        !selectedTagIds.includes(tag._id) &&
-        !newTagNames.some(
-          (name) => name.toLowerCase() === tag.name.toLowerCase(),
-        ),
-    )
-    .slice(0, 10);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -969,7 +958,7 @@ function SubmissionFormContent({
               type="button"
               onClick={() => toggleTag(tag._id)}
               disabled={
-                isSubmitting || (requiredTagId && tag._id === requiredTagId)
+                isSubmitting || !!(requiredTagId && tag._id === requiredTagId)
               }
               className={`px-3 py-1 rounded-md text-sm transition-colors border flex items-center gap-1 ${
                 selectedTagIds.includes(tag._id)
@@ -981,7 +970,7 @@ function SubmissionFormContent({
                   ? tag.backgroundColor || "#F4F0ED"
                   : "white",
                 color: selectedTagIds.includes(tag._id)
-                  ? tag.textColor || "#292929"
+                  ? (tag.textColor ?? "#292929")
                   : "#545454",
                 borderColor: selectedTagIds.includes(tag._id)
                   ? tag.borderColor ||
@@ -1181,10 +1170,9 @@ function SubmissionFormContent({
                       <span className="text-xs opacity-70">(Hidden)</span>
                     )}
                     {isRequired && (
-                      <Lock
-                        className="w-3 h-3 ml-1 opacity-50"
-                        title="Required tag"
-                      />
+                      <span title="Required tag">
+                        <Lock className="w-3 h-3 ml-1 opacity-50" />
+                      </span>
                     )}
                   </span>
                 );

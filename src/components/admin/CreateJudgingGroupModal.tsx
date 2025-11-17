@@ -23,7 +23,8 @@ export function CreateJudgingGroupModal({
     name: "",
     description: "",
     isPublic: true,
-    password: "",
+    judgePassword: "",
+    submissionPagePassword: "",
     resultsIsPublic: false,
     resultsPassword: "",
     isActive: true,
@@ -38,7 +39,8 @@ export function CreateJudgingGroupModal({
       name: "",
       description: "",
       isPublic: true,
-      password: "",
+      judgePassword: "",
+      submissionPagePassword: "",
       resultsIsPublic: false,
       resultsPassword: "",
       isActive: true,
@@ -64,12 +66,6 @@ export function CreateJudgingGroupModal({
       return;
     }
 
-    if (!formData.isPublic && !formData.password.trim()) {
-      setError("Password is required for private groups");
-      setIsSubmitting(false);
-      return;
-    }
-
     if (!formData.resultsIsPublic && !formData.resultsPassword.trim()) {
       setError("Password is required for private results pages");
       setIsSubmitting(false);
@@ -81,7 +77,12 @@ export function CreateJudgingGroupModal({
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
         isPublic: formData.isPublic,
-        password: !formData.isPublic ? formData.password.trim() : undefined,
+        judgePassword: !formData.isPublic && formData.judgePassword.trim() 
+          ? formData.judgePassword.trim() 
+          : undefined,
+        submissionPagePassword: !formData.isPublic && formData.submissionPagePassword.trim()
+          ? formData.submissionPagePassword.trim()
+          : undefined,
         resultsIsPublic: formData.resultsIsPublic,
         resultsPassword: !formData.resultsIsPublic
           ? formData.resultsPassword.trim()
@@ -183,7 +184,8 @@ export function CreateJudgingGroupModal({
                     setFormData((prev) => ({
                       ...prev,
                       isPublic: !!checked,
-                      password: !!checked ? "" : prev.password,
+                      judgePassword: !!checked ? "" : prev.judgePassword,
+                      submissionPagePassword: !!checked ? "" : prev.submissionPagePassword,
                     }))
                   }
                   disabled={isSubmitting}
@@ -196,30 +198,56 @@ export function CreateJudgingGroupModal({
               <p className="text-sm text-gray-500 ml-6">
                 {formData.isPublic
                   ? "Anyone with the link can access this judging group"
-                  : "Requires a password to access this judging group"}
+                  : "Password protection for judge and submission access"}
               </p>
             </div>
 
             {!formData.isPublic && (
-              <div>
-                <Label htmlFor="password" className="flex items-center gap-2">
-                  <Lock className="w-4 h-4" />
-                  Password *
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      password: e.target.value,
-                    }))
-                  }
-                  placeholder="Enter a secure password"
-                  required={!formData.isPublic}
-                  disabled={isSubmitting}
-                />
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="judgePassword" className="flex items-center gap-2">
+                    <Lock className="w-4 h-4" />
+                    Judge Access Password
+                  </Label>
+                  <Input
+                    id="judgePassword"
+                    type="password"
+                    value={formData.judgePassword}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        judgePassword: e.target.value,
+                      }))
+                    }
+                    placeholder="Password for judges (optional)"
+                    disabled={isSubmitting}
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Optional password for judges to access the judging interface
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="submissionPagePassword" className="flex items-center gap-2">
+                    <Lock className="w-4 h-4" />
+                    Submission Page Password
+                  </Label>
+                  <Input
+                    id="submissionPagePassword"
+                    type="password"
+                    value={formData.submissionPagePassword}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        submissionPagePassword: e.target.value,
+                      }))
+                    }
+                    placeholder="Password for submission form (optional)"
+                    disabled={isSubmitting}
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Optional password for users to access the custom submission form
+                  </p>
+                </div>
               </div>
             )}
           </div>

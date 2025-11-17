@@ -40,7 +40,8 @@ interface GroupSettings {
   name: string;
   description: string;
   isPublic: boolean;
-  password: string;
+  judgePassword: string;
+  submissionPagePassword: string;
   isActive: boolean;
   hasCustomSubmissionPage: boolean;
   submissionPageImageSize: number;
@@ -72,7 +73,8 @@ export function JudgingCriteriaEditor({
     name: "",
     description: "",
     isPublic: true,
-    password: "",
+    judgePassword: "",
+    submissionPagePassword: "",
     isActive: true,
     hasCustomSubmissionPage: false,
     submissionPageImageSize: 400,
@@ -123,7 +125,8 @@ export function JudgingCriteriaEditor({
         name: groupDetails.name,
         description: groupDetails.description || "",
         isPublic: groupDetails.isPublic,
-        password: "", // Don't load password for security
+        judgePassword: "", // Don't load password for security
+        submissionPagePassword: "", // Don't load password for security
         isActive: groupDetails.isActive,
         hasCustomSubmissionPage: groupDetails.hasCustomSubmissionPage || false,
         submissionPageImageSize: groupDetails.submissionPageImageSize || 400,
@@ -274,9 +277,12 @@ export function JudgingCriteriaEditor({
         submissionFormRequiredTagId: groupSettings.submissionFormRequiredTagId || undefined,
       };
 
-      // Only include password if it's provided
-      if (groupSettings.password.trim()) {
-        updateData.password = groupSettings.password.trim();
+      // Only include passwords if they're provided
+      if (groupSettings.judgePassword.trim()) {
+        updateData.judgePassword = groupSettings.judgePassword.trim();
+      }
+      if (groupSettings.submissionPagePassword.trim()) {
+        updateData.submissionPagePassword = groupSettings.submissionPagePassword.trim();
       }
 
       // Upload submission page image if provided
@@ -705,26 +711,49 @@ export function JudgingCriteriaEditor({
                   </span>
                 </div>
                 {!groupSettings.isPublic && (
-                  <div>
-                    <Label htmlFor="groupPassword">Access Password</Label>
-                    <Input
-                      id="groupPassword"
-                      type="password"
-                      value={groupSettings.password}
-                      onChange={(e) =>
-                        updateGroupSetting("password", e.target.value)
-                      }
-                      placeholder={
-                        groupDetails?.hasPassword
-                          ? "Enter new password (leave blank to keep current)"
-                          : "Set access password"
-                      }
-                    />
-                    <p className="text-sm text-gray-500 mt-1">
-                      {groupDetails?.hasPassword
-                        ? "Leave blank to keep the current password"
-                        : "Required for private groups"}
-                    </p>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="judgePassword">Judge Access Password</Label>
+                      <Input
+                        id="judgePassword"
+                        type="password"
+                        value={groupSettings.judgePassword}
+                        onChange={(e) =>
+                          updateGroupSetting("judgePassword", e.target.value)
+                        }
+                        placeholder={
+                          groupDetails?.hasJudgePassword
+                            ? "Enter new password (leave blank to keep current)"
+                            : "Set judge access password"
+                        }
+                      />
+                      <p className="text-sm text-gray-500 mt-1">
+                        {groupDetails?.hasJudgePassword
+                          ? "Leave blank to keep the current password"
+                          : "Password for judges to access the judging interface"}
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="submissionPagePassword">Submission Page Password</Label>
+                      <Input
+                        id="submissionPagePassword"
+                        type="password"
+                        value={groupSettings.submissionPagePassword}
+                        onChange={(e) =>
+                          updateGroupSetting("submissionPagePassword", e.target.value)
+                        }
+                        placeholder={
+                          groupDetails?.hasSubmissionPagePassword
+                            ? "Enter new password (leave blank to keep current)"
+                            : "Set submission page password"
+                        }
+                      />
+                      <p className="text-sm text-gray-500 mt-1">
+                        {groupDetails?.hasSubmissionPagePassword
+                          ? "Leave blank to keep the current password"
+                          : "Password for users to access the custom submission form"}
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
