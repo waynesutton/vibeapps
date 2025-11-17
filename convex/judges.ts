@@ -13,6 +13,17 @@ function generateSessionId(): string {
   return (timestamp + random1 + random2 + random3).substring(0, 64);
 }
 
+// Helper function to check if a story should be included in judging
+// Returns true if story is valid for judging (not deleted, hidden, archived, or rejected)
+// Type guard to ensure TypeScript knows story is not null when this returns true
+function isStoryValidForJudging(story: Doc<"stories"> | null): story is Doc<"stories"> {
+  if (!story) return false;
+  if (story.isHidden === true) return false;
+  if (story.isArchived === true) return false;
+  if (story.status === "rejected") return false;
+  return true;
+}
+
 // --- Admin Functions ---
 
 /**
@@ -394,8 +405,8 @@ export const getJudgeProgress = query({
       await Promise.all(
         submissions.map(async (submission) => {
           const story = await ctx.db.get(submission.storyId);
-          // Skip if story doesn't exist (deleted/archived)
-          if (!story) {
+          // Skip if story is deleted, hidden, archived, or rejected
+          if (!isStoryValidForJudging(story)) {
             return null;
           }
 

@@ -13,6 +13,17 @@ function generateSlug(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+// Helper function to check if a story should be included in judging
+// Returns true if story is valid for judging (not deleted, hidden, archived, or rejected)
+// Type guard to ensure TypeScript knows story is not null when this returns true
+function isStoryValidForJudging(story: Doc<"stories"> | null): story is Doc<"stories"> {
+  if (!story) return false;
+  if (story.isHidden === true) return false;
+  if (story.isArchived === true) return false;
+  if (story.status === "rejected") return false;
+  return true;
+}
+
 // Simple password hashing (for basic protection)
 // In production, consider using a more robust solution
 function hashPassword(password: string): string {
@@ -57,11 +68,25 @@ export const listGroups = query({
     // Enrich with counts
     const enrichedGroups = await Promise.all(
       groups.map(async (group) => {
-        const submissionCount = await ctx.db
+        const allSubmissions = await ctx.db
           .query("judgingGroupSubmissions")
           .withIndex("by_groupId", (q) => q.eq("groupId", group._id))
-          .collect()
-          .then((submissions) => submissions.length);
+          .collect();
+
+        // Filter out invalid stories (deleted, hidden, archived, rejected)
+        const validSubmissions = (
+          await Promise.all(
+            allSubmissions.map(async (submission) => {
+              const story = await ctx.db.get(submission.storyId);
+              if (!isStoryValidForJudging(story)) {
+                return null;
+              }
+              return submission;
+            }),
+          )
+        ).filter((submission): submission is NonNullable<typeof submission> => submission !== null);
+
+        const submissionCount = validSubmissions.length;
 
         const judgeCount = await ctx.db
           .query("judges")
@@ -384,11 +409,25 @@ export const getGroupWithDetails = query({
       .order("asc")
       .collect();
 
-    const submissionCount = await ctx.db
+    const allSubmissions = await ctx.db
       .query("judgingGroupSubmissions")
       .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
-      .collect()
-      .then((submissions) => submissions.length);
+      .collect();
+
+    // Filter out invalid stories (deleted, hidden, archived, rejected)
+    const validSubmissions = (
+      await Promise.all(
+        allSubmissions.map(async (submission) => {
+          const story = await ctx.db.get(submission.storyId);
+          if (!isStoryValidForJudging(story)) {
+            return null;
+          }
+          return submission;
+        }),
+      )
+    ).filter((submission): submission is NonNullable<typeof submission> => submission !== null);
+
+    const submissionCount = validSubmissions.length;
 
     const judgeCount = await ctx.db
       .query("judges")

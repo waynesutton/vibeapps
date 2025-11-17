@@ -4,6 +4,17 @@ import { Doc, Id } from "./_generated/dataModel";
 import { requireAdminRole } from "./users";
 import { internal } from "./_generated/api";
 
+// Helper function to check if a story should be included in judging
+// Returns true if story is valid for judging (not deleted, hidden, archived, or rejected)
+// Type guard to ensure TypeScript knows story is not null when this returns true
+function isStoryValidForJudging(story: Doc<"stories"> | null): story is Doc<"stories"> {
+  if (!story) return false;
+  if (story.isHidden === true) return false;
+  if (story.isArchived === true) return false;
+  if (story.status === "rejected") return false;
+  return true;
+}
+
 // --- Admin Functions ---
 
 /**
@@ -230,13 +241,15 @@ export const listByGroup = query({
       .collect();
     const judgeCount = judges.length;
 
-    const enrichedSubmissions = await Promise.all(
-      submissions.map(async (submission) => {
-        // Get story details
-        const story = await ctx.db.get(submission.storyId);
-        if (!story) {
-          throw new Error(`Story ${submission.storyId} not found`);
-        }
+    const enrichedSubmissions = (
+      await Promise.all(
+        submissions.map(async (submission) => {
+          // Get story details
+          const story = await ctx.db.get(submission.storyId);
+          // Skip if story is deleted, hidden, archived, or rejected
+          if (!isStoryValidForJudging(story)) {
+            return null;
+          }
 
         // Get scores for this submission
         const scores = await ctx.db
@@ -285,8 +298,9 @@ export const listByGroup = query({
             completionPercentage,
           },
         };
-      }),
-    );
+        }),
+      )
+    ).filter((submission): submission is NonNullable<typeof submission> => submission !== null);
 
     return enrichedSubmissions;
   },
@@ -523,8 +537,8 @@ export const getGroupSubmissions = query({
       await Promise.all(
         submissions.map(async (submission) => {
           const story = await ctx.db.get(submission.storyId);
-          // Skip if story doesn't exist (deleted/archived)
-          if (!story) {
+          // Skip if story is deleted, hidden, archived, or rejected
+          if (!isStoryValidForJudging(story)) {
             return null;
           }
 
@@ -698,8 +712,8 @@ export const getSubmissionStatuses = query({
       await Promise.all(
         statuses.map(async (status) => {
           const story = await ctx.db.get(status.storyId);
-          // Skip if story doesn't exist (deleted/archived)
-          if (!story) {
+          // Skip if story is deleted, hidden, archived, or rejected
+          if (!isStoryValidForJudging(story)) {
             return null;
           }
 
