@@ -279,7 +279,9 @@ export default function UserProfilePage() {
   >(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [newName, setNewName] = useState("");
+  // const [newName, setNewName] = useState("");
+  const [newFirstName, setNewFirstName] = useState("");
+  const [newLastName, setNewLastName] = useState("");
   const [newBio, setNewBio] = useState("");
   const [newWebsite, setNewWebsite] = useState("");
   const [newTwitter, setNewTwitter] = useState("");
@@ -326,14 +328,21 @@ export default function UserProfilePage() {
       return;
     }
     if (isEditing && profileData?.user) {
-      setNewName(profileData.user.name || "");
+      const { name, imageUrl, bio, website, twitter, bluesky, linkedin } = profileData.user
+
+      const nameParts = name.split(" ");
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(" ");
+
+      setNewFirstName(firstName || "");
+      setNewLastName(lastName || "")
       // setNewUsername(profileData.user.username || "");
-      setNewProfileImagePreview(profileData.user.imageUrl || null);
-      setNewBio(profileData.user.bio || "");
-      setNewWebsite(profileData.user.website || "");
-      setNewTwitter(profileData.user.twitter || "");
-      setNewBluesky(profileData.user.bluesky || "");
-      setNewLinkedin(profileData.user.linkedin || "");
+      setNewProfileImagePreview(imageUrl || null);
+      setNewBio(bio || "");
+      setNewWebsite(website || "");
+      setNewTwitter(twitter || "");
+      setNewBluesky(bluesky || "");
+      setNewLinkedin(linkedin || "");
     } else if (!isEditing) {
       setNewProfileImageFile(null);
       setEditError(null);
@@ -493,14 +502,21 @@ export default function UserProfilePage() {
   const handleEditToggle = () => {
     if (!isEditing) {
       if (loadedProfileUser) {
-        setNewName(loadedProfileUser.name || "");
-        // setNewUsername(loadedProfileUser.username || "");
-        setNewProfileImagePreview(loadedProfileUser.imageUrl || null);
-        setNewBio(loadedProfileUser.bio || "");
-        setNewWebsite(loadedProfileUser.website || "");
-        setNewTwitter(loadedProfileUser.twitter || "");
-        setNewBluesky(loadedProfileUser.bluesky || "");
-        setNewLinkedin(loadedProfileUser.linkedin || "");
+        const { name, imageUrl, bio, website, twitter, bluesky, linkedin } = loadedProfileUser
+
+        const nameParts = name.split(" ");
+        const firstName = nameParts[0];
+        const lastName = nameParts.slice(1).join(" ");
+
+        setNewFirstName(firstName || "");
+        setNewLastName(lastName || "")
+        // setNewUsername(profileData.user.username || "");
+        setNewProfileImagePreview(imageUrl || null);
+        setNewBio(bio || "");
+        setNewWebsite(website || "");
+        setNewTwitter(twitter || "");
+        setNewBluesky(bluesky || "");
+        setNewLinkedin(linkedin || "");
       }
     } else {
       setNewProfileImageFile(null);
@@ -537,10 +553,11 @@ export default function UserProfilePage() {
       const currentLinkedin = loadedProfileUser.linkedin || "";
 
       // Check if name changed
-      nameChanged = newName.trim() !== currentName;
+      const newName = `${newFirstName.trim()} ${newLastName.trim()}`
+      nameChanged = newName !== currentName;
 
       if (
-        newName.trim() !== currentName ||
+        newName !== currentName ||
         newBio !== currentBio ||
         newWebsite !== currentWebsite ||
         newTwitter !== currentTwitter ||
@@ -548,7 +565,7 @@ export default function UserProfilePage() {
         newLinkedin !== currentLinkedin
       ) {
         await updateProfileDetails({
-          name: newName.trim(),
+          name: newName,
           bio: newBio,
           website: newWebsite,
           twitter: newTwitter,
@@ -561,14 +578,9 @@ export default function UserProfilePage() {
       // Update Clerk if name changed
       if (nameChanged && authUser && authUser.update) {
         try {
-          // Split name into first and last for Clerk
-          const nameParts = newName.trim().split(" ");
-          const firstName = nameParts[0] || "";
-          const lastName = nameParts.slice(1).join(" ") || "";
-
           await authUser.update({
-            firstName: firstName,
-            lastName: lastName,
+            firstName: newFirstName.trim(),
+            lastName: newLastName.trim(),
           });
         } catch (clerkError) {
           console.warn("Clerk name update failed:", clerkError);
@@ -1004,14 +1016,22 @@ export default function UserProfilePage() {
           {/* Profile Info Section */}
           <div className="flex-grow text-left sm:text-left">
             {isEditing ? (
-              <div className="space-y-2 mb-2">
+              <div className="flex space-y-2 gap-2 mb-2">
                 {/* Name Input */}
                 <input
                   type="text"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  className="text-xl font-normal text-[#292929] w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
-                  placeholder="Display Name"
+                  value={newFirstName}
+                  onChange={(e) => setNewFirstName(e.target.value)}
+                  className="text-xl font-normal text-[#292929] w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:border-black"
+                  placeholder="First Name"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                />
+                <input
+                  type="text"
+                  value={newLastName}
+                  onChange={(e) => setNewLastName(e.target.value)}
+                  className="text-xl font-normal text-[#292929] w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:border-black"
+                  placeholder="Last Name"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 />
                 {/* Username Input */}
@@ -1325,7 +1345,7 @@ export default function UserProfilePage() {
               disabled={
                 isSaving ||
                 (!newProfileImageFile &&
-                  newName.trim() === (loadedProfileUser?.name || "").trim() &&
+                  `${newFirstName.trim()} ${newLastName.trim()}` === (loadedProfileUser?.name || "").trim() &&
                   newBio === (loadedProfileUser?.bio || "") &&
                   newWebsite === (loadedProfileUser?.website || "") &&
                   newTwitter === (loadedProfileUser?.twitter || "") &&
