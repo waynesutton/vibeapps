@@ -556,8 +556,16 @@ export default function UserProfilePage() {
       const newName = `${newFirstName.trim()} ${newLastName.trim()}`
       nameChanged = newName !== currentName;
 
+      // Early return if name is incompatible with clerk configuration
       if (
-        newName !== currentName ||
+        nameChanged &&
+        (newFirstName.trim() === "" || newLastName.trim() === "")
+      ) {
+        throw new Error("First and last name are both required.")
+      }
+
+      if (
+        nameChanged ||
         newBio !== currentBio ||
         newWebsite !== currentWebsite ||
         newTwitter !== currentTwitter ||
