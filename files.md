@@ -149,7 +149,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/components/StoryForm.tsx`: Main app submission form with validation, enhanced tag search dropdown, and multi-image upload support
 - `src/components/ResendForm.tsx`: Resend integration form for email collection
 - `src/components/YCHackForm.tsx`: YC AI Hackathon submission form with team information support
-- `src/components/StoryDetail.tsx`: Detailed app view with comments, ratings, voting, and image gallery
+- `src/components/StoryDetail.tsx`: Detailed app view with comments, ratings, voting, image gallery, and sticky sidebar for project links and tags
 - `src/components/StoryList.tsx`: List/grid view of app submissions
 - `src/components/ImageGallery.tsx`: Multi-image gallery component with thumbnail navigation and modal Lightbox
 

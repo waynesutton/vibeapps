@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Fixed] - 2025-11-22
+
+**Sticky Sidebar on Individual App Pages**
+
+- Fixed sticky column positioning on individual app detail pages
+  - Added `self-start` class to sidebar parent div for proper sticky behavior
+  - Adjusted top spacing from `top-4` to `top-8` for better vertical alignment
+  - Sidebar now correctly stays visible when scrolling through long app descriptions
+  - Ensures proper sticky positioning in flexbox layout on desktop and tablet views
+- **Files Modified**: `src/components/StoryDetail.tsx`
+- **PR**: Merges #14 by @Jamesllllllllll
+
 ### [Added] - November 16, 2025
 
 **Judging Interface Submission Filters**
