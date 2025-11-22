@@ -1006,8 +1006,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
             (field) => (story as any)[field.storyPropertyName],
           ) ||
           story.tags?.length > 0) && (
-          <div className="w-80 flex-shrink-0 hidden lg:block">
-            <div className="bg-[#F9F9F9] rounded-lg p-4 border border-[#E5E5E5] sticky top-4">
+          <div className="w-80 flex-shrink-0 hidden lg:block self-start">
+            <div className="bg-[#F9F9F9] rounded-lg p-4 border border-[#E5E5E5] sticky top-8">
               <h2 className="text-base font-medium text-[#525252] mb-3">
                 Project Links & Tags
               </h2>
