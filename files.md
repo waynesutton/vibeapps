@@ -199,7 +199,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/components/admin/JudgeTracking.tsx`: Comprehensive judge tracking dashboard with breadcrumb navigation, Stats Overview, Judge Activity section with expandable judge details and score moderation tools, Judge Scores & Comments tabbed interface showing detailed scoring per judge with submission grouping, floating scroll buttons, notes viewing, and CSV export of comprehensive judge activity data
 - `src/components/PublicJudgingResultsDashboard.tsx`: Public-facing results display showing overall stats, rankings, and criteria performance (Judge Scores & Comments section moved to admin JudgeTracking)
 - `src/components/PublicResultsViewer.tsx`: Public results viewer component
-- `src/pages/JudgingInterfacePage.tsx`: Individual submission judging interface showing ALL submissions with group-wide progress tracking, edit permissions based on completion status, read-only views of others' completed submissions, and @mention autocomplete in notes
+- `src/pages/JudgingInterfacePage.tsx`: Individual submission judging interface with comprehensive filtering (tag dropdown, judged status filter), search functionality, group-wide progress tracking, edit permissions based on completion status, read-only views of others' completed submissions, and @mention autocomplete in notes. Filters work together to help judges find specific submissions efficiently.
 
 ### Notification & Configuration
 
@@ -227,7 +227,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/pages/UserProfilePage.tsx`: User profile display and management with email preferences and unsubscribe functionality
 - `src/pages/TagPage.tsx`: Tag-specific app listings
 - `src/pages/JudgingGroupPage.tsx`: Judge interface for scoring submissions with session management
-- `src/pages/JudgingInterfacePage.tsx`: Individual submission judging interface showing ALL submissions with group-wide progress tracking, edit permissions based on completion status, read-only views of others' completed submissions, and @mention autocomplete in notes
+- `src/pages/JudgingInterfacePage.tsx`: Individual submission judging interface with comprehensive filtering (tag dropdown, judged status filter), search functionality, group-wide progress tracking, edit permissions based on completion status, read-only views of others' completed submissions, and @mention autocomplete in notes. Filters work together to help judges find specific submissions efficiently.
 - `src/pages/PublicJudgingResultsPage.tsx`: Public judging results page with password protection
 - `src/pages/NotificationsPage.tsx`: User notifications page with comprehensive alert system for all interaction types
 - `src/pages/InboxPage.tsx`: Direct messaging inbox with conversation view, message threads, @mentions, edit/delete, and real-time updates

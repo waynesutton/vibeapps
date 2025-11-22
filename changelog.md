@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Added] - November 16, 2025
+
+**Judging Interface Submission Filters**
+
+- **Tag Filter**: Judges can now filter submissions by tag in the judging interface
+  - Dropdown selector shows all tags present in judging group submissions
+  - Filter submissions by specific category or technology
+  - Works alongside other filters for precise submission viewing
+  - Shows count of filtered vs total submissions (e.g., "filtered from 5 total")
+- **Judged Status Filter**: Judges can filter submissions by completion status
+  - "All Submissions" shows every submission in the group
+  - "Not Judged" shows only submissions that haven't been completed by any judge
+  - Helps judges focus on unreviewed submissions
+  - Status determined by `completedBy` field (checks if any judge completed it)
+- **Combined Filtering**: Both filters work together for advanced submission browsing
+  - Filter by tag AND judged status simultaneously
+  - Clear visual indicators when filters are active
+  - "Clear All Filters" button to reset all filter selections
+  - Smooth navigation between filtered submissions
+- **Search Integration**: Search functionality works on top of active filters
+  - Search within filtered results
+  - Maintains filter state while searching
+  - Shows completion status and judge names in search results
+
+**Technical Implementation**
+
+- **Frontend Changes** (`src/pages/JudgingInterfacePage.tsx`):
+  - Added `selectedTagId` and `filterNotJudged` state management
+  - Implemented `displaySubmissions` filter logic with tag and status checks
+  - Added `useEffect` to reset submission index when filters change
+  - Updated all navigation and data fetching to use filtered submissions
+  - Added responsive dropdown selectors with consistent styling
+  - Defensive checks prevent errors when submissions list changes
+- **Filter Logic**:
+  - Tag filter: Checks if submission has matching tag in its tags array
+  - Status filter: Checks `judgeProgress.submissionProgress` for `completedBy` field
+  - Combined with AND logic: `matchesTag && matchesJudgedFilter`
+  - Shows "No Submissions Match Filters" message with clear button when no results
+- **UI Design**:
+  - Responsive filter row with proper wrapping on mobile
+  - Consistent height (h-8) and styling across all dropdowns
+  - Custom dropdown arrows and focus states
+  - Maintains site color scheme (#F2F4F7 background, clean borders)
+
+**User Benefits**
+
+- Judges can quickly find submissions by category or technology
+- Focus on unreviewed submissions to improve efficiency
+- Better coordination in multi-judge scenarios
+- Reduces time spent navigating through irrelevant submissions
+- Clear visual feedback on filter status and results
+
 ### [Added] - October 15, 2025
 
 **Inbox Message Emoji Reactions**
