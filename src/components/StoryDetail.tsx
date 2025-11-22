@@ -912,7 +912,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
         <div className="flex gap-8">
           {/* Main Content */}
         <div className="flex-1 min-w-0">
-          <article className="bg-white rounded-lg p-4 sm:p-6 border border-[#D8E1EC]">
+          <article className="bg-white rounded-lg p-4 sm:p-6 border border-[#D8E1EC] mt-0.5">
             <div className="flex gap-4">
               <div className="flex flex-col items-center gap-1 pt-1 min-w-[40px]">
                 <button
@@ -1007,7 +1007,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
           ) ||
           story.tags?.length > 0) && (
           <div className="w-80 flex-shrink-0 hidden lg:block">
-            <div className="bg-[#F9F9F9] rounded-lg p-4 border border-[#E5E5E5] sticky top-4">
+            <div className="sticky top-16">
+            <div className="bg-[#F9F9F9] rounded-lg p-4 border border-[#E5E5E5]">
               <h2 className="text-base font-medium text-[#525252] mb-3">
                 Project Links & Tags
               </h2>
@@ -1213,6 +1214,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
             >
               ← Back to Apps List
             </Link>
+            </div>
           </div>
         )}
       </div>
