@@ -564,12 +564,18 @@ export default function UserProfilePage() {
           // Split name into first and last for Clerk
           const nameParts = newName.trim().split(" ");
           const firstName = nameParts[0] || "";
-          const lastName = nameParts.slice(1).join(" ") || "";
+          const lastName = nameParts.slice(1).join(" ");
 
-          await authUser.update({
+          // Build update object - only include lastName if it's not empty
+          // This prevents Clerk errors when user wants only a first name
+          const clerkUpdateData: { firstName: string; lastName?: string } = {
             firstName: firstName,
-            lastName: lastName,
-          });
+          };
+          if (lastName) {
+            clerkUpdateData.lastName = lastName;
+          }
+
+          await authUser.update(clerkUpdateData);
         } catch (clerkError) {
           console.warn("Clerk name update failed:", clerkError);
           // Don't fail the whole operation if Clerk update fails
@@ -660,7 +666,11 @@ export default function UserProfilePage() {
       navigate(`/inbox?conversation=${conversationId}`);
     } catch (error: any) {
       console.error("Failed to create conversation:", error);
-      showMessage("Error", error.message || "Failed to start conversation", "error");
+      showMessage(
+        "Error",
+        error.message || "Failed to start conversation",
+        "error",
+      );
     } finally {
       setIsSendingMessage(false);
     }
@@ -917,7 +927,11 @@ export default function UserProfilePage() {
         reportedUserId: loadedProfileUser._id,
         reason: reportUserReason,
       });
-      showMessage("Report Submitted", "User reported successfully. An admin will review it.", "success");
+      showMessage(
+        "Report Submitted",
+        "User reported successfully. An admin will review it.",
+        "success",
+      );
       setIsReportUserModalOpen(false);
       setReportUserReason("");
     } catch (error: any) {
@@ -954,68 +968,68 @@ export default function UserProfilePage() {
       <div className="max-w-4xl mx-auto p-4 sm:p-6 from-slate-50 to-gray-100 min-h-screen">
         <header
           className="mb-4 p-6 bg-[#ffffff] rounded-lg border border-gray-200"
-        style={{ fontFamily: "Inter, sans-serif" }}
-      >
-        <div className="flex flex-col sm:flex-row items-start sm:items-start">
-          {/* Profile Image Section */}
-          <div className="relative mb-4 sm:mb-0 sm:mr-6 rounded-full w-24 h-24 overflow-hidden">
-            {isEditing ? (
-              <button
-                onClick={triggerFileEdit}
-                className="relative group rounded-full overflow-hidden"
-              >
-                {newProfileImagePreview ? (
-                  <img
-                    src={newProfileImagePreview}
-                    alt="Profile preview"
-                    className="w-full h-full object-cover border-4 border-gray-300 group-hover:opacity-75 w-24 h-24 overflow-hidden rounded-full transition-opacity"
+          style={{ fontFamily: "Inter, sans-serif" }}
+        >
+          <div className="flex flex-col sm:flex-row items-start sm:items-start">
+            {/* Profile Image Section */}
+            <div className="relative mb-4 sm:mb-0 sm:mr-6 rounded-full w-24 h-24 overflow-hidden">
+              {isEditing ? (
+                <button
+                  onClick={triggerFileEdit}
+                  className="relative group rounded-full overflow-hidden"
+                >
+                  {newProfileImagePreview ? (
+                    <img
+                      src={newProfileImagePreview}
+                      alt="Profile preview"
+                      className="w-full h-full object-cover border-4 border-gray-300 group-hover:opacity-75 w-24 h-24 overflow-hidden rounded-full transition-opacity"
+                    />
+                  ) : (
+                    <ProfileImagePlaceholder
+                      name={loadedProfileUser?.name}
+                      size="w-24 h-24"
+                    />
+                  )}
+                  <div className="absolute inset-0 rounded-full bg-black w-auto h-19 bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                    <Camera className="w-8 h-8 text-white" />
+                  </div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept="image/png, image/jpeg, image/gif"
+                    className="hidden"
                   />
-                ) : (
-                  <ProfileImagePlaceholder
-                    name={loadedProfileUser?.name}
-                    size="w-24 h-24"
-                  />
-                )}
-                <div className="absolute inset-0 rounded-full bg-black w-auto h-19 bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                  <Camera className="w-8 h-8 text-white" />
-                </div>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept="image/png, image/jpeg, image/gif"
-                  className="hidden"
+                </button>
+              ) : currentImageUrl ? (
+                <img
+                  src={currentImageUrl}
+                  alt={`${loadedProfileUser?.name || "User"}'s profile`}
+                  className="rounded-full h-19 object-cover border-2 border-gray-300"
                 />
-              </button>
-            ) : currentImageUrl ? (
-              <img
-                src={currentImageUrl}
-                alt={`${loadedProfileUser?.name || "User"}'s profile`}
-                className="rounded-full h-19 object-cover border-2 border-gray-300"
-              />
-            ) : (
-              <ProfileImagePlaceholder
-                name={loadedProfileUser?.name}
-                size="w-24 h-24"
-              />
-            )}
-          </div>
+              ) : (
+                <ProfileImagePlaceholder
+                  name={loadedProfileUser?.name}
+                  size="w-24 h-24"
+                />
+              )}
+            </div>
 
-          {/* Profile Info Section */}
-          <div className="flex-grow text-left sm:text-left">
-            {isEditing ? (
-              <div className="space-y-2 mb-2">
-                {/* Name Input */}
-                <input
-                  type="text"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  className="text-xl font-normal text-[#292929] w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
-                  placeholder="Display Name"
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                />
-                {/* Username Input */}
-                {/* <div className="flex items-center">
+            {/* Profile Info Section */}
+            <div className="flex-grow text-left sm:text-left">
+              {isEditing ? (
+                <div className="space-y-2 mb-2">
+                  {/* Name Input */}
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    className="text-xl font-normal text-[#292929] w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
+                    placeholder="Display Name"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  />
+                  {/* Username Input */}
+                  {/* <div className="flex items-center">
                   <span
                     className="text-lg text-gray-500 mr-1"
                     style={{ fontFamily: "Inter, sans-serif" }}>
@@ -1030,1182 +1044,1196 @@ export default function UserProfilePage() {
                     style={{ fontFamily: "Inter, sans-serif" }}
                   />
                 </div> */}
-              </div>
-            ) : (
-              <div className="flex items-baseline mb-1">
-                <h1
-                  className="text-lg font-normal text-[#292929] mr-2"
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                >
-                  {loadedProfileUser?.name || "Anonymous User"}
-                  {!isEditing && loadedProfileUser?.isVerified && (
-                    <VerifiedBadge />
-                  )}
-                </h1>
-                <p
-                  className="text-lg text-gray-600"
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                >
-                  {/* @{loadedProfileUser?.username || "N/A"}{" "} */}
-                  {typeof userNumber === "number" && (
-                    <span className="ml-0 text-xs text-gray-400">
-                      User #{userNumber}
-                    </span>
-                  )}
-                </p>
-              </div>
-            )}
-
-            {/* Bio Section - Full Width */}
-            <div className="mb-3 w-full text-left">
-              {isEditing ? (
-                <textarea
-                  value={newBio}
-                  onChange={(e) => setNewBio(e.target.value.slice(0, 200))}
-                  maxLength={200}
-                  className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
-                  placeholder="Add a short bio (max 200 chars)"
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                  rows={3}
-                />
-              ) : loadedProfileUser?.bio ? (
-                <p
-                  className="text-sm text-gray-700 w-full text-left"
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                >
-                  {loadedProfileUser.bio}
-                </p>
+                </div>
               ) : (
-                <p
-                  className="text-sm text-gray-400 italic w-full text-left"
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                >
-                  No bio yet.
-                </p>
+                <div className="flex items-baseline mb-1">
+                  <h1
+                    className="text-lg font-normal text-[#292929] mr-2"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  >
+                    {loadedProfileUser?.name || "Anonymous User"}
+                    {!isEditing && loadedProfileUser?.isVerified && (
+                      <VerifiedBadge />
+                    )}
+                  </h1>
+                  <p
+                    className="text-lg text-gray-600"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  >
+                    {/* @{loadedProfileUser?.username || "N/A"}{" "} */}
+                    {typeof userNumber === "number" && (
+                      <span className="ml-0 text-xs text-gray-400">
+                        User #{userNumber}
+                      </span>
+                    )}
+                  </p>
+                </div>
               )}
-            </div>
 
-            {/* Social Links Section - Horizontal */}
-            <div className="flex flex-wrap gap-3 items-center mb-3 justify-start">
-              {isEditing ? (
-                <>
-                  <input
-                    type="url"
-                    value={newWebsite}
-                    onChange={(e) => setNewWebsite(e.target.value)}
-                    className="flex-grow sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
-                    placeholder="Website"
+              {/* Bio Section - Full Width */}
+              <div className="mb-3 w-full text-left">
+                {isEditing ? (
+                  <textarea
+                    value={newBio}
+                    onChange={(e) => setNewBio(e.target.value.slice(0, 200))}
+                    maxLength={200}
+                    className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
+                    placeholder="Add a short bio (max 200 chars)"
                     style={{ fontFamily: "Inter, sans-serif" }}
+                    rows={3}
                   />
-                  <input
-                    type="url"
-                    value={newTwitter}
-                    onChange={(e) => setNewTwitter(e.target.value)}
-                    className="flex-grow sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
-                    placeholder="Twitter"
+                ) : loadedProfileUser?.bio ? (
+                  <p
+                    className="text-sm text-gray-700 w-full text-left"
                     style={{ fontFamily: "Inter, sans-serif" }}
-                  />
-                  <input
-                    type="url"
-                    value={newBluesky}
-                    onChange={(e) => setNewBluesky(e.target.value)}
-                    className="flex-grow sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
-                    placeholder="Bluesky"
+                  >
+                    {loadedProfileUser.bio}
+                  </p>
+                ) : (
+                  <p
+                    className="text-sm text-gray-400 italic w-full text-left"
                     style={{ fontFamily: "Inter, sans-serif" }}
-                  />
-                  <input
-                    type="url"
-                    value={newLinkedin}
-                    onChange={(e) => setNewLinkedin(e.target.value)}
-                    className="flex-grow  sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
-                    placeholder="LinkedIn"
-                    style={{ fontFamily: "Inter, sans-serif" }}
-                  />
-                </>
-              ) : (
-                <>
-                  {loadedProfileUser?.website && (
-                    <a
-                      href={loadedProfileUser.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-gray-500 hover:text-[#292929]"
-                      title="Website"
-                    >
-                      Website
-                    </a>
-                  )}
-                  {loadedProfileUser?.twitter && (
-                    <a
-                      href={loadedProfileUser.twitter}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-gray-500 hover:text-[#292929]"
-                      title="Twitter"
-                    >
-                      Twitter
-                    </a>
-                  )}
-                  {loadedProfileUser?.bluesky && (
-                    <a
-                      href={loadedProfileUser.bluesky}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-gray-500 hover:text-[#292929]"
-                      title="Bluesky"
-                    >
-                      Bluesky
-                    </a>
-                  )}
-                  {loadedProfileUser?.linkedin && (
-                    <a
-                      href={loadedProfileUser.linkedin}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-gray-500 hover:text-[#292929]"
-                      title="LinkedIn"
-                    >
-                      LinkedIn
-                    </a>
-                  )}
-                </>
-              )}
-            </div>
+                  >
+                    No bio yet.
+                  </p>
+                )}
+              </div>
 
-            {/* FOLLOW BUTTON & INBOX CONTROLS - Placed after social links and before Edit Profile button for non-own profiles */}
-            {!isOwnProfile && authUser && loadedProfileUser && !isEditing && (
-              <div className="mt-3 flex items-center gap-2">
-                {/* Follow Button */}
-                <button
-                  onClick={handleFollowToggle}
-                  disabled={isLoadingFollowAction}
-                  className={`px-6 py-2 rounded-md text-sm font-medium flex items-center justify-center transition-colors w-full sm:w-auto
+              {/* Social Links Section - Horizontal */}
+              <div className="flex flex-wrap gap-3 items-center mb-3 justify-start">
+                {isEditing ? (
+                  <>
+                    <input
+                      type="url"
+                      value={newWebsite}
+                      onChange={(e) => setNewWebsite(e.target.value)}
+                      className="flex-grow sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
+                      placeholder="Website"
+                      style={{ fontFamily: "Inter, sans-serif" }}
+                    />
+                    <input
+                      type="url"
+                      value={newTwitter}
+                      onChange={(e) => setNewTwitter(e.target.value)}
+                      className="flex-grow sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
+                      placeholder="Twitter"
+                      style={{ fontFamily: "Inter, sans-serif" }}
+                    />
+                    <input
+                      type="url"
+                      value={newBluesky}
+                      onChange={(e) => setNewBluesky(e.target.value)}
+                      className="flex-grow sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
+                      placeholder="Bluesky"
+                      style={{ fontFamily: "Inter, sans-serif" }}
+                    />
+                    <input
+                      type="url"
+                      value={newLinkedin}
+                      onChange={(e) => setNewLinkedin(e.target.value)}
+                      className="flex-grow  sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
+                      placeholder="LinkedIn"
+                      style={{ fontFamily: "Inter, sans-serif" }}
+                    />
+                  </>
+                ) : (
+                  <>
+                    {loadedProfileUser?.website && (
+                      <a
+                        href={loadedProfileUser.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-gray-500 hover:text-[#292929]"
+                        title="Website"
+                      >
+                        Website
+                      </a>
+                    )}
+                    {loadedProfileUser?.twitter && (
+                      <a
+                        href={loadedProfileUser.twitter}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-gray-500 hover:text-[#292929]"
+                        title="Twitter"
+                      >
+                        Twitter
+                      </a>
+                    )}
+                    {loadedProfileUser?.bluesky && (
+                      <a
+                        href={loadedProfileUser.bluesky}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-gray-500 hover:text-[#292929]"
+                        title="Bluesky"
+                      >
+                        Bluesky
+                      </a>
+                    )}
+                    {loadedProfileUser?.linkedin && (
+                      <a
+                        href={loadedProfileUser.linkedin}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-gray-500 hover:text-[#292929]"
+                        title="LinkedIn"
+                      >
+                        LinkedIn
+                      </a>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* FOLLOW BUTTON & INBOX CONTROLS - Placed after social links and before Edit Profile button for non-own profiles */}
+              {!isOwnProfile && authUser && loadedProfileUser && !isEditing && (
+                <div className="mt-3 flex items-center gap-2">
+                  {/* Follow Button */}
+                  <button
+                    onClick={handleFollowToggle}
+                    disabled={isLoadingFollowAction}
+                    className={`px-6 py-2 rounded-md text-sm font-medium flex items-center justify-center transition-colors w-full sm:w-auto
                     ${
                       isFollowedByCurrentUser
                         ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
                         : "bg-[#292929] text-white hover:bg-gray-700"
                     }`}
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                >
-                  {isLoadingFollowAction ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  ) : isFollowedByCurrentUser ? (
-                    <UserMinus className="w-4 h-4 mr-2" />
-                  ) : (
-                    <UserPlus className="w-4 h-4 mr-2" />
-                  )}
-                  {isLoadingFollowAction
-                    ? "Processing..."
-                    : isFollowedByCurrentUser
-                      ? "Unfollow"
-                      : "Follow"}
-                </button>
-
-                {/* Inbox Button - Always visible, grayed out if inbox disabled */}
-                <button
-                  onClick={
-                    recipientInboxEnabled !== false
-                      ? handleSendMessage
-                      : undefined
-                  }
-                  disabled={recipientInboxEnabled === false || isSendingMessage}
-                  className={`px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center transition-colors ${
-                    recipientInboxEnabled === false
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      : "bg-[#292929] text-white hover:bg-gray-700"
-                  }`}
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                  title={
-                    recipientInboxEnabled === false
-                      ? "This user's inbox is disabled"
-                      : "Send a message"
-                  }
-                >
-                  {isSendingMessage ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  ) : (
-                    <Inbox className="w-4 h-4 mr-2" />
-                  )}
-                  {isSendingMessage ? "Sending..." : "Message"}
-                </button>
-              </div>
-            )}
-
-            {/* INBOX BUTTON & TOGGLE - Only on own profile */}
-            {isOwnProfile && !isEditing && (
-              <div className="mt-3 flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-                {/* Go to Inbox Button */}
-                <button
-                  onClick={() =>
-                    ownInboxEnabled !== false && navigate("/inbox")
-                  }
-                  disabled={ownInboxEnabled === false}
-                  className={`px-6 py-2 rounded-md border border-[#D8E1EC] text-sm font-medium flex items-center justify-center transition-colors ${
-                    ownInboxEnabled === false
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      : "bg-[#292929] text-[#ffffff] hover:bg-[#F2F0ED] hover:text-[#292929]"
-                  }`}
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                  title={
-                    ownInboxEnabled === false
-                      ? "Enable your inbox to access messages"
-                      : "View your inbox"
-                  }
-                >
-                  <Inbox className="w-4 h-4 mr-2 text-md" />
-                  Inbox
-                </button>
-
-                {/* Inbox Toggle Controls */}
-                <div className="flex items-center gap-2 md:flex-shrink-0">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <span>Inbox Status:</span>
-                  </div>
-
-                  {/* Toggle Button */}
-                  <button
-                    onClick={handleInboxToggle}
-                    disabled={isTogglingInbox}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      ownInboxEnabled !== false ? "bg-[#292929]" : "bg-gray-300"
-                    }`}
-                    aria-label="Toggle inbox"
+                    style={{ fontFamily: "Inter, sans-serif" }}
                   >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        ownInboxEnabled !== false
-                          ? "translate-x-6"
-                          : "translate-x-1"
-                      }`}
-                    />
+                    {isLoadingFollowAction ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    ) : isFollowedByCurrentUser ? (
+                      <UserMinus className="w-4 h-4 mr-2" />
+                    ) : (
+                      <UserPlus className="w-4 h-4 mr-2" />
+                    )}
+                    {isLoadingFollowAction
+                      ? "Processing..."
+                      : isFollowedByCurrentUser
+                        ? "Unfollow"
+                        : "Follow"}
                   </button>
 
-                  <span className="text-sm text-gray-600">
-                    {isTogglingInbox
-                      ? "Updating..."
-                      : ownInboxEnabled !== false
-                        ? "Enabled"
-                        : "Disabled"}
-                  </span>
+                  {/* Inbox Button - Always visible, grayed out if inbox disabled */}
+                  <button
+                    onClick={
+                      recipientInboxEnabled !== false
+                        ? handleSendMessage
+                        : undefined
+                    }
+                    disabled={
+                      recipientInboxEnabled === false || isSendingMessage
+                    }
+                    className={`px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center transition-colors ${
+                      recipientInboxEnabled === false
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-[#292929] text-white hover:bg-gray-700"
+                    }`}
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                    title={
+                      recipientInboxEnabled === false
+                        ? "This user's inbox is disabled"
+                        : "Send a message"
+                    }
+                  >
+                    {isSendingMessage ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    ) : (
+                      <Inbox className="w-4 h-4 mr-2" />
+                    )}
+                    {isSendingMessage ? "Sending..." : "Message"}
+                  </button>
                 </div>
+              )}
 
-                {/* Edit Profile Button */}
-                <button
-                  onClick={handleEditToggle}
-                  className="px-6 py-2 rounded-md bg-[#292929] border border-[#D8E1EC] text-[#ffffff] text-sm font-medium hover:bg-[#F2F0ED] hover:text-[#292929] flex items-center justify-center transition-colors"
+              {/* INBOX BUTTON & TOGGLE - Only on own profile */}
+              {isOwnProfile && !isEditing && (
+                <div className="mt-3 flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+                  {/* Go to Inbox Button */}
+                  <button
+                    onClick={() =>
+                      ownInboxEnabled !== false && navigate("/inbox")
+                    }
+                    disabled={ownInboxEnabled === false}
+                    className={`px-6 py-2 rounded-md border border-[#D8E1EC] text-sm font-medium flex items-center justify-center transition-colors ${
+                      ownInboxEnabled === false
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-[#292929] text-[#ffffff] hover:bg-[#F2F0ED] hover:text-[#292929]"
+                    }`}
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                    title={
+                      ownInboxEnabled === false
+                        ? "Enable your inbox to access messages"
+                        : "View your inbox"
+                    }
+                  >
+                    <Inbox className="w-4 h-4 mr-2 text-md" />
+                    Inbox
+                  </button>
+
+                  {/* Inbox Toggle Controls */}
+                  <div className="flex items-center gap-2 md:flex-shrink-0">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <span>Inbox Status:</span>
+                    </div>
+
+                    {/* Toggle Button */}
+                    <button
+                      onClick={handleInboxToggle}
+                      disabled={isTogglingInbox}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        ownInboxEnabled !== false
+                          ? "bg-[#292929]"
+                          : "bg-gray-300"
+                      }`}
+                      aria-label="Toggle inbox"
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          ownInboxEnabled !== false
+                            ? "translate-x-6"
+                            : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+
+                    <span className="text-sm text-gray-600">
+                      {isTogglingInbox
+                        ? "Updating..."
+                        : ownInboxEnabled !== false
+                          ? "Enabled"
+                          : "Disabled"}
+                    </span>
+                  </div>
+
+                  {/* Edit Profile Button */}
+                  <button
+                    onClick={handleEditToggle}
+                    className="px-6 py-2 rounded-md bg-[#292929] border border-[#D8E1EC] text-[#ffffff] text-sm font-medium hover:bg-[#F2F0ED] hover:text-[#292929] flex items-center justify-center transition-colors"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  >
+                    <Edit3 className="w-4 h-4 mr-2 text-md" /> Edit my profile
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {isEditing && (
+            <div className="mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+              {editError && (
+                <p
+                  className="text-sm text-red-500 w-full sm:w-auto text-center sm:text-left"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 >
-                  <Edit3 className="w-4 h-4 mr-2 text-md" /> Edit my profile
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {isEditing && (
-          <div className="mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
-            {editError && (
-              <p
-                className="text-sm text-red-500 w-full sm:w-auto text-center sm:text-left"
+                  {editError}
+                </p>
+              )}
+              <button
+                onClick={handleEditToggle} // This is cancel
+                disabled={isSaving}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors flex items-center justify-center"
                 style={{ fontFamily: "Inter, sans-serif" }}
               >
-                {editError}
-              </p>
-            )}
-            <button
-              onClick={handleEditToggle} // This is cancel
-              disabled={isSaving}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors flex items-center justify-center"
-              style={{ fontFamily: "Inter, sans-serif" }}
-            >
-              <XCircle className="w-4 h-4 mr-2" /> Cancel
-            </button>
-            <button
-              onClick={handleSaveProfile}
-              disabled={
-                isSaving ||
-                (!newProfileImageFile &&
-                  newName.trim() === (loadedProfileUser?.name || "").trim() &&
-                  newBio === (loadedProfileUser?.bio || "") &&
-                  newWebsite === (loadedProfileUser?.website || "") &&
-                  newTwitter === (loadedProfileUser?.twitter || "") &&
-                  newBluesky === (loadedProfileUser?.bluesky || "") &&
-                  newLinkedin === (loadedProfileUser?.linkedin || ""))
-              }
-              className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors flex items-center justify-center disabled:opacity-50"
-              style={{ fontFamily: "Inter, sans-serif" }}
-            >
-              <Save className="w-4 h-4 mr-2" />{" "}
-              {isSaving ? "Saving..." : "Save Changes"}
-            </button>
-          </div>
-        )}
-      </header>
-
-      {/* Mini Dashboard Section */}
-      <section
-        className="mb-4 p-4 rounded-md border border-gray-200"
-        style={{ fontFamily: "Inter, sans-serif" }}
-      >
-        <h2 className="text-lg font-normal text-[#292929] mb-4 pb-2 border-b border-gray-300">
-          My Vibes
-          {loadedProfileUser?._creationTime && (
-            <span className="ml-2 text-xs text-gray-400">
-              Joined Vibe Apps{" "}
-              {new Date(loadedProfileUser._creationTime).toLocaleDateString(
-                "en-US",
-                {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                },
-              )}
-            </span>
+                <XCircle className="w-4 h-4 mr-2" /> Cancel
+              </button>
+              <button
+                onClick={handleSaveProfile}
+                disabled={
+                  isSaving ||
+                  (!newProfileImageFile &&
+                    newName.trim() === (loadedProfileUser?.name || "").trim() &&
+                    newBio === (loadedProfileUser?.bio || "") &&
+                    newWebsite === (loadedProfileUser?.website || "") &&
+                    newTwitter === (loadedProfileUser?.twitter || "") &&
+                    newBluesky === (loadedProfileUser?.bluesky || "") &&
+                    newLinkedin === (loadedProfileUser?.linkedin || ""))
+                }
+                className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors flex items-center justify-center disabled:opacity-50"
+                style={{ fontFamily: "Inter, sans-serif" }}
+              >
+                <Save className="w-4 h-4 mr-2" />{" "}
+                {isSaving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
           )}
-        </h2>
-        <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:gap-3 md:justify-start">
-          {/* Submissions */}
-          <button
-            onClick={() => handleMiniDashboardClick("submissions")}
-            aria-label={`View ${loadedProfileUser?.name || "user"}'s submissions`}
-            className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
-          >
-            <BookOpen className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
-            <div className="flex flex-col md:items-center">
-              <span className="text-xl font-bold text-[#292929]">
-                {stories.length}
-              </span>
-              <span className="text-xs text-gray-500 md:mt-0.5">
-                Submissions
-              </span>
-            </div>
-          </button>
+        </header>
 
-          {/* Votes */}
-          <button
-            onClick={() => handleMiniDashboardClick("votes")}
-            aria-label={`View ${loadedProfileUser?.name || "user"}'s votes`}
-            className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
-          >
-            <ThumbsUp className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
-            <div className="flex flex-col md:items-center">
-              <span className="text-xl font-bold text-[#292929]">
-                {votes.length}
+        {/* Mini Dashboard Section */}
+        <section
+          className="mb-4 p-4 rounded-md border bg-[#ffffff] border-gray-200"
+          style={{ fontFamily: "Inter, sans-serif" }}
+        >
+          <h2 className="text-lg font-normal text-[#292929] mb-4 pb-2 border-b border-gray-300">
+            My Vibes
+            {loadedProfileUser?._creationTime && (
+              <span className="ml-2 text-xs text-gray-400">
+                Joined Vibe Apps{" "}
+                {new Date(loadedProfileUser._creationTime).toLocaleDateString(
+                  "en-US",
+                  {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  },
+                )}
               </span>
-              <span className="text-xs text-gray-500 md:mt-0.5">Votes</span>
-            </div>
-          </button>
-
-          {/* Ratings Given */}
-          <button
-            onClick={() => handleMiniDashboardClick("ratings")}
-            aria-label={`View ratings given by ${loadedProfileUser?.name || "user"}`}
-            className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
-          >
-            <Star className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
-            <div className="flex flex-col md:items-center">
-              <span className="text-xl font-bold text-[#292929]">
-                {ratings.length}
-              </span>
-              <span className="text-xs text-gray-500 md:mt-0.5">Ratings</span>
-            </div>
-          </button>
-
-          {/* Comments */}
-          <button
-            onClick={() => handleMiniDashboardClick("comments")}
-            aria-label={`View comments made by ${loadedProfileUser?.name || "user"}`}
-            className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
-          >
-            <MessageCircle className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
-            <div className="flex flex-col md:items-center">
-              <span className="text-xl font-bold text-[#292929]">
-                {comments.length}
-              </span>
-              <span className="text-xs text-gray-500 md:mt-0.5">Comments</span>
-            </div>
-          </button>
-
-          {/* Bookmarks (Own Profile Only) */}
-          {isOwnProfile && (
+            )}
+          </h2>
+          <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:gap-3 md:justify-start">
+            {/* Submissions */}
             <button
-              onClick={() => handleMiniDashboardClick("bookmarks")}
-              aria-label={`View your bookmarks`}
+              onClick={() => handleMiniDashboardClick("submissions")}
+              aria-label={`View ${loadedProfileUser?.name || "user"}'s submissions`}
               className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
             >
-              <Bookmark className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+              <BookOpen className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
               <div className="flex flex-col md:items-center">
                 <span className="text-xl font-bold text-[#292929]">
-                  {userBookmarksCount ?? 0}
+                  {stories.length}
                 </span>
                 <span className="text-xs text-gray-500 md:mt-0.5">
-                  Bookmarks
+                  Submissions
                 </span>
               </div>
             </button>
-          )}
 
-          {/* Followers */}
-          <button
-            onClick={() => handleMiniDashboardClick("followers")}
-            aria-label={`View followers of ${loadedProfileUser?.name || "user"}`}
-            className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
-          >
-            <Users className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
-            <div className="flex flex-col md:items-center">
-              <span className="text-xl font-bold text-[#292929]">
-                {followersCount ?? 0}
-              </span>
-              <span className="text-xs text-gray-500 md:mt-0.5">Followers</span>
-            </div>
-          </button>
+            {/* Votes */}
+            <button
+              onClick={() => handleMiniDashboardClick("votes")}
+              aria-label={`View ${loadedProfileUser?.name || "user"}'s votes`}
+              className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
+            >
+              <ThumbsUp className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+              <div className="flex flex-col md:items-center">
+                <span className="text-xl font-bold text-[#292929]">
+                  {votes.length}
+                </span>
+                <span className="text-xs text-gray-500 md:mt-0.5">Votes</span>
+              </div>
+            </button>
 
-          {/* Following */}
-          <button
-            onClick={() => handleMiniDashboardClick("following")}
-            aria-label={`View users followed by ${loadedProfileUser?.name || "user"}`}
-            className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
-          >
-            <UserPlus className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
-            <div className="flex flex-col md:items-center">
-              <span className="text-xl font-bold text-[#292929]">
-                {followingCount ?? 0}
-              </span>
-              <span className="text-xs text-gray-500 md:mt-0.5">Following</span>
-            </div>
-          </button>
+            {/* Ratings Given */}
+            <button
+              onClick={() => handleMiniDashboardClick("ratings")}
+              aria-label={`View ratings given by ${loadedProfileUser?.name || "user"}`}
+              className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
+            >
+              <Star className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+              <div className="flex flex-col md:items-center">
+                <span className="text-xl font-bold text-[#292929]">
+                  {ratings.length}
+                </span>
+                <span className="text-xs text-gray-500 md:mt-0.5">Ratings</span>
+              </div>
+            </button>
 
-          {/* Achievements (Hidden for later) */}
-          {/*
+            {/* Comments */}
+            <button
+              onClick={() => handleMiniDashboardClick("comments")}
+              aria-label={`View comments made by ${loadedProfileUser?.name || "user"}`}
+              className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
+            >
+              <MessageCircle className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+              <div className="flex flex-col md:items-center">
+                <span className="text-xl font-bold text-[#292929]">
+                  {comments.length}
+                </span>
+                <span className="text-xs text-gray-500 md:mt-0.5">
+                  Comments
+                </span>
+              </div>
+            </button>
+
+            {/* Bookmarks (Own Profile Only) */}
+            {isOwnProfile && (
+              <button
+                onClick={() => handleMiniDashboardClick("bookmarks")}
+                aria-label={`View your bookmarks`}
+                className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
+              >
+                <Bookmark className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+                <div className="flex flex-col md:items-center">
+                  <span className="text-xl font-bold text-[#292929]">
+                    {userBookmarksCount ?? 0}
+                  </span>
+                  <span className="text-xs text-gray-500 md:mt-0.5">
+                    Bookmarks
+                  </span>
+                </div>
+              </button>
+            )}
+
+            {/* Followers */}
+            <button
+              onClick={() => handleMiniDashboardClick("followers")}
+              aria-label={`View followers of ${loadedProfileUser?.name || "user"}`}
+              className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
+            >
+              <Users className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+              <div className="flex flex-col md:items-center">
+                <span className="text-xl font-bold text-[#292929]">
+                  {followersCount ?? 0}
+                </span>
+                <span className="text-xs text-gray-500 md:mt-0.5">
+                  Followers
+                </span>
+              </div>
+            </button>
+
+            {/* Following */}
+            <button
+              onClick={() => handleMiniDashboardClick("following")}
+              aria-label={`View users followed by ${loadedProfileUser?.name || "user"}`}
+              className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
+            >
+              <UserPlus className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+              <div className="flex flex-col md:items-center">
+                <span className="text-xl font-bold text-[#292929]">
+                  {followingCount ?? 0}
+                </span>
+                <span className="text-xs text-gray-500 md:mt-0.5">
+                  Following
+                </span>
+              </div>
+            </button>
+
+            {/* Achievements (Hidden for later) */}
+            {/*
           <div className="flex flex-col items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-32 md:w-36 flex-shrink-0 h-32 justify-center">
             <Award className="w-7 h-7 mb-2 text-gray-600" />
             <span className="text-2xl font-bold text-[#292929]">{0}</span>
             <span className="text-xs text-gray-500 mt-0.5">Achievements</span>
           </div>
           */}
-        </div>
-      </section>
+          </div>
+        </section>
 
-      {/* Section for User's Submissions (Stories) - Always Visible */}
-      <section
-        ref={submissionsSectionRef}
-        id="submissions"
-        className="mb-6 p-4 bg-[#F3F4F6] rounded-md border border-gray-200"
-      >
-        <h2 className="text-lg font-normal text-[#292929] mb-4 pb-2 border-b border-gray-300">
-          Submissions
-        </h2>
-        {stories.length === 0 && (
-          <p className="text-gray-500 italic">No submissions yet.</p>
-        )}
-        {stories.length > 0 && (
-          <ul className="space-y-4">
-            {stories.map((story: StoryInProfile) => (
-              <li
-                key={story._id}
-                className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
-              >
-                <div className="flex-grow mr-4">
-                  <Link
-                    to={`/s/${story.slug}`}
-                    className="text-lg font-semibold text-[#292929] hover:underline"
-                  >
-                    {story.title}
-                  </Link>
-                  <p className="text-sm text-gray-600 whitespace-normal break-words">
-                    {story.description}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Submitted by:{" "}
-                    {story.authorName || story.authorUsername || "Anonymous"}
-                    {story.authorIsVerified && <VerifiedBadge />}
-                  </p>
-                </div>
-                {isOwnProfile && (
-                  <div className="flex items-center gap-2">
+        {/* Section for User's Submissions (Stories) - Always Visible */}
+        <section
+          ref={submissionsSectionRef}
+          id="submissions"
+          className="mb-6 p-4 bg-[#ffffff] rounded-md border border-gray-200"
+        >
+          <h2 className="text-lg font-normal text-[#292929] mb-4 pb-2 border-b border-gray-300">
+            Submissions
+          </h2>
+          {stories.length === 0 && (
+            <p className="text-gray-500 italic">No submissions yet.</p>
+          )}
+          {stories.length > 0 && (
+            <ul className="space-y-4">
+              {stories.map((story: StoryInProfile) => (
+                <li
+                  key={story._id}
+                  className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
+                >
+                  <div className="flex-grow mr-4">
                     <Link
-                      to={`/s/${story.slug}?edit=true`}
-                      className="text-sm text-blue-500 hover:text-blue-700 hover:bg-blue-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
+                      to={`/s/${story.slug}`}
+                      className="text-lg font-semibold text-[#292929] hover:underline"
                     >
-                      <Edit3 className="w-4 h-4" /> Edit
+                      {story.title}
                     </Link>
-                    <button
-                      onClick={() => handleDeleteStory(story._id)}
-                      className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
-                    >
-                      <Trash2 className="w-4 h-4" /> Delete
-                    </button>
+                    <p className="text-sm text-gray-600 whitespace-normal break-words">
+                      {story.description}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Submitted by:{" "}
+                      {story.authorName || story.authorUsername || "Anonymous"}
+                      {story.authorIsVerified && <VerifiedBadge />}
+                    </p>
                   </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+                  {isOwnProfile && (
+                    <div className="flex items-center gap-2">
+                      <Link
+                        to={`/s/${story.slug}?edit=true`}
+                        className="text-sm text-blue-500 hover:text-blue-700 hover:bg-blue-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
+                      >
+                        <Edit3 className="w-4 h-4" /> Edit
+                      </Link>
+                      <button
+                        onClick={() => handleDeleteStory(story._id)}
+                        className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
+                      >
+                        <Trash2 className="w-4 h-4" /> Delete
+                      </button>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-      {/* Tab Navigation and Content Area */}
-      <div className="mb-20">
-        {/* Tab Buttons */}
-        <div className="flex flex-col gap-2 md:flex-row md:flex-wrap border-b border-gray-300 mb-4">
-          <button
-            onClick={() => setActiveTab("votes")}
-            className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none ${
-              activeTab === "votes"
-                ? "border-b-2 border-[#292929] text-[#292929]"
-                : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            Votes ({votes?.length ?? 0})
-          </button>
-          <button
-            onClick={() => setActiveTab("ratings")}
-            className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none ${
-              activeTab === "ratings"
-                ? "border-b-2 border-[#292929] text-[#292929]"
-                : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            Ratings Given ({ratings?.length ?? 0})
-          </button>
-          <button
-            onClick={() => setActiveTab("comments")}
-            className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none ${
-              activeTab === "comments"
-                ? "border-b-2 border-[#292929] text-[#292929]"
-                : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            Comments ({comments?.length ?? 0})
-          </button>
-          {isOwnProfile && (
+        {/* Tab Navigation and Content Area */}
+        <div className="mb-20">
+          {/* Tab Buttons */}
+          <div className="flex flex-col gap-2 md:flex-row md:flex-wrap border-b border-gray-300 mb-4">
             <button
-              onClick={() => setActiveTab("bookmarks")}
-              className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none flex items-center ${
-                activeTab === "bookmarks"
+              onClick={() => setActiveTab("votes")}
+              className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none ${
+                activeTab === "votes"
                   ? "border-b-2 border-[#292929] text-[#292929]"
                   : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
-              title="Bookmarks are private"
             >
-              <BookKey className="w-4 h-4 mr-1" />
-              {isOwnProfile
-                ? `Bookmarks (${userBookmarksCount ?? 0})`
-                : "Bookmarks"}
+              Votes ({votes?.length ?? 0})
             </button>
-          )}
-          {/* Followers Tab Button */}
-          <button
-            onClick={() => setActiveTab("followers")}
-            className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none flex items-center ${
-              activeTab === "followers"
-                ? "border-b-2 border-[#292929] text-[#292929]"
-                : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
+            <button
+              onClick={() => setActiveTab("ratings")}
+              className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none ${
+                activeTab === "ratings"
+                  ? "border-b-2 border-[#292929] text-[#292929]"
+                  : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Ratings Given ({ratings?.length ?? 0})
+            </button>
+            <button
+              onClick={() => setActiveTab("comments")}
+              className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none ${
+                activeTab === "comments"
+                  ? "border-b-2 border-[#292929] text-[#292929]"
+                  : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Comments ({comments?.length ?? 0})
+            </button>
+            {isOwnProfile && (
+              <button
+                onClick={() => setActiveTab("bookmarks")}
+                className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none flex items-center ${
+                  activeTab === "bookmarks"
+                    ? "border-b-2 border-[#292929] text-[#292929]"
+                    : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+                title="Bookmarks are private"
+              >
+                <BookKey className="w-4 h-4 mr-1" />
+                {isOwnProfile
+                  ? `Bookmarks (${userBookmarksCount ?? 0})`
+                  : "Bookmarks"}
+              </button>
+            )}
+            {/* Followers Tab Button */}
+            <button
+              onClick={() => setActiveTab("followers")}
+              className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none flex items-center ${
+                activeTab === "followers"
+                  ? "border-b-2 border-[#292929] text-[#292929]"
+                  : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              <Users className="w-4 h-4 mr-1" /> Followers (
+              {followersCount ?? 0})
+            </button>
+            {/* Following Tab Button */}
+            <button
+              onClick={() => setActiveTab("following")}
+              className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none flex items-center ${
+                activeTab === "following"
+                  ? "border-b-2 border-[#292929] text-[#292929]"
+                  : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              <Users className="w-4 h-4 mr-1" /> Following (
+              {followingCount ?? 0})
+            </button>
+          </div>
+
+          {/* Conditionally Rendered Content */}
+          <div
+            ref={tabContentAreaRef}
+            className="focus:outline-none"
+            tabIndex={-1}
           >
-            <Users className="w-4 h-4 mr-1" /> Followers ({followersCount ?? 0})
-          </button>
-          {/* Following Tab Button */}
-          <button
-            onClick={() => setActiveTab("following")}
-            className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none flex items-center ${
-              activeTab === "following"
-                ? "border-b-2 border-[#292929] text-[#292929]"
-                : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
-            <Users className="w-4 h-4 mr-1" /> Following ({followingCount ?? 0})
-          </button>
-        </div>
-
-        {/* Conditionally Rendered Content */}
-        <div
-          ref={tabContentAreaRef}
-          className="focus:outline-none"
-          tabIndex={-1}
-        >
-          {activeTab === "votes" && (
-            <section
-              id="tab-section-votes"
-              className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200"
-            >
-              {votes.length === 0 && (
-                <p className="text-gray-500 italic">No votes yet.</p>
-              )}
-              {votes.length > 0 && (
-                <ul className="space-y-4">
-                  {votes.map((vote: VoteInProfile) => (
-                    <li
-                      key={vote._id}
-                      className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
-                    >
-                      <div className="flex-grow mr-4">
-                        <Link
-                          to={`/s/${vote.storySlug}`}
-                          className="text-lg font-semibold text-[#292929] hover:underline"
-                        >
-                          {vote.storyTitle || "View Story"}
-                        </Link>
-                        <p className="text-xs text-gray-400">
-                          Voted on:{" "}
-                          {new Date(vote._creationTime).toLocaleDateString()}
-                        </p>
-                      </div>
-                      {isOwnProfile && (
-                        <button
-                          onClick={() => handleUnvote(vote.storyId)}
-                          className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
-                        >
-                          <ThumbsUp className="w-4 h-4 transform rotate-180" />{" "}
-                          Unvote
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          )}
-
-          {activeTab === "ratings" && (
-            <section
-              id="tab-section-ratings"
-              className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200"
-            >
-              {ratings.length === 0 && (
-                <p className="text-gray-500 italic">No ratings given yet.</p>
-              )}
-              {ratings.length > 0 && (
-                <ul className="space-y-4">
-                  {ratings.map((rating: RatingInProfile) => (
-                    <li
-                      key={rating._id}
-                      className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
-                    >
-                      <div className="flex-grow mr-4">
-                        <Link
-                          to={`/s/${rating.storySlug}`}
-                          className="text-lg font-semibold text-[#292929] hover:underline"
-                        >
-                          {rating.storyTitle || "View Story"}
-                        </Link>
-                        <p className="text-sm text-yellow-500 flex items-center">
-                          Rated:{" "}
-                          {Array(rating.value)
-                            .fill(null)
-                            .map((_, i) => (
-                              <Star
-                                key={i}
-                                className="w-4 h-4 fill-current text-yellow-400"
-                              />
-                            ))}
-                          {Array(5 - rating.value)
-                            .fill(null)
-                            .map((_, i) => (
-                              <Star
-                                key={i + rating.value}
-                                className="w-4 h-4 text-gray-300 fill-current"
-                              />
-                            ))}
-                          <span className="ml-2 text-xs text-gray-400">
-                            (
-                            {new Date(
-                              rating._creationTime,
-                            ).toLocaleDateString()}
-                            )
-                          </span>
-                        </p>
-                      </div>
-                      {isOwnProfile && (
-                        <button
-                          onClick={() => handleDeleteRating(rating._id)}
-                          className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
-                        >
-                          <Trash2 className="w-4 h-4" /> Delete
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          )}
-
-          {activeTab === "comments" && (
-            <section
-              id="tab-section-comments"
-              className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200"
-            >
-              {comments.length === 0 && (
-                <p className="text-gray-500 italic">No comments yet.</p>
-              )}
-              {comments.length > 0 && (
-                <ul className="space-y-4">
-                  {comments.map((comment: CommentInProfile) => (
-                    <li
-                      key={comment._id}
-                      className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
-                    >
-                      <div className="flex-grow mr-4">
-                        <p className="text-gray-700 mb-1 whitespace-pre-wrap">
-                          {comment.content}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          Commented on{" "}
-                          <Link
-                            to={`/s/${comment.storySlug}#comments`}
-                            className="text-[#292929] hover:underline"
-                          >
-                            {comment.storyTitle || "story"}
-                          </Link>{" "}
-                          -{" "}
-                          {new Date(comment._creationTime).toLocaleDateString()}
-                        </p>
-                      </div>
-                      {isOwnProfile && (
-                        <button
-                          onClick={() => handleDeleteComment(comment._id)}
-                          className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
-                        >
-                          <Trash2 className="w-4 h-4" /> Delete
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          )}
-
-          {activeTab === "bookmarks" && (
-            <section
-              id="tab-section-bookmarks"
-              className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200"
-            >
-              {(!userBookmarksWithDetails ||
-                userBookmarksWithDetails.length === 0) && (
-                <p className="text-gray-500 italic">No bookmarks yet.</p>
-              )}
-              {userBookmarksWithDetails &&
-                userBookmarksWithDetails.length > 0 && (
+            {activeTab === "votes" && (
+              <section
+                id="tab-section-votes"
+                className="p-4 bg-[#ffffff] rounded-md border border-gray-200"
+              >
+                {votes.length === 0 && (
+                  <p className="text-gray-500 italic">No votes yet.</p>
+                )}
+                {votes.length > 0 && (
                   <ul className="space-y-4">
-                    {userBookmarksWithDetails.map(
-                      (bookmark: BookmarkedStoryItem) => (
-                        <li
-                          key={bookmark._id}
-                          className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
-                        >
-                          <div className="flex-grow mr-4">
-                            <Link
-                              to={`/s/${bookmark.storySlug}`}
-                              className="text-lg font-semibold text-[#292929] hover:underline"
-                            >
-                              {bookmark.storyTitle || "View Story"}
-                            </Link>
-                            {bookmark.storyDescription && (
-                              <p className="text-sm text-gray-600 whitespace-normal break-words mt-1">
-                                {bookmark.storyDescription}
-                              </p>
-                            )}
-                            <p className="text-xs text-gray-400 mt-1">
-                              Bookmarked on:{" "}
-                              {new Date(
-                                bookmark._creationTime,
-                              ).toLocaleDateString()}
-                            </p>
-                          </div>
-                          {isOwnProfile && (
-                            <button
-                              onClick={() =>
-                                handleRemoveBookmark(bookmark.storyId)
-                              }
-                              className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
-                              title="Remove bookmark"
-                            >
-                              <BookmarkMinus className="w-4 h-4" /> Remove
-                            </button>
-                          )}
-                        </li>
-                      ),
-                    )}
+                    {votes.map((vote: VoteInProfile) => (
+                      <li
+                        key={vote._id}
+                        className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
+                      >
+                        <div className="flex-grow mr-4">
+                          <Link
+                            to={`/s/${vote.storySlug}`}
+                            className="text-lg font-semibold text-[#292929] hover:underline"
+                          >
+                            {vote.storyTitle || "View Story"}
+                          </Link>
+                          <p className="text-xs text-gray-400">
+                            Voted on:{" "}
+                            {new Date(vote._creationTime).toLocaleDateString()}
+                          </p>
+                        </div>
+                        {isOwnProfile && (
+                          <button
+                            onClick={() => handleUnvote(vote.storyId)}
+                            className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
+                          >
+                            <ThumbsUp className="w-4 h-4 transform rotate-180" />{" "}
+                            Unvote
+                          </button>
+                        )}
+                      </li>
+                    ))}
                   </ul>
                 )}
-            </section>
-          )}
+              </section>
+            )}
 
-          {/* Followers Tab Content */}
-          {activeTab === "followers" && (
-            <section
-              id="tab-section-followers"
-              className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200"
-            >
-              {followersData === undefined && (
-                <p className="text-center p-8">Loading followers...</p>
-              )}
-              {followersData && followersData.length === 0 && (
-                <p className="text-gray-500 italic">No followers yet.</p>
-              )}
-              {followersData && followersData.length > 0 && (
-                <ul className="space-y-3">
-                  {followersData.map((follower: FollowUserListItem | null) =>
-                    follower ? (
+            {activeTab === "ratings" && (
+              <section
+                id="tab-section-ratings"
+                className="p-4 bg-[#ffffff] rounded-md border border-gray-200"
+              >
+                {ratings.length === 0 && (
+                  <p className="text-gray-500 italic">No ratings given yet.</p>
+                )}
+                {ratings.length > 0 && (
+                  <ul className="space-y-4">
+                    {ratings.map((rating: RatingInProfile) => (
                       <li
-                        key={follower._id}
-                        className="p-3 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-between transition-shadow hover:shadow-sm"
+                        key={rating._id}
+                        className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
                       >
-                        <Link
-                          to={`/${follower.username}`}
-                          className="flex items-center flex-grow mr-3"
-                        >
-                          {follower.imageUrl ? (
-                            <img
-                              src={follower.imageUrl}
-                              alt={follower.name ?? "User"}
-                              className="w-10 h-10 rounded-full mr-3 object-cover border border-gray-200"
-                            />
-                          ) : (
-                            <ProfileImagePlaceholder
-                              name={follower.name}
-                              size="w-10 h-10"
-                            />
-                          )}
-                          <div>
-                            <span className="text-sm font-semibold text-[#292929] hover:underline">
-                              {follower.name || "Anonymous User"}
+                        <div className="flex-grow mr-4">
+                          <Link
+                            to={`/s/${rating.storySlug}`}
+                            className="text-lg font-semibold text-[#292929] hover:underline"
+                          >
+                            {rating.storyTitle || "View Story"}
+                          </Link>
+                          <p className="text-sm text-yellow-500 flex items-center">
+                            Rated:{" "}
+                            {Array(rating.value)
+                              .fill(null)
+                              .map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className="w-4 h-4 fill-current text-yellow-400"
+                                />
+                              ))}
+                            {Array(5 - rating.value)
+                              .fill(null)
+                              .map((_, i) => (
+                                <Star
+                                  key={i + rating.value}
+                                  className="w-4 h-4 text-gray-300 fill-current"
+                                />
+                              ))}
+                            <span className="ml-2 text-xs text-gray-400">
+                              (
+                              {new Date(
+                                rating._creationTime,
+                              ).toLocaleDateString()}
+                              )
                             </span>
-                            <p className="text-xs  text-gray-500">
-                              @{follower.username || "N/A"}
-                            </p>
-                          </div>
-                        </Link>
-                        {/* Optional: Add follow/unfollow button for logged-in user viewing this list */}
-                        {/* This requires checking if authUser.id is follower._id and if authUser is following this follower */}
+                          </p>
+                        </div>
+                        {isOwnProfile && (
+                          <button
+                            onClick={() => handleDeleteRating(rating._id)}
+                            className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
+                          >
+                            <Trash2 className="w-4 h-4" /> Delete
+                          </button>
+                        )}
                       </li>
-                    ) : null,
-                  )}
-                </ul>
-              )}
-            </section>
-          )}
+                    ))}
+                  </ul>
+                )}
+              </section>
+            )}
 
-          {/* Following Tab Content */}
-          {activeTab === "following" && (
-            <section
-              id="tab-section-following"
-              className="p-4 bg-[#F3F4F6] rounded-md border border-gray-200"
-            >
-              {followingData === undefined && (
-                <p className="text-center p-8">Loading following...</p>
-              )}
-              {followingData && followingData.length === 0 && (
-                <p className="text-gray-500 italic">
-                  Not following anyone yet.
-                </p>
-              )}
-              {followingData && followingData.length > 0 && (
-                <ul className="space-y-3">
-                  {followingData.map(
-                    (followedUser: FollowUserListItem | null) =>
-                      followedUser ? (
+            {activeTab === "comments" && (
+              <section
+                id="tab-section-comments"
+                className="p-4 bg-[#ffffff] rounded-md border border-gray-200"
+              >
+                {comments.length === 0 && (
+                  <p className="text-gray-500 italic">No comments yet.</p>
+                )}
+                {comments.length > 0 && (
+                  <ul className="space-y-4">
+                    {comments.map((comment: CommentInProfile) => (
+                      <li
+                        key={comment._id}
+                        className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
+                      >
+                        <div className="flex-grow mr-4">
+                          <p className="text-gray-700 mb-1 whitespace-pre-wrap">
+                            {comment.content}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            Commented on{" "}
+                            <Link
+                              to={`/s/${comment.storySlug}#comments`}
+                              className="text-[#292929] hover:underline"
+                            >
+                              {comment.storyTitle || "story"}
+                            </Link>{" "}
+                            -{" "}
+                            {new Date(
+                              comment._creationTime,
+                            ).toLocaleDateString()}
+                          </p>
+                        </div>
+                        {isOwnProfile && (
+                          <button
+                            onClick={() => handleDeleteComment(comment._id)}
+                            className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
+                          >
+                            <Trash2 className="w-4 h-4" /> Delete
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            )}
+
+            {activeTab === "bookmarks" && (
+              <section
+                id="tab-section-bookmarks"
+                className="p-4 rounded-md border bg-[#ffffff] border-gray-200"
+              >
+                {(!userBookmarksWithDetails ||
+                  userBookmarksWithDetails.length === 0) && (
+                  <p className="text-gray-500 italic">No bookmarks yet.</p>
+                )}
+                {userBookmarksWithDetails &&
+                  userBookmarksWithDetails.length > 0 && (
+                    <ul className="space-y-4">
+                      {userBookmarksWithDetails.map(
+                        (bookmark: BookmarkedStoryItem) => (
+                          <li
+                            key={bookmark._id}
+                            className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
+                          >
+                            <div className="flex-grow mr-4">
+                              <Link
+                                to={`/s/${bookmark.storySlug}`}
+                                className="text-lg font-semibold text-[#292929] hover:underline"
+                              >
+                                {bookmark.storyTitle || "View Story"}
+                              </Link>
+                              {bookmark.storyDescription && (
+                                <p className="text-sm text-gray-600 whitespace-normal break-words mt-1">
+                                  {bookmark.storyDescription}
+                                </p>
+                              )}
+                              <p className="text-xs text-gray-400 mt-1">
+                                Bookmarked on:{" "}
+                                {new Date(
+                                  bookmark._creationTime,
+                                ).toLocaleDateString()}
+                              </p>
+                            </div>
+                            {isOwnProfile && (
+                              <button
+                                onClick={() =>
+                                  handleRemoveBookmark(bookmark.storyId)
+                                }
+                                className="text-sm text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
+                                title="Remove bookmark"
+                              >
+                                <BookmarkMinus className="w-4 h-4" /> Remove
+                              </button>
+                            )}
+                          </li>
+                        ),
+                      )}
+                    </ul>
+                  )}
+              </section>
+            )}
+
+            {/* Followers Tab Content */}
+            {activeTab === "followers" && (
+              <section
+                id="tab-section-followers"
+                className="p-4 bg-[#ffffff] rounded-md border border-gray-200"
+              >
+                {followersData === undefined && (
+                  <p className="text-center p-8">Loading followers...</p>
+                )}
+                {followersData && followersData.length === 0 && (
+                  <p className="text-gray-500 italic">No followers yet.</p>
+                )}
+                {followersData && followersData.length > 0 && (
+                  <ul className="space-y-3">
+                    {followersData.map((follower: FollowUserListItem | null) =>
+                      follower ? (
                         <li
-                          key={followedUser._id}
+                          key={follower._id}
                           className="p-3 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-between transition-shadow hover:shadow-sm"
                         >
                           <Link
-                            to={`/${followedUser.username}`}
+                            to={`/${follower.username}`}
                             className="flex items-center flex-grow mr-3"
                           >
-                            {followedUser.imageUrl ? (
+                            {follower.imageUrl ? (
                               <img
-                                src={followedUser.imageUrl}
-                                alt={followedUser.name ?? "User"}
+                                src={follower.imageUrl}
+                                alt={follower.name ?? "User"}
                                 className="w-10 h-10 rounded-full mr-3 object-cover border border-gray-200"
                               />
                             ) : (
                               <ProfileImagePlaceholder
-                                name={followedUser.name}
+                                name={follower.name}
                                 size="w-10 h-10"
                               />
                             )}
                             <div>
-                              <span className="text-sm p-1 font-semibold text-[#292929] hover:underline">
-                                {followedUser.name || "Anonymous User"}
+                              <span className="text-sm font-semibold text-[#292929] hover:underline">
+                                {follower.name || "Anonymous User"}
                               </span>
-                              <p className="text-xs  p-1 text-gray-500">
-                                @{followedUser.username || "N/A"}
+                              <p className="text-xs  text-gray-500">
+                                @{follower.username || "N/A"}
                               </p>
                             </div>
                           </Link>
                           {/* Optional: Add follow/unfollow button for logged-in user viewing this list */}
+                          {/* This requires checking if authUser.id is follower._id and if authUser is following this follower */}
                         </li>
                       ) : null,
-                  )}
-                </ul>
-              )}
-            </section>
-          )}
+                    )}
+                  </ul>
+                )}
+              </section>
+            )}
+
+            {/* Following Tab Content */}
+            {activeTab === "following" && (
+              <section
+                id="tab-section-following"
+                className="p-4 bg-[#ffffff] rounded-md border border-gray-200"
+              >
+                {followingData === undefined && (
+                  <p className="text-center p-8">Loading following...</p>
+                )}
+                {followingData && followingData.length === 0 && (
+                  <p className="text-gray-500 italic">
+                    Not following anyone yet.
+                  </p>
+                )}
+                {followingData && followingData.length > 0 && (
+                  <ul className="space-y-3">
+                    {followingData.map(
+                      (followedUser: FollowUserListItem | null) =>
+                        followedUser ? (
+                          <li
+                            key={followedUser._id}
+                            className="p-3 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-between transition-shadow hover:shadow-sm"
+                          >
+                            <Link
+                              to={`/${followedUser.username}`}
+                              className="flex items-center flex-grow mr-3"
+                            >
+                              {followedUser.imageUrl ? (
+                                <img
+                                  src={followedUser.imageUrl}
+                                  alt={followedUser.name ?? "User"}
+                                  className="w-10 h-10 rounded-full mr-3 object-cover border border-gray-200"
+                                />
+                              ) : (
+                                <ProfileImagePlaceholder
+                                  name={followedUser.name}
+                                  size="w-10 h-10"
+                                />
+                              )}
+                              <div>
+                                <span className="text-sm p-1 font-semibold text-[#292929] hover:underline">
+                                  {followedUser.name || "Anonymous User"}
+                                </span>
+                                <p className="text-xs  p-1 text-gray-500">
+                                  @{followedUser.username || "N/A"}
+                                </p>
+                              </div>
+                            </Link>
+                            {/* Optional: Add follow/unfollow button for logged-in user viewing this list */}
+                          </li>
+                        ) : null,
+                    )}
+                  </ul>
+                )}
+              </section>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Manage Profile Section - Visible only to profile owner */}
-      {isOwnProfile && (
-        <section
-          id="manage-profile"
-          className="mb-4 p-6 bg-[#ffffff] rounded-lg border border-gray-200"
-          style={{ fontFamily: "Inter, sans-serif" }}
-        >
-          <h2 className="text-lg font-normal text-[#292929] mb-6 pb-3 border-b border-gray-300">
-            Manage Profile & Account
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Column 1: Profile Settings and General Account Management */}
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-base font-normal text-[#292929] mb-2">
-                  Profile Settings
-                </h3>
-                <button
-                  onClick={() => {
-                    if (!isEditing) handleEditToggle();
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors disabled:opacity-50 flex items-center"
-                >
-                  <Edit3 className="w-4 h-4 inline-block mr-2" /> Edit Profile
-                  Details
-                </button>
-              </div>
+        {/* Manage Profile Section - Visible only to profile owner */}
+        {isOwnProfile && (
+          <section
+            id="manage-profile"
+            className="mb-4 p-6 bg-[#ffffff] rounded-lg border border-gray-200"
+            style={{ fontFamily: "Inter, sans-serif" }}
+          >
+            <h2 className="text-lg font-normal text-[#292929] mb-6 pb-3 border-b border-gray-300">
+              Manage Profile & Account
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Column 1: Profile Settings and General Account Management */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-base font-normal text-[#292929] mb-2">
+                    Profile Settings
+                  </h3>
+                  <button
+                    onClick={() => {
+                      if (!isEditing) handleEditToggle();
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors disabled:opacity-50 flex items-center"
+                  >
+                    <Edit3 className="w-4 h-4 inline-block mr-2" /> Edit Profile
+                    Details
+                  </button>
+                </div>
 
-              <div>
-                <h3 className="text-base font-normal text-[#292929] mb-2">
-                  Account Management
-                </h3>
-                <Link
-                  to="/user-settings"
-                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors flex items-center"
-                >
-                  <Settings className="w-4 h-4 inline-block mr-2" /> Account
-                  Settings (Change profile photo, Password, Delete account,
-                  etc.)
-                </Link>
-                {/* Email Preferences */}
-                <div className="mt-4 p-4 bg-white border border-gray-200 rounded-md">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h4 className="text-sm font-medium text-[#292929]">
-                        Email Preferences
-                      </h4>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Manage your email notifications.
-                      </p>
+                <div>
+                  <h3 className="text-base font-normal text-[#292929] mb-2">
+                    Account Management
+                  </h3>
+                  <Link
+                    to="/user-settings"
+                    className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors flex items-center"
+                  >
+                    <Settings className="w-4 h-4 inline-block mr-2" /> Account
+                    Settings (Change profile photo, Password, Delete account,
+                    etc.)
+                  </Link>
+                  {/* Email Preferences */}
+                  <div className="mt-4 p-4 bg-white border border-gray-200 rounded-md">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h4 className="text-sm font-medium text-[#292929]">
+                          Email Preferences
+                        </h4>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Manage your email notifications.
+                        </p>
+                      </div>
+                      <Mail className="w-4 h-4 text-gray-400" />
                     </div>
-                    <Mail className="w-4 h-4 text-gray-400" />
-                  </div>
 
-                  {emailSettingsData === undefined ? (
-                    <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400"></div>
-                      <span className="text-xs text-gray-500">
-                        Loading preferences...
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
-                        <div className="flex-1">
-                          <p className="text-sm text-[#292929]">
-                            {emailSettingsData &&
-                            (emailSettingsData as any).unsubscribedAt
-                              ? "Currently unsubscribed from all emails"
-                              : "Receiving email notifications"}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {emailSettingsData &&
-                            (emailSettingsData as any).unsubscribedAt
-                              ? "You won't receive any email notifications"
-                              : "Daily updates and weekly digests"}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            if (
+                    {emailSettingsData === undefined ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400"></div>
+                        <span className="text-xs text-gray-500">
+                          Loading preferences...
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                          <div className="flex-1">
+                            <p className="text-sm text-[#292929]">
+                              {emailSettingsData &&
+                              (emailSettingsData as any).unsubscribedAt
+                                ? "Currently unsubscribed from all emails"
+                                : "Receiving email notifications"}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {emailSettingsData &&
+                              (emailSettingsData as any).unsubscribedAt
+                                ? "You won't receive any email notifications"
+                                : "Daily updates and weekly digests"}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              if (
+                                emailSettingsData &&
+                                (emailSettingsData as any).unsubscribedAt
+                              ) {
+                                setDialogState({
+                                  isOpen: true,
+                                  title: "Resubscribe to Emails",
+                                  description:
+                                    "You'll start receiving email notifications for daily updates, mentions, and weekly digests.",
+                                  confirmText: "Resubscribe",
+                                  confirmVariant: "default",
+                                  onConfirm: () =>
+                                    confirmAndExecute(
+                                      handleResubscribeAllEmails,
+                                      "Resubscribed to emails.",
+                                      "Failed to resubscribe to emails.",
+                                    ),
+                                });
+                              } else {
+                                setDialogState({
+                                  isOpen: true,
+                                  title: "Unsubscribe from All Emails",
+                                  description:
+                                    "You'll stop receiving all email notifications. In-app alerts will still appear when you're using the app.",
+                                  confirmText: "Unsubscribe",
+                                  confirmVariant: "destructive",
+                                  onConfirm: () =>
+                                    confirmAndExecute(
+                                      handleUnsubscribeAllEmails,
+                                      "Unsubscribed from all emails.",
+                                      "Failed to unsubscribe from emails.",
+                                    ),
+                                });
+                              }
+                            }}
+                            disabled={isEmailUpdating}
+                            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors disabled:opacity-50 ${
                               emailSettingsData &&
                               (emailSettingsData as any).unsubscribedAt
-                            ) {
-                              setDialogState({
-                                isOpen: true,
-                                title: "Resubscribe to Emails",
-                                description:
-                                  "You'll start receiving email notifications for daily updates, mentions, and weekly digests.",
-                                confirmText: "Resubscribe",
-                                confirmVariant: "default",
-                                onConfirm: () =>
-                                  confirmAndExecute(
-                                    handleResubscribeAllEmails,
-                                    "Resubscribed to emails.",
-                                    "Failed to resubscribe to emails.",
-                                  ),
-                              });
-                            } else {
-                              setDialogState({
-                                isOpen: true,
-                                title: "Unsubscribe from All Emails",
-                                description:
-                                  "You'll stop receiving all email notifications. In-app alerts will still appear when you're using the app.",
-                                confirmText: "Unsubscribe",
-                                confirmVariant: "destructive",
-                                onConfirm: () =>
-                                  confirmAndExecute(
-                                    handleUnsubscribeAllEmails,
-                                    "Unsubscribed from all emails.",
-                                    "Failed to unsubscribe from emails.",
-                                  ),
-                              });
-                            }
-                          }}
-                          disabled={isEmailUpdating}
-                          className={`px-3 py-1 text-xs font-medium rounded-md transition-colors disabled:opacity-50 ${
-                            emailSettingsData &&
-                            (emailSettingsData as any).unsubscribedAt
-                              ? "bg-[#292929] text-white hover:bg-gray-700"
-                              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                          }`}
-                        >
-                          {isEmailUpdating ? (
-                            <div className="flex items-center gap-1">
-                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
-                              <span>Updating...</span>
-                            </div>
-                          ) : emailSettingsData &&
-                            (emailSettingsData as any).unsubscribedAt ? (
-                            "Resubscribe"
-                          ) : (
-                            "Unsubscribe"
-                          )}
-                        </button>
+                                ? "bg-[#292929] text-white hover:bg-gray-700"
+                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                            }`}
+                          >
+                            {isEmailUpdating ? (
+                              <div className="flex items-center gap-1">
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+                                <span>Updating...</span>
+                              </div>
+                            ) : emailSettingsData &&
+                              (emailSettingsData as any).unsubscribedAt ? (
+                              "Resubscribe"
+                            ) : (
+                              "Unsubscribe"
+                            )}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Column 2: Account Actions (Sign Out, Delete Account) */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-base font-normal text-[#292929] mb-2">
+                    Account Actions
+                  </h3>
+                  <button
+                    onClick={handleSignOut} // Updated to new handler
+                    className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors flex items-center"
+                  >
+                    <LogOut className="w-4 h-4 inline-block mr-2" /> Sign Out
+                  </button>
                 </div>
               </div>
             </div>
-
-            {/* Column 2: Account Actions (Sign Out, Delete Account) */}
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-base font-normal text-[#292929] mb-2">
-                  Account Actions
-                </h3>
-                <button
-                  onClick={handleSignOut} // Updated to new handler
-                  className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors flex items-center"
-                >
-                  <LogOut className="w-4 h-4 inline-block mr-2" /> Sign Out
-                </button>
+            {actionError && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-300 rounded-md">
+                <p className="text-sm text-red-700">{actionError}</p>
               </div>
-            </div>
-          </div>
-          {actionError && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-300 rounded-md">
-              <p className="text-sm text-red-700">{actionError}</p>
-            </div>
-          )}
-          <p className="mt-6 text-xs text-gray-500">
-            For more advanced settings, you can also visit your main account
-            page.
-          </p>
-        </section>
-      )}
-
-      {/* AlertDialog for confirmations */}
-      <AlertDialog
-        isOpen={dialogState.isOpen}
-        onClose={() => setDialogState({ ...dialogState, isOpen: false })}
-        onConfirm={dialogState.onConfirm}
-        title={dialogState.title}
-        description={dialogState.description}
-        confirmButtonText={dialogState.confirmText}
-        confirmButtonVariant={dialogState.confirmVariant}
-      />
-
-      {/* Report User Section - Only show for other users' profiles when signed in */}
-      {!isOwnProfile && isClerkLoaded && authUser && loadedProfileUser && (
-        <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between text-sm text-gray-600">
-          <div className="flex items-center gap-3">
-            <Flag className="w-4 h-4 text-gray-500 flex-shrink-0" />
-            <span className="font-medium text-gray-700">
-              Seen something inappropriate?
-            </span>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs"
-            onClick={handleOpenReportUserModal}
-          >
-            Report this User
-          </Button>
-        </div>
-      )}
-
-      {/* Report User Modal */}
-      <Dialog
-        open={isReportUserModalOpen}
-        onOpenChange={handleReportUserModalOpenChange}
-      >
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>
-              Report: {loadedProfileUser?.name || "User"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-4 space-y-2">
-            <p className="text-sm text-gray-500">
-              Please provide a reason for reporting this user. Your report will
-              be reviewed by an administrator.
+            )}
+            <p className="mt-6 text-xs text-gray-500">
+              For more advanced settings, you can also visit your main account
+              page.
             </p>
-            <Textarea
-              placeholder="Reason for reporting..."
-              value={reportUserReason}
-              onChange={(e) => {
-                setReportUserReason(e.target.value);
-                if (reportUserModalError && e.target.value.trim()) {
-                  setReportUserModalError(null);
-                }
-              }}
-              rows={4}
-              disabled={isReportingUser}
-            />
-          </div>
-          {reportUserModalError && (
-            <div className="mb-3 p-2 text-sm text-red-700 bg-red-100 border border-red-300 rounded-md">
-              {reportUserModalError}
+          </section>
+        )}
+
+        {/* AlertDialog for confirmations */}
+        <AlertDialog
+          isOpen={dialogState.isOpen}
+          onClose={() => setDialogState({ ...dialogState, isOpen: false })}
+          onConfirm={dialogState.onConfirm}
+          title={dialogState.title}
+          description={dialogState.description}
+          confirmButtonText={dialogState.confirmText}
+          confirmButtonVariant={dialogState.confirmVariant}
+        />
+
+        {/* Report User Section - Only show for other users' profiles when signed in */}
+        {!isOwnProfile && isClerkLoaded && authUser && loadedProfileUser && (
+          <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between text-sm text-gray-600">
+            <div className="flex items-center gap-3">
+              <Flag className="w-4 h-4 text-gray-500 flex-shrink-0" />
+              <span className="font-medium text-gray-700">
+                Seen something inappropriate?
+              </span>
             </div>
-          )}
-          <DialogFooter className="sm:justify-start">
             <Button
-              type="button"
               variant="outline"
-              onClick={() => {
-                setIsReportUserModalOpen(false);
-                setReportUserModalError(null);
-              }}
-              disabled={isReportingUser}
+              size="sm"
+              className="text-xs"
+              onClick={handleOpenReportUserModal}
             >
-              Cancel
+              Report this User
             </Button>
-            <Button
-              type="button"
-              onClick={handleReportUserSubmit}
-              disabled={isReportingUser || !reportUserReason.trim()}
-              className="bg-[#292929] text-white hover:bg-[#525252] disabled:opacity-50 sm:ml-[10px]"
-              style={{ fontWeight: "normal" }}
-            >
-              {isReportingUser ? "Submitting..." : "Submit Report"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          </div>
+        )}
+
+        {/* Report User Modal */}
+        <Dialog
+          open={isReportUserModalOpen}
+          onOpenChange={handleReportUserModalOpenChange}
+        >
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>
+                Report: {loadedProfileUser?.name || "User"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="py-4 space-y-2">
+              <p className="text-sm text-gray-500">
+                Please provide a reason for reporting this user. Your report
+                will be reviewed by an administrator.
+              </p>
+              <Textarea
+                placeholder="Reason for reporting..."
+                value={reportUserReason}
+                onChange={(e) => {
+                  setReportUserReason(e.target.value);
+                  if (reportUserModalError && e.target.value.trim()) {
+                    setReportUserModalError(null);
+                  }
+                }}
+                rows={4}
+                disabled={isReportingUser}
+              />
+            </div>
+            {reportUserModalError && (
+              <div className="mb-3 p-2 text-sm text-red-700 bg-red-100 border border-red-300 rounded-md">
+                {reportUserModalError}
+              </div>
+            )}
+            <DialogFooter className="sm:justify-start">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsReportUserModalOpen(false);
+                  setReportUserModalError(null);
+                }}
+                disabled={isReportingUser}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleReportUserSubmit}
+                disabled={isReportingUser || !reportUserReason.trim()}
+                className="bg-[#292929] text-white hover:bg-[#525252] disabled:opacity-50 sm:ml-[10px]"
+                style={{ fontWeight: "normal" }}
+              >
+                {isReportingUser ? "Submitting..." : "Submit Report"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </>
   );
 }

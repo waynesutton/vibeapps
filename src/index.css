@@ -14,8 +14,9 @@
   }
 
   body {
-    @apply bg-gradient-to-b from-[#F2F4F7] to-[#ffffff] text-[#292929];
-    /* @apply bg-[#F2F4F7] text-[#292929]; */
+    @apply bg-[#F4F2EE] text-[#292929];
+    /* @apply bg-gradient-to-b from-[#F2F4F7] to-[#ffffff] text-[#292929]; */
+    /* @apply bg-[#F4F2EE] text-[#292929]; */
   }
   :root {
     --background: 0 0% 95.7%;

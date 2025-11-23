@@ -89,7 +89,7 @@ export function Forms() {
       )}
 
       {forms && forms.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white rounded-lg border border-gray-200">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b border-gray-200 bg-gray-50">

@@ -21,7 +21,11 @@ export default defineSchema({
     emojiTheme: v.optional(v.string()), // Emoji color theme preference: "default", "red", "blue", "green", "purple", "orange"
   })
     .index("by_clerk_id", ["clerkId"])
-    .index("by_username", ["username"]), // Index for fetching by username
+    .index("by_username", ["username"]) // Index for fetching by username
+    .searchIndex("search_users", {
+      searchField: "name",
+      filterFields: ["isBanned"],
+    }),
 
   stories: defineTable({
     title: v.string(),

@@ -167,7 +167,7 @@ export function MentionTextarea({
       {showSuggestions && suggestions.length > 0 && (
         <div
           ref={suggestionsRef}
-          className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto"
+          className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md max-h-48 overflow-y-auto"
         >
           {suggestions.map((user, index) => (
             <div
@@ -207,7 +207,7 @@ export function MentionTextarea({
       {showSuggestions &&
         searchQuery.length > 0 &&
         suggestions.length === 0 && (
-          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg p-3">
+          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md p-3">
             <div className="text-sm text-gray-500">
               No users found matching "{searchQuery}"
             </div>

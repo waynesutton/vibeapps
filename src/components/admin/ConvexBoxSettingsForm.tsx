@@ -121,7 +121,7 @@ export function ConvexBoxSettingsForm() {
 
   if (authIsLoading) {
     return (
-      <div className="space-y-6 bg-white p-6 rounded-lg shadow border text-center">
+      <div className="space-y-6 bg-white p-6 rounded-lg border border-gray-200 text-center">
         Loading authentication...
       </div>
     );
@@ -132,7 +132,7 @@ export function ConvexBoxSettingsForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-lg shadow border">
+    <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-lg border border-gray-200">
       <h3 className="text-lg font-medium text-gray-800 mb-4">Popup Box Configuration</h3>
 
       <div className="flex items-center space-x-2">

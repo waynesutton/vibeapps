@@ -207,7 +207,7 @@ export function FormBuilder() {
   const renderFieldEditor = (field: EditableFormField) => (
     <div
       key={field.localId}
-      className="border border-gray-200 rounded-lg p-4 space-y-3 bg-white shadow-sm"
+      className="border border-gray-200 rounded-lg p-4 space-y-3 bg-white"
     >
       <div className="flex justify-between items-start gap-2">
         {/* Field Label Input */}
@@ -327,8 +327,8 @@ export function FormBuilder() {
 
   // --- Render Helper for Form Preview ---
   const renderPreview = () => (
-    <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-      <h1 className="text-2xl font-bold text-[#292929] mb-6">
+    <div className="bg-white rounded-lg p-6 border border-gray-200">
+      <h1 className="text-xl font-medium text-[#292929] mb-6">
         {title || "Untitled Form"}
       </h1>
       {fields.length === 0 && (

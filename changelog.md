@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Fixed] - 2025-11-23
+
+**User Profile Name Update - Last Name Removal**
+
+- Fixed issue where users couldn't successfully remove their last name from their profile
+  - **Root Cause**: Clerk API doesn't accept empty string for `lastName` field, causing silent failure
+  - **Impact**: Convex database updated successfully but Clerk sync failed, causing UI revert on refresh
+  - **Solution**: Conditionally include `lastName` in Clerk update object only when it has a value
+  - **Implementation**: Build update object with optional `lastName` field using TypeScript type `{ firstName: string; lastName?: string }`
+  - Users can now save profiles with just a first name (no last name)
+  - Maintains support for full names (first + last name) without any changes
+- **Files Modified**: `src/pages/UserProfilePage.tsx`
+- **Issue**: Fixes #11
+- **PR**: Closes #12 (implemented same solution)
+
 ### [Fixed] - 2025-11-22
 
 **Sticky Sidebar on Individual App Pages**

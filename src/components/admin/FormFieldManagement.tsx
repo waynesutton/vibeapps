@@ -224,7 +224,7 @@ export function FormFieldManagement() {
   if (authIsLoading) {
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 text-center">
+        <div className="bg-white rounded-lg p-6 border border-gray-200 text-center">
           Loading authentication...
         </div>
       </div>
@@ -233,7 +233,7 @@ export function FormFieldManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-[#F2F4F7] rounded-lg p-6 shadow-sm border border-gray-200">
+      <div className="bg-[#F4F2EE] rounded-lg p-6 border border-gray-200">
         {/* Header and Save Button */}
         <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
           <h2 className="text-xl font-medium text-[#525252]">

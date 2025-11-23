@@ -612,7 +612,7 @@ export function TagManagement() {
   if (authIsLoading) {
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 text-center">
+        <div className="bg-white rounded-lg p-6 border border-gray-200 text-center">
           Loading authentication...
         </div>
       </div>
@@ -621,7 +621,7 @@ export function TagManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg p-6 border border-gray-200">
         {/* Header and Save Button */}
         <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
           <h2 className="text-xl font-medium text-[#525252]">Manage Tags</h2>
@@ -1228,14 +1228,14 @@ export function TagManagement() {
         <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-40">
           <button
             onClick={scrollToTop}
-            className="p-3 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors"
+            className="p-3 bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
             title="Scroll to top"
           >
             <ArrowUp className="w-5 h-5" />
           </button>
           <button
             onClick={scrollToBottom}
-            className="p-3 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors"
+            className="p-3 bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
             title="Scroll to bottom"
           >
             <ArrowDown className="w-5 h-5" />

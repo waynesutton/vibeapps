@@ -109,7 +109,7 @@ export function ProfileHoverCard({
       {showCard && userData && (
         <div
           ref={cardRef}
-          className={`absolute z-50 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-lg border border-[#D8E1EC] p-4 mt-2 animate-fade-in ${
+          className={`absolute z-50 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-lg border border-[#D8E1EC] p-4 mt-2 animate-fade-in ${
             cardPosition === "left" ? "left-0" : "right-0"
           }`}
           onMouseEnter={() => setShowCard(true)}
@@ -179,7 +179,7 @@ export function ProfileHoverCard({
                   href={userData.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-1 bg-[#F2F4F7] hover:bg-[#E5E7EB] rounded text-xs text-[#525252] transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 bg-[#F4F2EE] hover:bg-[#E5E7EB] rounded text-xs text-[#525252] transition-colors"
                   title="Website"
                 >
                   <Globe className="w-3 h-3" />
@@ -191,7 +191,7 @@ export function ProfileHoverCard({
                   href={userData.twitter}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-1 bg-[#F2F4F7] hover:bg-[#E5E7EB] rounded text-xs text-[#525252] transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 bg-[#F4F2EE] hover:bg-[#E5E7EB] rounded text-xs text-[#525252] transition-colors"
                   title="Twitter"
                 >
                   <Twitter className="w-3 h-3" />
@@ -203,7 +203,7 @@ export function ProfileHoverCard({
                   href={userData.linkedin}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-1 bg-[#F2F4F7] hover:bg-[#E5E7EB] rounded text-xs text-[#525252] transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 bg-[#F4F2EE] hover:bg-[#E5E7EB] rounded text-xs text-[#525252] transition-colors"
                   title="LinkedIn"
                 >
                   <Linkedin className="w-3 h-3" />
@@ -215,7 +215,7 @@ export function ProfileHoverCard({
                   href={userData.bluesky}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-1 bg-[#F2F4F7] hover:bg-[#E5E7EB] rounded text-xs text-[#525252] transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 bg-[#F4F2EE] hover:bg-[#E5E7EB] rounded text-xs text-[#525252] transition-colors"
                   title="Bluesky"
                 >
                   <ExternalLink className="w-3 h-3" />

@@ -207,7 +207,7 @@ export function EmailManagement() {
       <DialogComponents />
       <div className="space-y-8">
         {/* Global Email Toggle */}
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+        <div className="bg-white rounded-lg p-6 border border-gray-200">
         <div className="flex items-center gap-3 mb-6">
           <Mail className="w-6 h-6 text-[#525252]" />
           <h2 className="text-xl font-medium text-[#525252]">
@@ -265,7 +265,7 @@ export function EmailManagement() {
       </div>
 
       {/* Admin Broadcast Emails */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg p-6 border border-gray-200">
         <div className="flex items-center gap-3 mb-6">
           <Send className="w-6 h-6 text-[#525252]" />
           <h2 className="text-xl font-medium text-[#525252]">
@@ -693,7 +693,7 @@ export function EmailManagement() {
                     {searchResults &&
                       searchResults.length > 0 &&
                       searchQuery.length >= 2 && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md max-h-48 overflow-y-auto">
                           {searchResults.map((user: any) => (
                             <button
                               key={user._id}
@@ -828,7 +828,7 @@ export function EmailManagement() {
       </div>
 
       {/* Email Status Overview */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg p-6 border border-gray-200">
         <h3 className="text-lg font-medium text-[#525252] mb-4">
           Automated Email Types
         </h3>
@@ -858,7 +858,7 @@ export function EmailManagement() {
       </div>
 
       {/* Email Configuration Info */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg p-6 border border-gray-200">
         <h3 className="text-lg font-medium text-[#525252] mb-4">
           Email Configuration
         </h3>

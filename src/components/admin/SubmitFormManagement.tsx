@@ -103,7 +103,7 @@ export function SubmitFormManagement() {
   if (authIsLoading) {
     return (
       <div className="space-y-6">
-        <div className="bg-[#F2F4F7] rounded-lg p-6 shadow-sm border border-gray-200 text-center">
+        <div className="bg-[#F4F2EE] rounded-lg p-6 border border-gray-200 text-center">
           Loading authentication...
         </div>
       </div>
@@ -113,7 +113,7 @@ export function SubmitFormManagement() {
   if (!isAuthenticated) {
     return (
       <div className="space-y-6">
-        <div className="bg-[#F2F4F7] rounded-lg p-6 shadow-sm border border-gray-200 text-center">
+        <div className="bg-[#F4F2EE] rounded-lg p-6 border border-gray-200 text-center">
           Please log in to access submit form management.
         </div>
       </div>
@@ -149,7 +149,7 @@ export function SubmitFormManagement() {
       </div>
 
       {submitForms === undefined ? (
-        <div className="bg-[#F2F4F7] rounded-lg p-6 shadow-sm border border-gray-200 text-center">
+        <div className="bg-[#F4F2EE] rounded-lg p-6 border border-gray-200 text-center">
           Loading submit forms...
         </div>
       ) : submitForms.length === 0 ? (
@@ -174,7 +174,7 @@ export function SubmitFormManagement() {
           {submitForms.map((form) => (
             <div
               key={form._id}
-              className="bg-[#F2F4F7] rounded-lg p-6 shadow-sm border border-gray-200"
+              className="bg-[#F4F2EE] rounded-lg p-6 border border-gray-200"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">

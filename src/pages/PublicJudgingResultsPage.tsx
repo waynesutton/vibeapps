@@ -59,7 +59,7 @@ export default function PublicJudgingResultsPage() {
   // Loading state
   if (!group) {
     return (
-      <div className="min-h-screen bg-[#F5F7F9] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F4F2EE]] flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading results...</p>
@@ -71,8 +71,8 @@ export default function PublicJudgingResultsPage() {
   // Not found state
   if (group === null) {
     return (
-      <div className="min-h-screen bg-[#F5F7F9] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+      <div className="min-h-screen bg-[#F4F2EE]] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-lg border border-gray-200 p-6 text-center">
           <h1 className="text-xl font-medium text-gray-900 mb-4">
             Results Not Found
           </h1>
@@ -95,8 +95,8 @@ export default function PublicJudgingResultsPage() {
   // Password required state
   if (!group.resultsIsPublic && !isPasswordValidated) {
     return (
-      <div className="min-h-screen bg-[#F5F7F9] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="min-h-screen bg-[#F4F2EE]] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-lg border border-gray-200 p-6">
           <div className="text-center mb-6">
             <Lock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h1 className="text-2xl font-medium text-gray-900 mb-2">
@@ -149,9 +149,9 @@ export default function PublicJudgingResultsPage() {
 
   // Results view (authenticated) - embed the admin results dashboard
   return (
-    <div className="min-h-screen bg-[#F5F7F9]">
+    <div className="min-h-screen bg-[#F4F2EE]]">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-[#F4F2EE] bg-[#F4F2EE]">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div>
             <h1 className="text-2xl font-medium text-gray-900">

@@ -92,3 +92,55 @@ export const getTotalRatings = query({
     return documents.length;
   },
 });
+
+// Get user growth data over time for chart
+export const getUserGrowthData = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      date: v.string(),
+      count: v.number(),
+      cumulative: v.number(),
+    })
+  ),
+  handler: async (ctx) => {
+    await requireAdminRole(ctx);
+    
+    // Get all users sorted by creation time
+    const users = await ctx.db
+      .query("users")
+      .order("asc")
+      .collect();
+
+    if (users.length === 0) {
+      return [];
+    }
+
+    // Group users by date
+    const usersByDate = new Map<string, number>();
+    
+    for (const user of users) {
+      const date = new Date(user._creationTime);
+      const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      usersByDate.set(dateKey, (usersByDate.get(dateKey) || 0) + 1);
+    }
+
+    // Convert to sorted array with cumulative counts
+    const sortedDates = Array.from(usersByDate.keys()).sort();
+    let cumulative = 0;
+    
+    const growthData = sortedDates.map(date => {
+      const count = usersByDate.get(date) || 0;
+      cumulative += count;
+      
+      return {
+        date,
+        count,
+        cumulative,
+      };
+    });
+
+    return growthData;
+  },
+});

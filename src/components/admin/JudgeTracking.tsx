@@ -1176,14 +1176,14 @@ export function JudgeTracking({
         <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-40">
           <button
             onClick={scrollToTop}
-            className="p-3 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors"
+            className="p-3 bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
             title="Scroll to top"
           >
             <ArrowUp className="w-5 h-5" />
           </button>
           <button
             onClick={scrollToBottom}
-            className="p-3 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition-colors"
+            className="p-3 bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
             title="Scroll to bottom"
           >
             <ArrowDown className="w-5 h-5" />

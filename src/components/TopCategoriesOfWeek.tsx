@@ -117,7 +117,7 @@ export function TopCategoriesOfWeek({
                   className={`flex items-center w-full text-left gap-2 text-sm py-1 rounded-md focus:outline-none
                             ${
                               isSelected
-                                ? "text-[#292929] font-semibold ring-1 ring-offset-1  bg-[#F3F4F6] ring-gray-400"
+                                ? "text-[#292929] font-semibold ring-1 ring-offset-1  bg-[#ffffff] ring-gray-400"
                                 : "text-[#545454] hover:text-[#292929] hover:underline"
                             }`}
                   title={category.name}

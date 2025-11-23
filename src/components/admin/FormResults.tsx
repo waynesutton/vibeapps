@@ -179,7 +179,7 @@ export function FormResults() {
       </div>
 
       {/* Results Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg border border-gray-200">
         {sortedSubmissions.length === 0 ? (
           <div className="p-6 text-center text-gray-500">
             No submissions received yet.

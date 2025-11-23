@@ -12,11 +12,15 @@ interface PublicFormProps {
 export function PublicForm({ form, fields }: PublicFormProps) {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
+  const [submitStatus, setSubmitStatus] = useState<
+    "idle" | "success" | "error"
+  >("idle");
   const submitFormMutation = useMutation(api.forms.submitForm);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const { name, value, type } = e.target;
 
@@ -29,7 +33,9 @@ export function PublicForm({ form, fields }: PublicFormProps) {
     } else if ("multiple" in e.target && e.target.multiple) {
       // Handle multi-select
       const select = e.target as HTMLSelectElement;
-      const selectedOptions = Array.from(select.selectedOptions).map((option) => option.value);
+      const selectedOptions = Array.from(select.selectedOptions).map(
+        (option) => option.value,
+      );
       setFormData((prev) => ({
         ...prev,
         [name]: selectedOptions,
@@ -78,19 +84,28 @@ export function PublicForm({ form, fields }: PublicFormProps) {
         return (
           <input
             type={
-              field.fieldType === "email" ? "email" : field.fieldType === "url" ? "url" : "text"
+              field.fieldType === "email"
+                ? "email"
+                : field.fieldType === "url"
+                  ? "url"
+                  : "text"
             }
             {...commonProps}
             placeholder={field.placeholder}
           />
         );
       case "longText":
-        return <textarea {...commonProps} placeholder={field.placeholder} rows={4} />;
+        return (
+          <textarea {...commonProps} placeholder={field.placeholder} rows={4} />
+        );
       case "yesNo":
         return (
           <select
             {...commonProps}
-            value={formData[field.label.toLowerCase().replace(/\s+/g, "_")] || ""}>
+            value={
+              formData[field.label.toLowerCase().replace(/\s+/g, "_")] || ""
+            }
+          >
             <option value="" disabled>
               {field.placeholder || "Select..."}
             </option>
@@ -102,7 +117,10 @@ export function PublicForm({ form, fields }: PublicFormProps) {
         return (
           <select
             {...commonProps}
-            value={formData[field.label.toLowerCase().replace(/\s+/g, "_")] || ""}>
+            value={
+              formData[field.label.toLowerCase().replace(/\s+/g, "_")] || ""
+            }
+          >
             <option value="" disabled>
               {field.placeholder || "Select..."}
             </option>
@@ -118,7 +136,9 @@ export function PublicForm({ form, fields }: PublicFormProps) {
           <select
             {...commonProps}
             multiple
-            value={formData[field.label.toLowerCase().replace(/\s+/g, "_")] || []}
+            value={
+              formData[field.label.toLowerCase().replace(/\s+/g, "_")] || []
+            }
             size={Math.min(5, (field.options || []).length)} // Show scroll after 5 options
           >
             {/* No placeholder for multi-select */}
@@ -136,7 +156,7 @@ export function PublicForm({ form, fields }: PublicFormProps) {
 
   return (
     <div className="max-w-2xl mx-auto bg-white p-6 rounded-lg border border-[#D8E1EC]">
-      <h1 className="text-2xl font-bold text-[#292929] mb-6">{form.title}</h1>
+      <h1 className="text-xl font-medium text-[#292929] mb-6">{form.title}</h1>
       {submitStatus === "success" ? (
         <div className="p-4 bg-green-100 text-green-800 rounded-md">
           Form submitted successfully! Thank you.
@@ -145,7 +165,10 @@ export function PublicForm({ form, fields }: PublicFormProps) {
         <form onSubmit={handleSubmit} className="space-y-6">
           {fields.map((field) => (
             <div key={field._id}>
-              <label htmlFor={field._id} className="block text-sm font-medium text-[#525252] mb-1">
+              <label
+                htmlFor={field._id}
+                className="block text-sm font-medium text-[#525252] mb-1"
+              >
                 {field.label}
                 {field.required && <span className="text-red-500"> *</span>}
               </label>
@@ -162,7 +185,8 @@ export function PublicForm({ form, fields }: PublicFormProps) {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors disabled:opacity-50">
+            className="px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors disabled:opacity-50"
+          >
             {isSubmitting ? "Submitting..." : "Submit"}
           </button>
         </form>

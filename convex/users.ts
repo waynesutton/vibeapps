@@ -1886,6 +1886,86 @@ export const searchUsersForMentions = query({
 });
 
 /**
+ * Search users by name or username for global search
+ * Uses full text search index for better performance
+ * Returns up to 20 matches
+ */
+export const searchUsers = query({
+  args: { searchTerm: v.string() },
+  returns: v.array(
+    v.object({
+      _id: v.id("users"),
+      _creationTime: v.number(),
+      name: v.string(),
+      username: v.optional(v.string()),
+      imageUrl: v.optional(v.string()),
+      bio: v.optional(v.string()),
+      isVerified: v.optional(v.boolean()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    if (!args.searchTerm || args.searchTerm.trim().length < 1) {
+      return [];
+    }
+
+    const searchTerm = args.searchTerm.trim();
+
+    // Use full text search on name field
+    const searchResults = await ctx.db
+      .query("users")
+      .withSearchIndex("search_users", (q) =>
+        q.search("name", searchTerm).eq("isBanned", false),
+      )
+      .take(20);
+
+    // Filter to only include users with usernames (they've completed profile setup)
+    const usersWithUsernames = searchResults.filter(
+      (user) => user.username !== undefined,
+    );
+
+    // If we got results from name search, return those
+    if (usersWithUsernames.length > 0) {
+      return usersWithUsernames.map((user) => ({
+        _id: user._id,
+        _creationTime: user._creationTime,
+        name: user.name,
+        username: user.username,
+        imageUrl: user.imageUrl,
+        bio: user.bio,
+        isVerified: user.isVerified,
+      }));
+    }
+
+    // Fallback: search by username prefix
+    const allUsers = await ctx.db
+      .query("users")
+      .filter((q) => q.neq(q.field("isBanned"), true))
+      .collect();
+
+    const queryLower = searchTerm.toLowerCase();
+    const usernameMatches = allUsers
+      .filter(
+        (user) =>
+          user.username &&
+          (user.username.toLowerCase().includes(queryLower) ||
+            user.name.toLowerCase().includes(queryLower)),
+      )
+      .slice(0, 20)
+      .map((user) => ({
+        _id: user._id,
+        _creationTime: user._creationTime,
+        name: user.name,
+        username: user.username,
+        imageUrl: user.imageUrl,
+        bio: user.bio,
+        isVerified: user.isVerified,
+      }));
+
+    return usernameMatches;
+  },
+});
+
+/**
  * Get the most recent users who have been active on the platform for the Recent Vibers sidebar
  * Includes users who have recently joined, commented, rated, voted, or submitted stories
  */

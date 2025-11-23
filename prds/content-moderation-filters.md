@@ -227,7 +227,7 @@ Added filter dependencies to useMemo array to ensure re-filtering on changes.
 
 **Visual Design**:
 
-- Container: `bg-[#F2F4F7]` rounded border matching site design
+- Container: `bg-[#F4F2EE]` rounded border matching site design
 - Positioned between date range filters and tag filters
 - Only visible for submissions (hidden for comments)
 

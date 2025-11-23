@@ -346,7 +346,7 @@ export default function JudgingInterfacePage() {
   if (isSessionValid === false) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+        <div className="max-w-md w-full bg-white rounded-lg border border-gray-200 p-6 text-center">
           <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h1 className="text-xl font-medium text-gray-900 mb-4">
             Session Expired
@@ -384,7 +384,7 @@ export default function JudgingInterfacePage() {
   if (submissions.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+        <div className="max-w-md w-full bg-white rounded-lg border border-gray-200 p-6 text-center">
           <h1 className="text-xl font-medium text-gray-900 mb-4">
             No Submissions
           </h1>
@@ -406,8 +406,8 @@ export default function JudgingInterfacePage() {
   // Show filtered message if no submissions match filters
   if (displaySubmissions.length === 0 && hasActiveFilters) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <div className="min-h-screen bg-[#F4F2EE]">
+        <div className="bg-[#F4F2EE] border-b border-gray-200 sticky top-0 z-10">
           <div className="max-w-6xl mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
               <div>
@@ -422,7 +422,7 @@ export default function JudgingInterfacePage() {
           </div>
         </div>
         <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+          <div className="bg-white rounded-lg border border-gray-200 p-6 text-center">
             <h2 className="text-lg font-medium text-gray-900 mb-2">
               No Submissions Match Filters
             </h2>
@@ -555,9 +555,9 @@ export default function JudgingInterfacePage() {
   return (
     <>
       <DialogComponents />
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[#F4F2EE]">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="bg-[#F4F2EE] border-gray-200 sticky top-0 z-10">
           <div className="max-w-6xl mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
               <div>
@@ -587,7 +587,7 @@ export default function JudgingInterfacePage() {
         </div>
 
         {/* Status Legend */}
-        <div className="bg-blue-50 border-b border-blue-200">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg mx-4 my-4">
           <div className="max-w-6xl mx-auto px-4 py-4">
             <div className="flex items-center gap-6">
               <h3 className="text-sm font-medium text-blue-900">
@@ -621,7 +621,7 @@ export default function JudgingInterfacePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             {/* Submission Details */}
             <div className="space-y-4 sm:space-y-6">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+              <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
                 <h2 className="text-lg font-medium text-gray-900 mb-4">
                   Submission {currentSubmissionIndex + 1} of{" "}
                   {displaySubmissions.length}
@@ -1192,7 +1192,7 @@ export default function JudgingInterfacePage() {
               {/* Video Demo Section */}
               {currentSubmission.videoUrl &&
                 currentSubmission.videoUrl.trim() && (
-                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
                     <div className="flex items-center gap-2 mb-4">
                       <Play className="w-4 h-4 text-gray-600 flex-shrink-0" />
                       <h3 className="font-medium text-gray-900">Video Demo</h3>
@@ -1301,7 +1301,7 @@ export default function JudgingInterfacePage() {
 
                         // Fallback for other URLs - show as link in a styled box
                         return (
-                          <div className="w-full aspect-video rounded-md border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50">
+                          <div className="w-full aspect-video rounded-md border-2 border-dashed border-gray-200 flex items-center justify-center bg-[#F4F2EE]">
                             <div className="text-center">
                               <Play className="w-12 h-12 text-gray-400 mx-auto mb-2" />
                               <p className="text-gray-600 mb-2">
@@ -1326,7 +1326,7 @@ export default function JudgingInterfacePage() {
               {/* Screenshot/Media */}
               {(currentSubmission.screenshotUrl ||
                 (currentSubmission as any).additionalImageUrls?.length > 0) && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
                   <h3 className="font-medium text-gray-900 mb-4">
                     {currentSubmission.screenshotUrl &&
                     (currentSubmission as any).additionalImageUrls?.length > 0
@@ -1348,7 +1348,7 @@ export default function JudgingInterfacePage() {
 
               {/* Team Info Section */}
               {(currentSubmission as any).teamName && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <Users className="w-4 h-4 text-gray-600" />
                     <h3 className="font-medium text-gray-900">Team Info</h3>
@@ -1407,7 +1407,7 @@ export default function JudgingInterfacePage() {
               )}
 
               {/* Judge Notes Section */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-medium text-gray-900 flex items-center gap-2">
                     <MessageSquare className="w-4 h-4" />
@@ -1551,7 +1551,7 @@ export default function JudgingInterfacePage() {
 
             {/* Scoring Section */}
             <div className="space-y-6">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-6">
                   Scoring Criteria
                 </h3>
@@ -1663,7 +1663,7 @@ export default function JudgingInterfacePage() {
               </div>
 
               {/* Progress Summary */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
                   Your Progress
                 </h3>

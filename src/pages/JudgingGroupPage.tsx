@@ -71,7 +71,7 @@ export default function JudgingGroupPage() {
 
   if (group === undefined) {
     return (
-      <div className="min-h-screen bg-[#F5F7F9] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F4F2EE]] flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading judging group...</p>
@@ -82,8 +82,8 @@ export default function JudgingGroupPage() {
 
   if (group === null) {
     return (
-      <div className="min-h-screen bg-[#F5F7F9] flex items-center justify-center">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+      <div className="min-h-screen bg-[#F4F2EE]] flex items-center justify-center">
+        <div className="max-w-md w-full bg-white rounded-lg border border-gray-200 p-6 text-center">
           <h1 className="text-xl font-medium text-gray-900 mb-4">
             Group Not Found
           </h1>
@@ -104,8 +104,8 @@ export default function JudgingGroupPage() {
   // Show password form for private groups
   if (!group.isPublic && !isRegistering) {
     return (
-      <div className="min-h-screen bg-[#F5F7F9] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="min-h-screen bg-[#F4F2EE]] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-lg border border-gray-200 p-6">
           <div className="text-center mb-6">
             <Lock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h1 className="text-xl font-medium text-gray-900 mb-2">
@@ -157,93 +157,99 @@ export default function JudgingGroupPage() {
   return (
     <>
       <DialogComponents />
-      <div className="min-h-screen bg-[#F5F7F9] flex items-center justify-center p-4">
-        <div className="max-w-lg w-full bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="min-h-screen bg-[#F4F2EE]] flex items-center justify-center p-4">
+        <div className="max-w-lg w-full bg-white rounded-lg border-gray-200 p-6">
           <div className="text-center mb-6">
-          <h1 className="text-2xl font-medium text-gray-900 mb-2">
-            {group.name}
-          </h1>
-          {group.description && (
-            <p className="text-gray-600 mb-4">{group.description}</p>
-          )}
-
-          <div className="flex items-center justify-center gap-4 text-sm text-gray-500 mb-6">
-            {group.startDate && (
-              <div className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                <span>
-                  Started {new Date(group.startDate).toLocaleDateString()}
-                </span>
-              </div>
+            <h1 className="text-2xl font-medium text-gray-900 mb-2">
+              {group.name}
+            </h1>
+            {group.description && (
+              <p className="text-gray-600 mb-4">{group.description}</p>
             )}
-            {group.endDate && (
-              <div className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                <span>Ends {new Date(group.endDate).toLocaleDateString()}</span>
-              </div>
-            )}
-          </div>
-        </div>
 
-        <form onSubmit={handleJudgeRegistration} className="space-y-4">
-          <div>
-            <Label htmlFor="judgeName">
-              Your Name * <br />
-              <strong>
-                {" "}
-                Use the same first name if you need to come back and continue
-                judging.
-              </strong>
-            </Label>
-            <Input
-              id="judgeName"
-              type="text"
-              value={judgeName}
-              onChange={(e) => {
-                const value = e.target.value
-                  .toLowerCase()
-                  .replace(/[^a-z]/g, "");
-                setJudgeName(value);
-              }}
-              placeholder="Enter your full name"
-              required
-              minLength={2}
-            />
-            <p className="mt-1 text-sm text-gray-500">
-              This will identify your scores in the system.
-            </p>
+            <div className="flex items-center justify-center gap-4 text-sm text-gray-500 mb-6">
+              {group.startDate && (
+                <div className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  <span>
+                    Started {new Date(group.startDate).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+              {group.endDate && (
+                <div className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  <span>
+                    Ends {new Date(group.endDate).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
-          <div>
-            <Label htmlFor="judgeEmail">Email (Optional)</Label>
-            <Input
-              id="judgeEmail"
-              type="email"
-              value={judgeEmail}
-              onChange={(e) => setJudgeEmail(e.target.value)}
-              placeholder="your.email@example.com"
-            />
-            <p className="mt-1 text-sm text-gray-500">
-              For communication about the judging process.
-            </p>
+          <form onSubmit={handleJudgeRegistration} className="space-y-4">
+            <div>
+              <Label htmlFor="judgeName">
+                Your Name * <br />
+                <strong>
+                  {" "}
+                  Use the same first name if you need to come back and continue
+                  judging.
+                </strong>
+              </Label>
+              <Input
+                id="judgeName"
+                type="text"
+                value={judgeName}
+                onChange={(e) => {
+                  const value = e.target.value
+                    .toLowerCase()
+                    .replace(/[^a-z]/g, "");
+                  setJudgeName(value);
+                }}
+                placeholder="Enter your full name"
+                required
+                minLength={2}
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                This will identify your scores in the system.
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="judgeEmail">Email (Optional)</Label>
+              <Input
+                id="judgeEmail"
+                type="email"
+                value={judgeEmail}
+                onChange={(e) => setJudgeEmail(e.target.value)}
+                placeholder="your.email@example.com"
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                For communication about the judging process.
+              </p>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={!judgeName.trim()}
+            >
+              Start Judging
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <Link
+              to="/"
+              className="text-sm text-gray-500 hover:text-gray-700 inline-flex items-center gap-1"
+            >
+              <ExternalLink className="w-3 h-3" />
+              Back to Home
+            </Link>
           </div>
-
-          <Button type="submit" className="w-full" disabled={!judgeName.trim()}>
-            Start Judging
-          </Button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <Link
-            to="/"
-            className="text-sm text-gray-500 hover:text-gray-700 inline-flex items-center gap-1"
-          >
-            <ExternalLink className="w-3 h-3" />
-            Back to Home
-          </Link>
         </div>
       </div>
-    </div>
     </>
   );
 }

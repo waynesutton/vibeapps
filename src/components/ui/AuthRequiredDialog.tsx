@@ -25,7 +25,7 @@ export function AuthRequiredDialog({
     <Dialog.Root open={isOpen} onOpenChange={onClose}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-40" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-xl w-[90vw] max-w-md z-50">
+        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg border border-gray-200 w-[90vw] max-w-md z-50">
           <div className="flex justify-between items-start mb-4">
             <Dialog.Title className="text-lg font-medium text-[#292929]">
               {title || defaultTitle}

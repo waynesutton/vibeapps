@@ -145,7 +145,7 @@ export function ReportManagement() {
   if (authIsLoading) {
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200 text-center">
+        <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200 text-center">
           Loading authentication...
         </div>
       </div>
@@ -154,7 +154,7 @@ export function ReportManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200">
         <h2 className="text-xl font-medium text-[#525252] mb-6">Report Management</h2>
 
         <div className="flex items-center gap-4 mb-6">

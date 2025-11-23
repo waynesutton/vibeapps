@@ -294,7 +294,7 @@ Notifications page `src/pages/NotificationsPage.tsx`
 
 UI theming and layout match
 
-- Page background uses site standard background `bg-[#F2F4F7]` [[memory:7364720]]
+- Page background uses site standard background `bg-[#F4F2EE]` [[memory:7364720]]
 - Wrap with existing `Layout` and standard container `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8`
 - Cards use `bg-white rounded-lg border border-[#D8E1EC]`
 - Text colors follow site tokens `#292929` for headings, `#525252` for body, `#545454` for meta

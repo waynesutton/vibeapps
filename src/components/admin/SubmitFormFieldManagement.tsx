@@ -192,7 +192,7 @@ export function SubmitFormFieldManagement({
           items={orderedFields.map((f) => f._id)}
           strategy={verticalListSortingStrategy}
         >
-          <div className="bg-[#F2F4F7] rounded-lg border border-gray-200">
+          <div className="bg-[#F4F2EE] rounded-lg border border-gray-200">
             <div className="p-3 border-b border-gray-200 bg-gray-100 rounded-t-lg">
               <h4 className="text-sm font-medium text-gray-700">
                 Additional Fields

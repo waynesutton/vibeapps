@@ -25,7 +25,7 @@ export function SubmitFormBuilder({ formId, onBack }: SubmitFormBuilderProps) {
   if (formWithFields === undefined) {
     return (
       <div className="space-y-6">
-        <div className="bg-[#F2F4F7] rounded-lg p-6 shadow-sm border border-gray-200 text-center">
+        <div className="bg-[#F4F2EE] rounded-lg p-6 border border-gray-200 text-center">
           Loading form builder...
         </div>
       </div>
@@ -35,7 +35,7 @@ export function SubmitFormBuilder({ formId, onBack }: SubmitFormBuilderProps) {
   if (formWithFields === null) {
     return (
       <div className="space-y-6">
-        <div className="bg-[#F2F4F7] rounded-lg p-6 shadow-sm border border-gray-200 text-center">
+        <div className="bg-[#F4F2EE] rounded-lg p-6 border border-gray-200 text-center">
           <p className="text-red-600">Form not found</p>
           <Button onClick={onBack} className="mt-4">
             Back to Forms
@@ -70,7 +70,7 @@ export function SubmitFormBuilder({ formId, onBack }: SubmitFormBuilderProps) {
     switch (activeTab) {
       case "settings":
         return (
-          <div className="bg-[#F2F4F7] rounded-lg border border-gray-200 p-6">
+          <div className="bg-[#F4F2EE] rounded-lg border border-gray-200 p-6">
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
@@ -188,7 +188,7 @@ export function SubmitFormBuilder({ formId, onBack }: SubmitFormBuilderProps) {
 
       case "preview":
         return (
-          <div className="bg-[#F2F4F7] rounded-lg border border-gray-200 p-6">
+          <div className="bg-[#F4F2EE] rounded-lg border border-gray-200 p-6">
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-4">

@@ -47,7 +47,7 @@ export function NotificationsPage() {
 
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-[#F2F4F7]">
+      <div className="min-h-screen bg-[#F4F2EE]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">Loading...</div>
         </div>
@@ -57,7 +57,7 @@ export function NotificationsPage() {
 
   if (!isSignedIn) {
     return (
-      <div className="min-h-screen bg-[#F2F4F7]">
+      <div className="min-h-screen bg-[#F4F2EE]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="bg-white rounded-lg p-8 border border-[#D8E1EC] text-center max-w-md">
@@ -84,7 +84,7 @@ export function NotificationsPage() {
     <div className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-[#292929]">Notifications</h1>
+          <h1 className="text-xl font-medium text-[#292929]">Notifications</h1>
           <p className="text-[#525252] mt-2">
             Stay up to date with activity on your apps and profile.
           </p>
@@ -169,7 +169,7 @@ function NotificationItem({ alert }: NotificationItemProps) {
 
   return (
     <div
-      className={`p-4 hover:bg-[#F2F4F7] transition-colors ${
+      className={`p-4 hover:bg-[#F4F2EE] transition-colors ${
         !alert.isRead ? "bg-blue-50" : ""
       }`}
     >

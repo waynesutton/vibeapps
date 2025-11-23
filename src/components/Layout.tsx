@@ -342,8 +342,8 @@ export function Layout({ children }: { children?: ReactNode }) {
     <>
       {/* <div className="absolute top-0 z-[-2] h-screen w-screen bg-white bg-[radial-gradient(100%_50%_at_50%_0%,rgba(0,163,255,0.13)_0,rgba(0,163,255,0)_50%,rgba(0,163,255,0)_100%)]"></div> */}
 
-      <div className="flex flex-col min-h-screen bg-[#F2F4F7]">
-        <header className="pt-5 pb-0 bg-[#F2F4F7] sticky top-0 z-50">
+      <div className="flex flex-col min-h-screen bg-[#F4F2EE]">
+        <header className="pt-5 pb-0 bg-[#F4F2EE] sticky top-0 z-50">
           <div className="container mx-auto px-4">
             {/* Responsive header layout */}
             <div className="flex flex-col gap-y-2 md:flex-row md:justify-between md:items-center">
@@ -384,7 +384,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                         onClick={() =>
                           setShowAlertsDropdown(!showAlertsDropdown)
                         }
-                        className="flex items-center justify-center w-8 h-8 rounded-full border border-[#D8E1EC] bg-white hover:bg-[#F2F4F7] transition-colors mr-2"
+                        className="flex items-center justify-center w-8 h-8 rounded-full border border-[#D8E1EC] bg-white hover:bg-[#F4F2EE] transition-colors mr-2"
                         aria-label="Notifications"
                       >
                         <Bell className="w-4 h-4 text-[#525252]" />
@@ -424,7 +424,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                                 setShowAlertsDropdown(false);
                                 // Mark all as read will be handled by the notifications page
                               }}
-                              className="block w-full px-3 py-2 text-center text-xs text-[#292929] hover:bg-[#F2F4F7] transition-colors"
+                              className="block w-full px-3 py-2 text-center text-xs text-[#292929] hover:bg-[#F4F2EE] transition-colors"
                             >
                               View all
                             </Link>
@@ -441,7 +441,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                       >
                         <Link
                           to="/inbox"
-                          className="flex items-center justify-center w-8 h-8 rounded-full border border-[#D8E1EC] bg-white hover:bg-[#F2F4F7] transition-colors"
+                          className="flex items-center justify-center w-8 h-8 rounded-full border border-[#D8E1EC] bg-white hover:bg-[#F4F2EE] transition-colors"
                           aria-label="Inbox"
                         >
                           <Inbox className="w-4 h-4 text-[#525252]" />
@@ -476,7 +476,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                         <div className="absolute right-0 mt-2 w-36 bg-white rounded-md shadow-lg border border-[#D8E1EC] py-0.5 z-50">
                           <Link
                             to={profileUrl}
-                            className="block px-3 py-1.5 text-xs text-[#292929] hover:bg-[#F2F4F7] transition-colors"
+                            className="block px-3 py-1.5 text-xs text-[#292929] hover:bg-[#F4F2EE] transition-colors"
                             onClick={() => setShowProfileDropdown(false)}
                           >
                             My Profile
@@ -486,7 +486,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                               clerk.openUserProfile();
                               setShowProfileDropdown(false);
                             }}
-                            className="block w-full px-3 py-1.5 text-xs text-[#292929] hover:bg-[#F2F4F7] transition-colors text-left"
+                            className="block w-full px-3 py-1.5 text-xs text-[#292929] hover:bg-[#F4F2EE] transition-colors text-left"
                           >
                             Manage Account
                           </button>
@@ -495,7 +495,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                               clerk.signOut({ redirectUrl: "/" });
                               setShowProfileDropdown(false);
                             }}
-                            className="block w-full px-3 py-1.5 text-xs text-[#292929] hover:bg-[#F2F4F7] transition-colors text-left"
+                            className="block w-full px-3 py-1.5 text-xs text-[#292929] hover:bg-[#F4F2EE] transition-colors text-left"
                           >
                             Sign Out
                           </button>
@@ -520,6 +520,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                       }
                     }}
                     className="flex items-center gap-2 bg-[#292929] text-white px-3 py-1 rounded-md text-sm hover:bg-[#525252] transition-colors"
+                    title="Submit your app to the community"
                   >
                     <PlusCircle className="w-4 h-4" />
                     Submit
@@ -531,8 +532,9 @@ export function Layout({ children }: { children?: ReactNode }) {
                         setUserChangedViewMode(true);
                         navigate("/"); // Navigate to homepage
                       }}
-                      className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "list" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
+                      className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "list" ? "bg-[#ffffff]" : "hover:bg-gray-100"}`}
                       aria-label="List View"
+                      title="List View"
                     >
                       <List className="w-5 h-5 text-[#545454]" />
                     </button>
@@ -544,8 +546,9 @@ export function Layout({ children }: { children?: ReactNode }) {
                         setUserChangedViewMode(true);
                         navigate("/"); // Navigate to homepage
                       }}
-                      className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "grid" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
+                      className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "grid" ? "bg-[#ffffff]" : "hover:bg-gray-100"}`}
                       aria-label="Grid View"
+                      title="Grid View"
                     >
                       <LayoutGrid className="w-5 h-5 text-[#545454]" />
                     </button>
@@ -557,8 +560,9 @@ export function Layout({ children }: { children?: ReactNode }) {
                         setUserChangedViewMode(true);
                         navigate("/"); // Navigate to homepage
                       }}
-                      className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "vibe" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
+                      className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "vibe" ? "bg-[#ffffff]" : "hover:bg-gray-100"}`}
                       aria-label="Vibe View"
+                      title="Vibe View"
                     >
                       <ThumbsUp className="w-5 h-5 text-[#545454]" />
                     </button>
@@ -687,7 +691,7 @@ export function Layout({ children }: { children?: ReactNode }) {
             {headerTags &&
               headerTags.filter((tag) => !tag.isHidden && tag.showInHeader)
                 .length > 0 && (
-                <div className="py-3 mt-1 border-t border-[#D8E1EC]">
+                <div className="py-3 mt-1 border-t border-[#F4F2EE]">
                   {" "}
                   {/* Mobile: Hamburger menu button - Hidden on screens 450px and smaller */}
                   <div className="hidden sm:block md:hidden mb-2">
@@ -839,7 +843,7 @@ function DropdownNotificationItem({
 
   return (
     <div
-      className={`px-3 py-2 border-b border-[#F4F0ED] last:border-b-0 hover:bg-[#F2F4F7] transition-colors ${
+      className={`px-3 py-2 border-b border-[#F4F0ED] last:border-b-0 hover:bg-[#F4F2EE] transition-colors ${
         !alert.isRead ? "bg-blue-50" : ""
       }`}
     >

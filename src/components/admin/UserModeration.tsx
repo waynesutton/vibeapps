@@ -183,7 +183,7 @@ export function UserModeration() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200">
         <h2 className="text-xl font-medium text-[#525252] mb-6">User Moderation</h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
@@ -362,7 +362,7 @@ export function UserModeration() {
 
       {confirmingAction && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+          <div className="bg-white p-6 rounded-lg border border-gray-200 max-w-md w-full">
             <div className="flex items-center mb-4">
               <AlertTriangle
                 className={`w-6 h-6 mr-3 ${confirmingAction.action === "delete" ? "text-red-500" : confirmingAction.action === "ban" ? "text-orange-500" : confirmingAction.action === "verify" ? "text-blue-500" : "text-yellow-500"}`}

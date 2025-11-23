@@ -15,7 +15,7 @@ export function LeaderboardPage() {
     <div className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-[#292929]">Leaderboard</h1>
+          <h1 className="text-xl font-medium text-[#292929]">Leaderboard</h1>
           <p className="text-[#525252] mt-2">
             Top apps with the most vibes this week.
           </p>
@@ -64,7 +64,7 @@ interface LeaderboardItemProps {
 
 function LeaderboardItem({ story, rank }: LeaderboardItemProps) {
   return (
-    <div className="p-4 hover:bg-[#F2F4F7] transition-colors">
+    <div className="p-4 hover:bg-[#F4F2EE] transition-colors">
       <div className="flex items-start gap-3">
         {/* Rank Number */}
         <div className="flex-shrink-0">

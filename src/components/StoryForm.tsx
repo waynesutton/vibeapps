@@ -392,7 +392,9 @@ export function StoryForm() {
 
       <div className="bg-white p-6 rounded-lg border border-[#D8E1EC]">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <h2 className="text-2xl font-bold text-[#292929]">Submit your app</h2>{" "}
+          <h2 className="text-xl font-medium text-[#292929]">
+            Submit your app
+          </h2>{" "}
           <span className="ml-2 text-sm text-gray-600">
             What did you build?
           </span>

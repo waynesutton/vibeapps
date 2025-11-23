@@ -377,7 +377,7 @@ export function ContentModeration() {
             {
               confirmButtonText: "Delete",
               confirmButtonVariant: "destructive",
-            }
+            },
           );
           break;
         case "togglePin":
@@ -504,7 +504,7 @@ export function ContentModeration() {
       {
         confirmButtonText: "Remove",
         confirmButtonVariant: "destructive",
-      }
+      },
     );
   };
 
@@ -800,7 +800,7 @@ export function ContentModeration() {
       {
         confirmButtonText: "Delete",
         confirmButtonVariant: "destructive",
-      }
+      },
     );
   };
 
@@ -914,7 +914,7 @@ export function ContentModeration() {
             </div>
             {/* Comprehensive Inline Edit Form */}
             {item.type === "story" && editingStoryId === item._id ? (
-              <div className="mt-3 space-y-4 p-4 bg-[#F2F4F7] rounded-lg border">
+              <div className="mt-3 space-y-4 p-4 bg-[#F4F2EE] rounded-lg border">
                 {/* Basic Information */}
                 <div>
                   <h4 className="font-medium text-gray-900 mb-3">
@@ -1434,11 +1434,19 @@ export function ContentModeration() {
                           const validFiles: File[] = [];
                           for (const file of files) {
                             if (file.size > 5 * 1024 * 1024) {
-                              showMessage("File Too Large", `File ${file.name} exceeds 5MB limit.`, "error");
+                              showMessage(
+                                "File Too Large",
+                                `File ${file.name} exceeds 5MB limit.`,
+                                "error",
+                              );
                               continue;
                             }
                             if (!file.type.startsWith("image/")) {
-                              showMessage("Invalid File Type", `File ${file.name} is not an image.`, "error");
+                              showMessage(
+                                "Invalid File Type",
+                                `File ${file.name} is not an image.`,
+                                "error",
+                              );
                               continue;
                             }
                             validFiles.push(file);
@@ -1450,7 +1458,11 @@ export function ContentModeration() {
                             (item.additionalImageUrls?.length || 0) +
                             validFiles.length;
                           if (totalImages > 4) {
-                            showMessage("Too Many Images", "Maximum of 4 additional images allowed.", "warning");
+                            showMessage(
+                              "Too Many Images",
+                              "Maximum of 4 additional images allowed.",
+                              "warning",
+                            );
                             return;
                           }
 
@@ -1487,7 +1499,11 @@ export function ContentModeration() {
                               additionalImageIds: allImageIds,
                             }));
                           } catch (error) {
-                            showMessage("Upload Failed", `Failed to upload images: ${error}`, "error");
+                            showMessage(
+                              "Upload Failed",
+                              `Failed to upload images: ${error}`,
+                              "error",
+                            );
                           }
                         }}
                         className="file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
@@ -1917,149 +1933,486 @@ export function ContentModeration() {
     <>
       <DialogComponents />
       <div className="space-y-6">
-        <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border border-gray-200">
+        <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200">
           <h2 className="text-xl font-medium text-[#525252] mb-6">
-          Content Moderation
-        </h2>
+            Content Moderation
+          </h2>
 
-        {/* First Row - Main Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-          <Select
-            value={activeItemType}
-            onValueChange={(v: string) => setActiveItemType(v as any)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select Type..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="submissions">Submissions</SelectItem>
-              <SelectItem value="comments">Comments</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* First Row - Main Filters */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            <Select
+              value={activeItemType}
+              onValueChange={(v: string) => setActiveItemType(v as any)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select Type..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="submissions">Submissions</SelectItem>
+                <SelectItem value="comments">Comments</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <Select
-            value={statusFilter}
-            onValueChange={(v: string) => setStatusFilter(v as StatusFilter)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Filter by status..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All (Active)</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
-              <SelectItem value="hidden">Hidden Only</SelectItem>
-              <SelectItem value="archived">Archived Only</SelectItem>
-            </SelectContent>
-          </Select>
+            <Select
+              value={statusFilter}
+              onValueChange={(v: string) => setStatusFilter(v as StatusFilter)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Filter by status..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All (Active)</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="hidden">Hidden Only</SelectItem>
+                <SelectItem value="archived">Archived Only</SelectItem>
+              </SelectContent>
+            </Select>
 
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              type="search"
-              placeholder={`Search ${activeItemType}...`}
-              value={searchTerm}
-              onChange={handleSearchChange}
-              className="pl-10"
-              disabled={activeItemType === "comments"} // Assuming comments search not implemented
-            />
-            {activeItemType === "comments" && (
-              <span className="text-xs text-gray-500 absolute right-3 top-1/2 transform -translate-y-1/2">
-                (Search N/A)
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Second Row - Date Range and Tag Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-          {/* Date Range Filter */}
-          <div className="flex gap-2 items-end">
-            <div className="flex-1">
-              <label className="text-xs text-gray-600 mb-1 block">
-                Start Date
-              </label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="text-sm"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="text-xs text-gray-600 mb-1 block">
-                End Date
-              </label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="text-sm"
-              />
-            </div>
-            {(startDate || endDate) && (
-              <button
-                onClick={() => {
-                  setStartDate("");
-                  setEndDate("");
-                }}
-                className="px-3 py-2 text-xs text-gray-600 hover:text-gray-900 border border-gray-300 rounded-md whitespace-nowrap"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-
-          {/* Tag Filter - Only show for submissions */}
-          {activeItemType === "submissions" && (
-            <div className="relative tag-search-container">
-              <label className="text-xs text-gray-600 mb-1 block">
-                Filter by Tags
-              </label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 type="search"
-                placeholder="Search tags to filter..."
-                value={tagSearchTerm}
-                onChange={(e) => {
-                  setTagSearchTerm(e.target.value);
-                  setShowTagDropdown(e.target.value.length > 0);
-                }}
-                onFocus={() => setShowTagDropdown(tagSearchTerm.length > 0)}
-                className="text-sm"
+                placeholder={`Search ${activeItemType}...`}
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-10"
+                disabled={activeItemType === "comments"} // Assuming comments search not implemented
               />
+              {activeItemType === "comments" && (
+                <span className="text-xs text-gray-500 absolute right-3 top-1/2 transform -translate-y-1/2">
+                  (Search N/A)
+                </span>
+              )}
+            </div>
+          </div>
 
-              {/* Tag Dropdown */}
-              {showTagDropdown && availableTags && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-[#D8E1EC] rounded-md shadow-lg max-h-48 overflow-y-auto">
-                  {(() => {
-                    const searchTerm = tagSearchTerm.toLowerCase();
-                    const filteredTags = availableTags
-                      .filter(
-                        (tag) =>
-                          tag.name.toLowerCase().includes(searchTerm) &&
-                          !selectedTagIds.includes(tag._id),
-                      )
-                      .slice(0, 10);
+          {/* Second Row - Date Range and Tag Filters */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            {/* Date Range Filter */}
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <label className="text-xs text-gray-600 mb-1 block">
+                  Start Date
+                </label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="text-sm"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs text-gray-600 mb-1 block">
+                  End Date
+                </label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="text-sm"
+                />
+              </div>
+              {(startDate || endDate) && (
+                <button
+                  onClick={() => {
+                    setStartDate("");
+                    setEndDate("");
+                  }}
+                  className="px-3 py-2 text-xs text-gray-600 hover:text-gray-900 border border-gray-300 rounded-md whitespace-nowrap"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
 
-                    if (filteredTags.length === 0) {
-                      return (
-                        <div className="px-3 py-2 text-sm text-gray-500">
-                          No matching tags found
-                        </div>
-                      );
-                    }
+            {/* Tag Filter - Only show for submissions */}
+            {activeItemType === "submissions" && (
+              <div className="relative tag-search-container">
+                <label className="text-xs text-gray-600 mb-1 block">
+                  Filter by Tags
+                </label>
+                <Input
+                  type="search"
+                  placeholder="Search tags to filter..."
+                  value={tagSearchTerm}
+                  onChange={(e) => {
+                    setTagSearchTerm(e.target.value);
+                    setShowTagDropdown(e.target.value.length > 0);
+                  }}
+                  onFocus={() => setShowTagDropdown(tagSearchTerm.length > 0)}
+                  className="text-sm"
+                />
 
-                    return filteredTags.map((tag) => (
-                      <button
-                        key={tag._id}
-                        type="button"
+                {/* Tag Dropdown */}
+                {showTagDropdown && availableTags && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-[#D8E1EC] rounded-md max-h-48 overflow-y-auto">
+                    {(() => {
+                      const searchTerm = tagSearchTerm.toLowerCase();
+                      const filteredTags = availableTags
+                        .filter(
+                          (tag) =>
+                            tag.name.toLowerCase().includes(searchTerm) &&
+                            !selectedTagIds.includes(tag._id),
+                        )
+                        .slice(0, 10);
+
+                      if (filteredTags.length === 0) {
+                        return (
+                          <div className="px-3 py-2 text-sm text-gray-500">
+                            No matching tags found
+                          </div>
+                        );
+                      }
+
+                      return filteredTags.map((tag) => (
+                        <button
+                          key={tag._id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedTagIds((prev) => [...prev, tag._id]);
+                            setTagSearchTerm("");
+                            setShowTagDropdown(false);
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-[#F4F0ED] focus:bg-[#F4F0ED] focus:outline-none flex items-center gap-2"
+                        >
+                          {tag.emoji && (
+                            <span className="text-sm">{tag.emoji}</span>
+                          )}
+                          {tag.iconUrl && !tag.emoji && (
+                            <img
+                              src={tag.iconUrl}
+                              alt=""
+                              className="w-4 h-4 rounded-sm object-cover"
+                            />
+                          )}
+                          <span
+                            className="inline-block px-2 py-0.5 rounded text-xs font-medium"
+                            style={{
+                              backgroundColor: tag.backgroundColor || "#F4F0ED",
+                              color: tag.textColor || "#525252",
+                              border: `1px solid ${tag.backgroundColor ? "transparent" : "#D5D3D0"}`,
+                            }}
+                          >
+                            {tag.name}
+                          </span>
+                        </button>
+                      ));
+                    })()}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Advanced Filters Section */}
+          {activeItemType === "submissions" && (
+            <div className="mb-6 p-4 bg-[#F4F2EE] rounded-lg border border-gray-200">
+              <label className="text-sm font-medium text-gray-700 block mb-3">
+                Advanced Filters
+              </label>
+
+              {/* Checkboxes */}
+              <div className="flex flex-wrap gap-4 mb-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hasMessage}
+                    onChange={(e) => setHasMessage(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                  />
+                  <span className="text-sm text-gray-700">
+                    Has Admin Message
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isPinned}
+                    onChange={(e) => setIsPinned(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                  />
+                  <span className="text-sm text-gray-700">
+                    Currently Pinned
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={wasPinned}
+                    onChange={(e) => setWasPinned(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                  />
+                  <span className="text-sm text-gray-700">
+                    Was Pinned Before
+                  </span>
+                </label>
+              </div>
+
+              {/* Judging Group Filter */}
+              <div>
+                <label className="text-xs text-gray-600 mb-1 block">
+                  In Judging Group
+                </label>
+                <Select
+                  value={selectedJudgingGroupIdFilter || "all"}
+                  onValueChange={(value) =>
+                    setSelectedJudgingGroupIdFilter(
+                      value === "all" ? null : (value as Id<"judgingGroups">),
+                    )
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All groups..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All groups</SelectItem>
+                    {judgingGroups?.map((group) => (
+                      <SelectItem key={group._id} value={group._id}>
+                        {group.name} ({group.submissionCount} submissions)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          {/* Bulk Actions Bar */}
+          {activeItemType === "submissions" && showBulkActions && (
+            <div className="mb-6 p-4 bg-blue-50 rounded-lg border-2 border-blue-300">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-blue-900">
+                    {selectedStoryIds.size} submission
+                    {selectedStoryIds.size !== 1 ? "s" : ""} selected
+                  </span>
+                  <button
+                    onClick={clearSelections}
+                    className="text-xs text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Clear selection
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Bulk Add Tag */}
+                  {bulkActionType === "tag" ? (
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={bulkSelectedTagId || ""}
+                        onValueChange={(value) =>
+                          setBulkSelectedTagId(value as Id<"tags">)
+                        }
+                      >
+                        <SelectTrigger className="w-48">
+                          <SelectValue placeholder="Select tag..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableTags?.map((tag) => (
+                            <SelectItem key={tag._id} value={tag._id}>
+                              <div className="flex items-center gap-2">
+                                {tag.emoji && <span>{tag.emoji}</span>}
+                                {tag.iconUrl && !tag.emoji && (
+                                  <img
+                                    src={tag.iconUrl}
+                                    alt=""
+                                    className="w-4 h-4 rounded-sm object-cover"
+                                  />
+                                )}
+                                <span>{tag.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        onClick={handleBulkAddTag}
+                        disabled={!bulkSelectedTagId}
+                      >
+                        Apply
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         onClick={() => {
-                          setSelectedTagIds((prev) => [...prev, tag._id]);
-                          setTagSearchTerm("");
-                          setShowTagDropdown(false);
+                          setBulkActionType(null);
+                          setBulkSelectedTagId(null);
                         }}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-[#F4F0ED] focus:bg-[#F4F0ED] focus:outline-none flex items-center gap-2"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : bulkActionType === "removeTag" ? (
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={bulkRemoveTagId || ""}
+                        onValueChange={(value) =>
+                          setBulkRemoveTagId(value as Id<"tags">)
+                        }
+                      >
+                        <SelectTrigger className="w-48">
+                          <SelectValue placeholder="Select tag to remove..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableTags?.map((tag) => (
+                            <SelectItem key={tag._id} value={tag._id}>
+                              <div className="flex items-center gap-2">
+                                {tag.emoji && <span>{tag.emoji}</span>}
+                                {tag.iconUrl && !tag.emoji && (
+                                  <img
+                                    src={tag.iconUrl}
+                                    alt=""
+                                    className="w-4 h-4 rounded-sm object-cover"
+                                  />
+                                )}
+                                <span>{tag.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        onClick={handleBulkRemoveTag}
+                        disabled={!bulkRemoveTagId}
+                      >
+                        Apply
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setBulkActionType(null);
+                          setBulkRemoveTagId(null);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : bulkActionType === "judging" ? (
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={bulkSelectedJudgingGroupId || ""}
+                        onValueChange={(value) =>
+                          setBulkSelectedJudgingGroupId(
+                            value as Id<"judgingGroups">,
+                          )
+                        }
+                      >
+                        <SelectTrigger className="w-56">
+                          <SelectValue placeholder="Select judging group..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {judgingGroups
+                            ?.filter((group) => group.isActive)
+                            .map((group) => (
+                              <SelectItem key={group._id} value={group._id}>
+                                <div className="flex items-center gap-2">
+                                  <Scale className="w-4 h-4" />
+                                  <span>{group.name}</span>
+                                  <span className="text-xs text-gray-500">
+                                    ({group.submissionCount} submissions)
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        onClick={handleBulkAddToJudgingGroup}
+                        disabled={!bulkSelectedJudgingGroupId}
+                      >
+                        Apply
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setBulkActionType(null);
+                          setBulkSelectedJudgingGroupId(null);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setBulkActionType("tag")}
+                        className="bg-white"
+                      >
+                        <Tag className="w-4 h-4 mr-1" /> Add Tag
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setBulkActionType("removeTag")}
+                        className="bg-white"
+                      >
+                        <X className="w-4 h-4 mr-1" /> Remove Tag
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setBulkActionType("judging")}
+                        className="bg-white"
+                      >
+                        <Scale className="w-4 h-4 mr-1" /> Add to Judging
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleBulkDelete}
+                        className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" /> Delete Selected
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Selected Tags Display */}
+          {activeItemType === "submissions" && selectedTagIds.length > 0 && (
+            <div className="mb-6 p-4 bg-[#F4F2EE] rounded-lg border border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-medium text-gray-700">
+                  Filtering by Tags ({selectedTagIds.length})
+                </h3>
+                <button
+                  onClick={() => setSelectedTagIds([])}
+                  className="text-xs text-gray-500 hover:text-gray-700 underline"
+                >
+                  Clear all
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {availableTags &&
+                  selectedTagIds.map((tagId) => {
+                    const tag = availableTags.find((t) => t._id === tagId);
+                    if (!tag) return null;
+
+                    return (
+                      <span
+                        key={tag._id}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm border transition-colors"
+                        style={{
+                          backgroundColor: tag.backgroundColor || "#F4F0ED",
+                          color: tag.textColor || "#292929",
+                          borderColor: tag.backgroundColor
+                            ? "transparent"
+                            : "#D5D3D0",
+                        }}
                       >
                         {tag.emoji && (
                           <span className="text-sm">{tag.emoji}</span>
@@ -2071,437 +2424,106 @@ export function ContentModeration() {
                             className="w-4 h-4 rounded-sm object-cover"
                           />
                         )}
-                        <span
-                          className="inline-block px-2 py-0.5 rounded text-xs font-medium"
-                          style={{
-                            backgroundColor: tag.backgroundColor || "#F4F0ED",
-                            color: tag.textColor || "#525252",
-                            border: `1px solid ${tag.backgroundColor ? "transparent" : "#D5D3D0"}`,
-                          }}
+                        {tag.name}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedTagIds((prev) =>
+                              prev.filter((id) => id !== tag._id),
+                            )
+                          }
+                          className="ml-1 text-current hover:opacity-70 transition-opacity"
+                          title="Remove tag filter"
                         >
-                          {tag.name}
-                        </span>
-                      </button>
-                    ));
-                  })()}
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+
+          {uiIsLoading && (
+            <div className="text-center py-6 text-lg font-medium text-[#545454]">
+              Loading...
+            </div>
+          )}
+
+          {!uiIsLoading && itemsToRender.length === 0 && (
+            <div className="text-center py-10 text-[#545454]">
+              No {activeItemType} found matching the criteria.
+            </div>
+          )}
+
+          {!uiIsLoading && itemsToRender.length > 0 && (
+            <div>
+              {/* Select All Checkbox - Only for submissions */}
+              {activeItemType === "submissions" && itemsToRender.length > 0 && (
+                <div className="border-b border-[#F4F0ED] py-3 mb-2 bg-gray-50">
+                  <label className="flex items-center gap-3 px-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={
+                        selectedStoryIds.size > 0 &&
+                        selectedStoryIds.size === itemsToRender.length
+                      }
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+                      aria-label="Select all submissions"
+                    />
+                    <span className="text-sm font-medium text-gray-700">
+                      {selectedStoryIds.size === itemsToRender.length &&
+                      selectedStoryIds.size > 0
+                        ? "Deselect All"
+                        : "Select All"}{" "}
+                      ({itemsToRender.length} submissions)
+                    </span>
+                  </label>
                 </div>
               )}
+              {itemsToRender.map((item) => renderItem(item))}
+            </div>
+          )}
+
+          {currentStatus === "CanLoadMore" && (
+            <div className="text-center mt-6">
+              <Button variant="outline" onClick={() => loadMore(10)}>
+                Load More {activeItemType}
+              </Button>
             </div>
           )}
         </div>
 
-        {/* Advanced Filters Section */}
-        {activeItemType === "submissions" && (
-          <div className="mb-6 p-4 bg-[#F2F4F7] rounded-lg border border-gray-200">
-            <label className="text-sm font-medium text-gray-700 block mb-3">
-              Advanced Filters
-            </label>
-
-            {/* Checkboxes */}
-            <div className="flex flex-wrap gap-4 mb-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={hasMessage}
-                  onChange={(e) => setHasMessage(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                />
-                <span className="text-sm text-gray-700">Has Admin Message</span>
-              </label>
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isPinned}
-                  onChange={(e) => setIsPinned(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                />
-                <span className="text-sm text-gray-700">Currently Pinned</span>
-              </label>
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={wasPinned}
-                  onChange={(e) => setWasPinned(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                />
-                <span className="text-sm text-gray-700">Was Pinned Before</span>
-              </label>
-            </div>
-
-            {/* Judging Group Filter */}
-            <div>
-              <label className="text-xs text-gray-600 mb-1 block">
-                In Judging Group
-              </label>
-              <Select
-                value={selectedJudgingGroupIdFilter || "all"}
-                onValueChange={(value) =>
-                  setSelectedJudgingGroupIdFilter(
-                    value === "all" ? null : (value as Id<"judgingGroups">),
-                  )
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="All groups..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All groups</SelectItem>
-                  {judgingGroups?.map((group) => (
-                    <SelectItem key={group._id} value={group._id}>
-                      {group.name} ({group.submissionCount} submissions)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
-
-        {/* Bulk Actions Bar */}
-        {activeItemType === "submissions" && showBulkActions && (
-          <div className="mb-6 p-4 bg-blue-50 rounded-lg border-2 border-blue-300">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-blue-900">
-                  {selectedStoryIds.size} submission
-                  {selectedStoryIds.size !== 1 ? "s" : ""} selected
-                </span>
-                <button
-                  onClick={clearSelections}
-                  className="text-xs text-blue-600 hover:text-blue-800 underline"
-                >
-                  Clear selection
-                </button>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Bulk Add Tag */}
-                {bulkActionType === "tag" ? (
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={bulkSelectedTagId || ""}
-                      onValueChange={(value) =>
-                        setBulkSelectedTagId(value as Id<"tags">)
-                      }
-                    >
-                      <SelectTrigger className="w-48">
-                        <SelectValue placeholder="Select tag..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableTags?.map((tag) => (
-                          <SelectItem key={tag._id} value={tag._id}>
-                            <div className="flex items-center gap-2">
-                              {tag.emoji && <span>{tag.emoji}</span>}
-                              {tag.iconUrl && !tag.emoji && (
-                                <img
-                                  src={tag.iconUrl}
-                                  alt=""
-                                  className="w-4 h-4 rounded-sm object-cover"
-                                />
-                              )}
-                              <span>{tag.name}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      size="sm"
-                      onClick={handleBulkAddTag}
-                      disabled={!bulkSelectedTagId}
-                    >
-                      Apply
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setBulkActionType(null);
-                        setBulkSelectedTagId(null);
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                ) : bulkActionType === "removeTag" ? (
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={bulkRemoveTagId || ""}
-                      onValueChange={(value) =>
-                        setBulkRemoveTagId(value as Id<"tags">)
-                      }
-                    >
-                      <SelectTrigger className="w-48">
-                        <SelectValue placeholder="Select tag to remove..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableTags?.map((tag) => (
-                          <SelectItem key={tag._id} value={tag._id}>
-                            <div className="flex items-center gap-2">
-                              {tag.emoji && <span>{tag.emoji}</span>}
-                              {tag.iconUrl && !tag.emoji && (
-                                <img
-                                  src={tag.iconUrl}
-                                  alt=""
-                                  className="w-4 h-4 rounded-sm object-cover"
-                                />
-                              )}
-                              <span>{tag.name}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      size="sm"
-                      onClick={handleBulkRemoveTag}
-                      disabled={!bulkRemoveTagId}
-                    >
-                      Apply
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setBulkActionType(null);
-                        setBulkRemoveTagId(null);
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                ) : bulkActionType === "judging" ? (
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={bulkSelectedJudgingGroupId || ""}
-                      onValueChange={(value) =>
-                        setBulkSelectedJudgingGroupId(
-                          value as Id<"judgingGroups">,
-                        )
-                      }
-                    >
-                      <SelectTrigger className="w-56">
-                        <SelectValue placeholder="Select judging group..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {judgingGroups
-                          ?.filter((group) => group.isActive)
-                          .map((group) => (
-                            <SelectItem key={group._id} value={group._id}>
-                              <div className="flex items-center gap-2">
-                                <Scale className="w-4 h-4" />
-                                <span>{group.name}</span>
-                                <span className="text-xs text-gray-500">
-                                  ({group.submissionCount} submissions)
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      size="sm"
-                      onClick={handleBulkAddToJudgingGroup}
-                      disabled={!bulkSelectedJudgingGroupId}
-                    >
-                      Apply
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setBulkActionType(null);
-                        setBulkSelectedJudgingGroupId(null);
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setBulkActionType("tag")}
-                      className="bg-white"
-                    >
-                      <Tag className="w-4 h-4 mr-1" /> Add Tag
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setBulkActionType("removeTag")}
-                      className="bg-white"
-                    >
-                      <X className="w-4 h-4 mr-1" /> Remove Tag
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setBulkActionType("judging")}
-                      className="bg-white"
-                    >
-                      <Scale className="w-4 h-4 mr-1" /> Add to Judging
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleBulkDelete}
-                      className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" /> Delete Selected
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Selected Tags Display */}
-        {activeItemType === "submissions" && selectedTagIds.length > 0 && (
-          <div className="mb-6 p-4 bg-[#F2F4F7] rounded-lg border border-gray-200">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-gray-700">
-                Filtering by Tags ({selectedTagIds.length})
+        {/* Delete Comment Confirmation Modal */}
+        {confirmDeleteCommentId && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full p-6 border border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Delete comment
               </h3>
-              <button
-                onClick={() => setSelectedTagIds([])}
-                className="text-xs text-gray-500 hover:text-gray-700 underline"
-              >
-                Clear all
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {availableTags &&
-                selectedTagIds.map((tagId) => {
-                  const tag = availableTags.find((t) => t._id === tagId);
-                  if (!tag) return null;
-
-                  return (
-                    <span
-                      key={tag._id}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm border transition-colors"
-                      style={{
-                        backgroundColor: tag.backgroundColor || "#F4F0ED",
-                        color: tag.textColor || "#292929",
-                        borderColor: tag.backgroundColor
-                          ? "transparent"
-                          : "#D5D3D0",
-                      }}
-                    >
-                      {tag.emoji && (
-                        <span className="text-sm">{tag.emoji}</span>
-                      )}
-                      {tag.iconUrl && !tag.emoji && (
-                        <img
-                          src={tag.iconUrl}
-                          alt=""
-                          className="w-4 h-4 rounded-sm object-cover"
-                        />
-                      )}
-                      {tag.name}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSelectedTagIds((prev) =>
-                            prev.filter((id) => id !== tag._id),
-                          )
-                        }
-                        className="ml-1 text-current hover:opacity-70 transition-opacity"
-                        title="Remove tag filter"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  );
-                })}
-            </div>
-          </div>
-        )}
-
-        {uiIsLoading && (
-          <div className="text-center py-6 text-lg font-medium text-[#545454]">
-            Loading...
-          </div>
-        )}
-
-        {!uiIsLoading && itemsToRender.length === 0 && (
-          <div className="text-center py-10 text-[#545454]">
-            No {activeItemType} found matching the criteria.
-          </div>
-        )}
-
-        {!uiIsLoading && itemsToRender.length > 0 && (
-          <div>
-            {/* Select All Checkbox - Only for submissions */}
-            {activeItemType === "submissions" && itemsToRender.length > 0 && (
-              <div className="border-b border-[#F4F0ED] py-3 mb-2 bg-gray-50">
-                <label className="flex items-center gap-3 px-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={
-                      selectedStoryIds.size > 0 &&
-                      selectedStoryIds.size === itemsToRender.length
-                    }
-                    onChange={toggleSelectAll}
-                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
-                    aria-label="Select all submissions"
-                  />
-                  <span className="text-sm font-medium text-gray-700">
-                    {selectedStoryIds.size === itemsToRender.length &&
-                    selectedStoryIds.size > 0
-                      ? "Deselect All"
-                      : "Select All"}{" "}
-                    ({itemsToRender.length} submissions)
-                  </span>
-                </label>
+              <p className="text-sm text-gray-600">This cannot be undone.</p>
+              <div className="flex justify-end gap-2 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setConfirmDeleteCommentId(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-[#292929] text-white hover:bg-[#525252]"
+                  onClick={async () => {
+                    await deleteComment({ commentId: confirmDeleteCommentId });
+                    setConfirmDeleteCommentId(null);
+                  }}
+                >
+                  Delete
+                </Button>
               </div>
-            )}
-            {itemsToRender.map((item) => renderItem(item))}
-          </div>
-        )}
-
-        {currentStatus === "CanLoadMore" && (
-          <div className="text-center mt-6">
-            <Button variant="outline" onClick={() => loadMore(10)}>
-              Load More {activeItemType}
-            </Button>
+            </div>
           </div>
         )}
       </div>
-
-      {/* Delete Comment Confirmation Modal */}
-      {confirmDeleteCommentId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6 border border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Delete comment
-            </h3>
-            <p className="text-sm text-gray-600">This cannot be undone.</p>
-            <div className="flex justify-end gap-2 mt-6">
-              <Button
-                variant="outline"
-                onClick={() => setConfirmDeleteCommentId(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="bg-[#292929] text-white hover:bg-[#525252]"
-                onClick={async () => {
-                  await deleteComment({ commentId: confirmDeleteCommentId });
-                  setConfirmDeleteCommentId(null);
-                }}
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
     </>
   );
 }

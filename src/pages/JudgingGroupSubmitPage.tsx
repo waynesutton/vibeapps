@@ -59,7 +59,7 @@ export function JudgingGroupSubmitPage() {
 
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-[#F2F4F7] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F4F2EE] flex items-center justify-center">
         <div className="text-[#525252]">Loading...</div>
       </div>
     );
@@ -67,7 +67,7 @@ export function JudgingGroupSubmitPage() {
 
   if (submissionPage === undefined) {
     return (
-      <div className="min-h-screen bg-[#F2F4F7] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F4F2EE] flex items-center justify-center">
         <div className="text-[#525252]">Loading submission page...</div>
       </div>
     );
@@ -75,7 +75,7 @@ export function JudgingGroupSubmitPage() {
 
   if (submissionPage === null) {
     return (
-      <div className="min-h-screen bg-[#F2F4F7] flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-[#F4F2EE] flex flex-col items-center justify-center p-4">
         <h1 className="text-2xl font-medium text-[#292929] mb-4">
           Page Not Found
         </h1>
@@ -92,9 +92,9 @@ export function JudgingGroupSubmitPage() {
   // Show password form if not authenticated
   if (!isAuthenticated && submissionPage.hasSubmissionPagePassword) {
     return (
-      <div className="min-h-screen bg-[#F2F4F7] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#F4F2EE] flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-md p-8 max-w-md w-full border border-[#D8E1EC]">
-          <div className="flex items-center justify-center w-12 h-12 bg-[#F2F4F7] rounded-full mx-auto mb-4">
+          <div className="flex items-center justify-center w-12 h-12 bg-[#F4F2EE] rounded-full mx-auto mb-4">
             <Lock className="w-6 h-6 text-[#525252]" />
           </div>
           <h2 className="text-xl font-medium text-[#292929] text-center mb-2">
@@ -140,7 +140,7 @@ export function JudgingGroupSubmitPage() {
 
   // Main submission page - Luma-style layout
   return (
-    <div className="min-h-screen bg-[#F2F4F7]">
+    <div className="min-h-screen bg-[#F4F2EE]">
       {/* Main Content - Dynamic Column Layout */}
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className={`grid grid-cols-1 ${layoutClass} gap-8`}>
@@ -247,7 +247,7 @@ export function JudgingGroupSubmitPage() {
 
                   {/* Notice about authentication */}
                   {!isSignedIn && (
-                    <div className="mb-6 p-4 bg-[#F2F4F7] border border-[#D8E1EC] rounded-md">
+                    <div className="mb-6 p-4 bg-[#F4F2EE] border border-[#D8E1EC] rounded-md">
                       <p className="text-sm text-[#525252]">
                         You need to{" "}
                         <Link
@@ -720,7 +720,7 @@ function SubmissionFormContent({
           accept="image/*"
           onChange={handleImageChange}
           disabled={isSubmitting}
-          className="w-full text-sm text-[#525252] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-[#F2F4F7] file:text-[#292929] hover:file:bg-[#D8E1EC]"
+          className="w-full text-sm text-[#525252] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-[#F4F2EE] file:text-[#292929] hover:file:bg-[#D8E1EC]"
           required
         />
       </div>
@@ -736,7 +736,7 @@ function SubmissionFormContent({
           multiple
           onChange={handleAdditionalImagesChange}
           disabled={isSubmitting || additionalImages.length >= 5}
-          className="w-full text-sm text-[#525252] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-[#F2F4F7] file:text-[#292929] hover:file:bg-[#D8E1EC]"
+          className="w-full text-sm text-[#525252] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-[#F4F2EE] file:text-[#292929] hover:file:bg-[#D8E1EC]"
         />
         {additionalImages.length > 0 && (
           <div className="mt-2 space-y-1">
@@ -798,7 +798,7 @@ function SubmissionFormContent({
       </div>
 
       {/* Hackathon Team Info - Always Shown */}
-      <div className="bg-[#F2F4F7] p-4 rounded-md border border-[#D8E1EC]">
+      <div className="bg-[#F4F2EE] p-4 rounded-md border border-[#D8E1EC]">
         <h3 className="text-base font-medium text-[#292929] mb-3">
           Hackathon Team Info (Optional)
         </h3>
@@ -926,7 +926,7 @@ function SubmissionFormContent({
                       ],
                     }));
                   }}
-                  className="w-full px-3 py-2 border border-[#D8E1EC] text-[#525252] hover:bg-[#F2F4F7] rounded-md transition-colors flex items-center justify-center gap-2"
+                  className="w-full px-3 py-2 border border-[#D8E1EC] text-[#525252] hover:bg-[#F4F2EE] rounded-md transition-colors flex items-center justify-center gap-2"
                   disabled={isSubmitting}
                 >
                   <Plus className="w-4 h-4" />

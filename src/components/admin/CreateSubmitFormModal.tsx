@@ -100,7 +100,7 @@ export function CreateSubmitFormModal({
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-        <div className="bg-[#F2F4F7] rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="bg-[#F4F2EE] rounded-lg border border-gray-200 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900">

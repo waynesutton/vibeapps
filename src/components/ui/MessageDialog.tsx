@@ -84,7 +84,7 @@ const MessageDialog: React.FC<MessageDialogProps> = ({
       aria-describedby="message-dialog-description"
       role="alertdialog"
     >
-      <div className="bg-[#F2F4F7] rounded-lg shadow-xl p-6 w-full max-w-md m-4 transform transition-all duration-300 ease-in-out scale-100">
+      <div className="bg-[#F4F2EE] rounded-lg border border-gray-200 p-6 w-full max-w-md m-4 transform transition-all duration-300 ease-in-out scale-100">
         <div className="flex flex-col">
           <h2
             id="message-dialog-title"

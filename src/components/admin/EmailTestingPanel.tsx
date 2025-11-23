@@ -83,7 +83,7 @@ export function EmailTestingPanel() {
   };
 
   return (
-    <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+    <div className="bg-white rounded-lg p-6 border border-gray-200">
       <div className="flex items-center gap-3 mb-4">
         <TestTube className="w-6 h-6 text-[#525252]" />
         <h2 className="text-xl font-medium text-[#525252]">

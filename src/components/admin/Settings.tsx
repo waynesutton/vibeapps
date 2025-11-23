@@ -203,7 +203,7 @@ export function Settings() {
 
   return (
     <div className="space-y-8">
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg p-6 border border-gray-200">
         <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
           <h2 className="text-xl font-medium text-[#525252]">Site Settings</h2>
           {(hasChanges || showSuccess) && (

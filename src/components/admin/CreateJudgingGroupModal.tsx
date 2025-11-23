@@ -77,12 +77,14 @@ export function CreateJudgingGroupModal({
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
         isPublic: formData.isPublic,
-        judgePassword: !formData.isPublic && formData.judgePassword.trim() 
-          ? formData.judgePassword.trim() 
-          : undefined,
-        submissionPagePassword: !formData.isPublic && formData.submissionPagePassword.trim()
-          ? formData.submissionPagePassword.trim()
-          : undefined,
+        judgePassword:
+          !formData.isPublic && formData.judgePassword.trim()
+            ? formData.judgePassword.trim()
+            : undefined,
+        submissionPagePassword:
+          !formData.isPublic && formData.submissionPagePassword.trim()
+            ? formData.submissionPagePassword.trim()
+            : undefined,
         resultsIsPublic: formData.resultsIsPublic,
         resultsPassword: !formData.resultsIsPublic
           ? formData.resultsPassword.trim()
@@ -105,7 +107,7 @@ export function CreateJudgingGroupModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#F2F4F7] rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-[#F4F2EE] rounded-lg border border-gray-200 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-medium text-gray-900">
@@ -185,7 +187,9 @@ export function CreateJudgingGroupModal({
                       ...prev,
                       isPublic: !!checked,
                       judgePassword: !!checked ? "" : prev.judgePassword,
-                      submissionPagePassword: !!checked ? "" : prev.submissionPagePassword,
+                      submissionPagePassword: !!checked
+                        ? ""
+                        : prev.submissionPagePassword,
                     }))
                   }
                   disabled={isSubmitting}
@@ -205,7 +209,10 @@ export function CreateJudgingGroupModal({
             {!formData.isPublic && (
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="judgePassword" className="flex items-center gap-2">
+                  <Label
+                    htmlFor="judgePassword"
+                    className="flex items-center gap-2"
+                  >
                     <Lock className="w-4 h-4" />
                     Judge Access Password
                   </Label>
@@ -227,7 +234,10 @@ export function CreateJudgingGroupModal({
                   </p>
                 </div>
                 <div>
-                  <Label htmlFor="submissionPagePassword" className="flex items-center gap-2">
+                  <Label
+                    htmlFor="submissionPagePassword"
+                    className="flex items-center gap-2"
+                  >
                     <Lock className="w-4 h-4" />
                     Submission Page Password
                   </Label>
@@ -245,7 +255,8 @@ export function CreateJudgingGroupModal({
                     disabled={isSubmitting}
                   />
                   <p className="text-sm text-gray-500 mt-1">
-                    Optional password for users to access the custom submission form
+                    Optional password for users to access the custom submission
+                    form
                   </p>
                 </div>
               </div>
@@ -316,9 +327,7 @@ export function CreateJudgingGroupModal({
 
           {/* Status Toggle */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900">
-              Group Status
-            </h3>
+            <h3 className="text-lg font-medium text-gray-900">Group Status</h3>
             <div className="flex items-center gap-3">
               <button
                 type="button"
