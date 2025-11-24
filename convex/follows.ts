@@ -8,6 +8,10 @@ import { internal } from "./_generated/api";
 
 export const followUser = mutation({
   args: { userIdToFollow: v.id("users") },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
   handler: async (ctx, args) => {
     const currentUser = await getUserByCtx(ctx);
     if (!currentUser) {
@@ -48,6 +52,10 @@ export const followUser = mutation({
 
 export const unfollowUser = mutation({
   args: { userIdToUnfollow: v.id("users") },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
   handler: async (ctx, args) => {
     const currentUser = await getUserByCtx(ctx);
     if (!currentUser) {
@@ -75,6 +83,28 @@ export const unfollowUser = mutation({
 
 export const getFollowers = query({
   args: { userId: v.id("users") },
+  returns: v.array(
+    v.object({
+      _id: v.id("users"),
+      _creationTime: v.number(),
+      name: v.string(),
+      clerkId: v.string(),
+      email: v.optional(v.string()),
+      username: v.string(), // Guaranteed to be string (defaults to "N/A")
+      imageUrl: v.optional(v.string()),
+      bio: v.optional(v.string()),
+      website: v.optional(v.string()),
+      twitter: v.optional(v.string()),
+      bluesky: v.optional(v.string()),
+      linkedin: v.optional(v.string()),
+      isBanned: v.optional(v.boolean()),
+      isPaused: v.optional(v.boolean()),
+      isVerified: v.optional(v.boolean()),
+      inboxEnabled: v.optional(v.boolean()),
+      emojiTheme: v.optional(v.string()),
+      role: v.optional(v.string()),
+    }),
+  ),
   handler: async (ctx, args) => {
     const follows = await ctx.db
       .query("follows")
@@ -90,12 +120,37 @@ export const getFollowers = query({
         return user ? { ...user, username: user.username || "N/A" } : null;
       }),
     );
-    return followers.filter(Boolean); // Filter out any nulls if users were deleted or issues
+    // Filter out nulls with proper type narrowing
+    return followers.filter(
+      (u): u is NonNullable<typeof u> => u !== null,
+    );
   },
 });
 
 export const getFollowing = query({
   args: { userId: v.id("users") },
+  returns: v.array(
+    v.object({
+      _id: v.id("users"),
+      _creationTime: v.number(),
+      name: v.string(),
+      clerkId: v.string(),
+      email: v.optional(v.string()),
+      username: v.string(), // Guaranteed to be string (defaults to "N/A")
+      imageUrl: v.optional(v.string()),
+      bio: v.optional(v.string()),
+      website: v.optional(v.string()),
+      twitter: v.optional(v.string()),
+      bluesky: v.optional(v.string()),
+      linkedin: v.optional(v.string()),
+      isBanned: v.optional(v.boolean()),
+      isPaused: v.optional(v.boolean()),
+      isVerified: v.optional(v.boolean()),
+      inboxEnabled: v.optional(v.boolean()),
+      emojiTheme: v.optional(v.string()),
+      role: v.optional(v.string()),
+    }),
+  ),
   handler: async (ctx, args) => {
     const follows = await ctx.db
       .query("follows")
@@ -111,12 +166,19 @@ export const getFollowing = query({
         return user ? { ...user, username: user.username || "N/A" } : null;
       }),
     );
-    return following.filter(Boolean);
+    // Filter out nulls with proper type narrowing
+    return following.filter(
+      (u): u is NonNullable<typeof u> => u !== null,
+    );
   },
 });
 
 export const getFollowStats = query({
   args: { userId: v.id("users") },
+  returns: v.object({
+    followersCount: v.number(),
+    followingCount: v.number(),
+  }),
   handler: async (ctx, args) => {
     const followers = await ctx.db
       .query("follows")
@@ -137,6 +199,7 @@ export const getFollowStats = query({
 
 export const isFollowing = query({
   args: { profileUserId: v.id("users") },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
     const currentUser = await getUserByCtx(ctx);
     if (!currentUser) {
