@@ -165,7 +165,6 @@ export function FormBuilder() {
         fields: fieldsToSave,
       });
 
-      console.log("Form and fields saved successfully!");
       // Optionally show a success message (could be a state update)
       // Example: setShowSuccess(true); setTimeout(() => setShowSuccess(false), 3000);
     } catch (err) {

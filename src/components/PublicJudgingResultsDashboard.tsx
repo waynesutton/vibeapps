@@ -14,14 +14,22 @@ import {
 
 interface PublicJudgingResultsDashboardProps {
   groupId: Id<"judgingGroups">;
+  isValidated?: boolean; // Whether user has validated via password
 }
 
 export function PublicJudgingResultsDashboard({
   groupId,
+  isValidated = false,
 }: PublicJudgingResultsDashboardProps) {
-  const groupScores = useQuery(api.judgeScores.getPublicGroupScores, {
-    groupId,
-  });
+  // Use validated query if user has entered password, otherwise use public query
+  const groupScores = useQuery(
+    isValidated
+      ? api.judgeScores.getValidatedGroupScores
+      : api.judgeScores.getPublicGroupScores,
+    {
+      groupId,
+    },
+  );
 
   // If data is not ready
   if (groupScores === undefined) {
@@ -171,8 +179,23 @@ export function PublicJudgingResultsDashboard({
                       )}
                     </div>
                     <p className="text-sm text-gray-500">
-                      {submission.scoreCount} score
-                      {submission.scoreCount !== 1 ? "s" : ""} submitted
+                      {(() => {
+                        // Detect if there's a rare mix case (partial scoring)
+                        const expectedScores =
+                          submission.judgesCompleted *
+                          groupScores.criteriaCount;
+                        const hasMix =
+                          submission.scoreCount !== expectedScores &&
+                          submission.scoreCount > 0;
+
+                        if (hasMix) {
+                          // Show detailed breakdown for mix cases
+                          return `${submission.judgesCompleted} judge${submission.judgesCompleted !== 1 ? "s" : ""} completed, ${submission.scoreCount} score${submission.scoreCount !== 1 ? "s" : ""} total`;
+                        } else {
+                          // Show simple format for clean cases
+                          return `${submission.judgesCompleted} judge${submission.judgesCompleted !== 1 ? "s" : ""} completed`;
+                        }
+                      })()}
                     </p>
                   </div>
                 </div>

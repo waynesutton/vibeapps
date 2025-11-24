@@ -191,21 +191,21 @@ export const updateGroup = mutation({
   args: {
     groupId: v.id("judgingGroups"),
     name: v.optional(v.string()),
-    description: v.optional(v.string()),
+    description: v.optional(v.union(v.string(), v.null())), // Allow null to clear description
     isPublic: v.optional(v.boolean()),
-    judgePassword: v.optional(v.string()),
-    submissionPagePassword: v.optional(v.string()),
+    judgePassword: v.optional(v.union(v.string(), v.null())), // Allow null to clear password
+    submissionPagePassword: v.optional(v.union(v.string(), v.null())),
     resultsIsPublic: v.optional(v.boolean()),
-    resultsPassword: v.optional(v.string()),
+    resultsPassword: v.optional(v.union(v.string(), v.null())),
     isActive: v.optional(v.boolean()),
     hasCustomSubmissionPage: v.optional(v.boolean()),
-    submissionPageImageId: v.optional(v.id("_storage")),
+    submissionPageImageId: v.optional(v.union(v.id("_storage"), v.null())),
     submissionPageImageSize: v.optional(v.number()),
     submissionPageLayout: v.optional(
       v.union(v.literal("two-column"), v.literal("one-third")),
     ),
-    submissionPageTitle: v.optional(v.string()),
-    submissionPageDescription: v.optional(v.string()),
+    submissionPageTitle: v.optional(v.union(v.string(), v.null())),
+    submissionPageDescription: v.optional(v.union(v.string(), v.null())),
     submissionPageLinks: v.optional(
       v.array(
         v.object({
@@ -214,9 +214,9 @@ export const updateGroup = mutation({
         }),
       ),
     ),
-    submissionFormTitle: v.optional(v.string()),
-    submissionFormSubtitle: v.optional(v.string()),
-    submissionFormRequiredTagId: v.optional(v.id("tags")),
+    submissionFormTitle: v.optional(v.union(v.string(), v.null())),
+    submissionFormSubtitle: v.optional(v.union(v.string(), v.null())),
+    submissionFormRequiredTagId: v.optional(v.union(v.id("tags"), v.null())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -224,8 +224,19 @@ export const updateGroup = mutation({
 
     const { groupId, judgePassword, submissionPagePassword, resultsPassword, ...updates } = args;
 
-    // Hash passwords if provided
-    const finalUpdates: any = { ...updates };
+    // Build finalUpdates object properly, handling nulls explicitly
+    const finalUpdates: any = {};
+    
+    // Copy non-password fields
+    Object.keys(updates).forEach((key) => {
+      const value = (updates as any)[key];
+      // Explicitly set field even if undefined to allow clearing values
+      if (value !== undefined) {
+        finalUpdates[key] = value;
+      }
+    });
+
+    // Hash passwords if provided, set undefined if null to clear
     if (judgePassword !== undefined) {
       finalUpdates.judgePassword = judgePassword ? hashPassword(judgePassword) : undefined;
     }
@@ -731,6 +742,66 @@ export const getSubmissionPageMetadata = internalQuery({
         `Submit your app to ${group.name}`,
       imageUrl,
       slug: group.slug,
+    };
+  },
+});
+
+/**
+ * Verify results password for a judging group
+ */
+export const verifyResultsPassword = query({
+  args: {
+    groupId: v.id("judgingGroups"),
+    password: v.string(),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const group = await ctx.db.get(args.groupId);
+    
+    if (!group || !group.resultsPassword) {
+      return false;
+    }
+
+    return verifyPassword(args.password, group.resultsPassword);
+  },
+});
+
+/**
+ * Get public results information for a judging group (metadata only, no scores)
+ * Used to show if results are available and what password protection exists
+ */
+export const getPublicResultsInfo = query({
+  args: { groupId: v.id("judgingGroups") },
+  returns: v.union(
+    v.object({
+      _id: v.id("judgingGroups"),
+      name: v.string(),
+      slug: v.string(),
+      description: v.optional(v.string()),
+      isResultsPublic: v.boolean(),
+      hasResultsPassword: v.boolean(),
+      isAdmin: v.boolean(), // Whether current user is admin (can bypass password)
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const group = await ctx.db.get(args.groupId);
+    
+    if (!group) {
+      return null;
+    }
+
+    // Check if user is admin
+    const isAdmin = await isUserAdmin(ctx);
+
+    return {
+      _id: group._id,
+      name: group.name,
+      slug: group.slug,
+      description: group.description,
+      isResultsPublic: group.resultsIsPublic ?? false,
+      hasResultsPassword: !!group.resultsPassword,
+      isAdmin,
     };
   },
 });

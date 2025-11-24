@@ -293,15 +293,23 @@ type AdminTab =
    - Actions: Create, Edit, View Results, Track Judges, Delete
    - Quick links to group management, results dashboard, and tracking page
 
-2. **Judging Group Management** (`src/components/admin/JudgingGroupManagement.tsx`) - **ENHANCED**
-   - Create/edit judging group form
-   - Group settings: name, slug (URL-friendly), description
-   - Toggle for public/private access with password field
+2. **Judging Group Management** (`src/components/admin/CreateJudgingGroupModal.tsx` and `EditJudgingGroupModal.tsx`)
+   - Create/edit judging group modal forms
+   - Group settings: name, slug (auto-generated from name), description
+   - Toggle for public/private access with `judgePassword` field
    - Toggle for active/inactive status
-   - **NEW**: Separate results visibility controls:
+   - Separate results visibility controls:
      - Toggle for public results or password-protected results
-     - Optional resultsPassword field
-   - Date range picker for judging period (start/end dates)
+     - Optional `resultsPassword` field
+   - **Custom Submission Page Settings**:
+     - Toggle to enable custom submission page (`hasCustomSubmissionPage`)
+     - Upload header image with size control (`submissionPageImageId`, `submissionPageImageSize`)
+     - Layout selection: two-column (50/50) or one-third (33/67) split
+     - Custom title and description for submission page
+     - External links array (label + URL pairs)
+     - Custom form title and subtitle
+     - Required tag selection (auto-selected and locked in form)
+   - Separate submission page password (`submissionPagePassword`) for protecting submission access
    - Link sharing with automatic copy-to-clipboard
 
 3. **Judging Criteria Editor** (`src/components/admin/JudgingCriteriaEditor.tsx`)
@@ -424,18 +432,38 @@ type AdminTab =
      - Checks if group is active
      - Toast notifications for save status and errors
 
-3. **Public Judging Results Page** (`src/pages/PublicJudgingResultsPage.tsx`) - **NEW**
+3. **Custom Submission Page** (`src/pages/JudgingGroupSubmitPage.tsx`) - **NEW**
    - **Access Control**:
-     - Shows results immediately if resultsIsPublic is true
-     - Shows password prompt if resultsIsPublic is false
-     - Validates resultsPassword (separate from group password)
+     - Shows submission page immediately if group is public
+     - Shows password prompt if `submissionPagePassword` is set
+     - Validates `submissionPagePassword` (separate from judge password)
+   - **Layout Options**:
+     - Two-column layout (50/50 split): Image/info on left, form on right
+     - One-third layout (33/67 split): Image/info on left (narrower), form on right (wider)
+   - **Left Column**:
+     - Header image (square, configurable size)
+     - Custom title and description
+     - External links list
+   - **Right Column**:
+     - Submission form with custom title/subtitle
+     - Required tag auto-selected and locked (if `submissionFormRequiredTagId` is set)
+     - Standard story submission fields
+   - Uses same form component as main submission flow (`DynamicSubmitForm`)
+   - Only accessible if `hasCustomSubmissionPage` is enabled
+
+4. **Public Judging Results Page** (`src/pages/PublicJudgingResultsPage.tsx`)
+   - **Access Control**:
+     - Shows results immediately if `resultsIsPublic` is true
+     - Shows password prompt if `resultsIsPublic` is false
+     - Validates `resultsPassword` (separate from group password)
+     - Stores validation in sessionStorage for session persistence
    - **Results Display Component** (`src/components/PublicJudgingResultsDashboard.tsx`):
-     - Overall rankings with weighted scores
+     - Overall rankings with weighted scores (sorted by average score)
      - Per-criteria breakdown for each submission
-     - Judge details with scores and comments
+     - Judge details with scores and comments (if results are public)
      - CSV export available
-     - Only shows completed submissions
-     - Excludes scores marked as hidden by admin
+     - Only shows completed submissions (filtered by `submissionStatuses` table)
+     - Excludes scores marked as hidden by admin (`isHidden` flag)
    - Same visual layout as admin results dashboard
 
 ### Authentication & Permissions
@@ -483,18 +511,19 @@ type AdminTab =
 
 ### Routing Structure
 
-#### Admin Routes - **UPDATED**
+#### Admin Routes
 
-- `/admin?tab=judging` - Main judging dashboard (list all groups)
-- `/admin/judging/:slug` - Group management page (criteria, submissions, results)
-- `/admin/judging/:slug/results` - **DEPRECATED** (now part of group management page)
-- `/admin/judging/:slug/tracking` - **NEW**: Judge tracking dashboard with comprehensive analytics
+- `/admin?tab=judging` - Main judging dashboard (list all groups, create/edit groups)
+- `/admin/judging/:slug/tracking` - Judge tracking dashboard with comprehensive analytics
 
-#### Public Routes - **UPDATED**
+**Note**: Group management (criteria, submissions, results) is handled through modals and inline views within the main judging dashboard (`/admin?tab=judging`), not separate routes.
 
-- `/judging/:slug` - Public group access (password entry, judge registration)
-- `/judging/:slug/judge/:sessionId` - **UPDATED**: Judging interface with enhanced features
-- `/judging/:slug/results` - **NEW**: Public results page (with optional password protection)
+#### Public Routes
+
+- `/judging/:slug` - Public group access page (password entry for private groups, judge registration form)
+- `/judging/:slug/judge` - Judging interface page (accessed after judge registration, uses sessionId from localStorage)
+- `/judging/:slug/submit` - Custom submission page (only available if `hasCustomSubmissionPage` is enabled)
+- `/judging/:slug/results` - Public results page (with optional password protection via `resultsPassword`)
 
 ### Technical Implementation Notes
 
@@ -1113,6 +1142,7 @@ const nextSubmission = () => {
 - Comprehensive judge tracking and analytics
 - Session-based authentication for judges
 - Optimized registration to prevent conflicts
+- Custom submission pages with branding and layout options
 
 ### Database Schema Changes
 
@@ -1123,11 +1153,15 @@ const nextSubmission = () => {
 
 **Modified Tables**:
 
-1. `judgingGroups` - Added `resultsIsPublic` and `resultsPassword` fields
+1. `judgingGroups` - Added multiple fields:
+   - `resultsIsPublic` and `resultsPassword` for results page access control
+   - `judgePassword` (replaces old `password` field for backward compatibility)
+   - `submissionPagePassword` for submission page access control
+   - Custom submission page fields: `hasCustomSubmissionPage`, `submissionPageImageId`, `submissionPageImageSize`, `submissionPageLayout`, `submissionPageTitle`, `submissionPageDescription`, `submissionPageLinks`, `submissionFormTitle`, `submissionFormSubtitle`, `submissionFormRequiredTagId`
 2. `judges` - Added optional `userId` field for linking authenticated users
 3. `judgeScores` - Added `isHidden` field for admin moderation
 
-**Impact**: These changes are additive and do not break existing functionality. All new fields are optional or have sensible defaults.
+**Impact**: These changes are additive and do not break existing functionality. All new fields are optional or have sensible defaults. The system maintains backward compatibility with the old `password` field name.
 
 ### Backward Compatibility
 
@@ -1151,9 +1185,11 @@ const nextSubmission = () => {
 
 #### Integration Touch Points
 
-- Content Moderation → Add to Judging Group button
-- Admin Dashboard → Judging tab
-- Story submission form → Can be judged after creation
-- User profiles → Can be linked to judge accounts
+- **Content Moderation** (`src/components/admin/ContentModeration.tsx`) → "Add to Judging" button opens judging group selector
+- **Admin Dashboard** (`src/components/admin/AdminDashboard.tsx`) → "Judging" tab shows main judging management interface
+- **Story submission form** → Stories can be added to judging groups after creation
+- **Custom submission pages** → Dedicated submission pages per judging group with custom branding
+- **User profiles** → Judges can be linked to authenticated user accounts via `userId` field
+- **HTTP endpoints** (`convex/http.ts`) → OpenGraph metadata generation for custom submission pages
 
 This PRD now reflects the complete, production-ready Submission Judging System as implemented in Vibe Apps, including all recent enhancements, bug fixes, and integration with existing platform features.

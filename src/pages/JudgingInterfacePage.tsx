@@ -55,6 +55,9 @@ export default function JudgingInterfacePage() {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [selectedTagId, setSelectedTagId] = useState<Id<"tags"> | null>(null);
   const [filterNotJudged, setFilterNotJudged] = useState(false);
+  const [selectedJudgeName, setSelectedJudgeName] = useState<string | null>(
+    null,
+  );
 
   // Get session ID from localStorage on mount
   useEffect(() => {
@@ -90,22 +93,22 @@ export default function JudgingInterfacePage() {
   // The backend determines edit permissions via canEdit field
   const submissions = allSubmissions;
 
-  // Get unique tags from submissions in the judging group
-  const availableTags = submissions
+  // Check if any filters are active
+  const hasActiveFilters =
+    selectedTagId !== null || filterNotJudged || selectedJudgeName !== null;
+
+  // Get unique list of judges who have completed at least one submission
+  const activeJudges = judgeProgress?.submissionProgress
     ? Array.from(
-        new Map(
-          submissions
-            .flatMap((s) => (s as any).tags || [])
-            .filter((tag: Doc<"tags">) => !tag.isHidden)
-            .map((tag: Doc<"tags">) => [tag._id, tag]),
-        ).values(),
-      ).sort((a, b) => a.name.localeCompare(b.name))
+        new Set(
+          judgeProgress.submissionProgress
+            .map((p) => p.completedBy)
+            .filter((name): name is string => !!name),
+        ),
+      ).sort((a, b) => a.localeCompare(b))
     : [];
 
-  // Check if any filters are active
-  const hasActiveFilters = selectedTagId !== null || filterNotJudged;
-
-  // Filter submissions based on selected tag and judged status
+  // Filter submissions based on selected tag, judged status, and judge name
   const displaySubmissions =
     submissions?.filter((submission) => {
       // Filter by tag
@@ -127,8 +130,45 @@ export default function JudgingInterfacePage() {
         matchesJudgedFilter = !progressInfo?.completedBy;
       }
 
-      return matchesTag && matchesJudgedFilter;
+      // Filter by selected judge name
+      let matchesJudgeFilter = true;
+      if (selectedJudgeName) {
+        // When a specific judge is selected, only show submissions completed by that judge
+        const progressInfo = judgeProgress?.submissionProgress?.find(
+          (p) => p.storyId === submission._id,
+        );
+
+        // Include only if the selected judge completed it
+        matchesJudgeFilter = progressInfo?.completedBy === selectedJudgeName;
+      }
+
+      return matchesTag && matchesJudgedFilter && matchesJudgeFilter;
     }) || [];
+
+  // Get unique tags from submissions in the judging group
+  // Must be calculated AFTER displaySubmissions since we use displaySubmissions for filtering
+  const availableTags = submissions
+    ? Array.from(
+        new Map(
+          submissions
+            .flatMap((s) => (s as any).tags || [])
+            .filter((tag: Doc<"tags">) => !tag.isHidden)
+            .map((tag: Doc<"tags">) => [tag._id, tag]),
+        ).values(),
+      ).sort((a, b) => a.name.localeCompare(b.name))
+    : [];
+
+  // Get scores from completed submission (if viewing submission completed by another judge)
+  // This must be defined AFTER displaySubmissions since it depends on it
+  const completedSubmissionScores = useQuery(
+    api.judgeScores.getCompletedSubmissionScores,
+    sessionId &&
+      displaySubmissions &&
+      displaySubmissions.length > 0 &&
+      displaySubmissions[currentSubmissionIndex]
+      ? { sessionId, storyId: displaySubmissions[currentSubmissionIndex]._id }
+      : "skip",
+  );
 
   const existingScores = useQuery(
     api.judgeScores.getJudgeSubmissionScores,
@@ -433,6 +473,7 @@ export default function JudgingInterfacePage() {
               onClick={() => {
                 setSelectedTagId(null);
                 setFilterNotJudged(false);
+                setSelectedJudgeName(null);
               }}
               className="inline-flex items-center gap-2"
             >
@@ -519,7 +560,13 @@ export default function JudgingInterfacePage() {
   const renderStarRating = (
     criteriaId: Id<"judgingCriteria">,
     currentScore?: number,
+    readonly: boolean = false,
+    completedScore?: number,
   ) => {
+    // If readonly, show the completed score
+    const displayScore =
+      readonly && completedScore !== undefined ? completedScore : currentScore;
+
     return (
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-1">
@@ -527,26 +574,28 @@ export default function JudgingInterfacePage() {
             <button
               key={score}
               onClick={() =>
+                !readonly &&
                 handleScoreChange(
                   criteriaId,
                   score,
                   scores[criteriaId]?.comments,
                 )
               }
+              disabled={readonly}
               className={`px-2 py-1 text-sm font-medium rounded transition-colors ${
-                currentScore === score
+                displayScore === score
                   ? "bg-yellow-400 text-white"
-                  : currentScore && score <= currentScore
+                  : displayScore && score <= displayScore
                     ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+              } ${readonly ? "cursor-not-allowed opacity-75" : ""}`}
             >
               {score}
             </button>
           ))}
         </div>
         <span className="ml-2 text-sm text-gray-600">
-          {currentScore ? `${currentScore}/10` : "Not scored"}
+          {displayScore ? `${displayScore}/10` : "Not scored"}
         </span>
       </div>
     );
@@ -617,12 +666,12 @@ export default function JudgingInterfacePage() {
           </div>
         </div>
 
-        <div className="max-w-6xl mx-auto px-2 sm:px-4 py-4 sm:py-6">
+        <div className="max-w-6xl mx-auto px-2 sm:px-4 py-2 sm:py-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             {/* Submission Details */}
-            <div className="space-y-4 sm:space-y-6">
+            <div className="space-y-3 sm:space-y-4">
               <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
-                <h2 className="text-lg font-medium text-gray-900 mb-4">
+                <h2 className="text-lg font-medium text-gray-900 mb-3">
                   Submission {currentSubmissionIndex + 1} of{" "}
                   {displaySubmissions.length}
                   {hasActiveFilters && (
@@ -633,7 +682,7 @@ export default function JudgingInterfacePage() {
                 </h2>
 
                 {/* Filters Row */}
-                <div className="flex flex-col gap-2 mb-4">
+                <div className="flex flex-col gap-2 mb-3">
                   <div className="flex flex-wrap items-center gap-2">
                     {/* Search submissions */}
                     <div className="relative w-full sm:w-48">
@@ -783,6 +832,40 @@ export default function JudgingInterfacePage() {
                         </svg>
                       </div>
                     </div>
+
+                    {/* Filter by Judge - separate dropdown with all active judges */}
+                    <div className="relative w-full sm:w-auto">
+                      <select
+                        value={selectedJudgeName || ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setSelectedJudgeName(value ? value : null);
+                        }}
+                        className="w-full sm:w-44 h-8 text-sm px-2 pr-8 border border-gray-300 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+                      >
+                        <option value="">All Judges</option>
+                        {activeJudges.map((judgeName) => (
+                          <option key={judgeName} value={judgeName}>
+                            {judgeName}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                        <svg
+                          className="w-4 h-4 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Navigation Row */}
@@ -837,15 +920,20 @@ export default function JudgingInterfacePage() {
                   </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div>
                     <h3 className="font-medium text-gray-900 mb-2">
                       {currentSubmission.title}
                     </h3>
 
+                    {/* App/Project Tagline Description */}
+                    <p className="text-gray-600 text-sm leading-relaxed mb-3">
+                      {currentSubmission.description}
+                    </p>
+
                     {/* Status Section */}
                     {submissionStatus && (
-                      <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-gray-700">
@@ -898,9 +986,9 @@ export default function JudgingInterfacePage() {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleStatusUpdate("skip")}
-                                    className="text-gray-600 hover:text-gray-800"
+                                    className="text-gray-600 hover:text-gray-800 flex items-center gap-2"
                                   >
-                                    <FileX className="w-3 h-3 mr-1" />
+                                    <FileX className="w-3 h-3" />
                                     Skip
                                   </Button>
                                 )}
@@ -909,9 +997,9 @@ export default function JudgingInterfacePage() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleStatusUpdate("pending")}
-                                  className="text-yellow-600 hover:text-yellow-800"
+                                  className="text-yellow-600 hover:text-yellow-800 flex items-center gap-2"
                                 >
-                                  <PlayCircle className="w-3 h-3 mr-1" />
+                                  <PlayCircle className="w-3 h-3" />
                                   Resume
                                 </Button>
                               )}
@@ -926,9 +1014,9 @@ export default function JudgingInterfacePage() {
                                     onClick={() =>
                                       handleStatusUpdate("pending")
                                     }
-                                    className="text-blue-600 hover:text-blue-800"
+                                    className="text-blue-600 hover:text-blue-800 flex items-center gap-2"
                                   >
-                                    <PlayCircle className="w-3 h-3 mr-1" />
+                                    <PlayCircle className="w-3 h-3" />
                                     Edit Scores
                                   </Button>
                                 )}
@@ -950,9 +1038,238 @@ export default function JudgingInterfacePage() {
                       </div>
                     )}
 
-                    <p className="text-gray-600 text-sm leading-relaxed">
-                      {currentSubmission.description}
-                    </p>
+                    {/* Project Info Section - Combined Box */}
+                    <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
+                      {/* Project Links */}
+                      {(currentSubmission.url ||
+                        (currentSubmission as any).linkedinUrl ||
+                        (currentSubmission as any).twitterUrl ||
+                        (currentSubmission as any).githubUrl ||
+                        (currentSubmission as any).chefShowUrl ||
+                        (currentSubmission as any).chefAppUrl) && (
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">
+                            Project Links
+                          </h4>
+                          <div className="flex flex-wrap gap-4">
+                            {currentSubmission.url && (
+                              <div className="flex items-center gap-2">
+                                <ExternalLink className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                                <a
+                                  href={currentSubmission.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-gray-700 hover:text-gray-900 hover:underline truncate"
+                                  title={currentSubmission.url}
+                                >
+                                  Live App
+                                </a>
+                              </div>
+                            )}
+                            {(currentSubmission as any).linkedinUrl && (
+                              <div className="flex items-center gap-2">
+                                <Linkedin className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                                <a
+                                  href={(currentSubmission as any).linkedinUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-gray-700 hover:text-gray-900 hover:underline truncate"
+                                  title={(currentSubmission as any).linkedinUrl}
+                                >
+                                  LinkedIn
+                                </a>
+                              </div>
+                            )}
+                            {(currentSubmission as any).twitterUrl && (
+                              <div className="flex items-center gap-2">
+                                <Twitter className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                                <a
+                                  href={(currentSubmission as any).twitterUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-gray-700 hover:text-gray-900 hover:underline truncate"
+                                  title={(currentSubmission as any).twitterUrl}
+                                >
+                                  Twitter
+                                </a>
+                              </div>
+                            )}
+                            {(currentSubmission as any).githubUrl && (
+                              <div className="flex items-center gap-2">
+                                <Github className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                                <a
+                                  href={(currentSubmission as any).githubUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-gray-700 hover:text-gray-900 hover:underline truncate"
+                                  title={(currentSubmission as any).githubUrl}
+                                >
+                                  GitHub
+                                </a>
+                              </div>
+                            )}
+                            {(currentSubmission as any).chefShowUrl && (
+                              <div className="flex items-center gap-2">
+                                <span className="w-4 h-4 text-gray-600 flex-shrink-0">
+                                  🍲
+                                </span>
+                                <a
+                                  href={(currentSubmission as any).chefShowUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-gray-700 hover:text-gray-900 hover:underline truncate"
+                                  title={(currentSubmission as any).chefShowUrl}
+                                >
+                                  Chef Show
+                                </a>
+                              </div>
+                            )}
+                            {(currentSubmission as any).chefAppUrl && (
+                              <div className="flex items-center gap-2">
+                                <span className="w-4 h-4 text-gray-600 flex-shrink-0">
+                                  🍲
+                                </span>
+                                <a
+                                  href={(currentSubmission as any).chefAppUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-gray-700 hover:text-gray-900 hover:underline truncate"
+                                  title={(currentSubmission as any).chefAppUrl}
+                                >
+                                  Chef App
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Tags */}
+                      {(currentSubmission as any).tags &&
+                        (currentSubmission as any).tags.length > 0 && (
+                          <div>
+                            <h4 className="font-medium text-gray-900 mb-2">
+                              Tags
+                            </h4>
+                            <div className="flex gap-1.5 flex-wrap">
+                              {((currentSubmission as any).tags || []).map(
+                                (tag: Doc<"tags">) =>
+                                  !tag.isHidden &&
+                                  tag.name !== "resendhackathon" &&
+                                  tag.name !== "ychackathon" && (
+                                    <Link
+                                      key={tag._id}
+                                      to={`/tag/${tag.slug}`}
+                                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition-opacity hover:opacity-80"
+                                      style={{
+                                        backgroundColor:
+                                          tag.backgroundColor || "#F4F0ED",
+                                        color: tag.textColor || "#525252",
+                                        border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "#D5D3D0")}`,
+                                      }}
+                                      title={`View all apps tagged with ${tag.name}`}
+                                    >
+                                      {tag.emoji && (
+                                        <span className="mr-1">
+                                          {tag.emoji}
+                                        </span>
+                                      )}
+                                      {tag.iconUrl && !tag.emoji && (
+                                        <img
+                                          src={tag.iconUrl}
+                                          alt=""
+                                          className="w-3 h-3 mr-1 rounded-sm object-cover"
+                                        />
+                                      )}
+                                      {tag.name}
+                                    </Link>
+                                  ),
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                      {/* Visit Submission and View Change Log buttons */}
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <Link
+                          to={`/s/${currentSubmission.slug}`}
+                          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                        >
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Visit Submission
+                        </Link>
+                        <Link
+                          to={`/s/${currentSubmission.slug}#changelog`}
+                          className="inline-flex items-center px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm"
+                        >
+                          <svg
+                            className="w-4 h-4 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
+                          View Change Log
+                        </Link>
+                      </div>
+
+                      {/* Originally submitted date */}
+                      <div className="text-sm text-gray-600 space-y-1 pt-2 border-t border-gray-200">
+                        <div>
+                          <span className="font-medium text-gray-700">
+                            Originally submitted:
+                          </span>{" "}
+                          {new Date(
+                            currentSubmission._creationTime,
+                          ).toLocaleDateString(undefined, {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}{" "}
+                          at{" "}
+                          {new Date(
+                            currentSubmission._creationTime,
+                          ).toLocaleTimeString(undefined, {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                        {(currentSubmission as any).changeLog &&
+                          (currentSubmission as any).changeLog.length > 0 && (
+                            <div>
+                              <span className="font-medium text-gray-700">
+                                Last modified:
+                              </span>{" "}
+                              {new Date(
+                                (currentSubmission as any).changeLog[
+                                  (currentSubmission as any).changeLog.length -
+                                    1
+                                ].timestamp,
+                              ).toLocaleDateString(undefined, {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })}{" "}
+                              at{" "}
+                              {new Date(
+                                (currentSubmission as any).changeLog[
+                                  (currentSubmission as any).changeLog.length -
+                                    1
+                                ].timestamp,
+                              ).toLocaleTimeString(undefined, {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </div>
+                          )}
+                      </div>
+                    </div>
                   </div>
 
                   {currentSubmission.longDescription && (
@@ -965,227 +1282,6 @@ export default function JudgingInterfacePage() {
                       </div>
                     </div>
                   )}
-
-                  {/* Project Links Section */}
-                  {(currentSubmission.url ||
-                    (currentSubmission as any).linkedinUrl ||
-                    (currentSubmission as any).twitterUrl ||
-                    (currentSubmission as any).githubUrl ||
-                    (currentSubmission as any).chefShowUrl ||
-                    (currentSubmission as any).chefAppUrl) && (
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-3">
-                        Project Links
-                      </h4>
-                      <div className="flex flex-wrap gap-4">
-                        {currentSubmission.url && (
-                          <div className="flex items-center gap-2">
-                            <ExternalLink className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                            <a
-                              href={currentSubmission.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm text-gray-700 hover:text-gray-900 hover:underline truncate"
-                              title={currentSubmission.url}
-                            >
-                              Live App
-                            </a>
-                          </div>
-                        )}
-                        {(currentSubmission as any).linkedinUrl && (
-                          <div className="flex items-center gap-2">
-                            <Linkedin className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                            <a
-                              href={(currentSubmission as any).linkedinUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm text-gray-700 hover:text-gray-900 hover:underline truncate"
-                              title={(currentSubmission as any).linkedinUrl}
-                            >
-                              LinkedIn
-                            </a>
-                          </div>
-                        )}
-                        {(currentSubmission as any).twitterUrl && (
-                          <div className="flex items-center gap-2">
-                            <Twitter className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                            <a
-                              href={(currentSubmission as any).twitterUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm text-gray-700 hover:text-gray-900 hover:underline truncate"
-                              title={(currentSubmission as any).twitterUrl}
-                            >
-                              Twitter
-                            </a>
-                          </div>
-                        )}
-                        {(currentSubmission as any).githubUrl && (
-                          <div className="flex items-center gap-2">
-                            <Github className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                            <a
-                              href={(currentSubmission as any).githubUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm text-gray-700 hover:text-gray-900 hover:underline truncate"
-                              title={(currentSubmission as any).githubUrl}
-                            >
-                              GitHub
-                            </a>
-                          </div>
-                        )}
-                        {(currentSubmission as any).chefShowUrl && (
-                          <div className="flex items-center gap-2">
-                            <span className="w-4 h-4 text-gray-600 flex-shrink-0">
-                              🍲
-                            </span>
-                            <a
-                              href={(currentSubmission as any).chefShowUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm text-gray-700 hover:text-gray-900 hover:underline truncate"
-                              title={(currentSubmission as any).chefShowUrl}
-                            >
-                              Chef Show
-                            </a>
-                          </div>
-                        )}
-                        {(currentSubmission as any).chefAppUrl && (
-                          <div className="flex items-center gap-2">
-                            <span className="w-4 h-4 text-gray-600 flex-shrink-0">
-                              🍲
-                            </span>
-                            <a
-                              href={(currentSubmission as any).chefAppUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm text-gray-700 hover:text-gray-900 hover:underline truncate"
-                              title={(currentSubmission as any).chefAppUrl}
-                            >
-                              Chef App
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-4 flex-wrap">
-                      <Link
-                        to={`/s/${currentSubmission.slug}`}
-                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
-                      >
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        Visit Submission
-                      </Link>
-                      <Link
-                        to={`/s/${currentSubmission.slug}#changelog`}
-                        className="inline-flex items-center px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm"
-                      >
-                        <svg
-                          className="w-4 h-4 mr-2"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                        View Change Log
-                      </Link>
-                    </div>
-
-                    {/* Tags */}
-                    {(currentSubmission as any).tags &&
-                      (currentSubmission as any).tags.length > 0 && (
-                        <div className="flex gap-1.5 flex-wrap py-2">
-                          {((currentSubmission as any).tags || []).map(
-                            (tag: Doc<"tags">) =>
-                              !tag.isHidden &&
-                              tag.name !== "resendhackathon" &&
-                              tag.name !== "ychackathon" && (
-                                <Link
-                                  key={tag._id}
-                                  to={`/tag/${tag.slug}`}
-                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition-opacity hover:opacity-80"
-                                  style={{
-                                    backgroundColor:
-                                      tag.backgroundColor || "#F4F0ED",
-                                    color: tag.textColor || "#525252",
-                                    border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "#D5D3D0")}`,
-                                  }}
-                                  title={`View all apps tagged with ${tag.name}`}
-                                >
-                                  {tag.emoji && (
-                                    <span className="mr-1">{tag.emoji}</span>
-                                  )}
-                                  {tag.iconUrl && !tag.emoji && (
-                                    <img
-                                      src={tag.iconUrl}
-                                      alt=""
-                                      className="w-3 h-3 mr-1 rounded-sm object-cover"
-                                    />
-                                  )}
-                                  {tag.name}
-                                </Link>
-                              ),
-                          )}
-                        </div>
-                      )}
-
-                    <div className="text-sm text-gray-600 space-y-1">
-                      <div>
-                        <span className="font-medium text-gray-700">
-                          Originally submitted:
-                        </span>{" "}
-                        {new Date(
-                          currentSubmission._creationTime,
-                        ).toLocaleDateString(undefined, {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}{" "}
-                        at{" "}
-                        {new Date(
-                          currentSubmission._creationTime,
-                        ).toLocaleTimeString(undefined, {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </div>
-                      {(currentSubmission as any).changeLog &&
-                        (currentSubmission as any).changeLog.length > 0 && (
-                          <div>
-                            <span className="font-medium text-gray-700">
-                              Last modified:
-                            </span>{" "}
-                            {new Date(
-                              (currentSubmission as any).changeLog[
-                                (currentSubmission as any).changeLog.length - 1
-                              ].timestamp,
-                            ).toLocaleDateString(undefined, {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            })}{" "}
-                            at{" "}
-                            {new Date(
-                              (currentSubmission as any).changeLog[
-                                (currentSubmission as any).changeLog.length - 1
-                              ].timestamp,
-                            ).toLocaleTimeString(undefined, {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </div>
-                        )}
-                    </div>
-                  </div>
                 </div>
               </div>
 
@@ -1407,8 +1503,8 @@ export default function JudgingInterfacePage() {
               )}
 
               {/* Judge Notes Section */}
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
+              <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-3">
                   <h3 className="font-medium text-gray-900 flex items-center gap-2">
                     <MessageSquare className="w-4 h-4" />
                     Judge Collaboration Notes
@@ -1550,9 +1646,9 @@ export default function JudgingInterfacePage() {
             </div>
 
             {/* Scoring Section */}
-            <div className="space-y-6">
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-6">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
                   Scoring Criteria
                 </h3>
 
@@ -1562,35 +1658,45 @@ export default function JudgingInterfacePage() {
                   submissionStatus.assignedJudgeName &&
                   judgeSession &&
                   submissionStatus.assignedJudgeName !== judgeSession.name && (
-                    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <CheckCircle className="w-5 h-5 text-blue-600" />
                         <h4 className="font-medium text-gray-900">
                           Completed by Another Judge
                         </h4>
                       </div>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 mb-2">
                         This submission has been completed by{" "}
                         <strong>{submissionStatus.assignedJudgeName}</strong>.
-                        You can view the submission but cannot edit or score it.
+                        You can view their scores below but cannot edit them.
                       </p>
                     </div>
                   )}
 
-                <div
-                  className={`space-y-6 ${
-                    submissionStatus &&
-                    submissionStatus.status === "completed" &&
-                    submissionStatus.assignedJudgeName &&
-                    judgeSession &&
-                    submissionStatus.assignedJudgeName !== judgeSession.name
-                      ? "opacity-50 pointer-events-none"
-                      : ""
-                  }`}
-                >
+                <div className={`space-y-4`}>
                   {criteria.map((criterion) => {
                     const currentScore = scores[criterion._id]?.score;
                     const isComplete = !!currentScore;
+                    const isReadonly =
+                      submissionStatus &&
+                      submissionStatus.status === "completed" &&
+                      submissionStatus.assignedJudgeName &&
+                      judgeSession &&
+                      submissionStatus.assignedJudgeName !== judgeSession.name;
+
+                    // Get completed score if viewing another judge's work
+                    const completedScore =
+                      isReadonly && completedSubmissionScores
+                        ? completedSubmissionScores.scores.find(
+                            (s) => s.criteriaId === criterion._id,
+                          )?.score
+                        : undefined;
+                    const completedComments =
+                      isReadonly && completedSubmissionScores
+                        ? completedSubmissionScores.scores.find(
+                            (s) => s.criteriaId === criterion._id,
+                          )?.comments
+                        : undefined;
 
                     return (
                       <div key={criterion._id} className="space-y-3">
@@ -1600,7 +1706,7 @@ export default function JudgingInterfacePage() {
                               <h4 className="font-medium text-gray-900">
                                 {criterion.question}
                               </h4>
-                              {isComplete && (
+                              {(isComplete || completedScore) && (
                                 <CheckCircle className="w-4 h-4 text-green-500" />
                               )}
                             </div>
@@ -1612,19 +1718,29 @@ export default function JudgingInterfacePage() {
                           </div>
                         </div>
 
-                        {renderStarRating(criterion._id, currentScore)}
+                        {renderStarRating(
+                          criterion._id,
+                          currentScore,
+                          !!isReadonly,
+                          completedScore,
+                        )}
 
                         <div>
                           <Label
                             htmlFor={`comments-${criterion._id}`}
                             className="text-sm"
                           >
-                            Comments (Optional)
+                            Comments {isReadonly ? "" : "(Optional)"}
                           </Label>
                           <Textarea
                             id={`comments-${criterion._id}`}
-                            value={scores[criterion._id]?.comments || ""}
+                            value={
+                              isReadonly
+                                ? completedComments || "No comments provided"
+                                : scores[criterion._id]?.comments || ""
+                            }
                             onChange={(e) => {
+                              if (isReadonly) return;
                               const newComments = e.target.value;
                               // Update local state immediately for smooth typing
                               setScores((prev) => ({
@@ -1636,6 +1752,7 @@ export default function JudgingInterfacePage() {
                               }));
                             }}
                             onBlur={() => {
+                              if (isReadonly) return;
                               // Save to backend when user finishes typing (on blur)
                               const currentScore = scores[criterion._id]?.score;
                               const currentComments =
@@ -1651,9 +1768,15 @@ export default function JudgingInterfacePage() {
                                 );
                               }
                             }}
-                            placeholder="Add your thoughts about this criteria..."
+                            placeholder={
+                              isReadonly
+                                ? "No comments provided"
+                                : "Add your thoughts about this criteria..."
+                            }
                             className="text-sm"
                             rows={2}
+                            disabled={!!isReadonly}
+                            readOnly={!!isReadonly}
                           />
                         </div>
                       </div>
@@ -1663,8 +1786,8 @@ export default function JudgingInterfacePage() {
               </div>
 
               {/* Progress Summary */}
-              <div className="bg-white rounded-lg border border-gray-200 p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
+              <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-3">
                   Your Progress
                 </h3>
                 <div className="space-y-3">

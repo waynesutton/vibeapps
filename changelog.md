@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Added] - 2025-11-23
+
+**Edit Judging Group Modal**
+
+- Added comprehensive EditJudgingGroupModal component for managing judging group settings
+  - Edit all group settings including name, description, access controls, and custom submission page configuration
+  - Manage judge access with public/private toggle and password protection
+  - Configure submission page access with separate password protection
+  - Control results page visibility with public/private toggle and password
+  - Toggle group active/inactive status
+  - Custom submission page settings:
+    - Enable/disable custom submission page
+    - Upload header image with size control (100-1000px)
+    - Select layout: two-column (50/50) or one-third (33/67)
+    - Custom page title and description
+    - External links management (add/remove label-URL pairs)
+    - Custom form title and subtitle
+    - Required tag selection (auto-selected and locked in form)
+  - Submission page URL display with copy and open links
+  - Password management with option to keep existing passwords
+  - Form validation and error handling
+  - Real-time updates with Convex reactivity
+- **Files Added**: `src/components/admin/EditJudgingGroupModal.tsx`
+- **Files Modified**: `src/components/admin/Judging.tsx` (integrated edit modal)
+
+### [Added] - 2025-11-22
+
+**Judging Interface Submission Filters**
+
+- Added tag filter dropdown to judging interface for filtering submissions by tag
+- Added judged status filter to show all submissions, not judged, or completed submissions
+- Filters work together for advanced submission browsing
+- Clear visual indicators when filters are active
+- "Clear All Filters" button to reset filter selections
+- Search functionality works on top of active filters
+- **Files Modified**: `src/pages/JudgingInterfacePage.tsx`
+
 ### [Fixed] - 2025-11-23
 
 **User Profile Name Update - Last Name Removal**

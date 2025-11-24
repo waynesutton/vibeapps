@@ -25,10 +25,8 @@ export function UserSyncer() {
   useEffect(() => {
     // Effect for ensuring user record in Convex DB
     if (isClerkLoaded && isSignedIn && clerkUser && !isSyncedAndChecked) {
-      console.log("User is signed in, attempting to sync with Convex (ensureUser)...");
       ensureUserMutation()
         .then((userId) => {
-          console.log(`User synced with Convex (ensureUser). Convex User ID: ${userId}`);
           // After ensuring user, convexUserDoc query will refetch or update.
           // The next useEffect will handle username check.
         })
@@ -50,11 +48,7 @@ export function UserSyncer() {
         );
         // Potentially set a small timeout before concluding it's an error or retrying ensureUser.
       } else if (convexUserDoc.username === null || convexUserDoc.username === undefined) {
-        console.log("User has no username set in Convex. Redirecting to /set-username.");
         navigate("/set-username");
-      } else {
-        // User exists in Convex and has a username.
-        console.log(`UserSyncer: User ${convexUserDoc.username} checked, has username.`);
       }
       setIsSyncedAndChecked(true); // Mark as checked for this session/user state
     }

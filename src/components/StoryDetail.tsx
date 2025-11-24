@@ -396,7 +396,6 @@ export function StoryDetail({ story }: StoryDetailProps) {
     }
     voteStory({ storyId: story._id })
       .then((result) => {
-        console.log("Vote successful:", result);
         // Optionally, update UI based on result.action and result.newVoteCount
       })
       .catch((error) => {
@@ -420,7 +419,6 @@ export function StoryDetail({ story }: StoryDetailProps) {
     }
     rateStory({ storyId: story._id, rating: value })
       .then((result) => {
-        console.log("Rating success:", result);
         // Optimistically update UI or refetch currentUserRating might be needed here
         // For now, a simple alert.
       })
@@ -949,14 +947,14 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     {story.customMessage}
                   </div>
                 )}
+                <p className="text-[#000000] mb-4 prose prose-base max-w-none">
+                  {story.description}
+                </p>
                 <ImageGallery
                   mainImageUrl={story.screenshotUrl}
                   additionalImageUrls={story.additionalImageUrls || []}
                   altText={`${story.title} screenshot`}
                 />
-                <p className="text-[#000000] mb-4 mt-[20px] prose prose-base max-w-none">
-                  {story.description}
-                </p>
                 {story.longDescription && (
                   <div className="text-[#525252] mb-4 prose prose-base max-w-none">
                     <Markdown>{story.longDescription}</Markdown>

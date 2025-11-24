@@ -17,6 +17,86 @@ function isStoryValidForJudging(story: Doc<"stories"> | null): story is Doc<"sto
 // --- Public Functions (for judges) ---
 
 /**
+ * Get scores for a completed submission (for viewing by other judges)
+ * Returns scores given by the judge who completed the submission
+ */
+export const getCompletedSubmissionScores = query({
+  args: {
+    sessionId: v.string(),
+    storyId: v.id("stories"),
+  },
+  returns: v.union(
+    v.null(),
+    v.object({
+      assignedJudgeName: v.string(),
+      scores: v.array(
+        v.object({
+          criteriaId: v.id("judgingCriteria"),
+          score: v.number(),
+          comments: v.optional(v.string()),
+        }),
+      ),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    // Verify judge session
+    const judge = await ctx.db
+      .query("judges")
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
+      .unique();
+
+    if (!judge) {
+      return null;
+    }
+
+    // Get submission status for this story in this group
+    const submissionStatus = await ctx.db
+      .query("submissionStatuses")
+      .withIndex("by_groupId_storyId", (q) =>
+        q.eq("groupId", judge.groupId).eq("storyId", args.storyId),
+      )
+      .unique();
+
+    // Only return scores if submission is completed by another judge
+    if (
+      !submissionStatus ||
+      submissionStatus.status !== "completed" ||
+      !submissionStatus.assignedJudgeId ||
+      submissionStatus.assignedJudgeId === judge._id
+    ) {
+      return null;
+    }
+
+    // Get the assigned judge's name
+    const assignedJudge = await ctx.db.get(submissionStatus.assignedJudgeId);
+    if (!assignedJudge) {
+      return null;
+    }
+
+    // Get all scores by the assigned judge for this submission
+    const judgeScores = await ctx.db
+      .query("judgeScores")
+      .withIndex("by_groupId_storyId", (q) =>
+        q.eq("groupId", judge.groupId).eq("storyId", args.storyId),
+      )
+      .filter((q) => q.eq(q.field("judgeId"), submissionStatus.assignedJudgeId))
+      .filter((q) => q.neq(q.field("isHidden"), true))
+      .collect();
+
+    const scores = judgeScores.map((score) => ({
+      criteriaId: score.criteriaId,
+      score: score.score,
+      comments: score.comments,
+    }));
+
+    return {
+      assignedJudgeName: assignedJudge.name,
+      scores,
+    };
+  },
+});
+
+/**
  * Submit or update a score for a specific criteria and submission - Fixed: Validation reads before writes
  */
 export const submitScore = mutation({
@@ -694,6 +774,7 @@ export const getPublicGroupScores = query({
           totalScore: v.number(),
           averageScore: v.number(),
           scoreCount: v.number(),
+          judgesCompleted: v.number(),
         }),
       ),
       criteriaBreakdown: v.array(
@@ -788,23 +869,40 @@ export const getPublicGroupScores = query({
     const completionPercentage =
       submissionCount > 0 ? (completedSubmissions / submissionCount) * 100 : 0;
 
-    // Calculate story rankings
+    // Calculate story rankings with judge completion tracking
     const storyScoreMap = new Map<
       string,
-      { totalScore: number; count: number }
+      { totalScore: number; count: number; judgeScores: Map<string, number> }
     >();
     scores.forEach((score) => {
       const key = score.storyId;
-      const existing = storyScoreMap.get(key) || { totalScore: 0, count: 0 };
+      const existing = storyScoreMap.get(key) || { 
+        totalScore: 0, 
+        count: 0,
+        judgeScores: new Map<string, number>()
+      };
+      
+      // Track scores per judge to detect completion
+      const judgeKey = score.judgeId;
+      const judgeCount = existing.judgeScores.get(judgeKey) || 0;
+      existing.judgeScores.set(judgeKey, judgeCount + 1);
+      
       storyScoreMap.set(key, {
         totalScore: existing.totalScore + score.score,
         count: existing.count + 1,
+        judgeScores: existing.judgeScores,
       });
     });
 
     const rankings = await Promise.all(
       Array.from(storyScoreMap.entries()).map(async ([storyId, data]) => {
         const story = await ctx.db.get(storyId as Id<"stories">);
+        
+        // Count judges who completed ALL criteria for this submission
+        const judgesCompleted = Array.from(data.judgeScores.values()).filter(
+          count => count >= criteriaCount
+        ).length;
+        
         return {
           storyId: storyId as Id<"stories">,
           storyTitle: story?.title || "Unknown Story",
@@ -813,6 +911,216 @@ export const getPublicGroupScores = query({
           totalScore: data.totalScore,
           averageScore: data.count > 0 ? data.totalScore / data.count : 0,
           scoreCount: data.count,
+          judgesCompleted, // Number of judges who scored all criteria
+        };
+      }),
+    );
+
+    rankings.sort((a, b) => b.averageScore - a.averageScore);
+
+    // Calculate criteria breakdown
+    const criteriaScoreMap = new Map<
+      string,
+      { totalScore: number; count: number }
+    >();
+    scores.forEach((score) => {
+      const key = score.criteriaId;
+      const existing = criteriaScoreMap.get(key) || { totalScore: 0, count: 0 };
+      criteriaScoreMap.set(key, {
+        totalScore: existing.totalScore + score.score,
+        count: existing.count + 1,
+      });
+    });
+
+    const criteriaBreakdown = await Promise.all(
+      Array.from(criteriaScoreMap.entries()).map(async ([criteriaId, data]) => {
+        const criterion = await ctx.db.get(criteriaId as Id<"judgingCriteria">);
+        return {
+          criteriaId: criteriaId as Id<"judgingCriteria">,
+          criteriaName: criterion?.question || "Unknown Criteria",
+          averageScore: data.count > 0 ? data.totalScore / data.count : 0,
+          scoreCount: data.count,
+        };
+      }),
+    );
+
+    return {
+      totalScores,
+      submissionsJudged,
+      averageScore,
+      judgeCount,
+      submissionCount,
+      criteriaCount,
+      completionPercentage,
+      rankings,
+      criteriaBreakdown,
+    };
+  },
+});
+
+/**
+ * Get group scores for password-protected results (after validation)
+ * This query is called after the user has successfully validated the results password
+ */
+export const getValidatedGroupScores = query({
+  args: { groupId: v.id("judgingGroups") },
+  returns: v.union(
+    v.null(),
+    v.object({
+      totalScores: v.number(),
+      submissionsJudged: v.number(),
+      averageScore: v.optional(v.number()),
+      judgeCount: v.number(),
+      submissionCount: v.number(),
+      criteriaCount: v.number(),
+      completionPercentage: v.number(),
+      rankings: v.array(
+        v.object({
+          storyId: v.id("stories"),
+          storyTitle: v.string(),
+          storySlug: v.string(),
+          storyUrl: v.optional(v.string()),
+          totalScore: v.number(),
+          averageScore: v.number(),
+          scoreCount: v.number(),
+          judgesCompleted: v.number(),
+        }),
+      ),
+      criteriaBreakdown: v.array(
+        v.object({
+          criteriaId: v.id("judgingCriteria"),
+          criteriaName: v.string(),
+          averageScore: v.number(),
+          scoreCount: v.number(),
+        }),
+      ),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    // Check if group exists (no public check - this is called after validation)
+    const group = await ctx.db.get(args.groupId);
+    if (!group) {
+      return null;
+    }
+
+    // Get all submission statuses to filter by completion
+    const submissionStatuses = await ctx.db
+      .query("submissionStatuses")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+
+    // Get only completed submission IDs
+    const completedSubmissionIds = new Set(
+      submissionStatuses
+        .filter((status) => status.status === "completed")
+        .map((status) => status.storyId),
+    );
+
+    // Get all scores for this group (excluding hidden scores)
+    const allScores = await ctx.db
+      .query("judgeScores")
+      .withIndex("by_groupId_storyId", (q) => q.eq("groupId", args.groupId))
+      .filter((q) => q.neq(q.field("isHidden"), true))
+      .collect();
+
+    // Filter scores to only include completed submissions
+    const scores = allScores.filter((score) =>
+      completedSubmissionIds.has(score.storyId),
+    );
+
+    // Get group metadata - Filter out invalid stories (deleted, hidden, archived, rejected)
+    const allSubmissions = await ctx.db
+      .query("judgingGroupSubmissions")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+
+    const submissions = (
+      await Promise.all(
+        allSubmissions.map(async (submission) => {
+          const story = await ctx.db.get(submission.storyId);
+          if (!isStoryValidForJudging(story)) {
+            return null;
+          }
+          return submission;
+        }),
+      )
+    ).filter((submission): submission is NonNullable<typeof submission> => submission !== null);
+
+    const criteria = await ctx.db
+      .query("judgingCriteria")
+      .withIndex("by_groupId_order", (q) => q.eq("groupId", args.groupId))
+      .collect();
+
+    const judges = await ctx.db
+      .query("judges")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+
+    const totalScores = scores.length;
+    const averageScore =
+      totalScores > 0
+        ? scores.reduce((sum, score) => sum + score.score, 0) / totalScores
+        : undefined;
+
+    // Calculate submissions judged (submissions that have at least one score)
+    const submissionsJudged = new Set(scores.map((score) => score.storyId))
+      .size;
+
+    const judgeCount = judges.length;
+    const submissionCount = submissions.length;
+    const criteriaCount = criteria.length;
+
+    // Calculate completion based on submissions marked as "completed"
+    const completedSubmissions = submissionStatuses.filter(
+      (status) => status.status === "completed",
+    ).length;
+
+    const completionPercentage =
+      submissionCount > 0 ? (completedSubmissions / submissionCount) * 100 : 0;
+
+    // Calculate story rankings with judge completion tracking
+    const storyScoreMap = new Map<
+      string,
+      { totalScore: number; count: number; judgeScores: Map<string, number> }
+    >();
+    scores.forEach((score) => {
+      const key = score.storyId;
+      const existing = storyScoreMap.get(key) || { 
+        totalScore: 0, 
+        count: 0,
+        judgeScores: new Map<string, number>()
+      };
+      
+      // Track scores per judge to detect completion
+      const judgeKey = score.judgeId;
+      const judgeCount = existing.judgeScores.get(judgeKey) || 0;
+      existing.judgeScores.set(judgeKey, judgeCount + 1);
+      
+      storyScoreMap.set(key, {
+        totalScore: existing.totalScore + score.score,
+        count: existing.count + 1,
+        judgeScores: existing.judgeScores,
+      });
+    });
+
+    const rankings = await Promise.all(
+      Array.from(storyScoreMap.entries()).map(async ([storyId, data]) => {
+        const story = await ctx.db.get(storyId as Id<"stories">);
+        
+        // Count judges who completed ALL criteria for this submission
+        const judgesCompleted = Array.from(data.judgeScores.values()).filter(
+          count => count >= criteriaCount
+        ).length;
+        
+        return {
+          storyId: storyId as Id<"stories">,
+          storyTitle: story?.title || "Unknown Story",
+          storySlug: story?.slug || "",
+          storyUrl: story?.url,
+          totalScore: data.totalScore,
+          averageScore: data.count > 0 ? data.totalScore / data.count : 0,
+          scoreCount: data.count,
+          judgesCompleted,
         };
       }),
     );
@@ -1028,7 +1336,7 @@ export const exportScores = query({
       .collect();
 
     // Enrich each score with full details
-    const exportData = await Promise.all(
+    const exportDataWithNulls = await Promise.all(
       scores.map(async (score) => {
         const [story, judge, criteria] = await Promise.all([
           ctx.db.get(score.storyId),
@@ -1036,8 +1344,12 @@ export const exportScores = query({
           ctx.db.get(score.criteriaId),
         ]);
 
+        // Skip scores with missing related data (deleted stories, judges, or criteria)
         if (!story || !judge || !criteria) {
-          throw new Error("Missing related data for score export");
+          console.warn(
+            `Skipping score ${score._id} due to missing related data: story=${!!story}, judge=${!!judge}, criteria=${!!criteria}`,
+          );
+          return null;
         }
 
         return {
@@ -1054,6 +1366,11 @@ export const exportScores = query({
           scoreTimestamp: score._creationTime,
         };
       }),
+    );
+
+    // Filter out null entries (scores with missing related data)
+    const exportData = exportDataWithNulls.filter(
+      (item): item is NonNullable<typeof item> => item !== null,
     );
 
     return {

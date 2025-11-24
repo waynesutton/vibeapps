@@ -286,62 +286,57 @@ export function UserModeration() {
                       </td>
                       <td className={`${tdClass} text-right space-x-1 space-y-1 sm:space-y-0`}>
                         {user.isVerified ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-gray-600 border-gray-300 hover:bg-gray-100"
+                          <button
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                             onClick={() => openConfirmModal(user._id, user.name, "unverify")}>
-                            <ShieldOff className="w-4 h-4 mr-1" /> Unverify
-                          </Button>
+                            <ShieldOff className="w-3.5 h-3.5" />
+                            <span>Unverify</span>
+                          </button>
                         ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                          <button
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 hover:border-blue-300 transition-all font-medium"
                             onClick={() => openConfirmModal(user._id, user.name, "verify")}>
-                            <ShieldCheck className="w-4 h-4 mr-1" /> Verify
-                          </Button>
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                            <span>Verify</span>
+                          </button>
                         )}
                         {!user.isBanned && user.isPaused && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-green-600 border-green-300 hover:bg-green-50"
+                          <button
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-green-700 hover:text-green-900 bg-green-50 hover:bg-green-100 rounded-lg border border-green-200 hover:border-green-300 transition-all font-medium"
                             onClick={() => openConfirmModal(user._id, user.name, "unpause")}>
-                            <PlayCircle className="w-4 h-4 mr-1" /> Unpause
-                          </Button>
+                            <PlayCircle className="w-3.5 h-3.5" />
+                            <span>Unpause</span>
+                          </button>
                         )}
                         {!user.isBanned && !user.isPaused && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-yellow-600 border-yellow-300 hover:bg-yellow-50"
+                          <button
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-yellow-700 hover:text-yellow-900 bg-yellow-50 hover:bg-yellow-100 rounded-lg border border-yellow-200 hover:border-yellow-300 transition-all font-medium"
                             onClick={() => openConfirmModal(user._id, user.name, "pause")}>
-                            <PauseCircle className="w-4 h-4 mr-1" /> Pause
-                          </Button>
+                            <PauseCircle className="w-3.5 h-3.5" />
+                            <span>Pause</span>
+                          </button>
                         )}
                         {user.isBanned ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
+                          <button
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                             onClick={() => openConfirmModal(user._id, user.name, "unban")}>
-                            <CheckCircle className="w-4 h-4 mr-1" /> Unban
-                          </Button>
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            <span>Unban</span>
+                          </button>
                         ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                          <button
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-orange-700 hover:text-orange-900 bg-orange-50 hover:bg-orange-100 rounded-lg border border-orange-200 hover:border-orange-300 transition-all font-medium"
                             onClick={() => openConfirmModal(user._id, user.name, "ban")}>
-                            <Ban className="w-4 h-4 mr-1" /> Ban
-                          </Button>
+                            <Ban className="w-3.5 h-3.5" />
+                            <span>Ban</span>
+                          </button>
                         )}
-                        <Button
-                          variant="destructive_outline"
-                          size="sm"
+                        <button
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 hover:border-red-300 transition-all font-medium"
                           onClick={() => openConfirmModal(user._id, user.name, "delete")}>
-                          <Trash2 className="w-4 h-4 mr-1" /> Delete
-                        </Button>
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
                       </td>
                     </tr>
                   );
@@ -353,9 +348,13 @@ export function UserModeration() {
 
         {status === "CanLoadMore" && (
           <div className="text-center mt-6">
-            <Button variant="outline" onClick={() => loadMore(15)} disabled={isLoading}>
-              {isLoading ? "Loading..." : "Load More Users"}
-            </Button>
+            <button
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => loadMore(15)}
+              disabled={isLoading}
+            >
+              <span>{isLoading ? "Loading..." : "Load More Users"}</span>
+            </button>
           </div>
         )}
       </div>
@@ -386,37 +385,35 @@ export function UserModeration() {
                 " This will remove the verified status from the user."}
             </p>
             <div className="flex justify-end gap-3">
-              <Button variant="ghost" onClick={() => setConfirmingAction(null)}>
-                Cancel
-              </Button>
-              <Button
-                variant={
+              <button
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                onClick={() => setConfirmingAction(null)}
+              >
+                <span>Cancel</span>
+              </button>
+              <button
+                className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm text-white rounded-lg border transition-all font-medium ${
                   confirmingAction.action === "delete"
-                    ? "destructive"
+                    ? "bg-red-600 hover:bg-red-700 border-red-600"
                     : confirmingAction.action === "ban"
-                      ? "default"
-                      : confirmingAction.action === "verify" ||
-                          confirmingAction.action === "unverify"
-                        ? "default"
-                        : "default"
-                }
+                      ? "bg-orange-500 hover:bg-orange-600 border-orange-500"
+                      : confirmingAction.action === "pause"
+                        ? "bg-yellow-500 hover:bg-yellow-600 border-yellow-500"
+                        : confirmingAction.action === "unpause"
+                          ? "bg-green-500 hover:bg-green-600 border-green-500"
+                          : confirmingAction.action === "verify"
+                            ? "bg-blue-500 hover:bg-blue-600 border-blue-500"
+                            : confirmingAction.action === "unverify"
+                              ? "bg-gray-500 hover:bg-gray-600 border-gray-500"
+                              : "bg-gray-900 hover:bg-gray-800 border-gray-900"
+                }`}
                 onClick={handleAction}
-                className={
-                  confirmingAction.action === "ban"
-                    ? "bg-orange-500 hover:bg-orange-600 text-white"
-                    : confirmingAction.action === "pause"
-                      ? "bg-yellow-500 hover:bg-yellow-600 text-white"
-                      : confirmingAction.action === "unpause"
-                        ? "bg-green-500 hover:bg-green-600 text-white"
-                        : confirmingAction.action === "verify"
-                          ? "bg-blue-500 hover:bg-blue-600 text-white"
-                          : confirmingAction.action === "unverify"
-                            ? "bg-gray-500 hover:bg-gray-600 text-white"
-                            : ""
-                }>
-                Confirm{" "}
-                {confirmingAction.action.charAt(0).toUpperCase() + confirmingAction.action.slice(1)}
-              </Button>
+              >
+                <span>
+                  Confirm{" "}
+                  {confirmingAction.action.charAt(0).toUpperCase() + confirmingAction.action.slice(1)}
+                </span>
+              </button>
             </div>
           </div>
         </div>

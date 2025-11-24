@@ -90,6 +90,22 @@ The community where you go to show off what you've built, and see what others ar
 
 ## Recent Updates
 
+- **Edit Judging Group Modal** ✅ COMPLETED:
+  - Added comprehensive EditJudgingGroupModal component for managing all judging group settings
+  - Edit group name, description, access controls, and custom submission page configuration
+  - Manage judge access, submission page access, and results page visibility with password protection
+  - Configure custom submission page with header image, layout options, external links, and required tags
+  - Toggle group active/inactive status
+  - Real-time updates with Convex reactivity
+  - Files: `src/components/admin/EditJudgingGroupModal.tsx`
+
+- **Judging Interface Filters** ✅ COMPLETED:
+  - Added tag filter dropdown to filter submissions by tag in judging interface
+  - Added judged status filter (all submissions, not judged, completed)
+  - Filters work together for advanced submission browsing
+  - Clear visual indicators and reset functionality
+  - Files: `src/pages/JudgingInterfacePage.tsx`
+
 - **Judging Progress Calculation Fix** ✅ COMPLETED:
   - Fixed judging progress calculation to accurately reflect submission completion status
   - Progress now correctly counts submissions marked as "completed" instead of just scored criteria

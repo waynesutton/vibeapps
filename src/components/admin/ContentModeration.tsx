@@ -466,11 +466,7 @@ export function ContentModeration() {
         storyIds: [storyId],
       });
 
-      if (result.added > 0) {
-        console.log(`Successfully added submission to judging group`);
-      } else if (result.skipped > 0) {
-        console.log(`Submission already in judging group`);
-      }
+      // Submission added or already in group
 
       if (result.errors.length > 0) {
         console.error("Errors adding to judging group:", result.errors);
@@ -496,7 +492,6 @@ export function ContentModeration() {
             groupId,
             storyId,
           });
-          console.log(`Successfully removed submission from ${groupName}`);
         } catch (error) {
           console.error("Failed to remove from judging group:", error);
         }
@@ -1242,15 +1237,14 @@ export function ContentModeration() {
                         <label className="text-sm font-medium text-gray-700">
                           New Tags
                         </label>
-                        <Button
+                        <button
                           type="button"
-                          size="sm"
-                          variant="outline"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                           onClick={handleAddNewTag}
                         >
-                          <Plus className="w-3 h-3 mr-1" />
-                          Add New
-                        </Button>
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add New</span>
+                        </button>
                       </div>
                       {newTagNames.length > 0 && (
                         <div className="flex flex-wrap gap-2">
@@ -1293,15 +1287,13 @@ export function ContentModeration() {
                               alt="Current screenshot"
                               className="w-32 h-24 object-cover rounded border"
                             />
-                            <Button
+                            <button
                               type="button"
-                              size="sm"
-                              variant="outline"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium mt-2"
                               onClick={handleRemoveScreenshot}
-                              className="mt-2"
                             >
-                              Remove Screenshot
-                            </Button>
+                              <span>Remove Screenshot</span>
+                            </button>
                           </div>
                         </div>
                       )}
@@ -1319,26 +1311,24 @@ export function ContentModeration() {
                             className="w-32 h-24 object-cover rounded border"
                           />
                           <div className="flex gap-2 mt-2">
-                            <Button
+                            <button
                               type="button"
-                              size="sm"
-                              variant="outline"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                               onClick={() => {
                                 setNewScreenshotFile(null);
                                 setScreenshotPreview(null);
                               }}
                             >
-                              Remove New
-                            </Button>
+                              <span>Remove New</span>
+                            </button>
                             {item.screenshotUrl && (
-                              <Button
+                              <button
                                 type="button"
-                                size="sm"
-                                variant="outline"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                                 onClick={handleKeepCurrentScreenshot}
                               >
-                                Keep Current
-                              </Button>
+                                <span>Keep Current</span>
+                              </button>
                             )}
                           </div>
                         </div>
@@ -1400,20 +1390,18 @@ export function ContentModeration() {
                               </div>
                             ))}
                           </div>
-                          <Button
+                          <button
                             type="button"
-                            size="sm"
-                            variant="outline"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium mt-2"
                             onClick={() => {
                               setEditFormData((prev) => ({
                                 ...prev,
                                 removeAdditionalImages: true,
                               }));
                             }}
-                            className="mt-2"
                           >
-                            Remove All Additional Images
-                          </Button>
+                            <span>Remove All Additional Images</span>
+                          </button>
                         </div>
                       )}
 
@@ -1514,16 +1502,18 @@ export function ContentModeration() {
 
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-2 border-t">
-                  <Button size="sm" onClick={handleSaveEdit}>
-                    Save Changes
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
+                  <button
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-white bg-gray-900 hover:bg-gray-800 rounded-lg border border-gray-900 transition-all font-medium"
+                    onClick={handleSaveEdit}
+                  >
+                    <span>Save Changes</span>
+                  </button>
+                  <button
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                     onClick={handleCancelEdit}
                   >
-                    Cancel
-                  </Button>
+                    <span>Cancel</span>
+                  </button>
                 </div>
               </div>
             ) : (
@@ -1552,20 +1542,18 @@ export function ContentModeration() {
                   className="text-sm"
                 />
                 <div className="flex gap-2 justify-end">
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  <button
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                     onClick={handleCancelEditMessage}
                   >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="default"
-                    size="sm"
+                    <span>Cancel</span>
+                  </button>
+                  <button
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-gray-900 hover:bg-gray-800 rounded-lg border border-gray-900 transition-all font-medium"
                     onClick={() => handleSaveMessage(item._id as Id<"stories">)}
                   >
-                    Save Message
-                  </Button>
+                    <span>Save Message</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -1611,21 +1599,20 @@ export function ContentModeration() {
                         ))}
                     </SelectContent>
                   </Select>
-                  <Button
-                    variant="default"
-                    size="sm"
+                  <button
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-gray-900 hover:bg-gray-800 rounded-lg border border-gray-900 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => handleAddTag(item._id as Id<"stories">)}
                     disabled={!selectedTagId}
                   >
-                    <Plus className="w-4 h-4 mr-1" /> Add
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add</span>
+                  </button>
+                  <button
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                     onClick={handleCancelTagSelector}
                   >
-                    Cancel
-                  </Button>
+                    <span>Cancel</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -1661,23 +1648,22 @@ export function ContentModeration() {
                         ))}
                     </SelectContent>
                   </Select>
-                  <Button
-                    variant="default"
-                    size="sm"
+                  <button
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-gray-900 hover:bg-gray-800 rounded-lg border border-gray-900 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() =>
                       handleAddToJudgingGroup(item._id as Id<"stories">)
                     }
                     disabled={!selectedJudgingGroupId}
                   >
-                    <Plus className="w-4 h-4 mr-1" /> Add
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add</span>
+                  </button>
+                  <button
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                     onClick={handleCancelJudgingGroupSelector}
                   >
-                    Cancel
-                  </Button>
+                    <span>Cancel</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -1761,22 +1747,20 @@ export function ContentModeration() {
             {/* Approve/Reject actions for pending items */}
             {item.status === "pending" && (
               <div className="flex flex-wrap gap-2 items-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                <button
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-green-700 hover:text-green-900 bg-green-50 hover:bg-green-100 rounded-lg border border-green-200 hover:border-green-300 transition-all font-medium"
                   onClick={() => handleAction("approve", item)}
                 >
-                  <Check className="w-4 h-4 mr-1" /> Approve
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Approve</span>
+                </button>
+                <button
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 hover:border-red-300 transition-all font-medium"
                   onClick={() => handleAction("reject", item)}
                 >
-                  <X className="w-4 h-4 mr-1" /> Reject
-                </Button>
+                  <X className="w-3.5 h-3.5" />
+                  <span>Reject</span>
+                </button>
               </div>
             )}
 
@@ -1784,46 +1768,42 @@ export function ContentModeration() {
             <div className="flex flex-wrap gap-2 items-center">
               {/* Hide/Show Button */}
               {item.isHidden ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                <button
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 hover:border-blue-300 transition-all font-medium"
                   onClick={() => handleAction("show", item)}
                 >
-                  <Eye className="w-4 h-4 mr-1" /> Show
-                </Button>
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Show</span>
+                </button>
               ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
+                <button
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-orange-700 hover:text-orange-900 bg-orange-50 hover:bg-orange-100 rounded-lg border border-orange-200 hover:border-orange-300 transition-all font-medium"
                   onClick={() => handleAction("hide", item)}
                 >
-                  <EyeOff className="w-4 h-4 mr-1" /> Hide
-                </Button>
+                  <EyeOff className="w-3.5 h-3.5" />
+                  <span>Hide</span>
+                </button>
               )}
 
               {/* Archive/Unarchive Button - Only for stories */}
               {item.type === "story" && (
                 <>
                   {(item as StoryWithDetails).isArchived ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                    <button
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 hover:border-blue-300 transition-all font-medium"
                       onClick={() => handleAction("unarchive", item)}
                     >
-                      <FileX className="w-4 h-4 mr-1" /> Unarchive
-                    </Button>
+                      <FileX className="w-3.5 h-3.5" />
+                      <span>Unarchive</span>
+                    </button>
                   ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200"
+                    <button
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                       onClick={() => handleAction("archive", item)}
                     >
-                      <FileX className="w-4 h-4 mr-1" /> Archive
-                    </Button>
+                      <FileX className="w-3.5 h-3.5" />
+                      <span>Archive</span>
+                    </button>
                   )}
                 </>
               )}
@@ -1832,37 +1812,39 @@ export function ContentModeration() {
               {item.type === "story" && (
                 <>
                   {/* Pin Button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={`${item.isPinned ? "text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100" : "text-gray-600 hover:bg-gray-50"}`}
+                  <button
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-all font-medium ${
+                      item.isPinned
+                        ? "text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 border-blue-200 hover:border-blue-300"
+                        : "text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300"
+                    }`}
                     onClick={() => handleAction("togglePin", item)}
                   >
-                    <Pin className="w-4 h-4 mr-1" />{" "}
-                    {item.isPinned ? "Unpin" : "Pin"}
-                  </Button>
+                    <Pin className="w-3.5 h-3.5" />
+                    <span>{item.isPinned ? "Unpin" : "Pin"}</span>
+                  </button>
                   {/* Add Message Button */}
                   {!isEditing && (
-                    <Button
-                      variant="outline"
-                      size="sm"
+                    <button
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                       onClick={() =>
                         handleEditMessage(item as StoryWithDetails)
                       }
                     >
-                      <MessageSquare className="w-4 h-4 mr-1" /> Add Message
-                    </Button>
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>Add Message</span>
+                    </button>
                   )}
                   {/* Add Tag Button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
+                  <button
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                     onClick={() =>
                       handleShowTagSelector(item._id as Id<"stories">)
                     }
                   >
-                    <Tag className="w-4 h-4 mr-1" /> Add Tag
-                  </Button>
+                    <Tag className="w-3.5 h-3.5" />
+                    <span>Add Tag</span>
+                  </button>
                 </>
               )}
             </div>
@@ -1873,36 +1855,34 @@ export function ContentModeration() {
               {item.type === "story" && (
                 <>
                   {/* Add to Judging Button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
+                  <button
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                     onClick={() =>
                       handleShowJudgingGroupSelector(item._id as Id<"stories">)
                     }
                   >
-                    <Scale className="w-4 h-4 mr-1" /> Add to Judging
-                  </Button>
+                    <Scale className="w-3.5 h-3.5" />
+                    <span>Add to Judging</span>
+                  </button>
                   {/* Edit Button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                  <button
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 hover:border-blue-300 transition-all font-medium"
                     onClick={() => handleEditStory(item as StoryWithDetails)}
                   >
-                    <Edit className="w-4 h-4 mr-1" /> Edit
-                  </Button>
+                    <Edit className="w-3.5 h-3.5" />
+                    <span>Edit</span>
+                  </button>
                 </>
               )}
 
               {/* Delete Action (Common) */}
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-red-700 hover:bg-red-50 hover:text-red-800 border-red-200"
+              <button
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-700 hover:text-red-800 bg-white hover:bg-red-50 rounded-lg border border-red-200 hover:border-red-300 transition-all font-medium"
                 onClick={() => handleAction("delete", item)}
               >
-                <Trash2 className="w-4 h-4 mr-1" /> Delete
-              </Button>
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete</span>
+              </button>
             </div>
           </div>
         </div>
@@ -2229,23 +2209,22 @@ export function ContentModeration() {
                           ))}
                         </SelectContent>
                       </Select>
-                      <Button
-                        size="sm"
+                      <button
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-gray-900 hover:bg-gray-800 rounded-lg border border-gray-900 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={handleBulkAddTag}
                         disabled={!bulkSelectedTagId}
                       >
-                        Apply
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                        <span>Apply</span>
+                      </button>
+                      <button
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                         onClick={() => {
                           setBulkActionType(null);
                           setBulkSelectedTagId(null);
                         }}
                       >
-                        Cancel
-                      </Button>
+                        <span>Cancel</span>
+                      </button>
                     </div>
                   ) : bulkActionType === "removeTag" ? (
                     <div className="flex items-center gap-2">
@@ -2276,23 +2255,22 @@ export function ContentModeration() {
                           ))}
                         </SelectContent>
                       </Select>
-                      <Button
-                        size="sm"
+                      <button
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-gray-900 hover:bg-gray-800 rounded-lg border border-gray-900 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={handleBulkRemoveTag}
                         disabled={!bulkRemoveTagId}
                       >
-                        Apply
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                        <span>Apply</span>
+                      </button>
+                      <button
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                         onClick={() => {
                           setBulkActionType(null);
                           setBulkRemoveTagId(null);
                         }}
                       >
-                        Cancel
-                      </Button>
+                        <span>Cancel</span>
+                      </button>
                     </div>
                   ) : bulkActionType === "judging" ? (
                     <div className="flex items-center gap-2">
@@ -2323,58 +2301,53 @@ export function ContentModeration() {
                             ))}
                         </SelectContent>
                       </Select>
-                      <Button
-                        size="sm"
+                      <button
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-gray-900 hover:bg-gray-800 rounded-lg border border-gray-900 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={handleBulkAddToJudgingGroup}
                         disabled={!bulkSelectedJudgingGroupId}
                       >
-                        Apply
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                        <span>Apply</span>
+                      </button>
+                      <button
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                         onClick={() => {
                           setBulkActionType(null);
                           setBulkSelectedJudgingGroupId(null);
                         }}
                       >
-                        Cancel
-                      </Button>
+                        <span>Cancel</span>
+                      </button>
                     </div>
                   ) : (
                     <>
-                      <Button
-                        size="sm"
-                        variant="outline"
+                      <button
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                         onClick={() => setBulkActionType("tag")}
-                        className="bg-white"
                       >
-                        <Tag className="w-4 h-4 mr-1" /> Add Tag
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
+                        <Tag className="w-3.5 h-3.5" />
+                        <span>Add Tag</span>
+                      </button>
+                      <button
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                         onClick={() => setBulkActionType("removeTag")}
-                        className="bg-white"
                       >
-                        <X className="w-4 h-4 mr-1" /> Remove Tag
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
+                        <X className="w-3.5 h-3.5" />
+                        <span>Remove Tag</span>
+                      </button>
+                      <button
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                         onClick={() => setBulkActionType("judging")}
-                        className="bg-white"
                       >
-                        <Scale className="w-4 h-4 mr-1" /> Add to Judging
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
+                        <Scale className="w-3.5 h-3.5" />
+                        <span>Add to Judging</span>
+                      </button>
+                      <button
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-700 hover:text-red-900 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 hover:border-red-300 transition-all font-medium"
                         onClick={handleBulkDelete}
-                        className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
                       >
-                        <Trash2 className="w-4 h-4 mr-1" /> Delete Selected
-                      </Button>
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete Selected</span>
+                      </button>
                     </>
                   )}
                 </div>
@@ -2488,9 +2461,12 @@ export function ContentModeration() {
 
           {currentStatus === "CanLoadMore" && (
             <div className="text-center mt-6">
-              <Button variant="outline" onClick={() => loadMore(10)}>
-                Load More {activeItemType}
-              </Button>
+              <button
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                onClick={() => loadMore(10)}
+              >
+                <span>Load More {activeItemType}</span>
+              </button>
             </div>
           )}
         </div>
@@ -2504,21 +2480,21 @@ export function ContentModeration() {
               </h3>
               <p className="text-sm text-gray-600">This cannot be undone.</p>
               <div className="flex justify-end gap-2 mt-6">
-                <Button
-                  variant="outline"
+                <button
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                   onClick={() => setConfirmDeleteCommentId(null)}
                 >
-                  Cancel
-                </Button>
-                <Button
-                  className="bg-[#292929] text-white hover:bg-[#525252]"
+                  <span>Cancel</span>
+                </button>
+                <button
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-white bg-gray-900 hover:bg-gray-800 rounded-lg border border-gray-900 transition-all font-medium"
                   onClick={async () => {
                     await deleteComment({ commentId: confirmDeleteCommentId });
                     setConfirmDeleteCommentId(null);
                   }}
                 >
-                  Delete
-                </Button>
+                  <span>Delete</span>
+                </button>
               </div>
             </div>
           </div>

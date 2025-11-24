@@ -33,8 +33,6 @@ export function EmailTestingPanel() {
     setTestResult(null);
 
     try {
-      console.log(`Testing ${emailType} email with fresh data...`);
-
       const result = await testEmailMutation({ emailType });
 
       setTestResult(result);
@@ -60,8 +58,6 @@ export function EmailTestingPanel() {
     emailType: "daily_admin" | "daily_engagement" | "weekly_digest",
   ) => {
     try {
-      console.log(`Verifying ${emailType} email logs...`);
-
       // Use a separate query call - we'll need to create a hook for this
       // For now, just show a success message
       setVerificationResults((prev) => ({

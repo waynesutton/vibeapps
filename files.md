@@ -194,6 +194,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 - `src/components/admin/Judging.tsx`: Main judging group management interface with comprehensive controls
 - `src/components/admin/CreateJudgingGroupModal.tsx`: Judging group creation modal with password protection
+- `src/components/admin/EditJudgingGroupModal.tsx`: Comprehensive editing modal for judging group settings including access controls, custom submission page configuration, password management, and all group settings
 - `src/components/admin/JudgingCriteriaEditor.tsx`: Scoring criteria management with 1-10 star ratings
 - `src/components/admin/JudgingResultsDashboard.tsx`: Admin results and analytics with CSV export
 - `src/components/admin/JudgeTracking.tsx`: Comprehensive judge tracking dashboard with breadcrumb navigation, Stats Overview, Judge Activity section with expandable judge details and score moderation tools, Judge Scores & Comments tabbed interface showing detailed scoring per judge with submission grouping, floating scroll buttons, notes viewing, and CSV export of comprehensive judge activity data

@@ -267,6 +267,33 @@ export function Layout({ children }: { children?: ReactNode }) {
     }
   };
 
+  // Command+K keyboard shortcut to toggle search
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Cmd+K (Mac) or Ctrl+K (Windows/Linux)
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault(); // Prevent default browser behavior
+
+        // Toggle search expansion
+        setIsSearchExpanded((prev) => {
+          const newState = !prev;
+
+          // If opening, focus the input
+          if (newState) {
+            setTimeout(() => {
+              searchInputRef.current?.focus();
+            }, 100);
+          }
+
+          return newState;
+        });
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const siteTitle = settings?.siteTitle || "Vibe Apps";
 
   let profileUrl = "/sign-in";
@@ -324,17 +351,23 @@ export function Layout({ children }: { children?: ReactNode }) {
 
   // Determine if the sidebar should be shown based on view mode and settings
   // Ensure settings is loaded before trying to access its properties for showSidebar
-  // Never show sidebar on story detail pages, judging pages, hackathon forms, or dynamic submit forms
+  // Never show sidebar on story detail pages, judging pages, hackathon forms, dynamic submit forms, custom form pages, or results pages
   const isStoryDetailPage = location.pathname.startsWith("/s/");
   const isJudgingPage = location.pathname.startsWith("/judging/");
   const isYCHackFormPage = location.pathname === "/ychack";
   const isDynamicSubmitFormPage = location.pathname.startsWith("/submit/");
+  const isCustomFormPage = location.pathname.startsWith("/f/");
+  const isPublicResultsPage = location.pathname.startsWith("/results/");
+  const isAdminFormPage = location.pathname.startsWith("/admin/forms/");
   const showSidebar =
     settings &&
     !isStoryDetailPage &&
     !isJudgingPage &&
     !isYCHackFormPage &&
     !isDynamicSubmitFormPage &&
+    !isCustomFormPage &&
+    !isPublicResultsPage &&
+    !isAdminFormPage &&
     (viewMode === "vibe" || viewMode === "list") &&
     (settings.showListView || settings.showVibeView);
 
@@ -354,7 +387,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                   to="/"
                   className="inline-block text-[#292929] hover:text-[#525252] md:order-1"
                 >
-                  <h1 className="title-font text-2xl">{siteTitle}</h1>
+                  <h1 className="title-font text-xl">{siteTitle}</h1>
                 </Link>
                 {/* Right: User/Sign-in */}
                 <div className="flex items-center gap-2 md:order-3">

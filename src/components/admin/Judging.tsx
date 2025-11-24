@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Plus,
@@ -22,6 +22,7 @@ import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { formatDistanceToNow } from "date-fns";
 import { CreateJudgingGroupModal } from "./CreateJudgingGroupModal";
+import { EditJudgingGroupModal } from "./EditJudgingGroupModal";
 import { JudgingCriteriaEditor } from "./JudgingCriteriaEditor";
 import { JudgingResultsDashboard } from "./JudgingResultsDashboard";
 
@@ -32,13 +33,15 @@ export function Judging() {
     api.judgingGroups.listGroups,
     authIsLoading || !isAuthenticated ? "skip" : {},
   );
-  const createGroup = useMutation(api.judgingGroups.createGroup);
   const updateGroup = useMutation(api.judgingGroups.updateGroup);
   const deleteGroup = useMutation(api.judgingGroups.deleteGroup);
 
   const [deleteConfirmId, setDeleteConfirmId] =
     useState<Id<"judgingGroups"> | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editGroupId, setEditGroupId] = useState<Id<"judgingGroups"> | null>(
+    null,
+  );
   const [currentView, setCurrentView] = useState<
     "list" | "criteria" | "results"
   >("list");
@@ -136,7 +139,7 @@ export function Judging() {
         <h2 className="text-xl font-medium text-[#525252]">Judging System</h2>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 text-sm"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all text-sm font-medium"
         >
           <Plus className="w-4 h-4" />
           Create Judging Group
@@ -269,31 +272,36 @@ export function Judging() {
                       {formatDistanceToNow(group._creationTime)} ago
                     </td>
                     <td className="p-2 px-3">
-                      <div className="flex items-center gap-1 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                          onClick={() => setEditGroupId(group._id)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                          title="Edit group settings"
+                        >
+                          <Settings className="w-3.5 h-3.5" />
+                          <span>Settings</span>
+                        </button>
+
                         <a
                           href={`/judging/${group.slug}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors min-w-[60px]"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                           title="Open judging page"
                         >
-                          <ExternalLink className="w-3 h-3 mx-auto" />
-                          <span className="text-[10px] leading-tight mt-0.5">
-                            Open Page
-                          </span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Open Page</span>
                         </a>
 
                         <button
                           onClick={() =>
                             handleEditCriteria(group._id, group.name)
                           }
-                          className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors min-w-[60px]"
-                          title="Edit criteria"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                          title="Edit judging criteria"
                         >
-                          <Edit className="w-3 h-3 mx-auto" />
-                          <span className="text-[10px] leading-tight mt-0.5">
-                            Edit Criteria
-                          </span>
+                          <Edit className="w-3.5 h-3.5" />
+                          <span>Criteria</span>
                         </button>
 
                         {group.hasCustomSubmissionPage && (
@@ -301,66 +309,66 @@ export function Judging() {
                             href={`/judging/${group.slug}/submit`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors min-w-[60px]"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                             title="Open custom submission page"
                           >
-                            <FileText className="w-3 h-3 mx-auto" />
-                            <span className="text-[10px] leading-tight mt-0.5">
-                              Submit Page
-                            </span>
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>Submit Page</span>
                           </a>
                         )}
 
-                        {group.resultsIsPublic ? (
-                          <a
-                            href={`/judging/${group.slug}/results`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors min-w-[60px]"
-                            title="View public results"
-                          >
-                            <BarChart2 className="w-3 h-3 mx-auto" />
-                            <span className="text-[10px] leading-tight mt-0.5">
-                              Public Results
-                            </span>
-                          </a>
-                        ) : (
+                        <a
+                          href={`/judging/${group.slug}/results`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                          title={
+                            group.resultsIsPublic
+                              ? "View public results page"
+                              : "View password-protected results page"
+                          }
+                        >
+                          <BarChart2 className="w-3.5 h-3.5" />
+                          <span>
+                            {group.resultsIsPublic
+                              ? "Public Results"
+                              : "Results Page"}
+                          </span>
+                        </a>
+
+                        {!group.resultsIsPublic && (
                           <button
                             onClick={() =>
                               handleViewResults(group._id, group.name)
                             }
-                            className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors min-w-[60px]"
-                            title="View admin results"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                            title="View admin results dashboard"
                           >
-                            <BarChart2 className="w-3 h-3 mx-auto" />
-                            <span className="text-[10px] leading-tight mt-0.5">
-                              Admin Results
-                            </span>
+                            <BarChart2 className="w-3.5 h-3.5" />
+                            <span>Admin Results</span>
                           </button>
                         )}
 
                         <Link
                           to={`/admin/judging/${group.slug}/tracking`}
-                          className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors min-w-[60px]"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
                           title="Track judges"
                         >
-                          <Users className="w-3 h-3 mx-auto" />
-                          <span className="text-[10px] leading-tight mt-0.5">
-                            Judge Tracking
-                          </span>
+                          <Users className="w-3.5 h-3.5" />
+                          <span>Judge Tracking</span>
                         </Link>
 
                         <button
                           onClick={() => handleDelete(group._id)}
-                          className="flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 text-gray-600 hover:text-red-600 bg-gray-50 hover:bg-red-50 rounded border border-gray-200 hover:border-red-200 transition-colors min-w-[60px]"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-600 hover:text-red-700 bg-white hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-300 transition-all font-medium"
                           title={
                             deleteConfirmId === group._id
                               ? "Click again to confirm"
                               : "Delete group"
                           }
                         >
-                          <Trash2 className="w-3 h-3 mx-auto" />
-                          <span className="text-[10px] leading-tight mt-0.5">
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>
                             {deleteConfirmId === group._id
                               ? "Confirm"
                               : "Delete"}
@@ -434,10 +442,22 @@ export function Judging() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSuccess={() => {
-          console.log("Judging group created successfully");
           // Groups will automatically refresh due to Convex reactivity
         }}
       />
+
+      {/* Edit Group Modal */}
+      {editGroupId && (
+        <EditJudgingGroupModal
+          isOpen={!!editGroupId}
+          onClose={() => setEditGroupId(null)}
+          onSuccess={() => {
+            setEditGroupId(null);
+            // Groups will automatically refresh due to Convex reactivity
+          }}
+          groupId={editGroupId}
+        />
+      )}
     </div>
   );
 }

@@ -24,10 +24,20 @@ export default function PublicJudgingResultsPage() {
     api.judgingGroups.validateResultsPassword,
   );
 
-  // Check if results are public (no password needed)
+  // Check sessionStorage for existing validation or if results are public
   useEffect(() => {
-    if (group && group.resultsIsPublic) {
-      setIsPasswordValidated(true);
+    if (group) {
+      // If results are explicitly set to public, allow access without password
+      if (group.resultsIsPublic === true) {
+        setIsPasswordValidated(true);
+      } else {
+        // Check if user has previously validated for this group
+        const validationKey = `resultsValidated_${group._id}`;
+        const isValidated = sessionStorage.getItem(validationKey) === "true";
+        if (isValidated) {
+          setIsPasswordValidated(true);
+        }
+      }
     }
   }, [group]);
 
@@ -46,6 +56,9 @@ export default function PublicJudgingResultsPage() {
 
       if (isValid) {
         setIsPasswordValidated(true);
+        // Store validation in sessionStorage so it persists during this session
+        const validationKey = `resultsValidated_${group._id}`;
+        sessionStorage.setItem(validationKey, "true");
       } else {
         setPasswordError("Incorrect password. Please try again.");
       }
@@ -57,9 +70,9 @@ export default function PublicJudgingResultsPage() {
   };
 
   // Loading state
-  if (!group) {
+  if (group === undefined) {
     return (
-      <div className="min-h-screen bg-[#F4F2EE]] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F4F2EE] flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading results...</p>
@@ -71,7 +84,7 @@ export default function PublicJudgingResultsPage() {
   // Not found state
   if (group === null) {
     return (
-      <div className="min-h-screen bg-[#F4F2EE]] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#F4F2EE] flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-lg border border-gray-200 p-6 text-center">
           <h1 className="text-xl font-medium text-gray-900 mb-4">
             Results Not Found
@@ -92,24 +105,24 @@ export default function PublicJudgingResultsPage() {
     );
   }
 
-  // Password required state
+  // Password required state (only show if results are private AND no valid judge session)
   if (!group.resultsIsPublic && !isPasswordValidated) {
     return (
-      <div className="min-h-screen bg-[#F4F2EE]] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#F4F2EE] flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white rounded-lg border border-gray-200 p-6">
           <div className="text-center mb-6">
             <Lock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h1 className="text-2xl font-medium text-gray-900 mb-2">
-              Protected Results
+              Private Results
             </h1>
-            <p className="text-gray-600">
-              This judging results page is password protected.
+            <p className="text-gray-600 mb-2">
+              These judging results are private and require a password.
             </p>
           </div>
 
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Access Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -133,7 +146,13 @@ export default function PublicJudgingResultsPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-2">
+            <Link
+              to={`/judging/${slug}`}
+              className="text-sm text-blue-600 hover:text-blue-800 block"
+            >
+              Access the judging interface →
+            </Link>
             <Link
               to="/"
               className="text-sm text-gray-500 hover:text-gray-700 inline-flex items-center gap-1"
@@ -149,9 +168,9 @@ export default function PublicJudgingResultsPage() {
 
   // Results view (authenticated) - embed the admin results dashboard
   return (
-    <div className="min-h-screen bg-[#F4F2EE]]">
+    <div className="min-h-screen bg-[#F4F2EE]">
       {/* Header */}
-      <div className="bg-[#F4F2EE] bg-[#F4F2EE]">
+      <div className="bg-[#F4F2EE]">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div>
             <h1 className="text-2xl font-medium text-gray-900">
@@ -166,7 +185,10 @@ export default function PublicJudgingResultsPage() {
 
       {/* Results Dashboard */}
       <div className="max-w-6xl mx-auto px-4 py-6">
-        <PublicJudgingResultsDashboard groupId={group._id} />
+        <PublicJudgingResultsDashboard
+          groupId={group._id}
+          isValidated={!group.resultsIsPublic && isPasswordValidated}
+        />
       </div>
     </div>
   );

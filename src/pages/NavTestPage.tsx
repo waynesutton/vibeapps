@@ -113,7 +113,7 @@ const NavTestPage: React.FC = () => {
                   to="/"
                   className="inline-block text-[#292929] hover:text-[#525252] md:order-1"
                 >
-                  <h1 className="title-font text-2xl">{siteTitle}</h1>
+                  <h1 className="title-font text-xl">{siteTitle}</h1>
                 </Link>
                 <div className="flex items-center gap-2 md:order-3">
                   <SignedOut>

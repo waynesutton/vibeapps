@@ -93,7 +93,7 @@ export function JudgingGroupSubmitPage() {
   if (!isAuthenticated && submissionPage.hasSubmissionPagePassword) {
     return (
       <div className="min-h-screen bg-[#F4F2EE] flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-md p-8 max-w-md w-full border border-[#D8E1EC]">
+        <div className="bg-white rounded-lg p-8 max-w-md w-full border border-gray-200">
           <div className="flex items-center justify-center w-12 h-12 bg-[#F4F2EE] rounded-full mx-auto mb-4">
             <Lock className="w-6 h-6 text-[#525252]" />
           </div>
