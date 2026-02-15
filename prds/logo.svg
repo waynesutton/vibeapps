@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="m logo">
+  <rect x="32" y="32" width="448" height="448" rx="96" ry="96" fill="#000000"/>
+  <text x="256" y="330"
+        text-anchor="middle"
+        font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji','Segoe UI Emoji'"
+        font-size="300"
+        font-weight="800"
+        fill="#ffffff"
+        letter-spacing="-8">m</text>
+</svg>

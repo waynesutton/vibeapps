@@ -1,17 +1,13 @@
-import React from "react";
 import {
   BrowserRouter,
   Routes,
   Route,
-  Navigate,
   useParams,
   useSearchParams,
 } from "react-router-dom";
 import {
   usePaginatedQuery,
   useQuery,
-  useConvex,
-  ConvexProvider,
 } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Layout } from "./components/Layout";
@@ -28,7 +24,6 @@ import { FormResults } from "./components/admin/FormResults";
 import { PublicForm } from "./components/PublicForm";
 import { PublicResultsViewer } from "./components/PublicResultsViewer";
 import { useLayoutContext } from "./components/Layout";
-import { Id } from "../convex/_generated/dataModel";
 import { Story } from "./types";
 import SignInPage from "./pages/SignInPage";
 import SignUpPage from "./pages/SignUpPage";
