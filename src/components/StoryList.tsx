@@ -293,6 +293,7 @@ export function StoryList({
                             .filter(
                               (tag: Doc<"tags">) =>
                                 !tag.isHidden &&
+                                !tag.hideInStoryList &&
                                 tag.name !== "resendhackathon" &&
                                 tag.name !== "ychackathon",
                             )

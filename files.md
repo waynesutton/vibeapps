@@ -85,7 +85,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `convex/bookmarks.ts`: User bookmarking system functions with improved interface and notification creation
 - `convex/storyRatings.ts`: 1-5 star rating system for apps
 - `convex/follows.ts`: User following system functions with real-time updates
-- `convex/tags.ts`: Tag management and categorization system with enhanced dropdown search support
+- `convex/tags.ts`: Tag management and categorization system with enhanced dropdown search support, including per-view visibility flags (header, app detail page, app lists, archive)
 - `convex/reports.ts`: User reporting system for content moderation with admin notification creation and immediate email alerts
 - `convex/alerts.ts`: Comprehensive notification system for votes, comments, ratings, follows, bookmarks, admin reports, and future message notifications
   - Includes helper `getAdminUserIds` and `createReportNotifications` for admin/manager report alerts with email integration
@@ -107,7 +107,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 - `convex/judgingGroups.ts`: Judging group management with public/private access, password protection, configurable `judgesPerSubmission` for multi-judge mode, and required-tag backfill in `updateGroup` (stories carrying a newly set required tag are auto-included for judging)
 - `convex/judgingCriteria.ts`: Judging criteria and scoring questions management with 1-10 star ratings
-- `convex/judgingGroupSubmissions.ts`: Submission assignment within judging groups with @mentions in notes, search functionality, status tracking, `markJudgeCompleted` mutation for multi-judge OCC-safe completion, and required-tag inclusion (`ensureStoryInGroup`/`syncStoryToTaggedGroups` helpers + `syncRequiredTagSubmissions` admin mutation) so any story carrying a group's required tag is judged and counted
+- `convex/judgingGroupSubmissions.ts`: Submission assignment within judging groups with @mentions in notes, search functionality, status tracking, `markJudgeCompleted` mutation for multi-judge OCC-safe completion, required-tag inclusion (`ensureStoryInGroup`/`syncStoryToTaggedGroups` helpers + `syncRequiredTagSubmissions` admin mutation) so any story carrying a group's required tag is judged and counted, and `exportGroupSubmissions` admin query that returns flattened submission rows (custom form info, links, tags, hackathon team info; no images) for CSV download
 - `convex/judges.ts`: Judge registration, session management, and group-wide progress tracking with canEdit/completedBy flags for multi-judge transparency and edit permission enforcement
 - `convex/judgeScores.ts`: Score submission, calculation, results with CSV export, weighted scoring, and `getSubmissionJudgeBreakdown` query for per-judge score breakdown with after-self reveal rule
 - `convex/adminJudgeTracking.ts`: Admin utilities for judge monitoring, submission status management, and comprehensive CSV export of judge activity including individual scores, total scores per submission, submissions, criteria, and comments
@@ -180,7 +180,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/components/admin/AdminDashboard.tsx`: Main admin dashboard overview with comprehensive navigation including Email Management tab
 - `src/components/admin/ContentModeration.tsx`: Content approval/rejection interface with image management
 - `src/components/admin/UserModeration.tsx`: User management, verification, and ban/pause functionality
-- `src/components/admin/TagManagement.tsx`: Tag creation and customization with colors, emojis, and ordering. Save and drag-and-drop reorder persist only changed tags in parallel (fast with large tag sets); includes paginated list with selectable page size (5-200), synced top and bottom pagination controls, and search across all tags
+- `src/components/admin/TagManagement.tsx`: Tag creation and customization with colors, emojis, and ordering. Per-tag toggles control visibility in the header, on the app detail page, and on app card lists, plus archive. Save and drag-and-drop reorder persist only changed tags in parallel (fast with large tag sets); includes paginated list with selectable page size (5-200), synced top and bottom pagination controls, and search across all tags
 - `src/components/admin/Settings.tsx`: Site-wide settings configuration with view mode controls
 - `src/components/admin/NumbersView.tsx`: Analytics and metrics dashboard with detailed tracking
 - `src/components/admin/ReportManagement.tsx`: User report review and resolution with status tracking and email notification integration
@@ -201,7 +201,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 ### Judging System Components
 
-- `src/components/admin/Judging.tsx`: Main judging group management interface with comprehensive controls
+- `src/components/admin/Judging.tsx`: Main judging group management interface with comprehensive controls, including a per-group "Export CSV" action that fetches submissions on demand and downloads custom submit form info (no images)
 - `src/components/admin/CreateJudgingGroupModal.tsx`: Judging group creation modal with password protection
 - `src/components/admin/EditJudgingGroupModal.tsx`: Comprehensive editing modal for judging group settings including access controls, custom submission page configuration, admin-selectable required submission fields, password management, a "Sync existing submissions with this tag" backfill button, and all group settings
 - `src/components/admin/JudgingCriteriaEditor.tsx`: Scoring criteria management with 1-10 star ratings

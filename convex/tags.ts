@@ -138,6 +138,8 @@ export const create = mutation({
     slug: v.string(), // Accept slug from frontend
     showInHeader: v.optional(v.boolean()),
     isHidden: v.optional(v.boolean()), // Optional: defaults to false
+    hideInStoryDetail: v.optional(v.boolean()), // Hide only on app detail page
+    hideInStoryList: v.optional(v.boolean()), // Hide only on app card lists
     backgroundColor: v.optional(v.union(v.string(), v.null())), // Allow null for clearing
     textColor: v.optional(v.union(v.string(), v.null())), // Allow null for clearing
     borderColor: v.optional(v.union(v.string(), v.null())), // Allow null for clearing
@@ -185,6 +187,8 @@ export const create = mutation({
       slug: slug,
       showInHeader: args.showInHeader ?? false,
       isHidden: args.isHidden ?? false,
+      hideInStoryDetail: args.hideInStoryDetail ?? false,
+      hideInStoryList: args.hideInStoryList ?? false,
       backgroundColor: args.backgroundColor ?? undefined,
       textColor: args.textColor ?? undefined,
       borderColor: args.borderColor ?? undefined,
@@ -204,6 +208,8 @@ export const update = mutation({
     slug: v.optional(v.string()),
     showInHeader: v.optional(v.boolean()),
     isHidden: v.optional(v.boolean()),
+    hideInStoryDetail: v.optional(v.boolean()), // Hide only on app detail page
+    hideInStoryList: v.optional(v.boolean()), // Hide only on app card lists
     backgroundColor: v.optional(v.union(v.string(), v.null())),
     textColor: v.optional(v.union(v.string(), v.null())),
     borderColor: v.optional(v.union(v.string(), v.null())),
@@ -259,6 +265,10 @@ export const update = mutation({
     if (rest.showInHeader !== undefined)
       updateData.showInHeader = rest.showInHeader;
     if (rest.isHidden !== undefined) updateData.isHidden = rest.isHidden;
+    if (rest.hideInStoryDetail !== undefined)
+      updateData.hideInStoryDetail = rest.hideInStoryDetail;
+    if (rest.hideInStoryList !== undefined)
+      updateData.hideInStoryList = rest.hideInStoryList;
     if (rest.backgroundColor !== undefined)
       updateData.backgroundColor =
         rest.backgroundColor === null ? undefined : rest.backgroundColor;

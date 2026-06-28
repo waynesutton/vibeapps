@@ -150,6 +150,8 @@ export default defineSchema({
     slug: v.optional(v.string()),
     showInHeader: v.boolean(),
     isHidden: v.optional(v.boolean()),
+    hideInStoryDetail: v.optional(v.boolean()), // Hide tag only on the app detail page
+    hideInStoryList: v.optional(v.boolean()), // Hide tag only on app card lists (list/grid/vibe)
     backgroundColor: v.optional(v.string()),
     textColor: v.optional(v.string()),
     borderColor: v.optional(v.string()),

@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [Added] - 2026-06-28
 
+**Judging: Export submissions to CSV per group**
+
+- Each judging group in the Admin Judging System now has an "Export CSV" action that downloads every submission in that group.
+- The CSV includes the custom submit form info: App Title, App/Project Tagline, Description, App Website Link, Video Demo URL, GitHub, LinkedIn, Twitter/X, Chef Show, Chef App, Tags, Hackathon Team Info (team name, member count, members), submitter name, email, slug, and votes. Images are intentionally excluded.
+- Hidden, archived, rejected, or deleted stories are skipped, and empty groups show a notification instead of downloading an empty file.
+- The export is admin only and fetched on demand (no extra reactive load on the list view).
+- **Backend**: `convex/judgingGroupSubmissions.ts` (new `exportGroupSubmissions` query).
+- **Frontend**: `src/components/admin/Judging.tsx` (Export CSV button + client-side CSV builder).
+- **PRD**: `prds/judging-group-csv-export.md`
+
+### [Added] - 2026-06-28
+
+**Per-view tag visibility controls**
+
+- Admins can now hide a tag from the app detail page and the app card lists (home, category, grid, vibe) independently, on top of the existing header visibility and archive controls. This lets us hide custom submission tags (for example resendhackathon, ychackathon) from public surfaces without hardcoding names.
+- Tag Management adds two new per-tag toggles: a document icon for the detail page and a list icon for app lists. Both persist on Save and are disabled while a tag is archived.
+- New optional `hideInStoryDetail` and `hideInStoryList` fields on the tags table flow through story tag resolution so the client filters consistently.
+- **Backend**: `convex/schema.ts` (tags fields), `convex/tags.ts` (create/update), `convex/stories.ts` (tag resolution).
+- **Frontend**: `src/components/admin/TagManagement.tsx`, `src/components/StoryDetail.tsx`, `src/components/StoryList.tsx`.
+- **PRD**: `prds/tag-per-view-visibility.md`
+
+### [Added] - 2026-06-28
+
 **Judge score breakdown on results page**
 
 - When a submission has more than one judge, the Rankings section on the public judging results page now shows a collapsible toggle below each score.

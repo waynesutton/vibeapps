@@ -571,6 +571,97 @@ export const getStoryJudgingGroups = query({
   },
 });
 
+/**
+ * Export all submissions in a judging group as flat rows for CSV download (admin only).
+ * Includes custom submit form info (tags, project links, hackathon team info, title,
+ * tagline, website, video) but intentionally excludes image data.
+ */
+export const exportGroupSubmissions = query({
+  args: { groupId: v.id("judgingGroups") },
+  returns: v.array(
+    v.object({
+      title: v.string(),
+      tagline: v.string(),
+      longDescription: v.optional(v.string()),
+      url: v.string(),
+      videoUrl: v.optional(v.string()),
+      githubUrl: v.optional(v.string()),
+      linkedinUrl: v.optional(v.string()),
+      twitterUrl: v.optional(v.string()),
+      chefShowUrl: v.optional(v.string()),
+      chefAppUrl: v.optional(v.string()),
+      tags: v.string(),
+      teamName: v.optional(v.string()),
+      teamMemberCount: v.optional(v.number()),
+      teamMembers: v.string(),
+      submitterName: v.optional(v.string()),
+      email: v.optional(v.string()),
+      slug: v.string(),
+      votes: v.number(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
+
+    const submissions = await ctx.db
+      .query("judgingGroupSubmissions")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+
+    const rows = (
+      await Promise.all(
+        submissions.map(async (submission) => {
+          const story = await ctx.db.get(submission.storyId);
+          // Skip deleted, hidden, archived, or rejected stories
+          if (!isStoryValidForJudging(story)) {
+            return null;
+          }
+
+          // Resolve tag names (no images involved)
+          const tagNames = story.tagIds
+            ? (
+                await Promise.all(
+                  story.tagIds.map(async (tagId) => {
+                    const tag = await ctx.db.get(tagId);
+                    return tag?.name ?? null;
+                  }),
+                )
+              ).filter((name): name is string => name !== null)
+            : [];
+
+          // Serialize hackathon team members as "Name <email>; ..."
+          const teamMembers = (story.teamMembers || [])
+            .map((m) => `${m.name} <${m.email}>`)
+            .join("; ");
+
+          return {
+            title: story.title,
+            tagline: story.description,
+            longDescription: story.longDescription,
+            url: story.url,
+            videoUrl: story.videoUrl,
+            githubUrl: story.githubUrl,
+            linkedinUrl: story.linkedinUrl,
+            twitterUrl: story.twitterUrl,
+            chefShowUrl: story.chefShowUrl,
+            chefAppUrl: story.chefAppUrl,
+            tags: tagNames.join(", "),
+            teamName: story.teamName,
+            teamMemberCount: story.teamMemberCount,
+            teamMembers,
+            submitterName: story.submitterName,
+            email: story.email,
+            slug: story.slug,
+            votes: story.votes,
+          };
+        }),
+      )
+    ).filter((row): row is NonNullable<typeof row> => row !== null);
+
+    return rows;
+  },
+});
+
 // --- Public Functions (for judges) ---
 
 /**

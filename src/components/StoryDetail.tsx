@@ -1152,6 +1152,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     {(story.tags || []).map(
                       (tag: Doc<"tags">) =>
                         !tag.isHidden &&
+                        !tag.hideInStoryDetail &&
                         tag.name !== "resendhackathon" &&
                         tag.name !== "ychackathon" && (
                           <Link

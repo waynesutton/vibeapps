@@ -16,8 +16,15 @@ import {
   PauseCircle,
   Edit,
   FileText,
+  Download,
+  Loader2,
 } from "lucide-react";
-import { useQuery, useMutation, useConvexAuth } from "convex/react";
+import {
+  useQuery,
+  useMutation,
+  useConvexAuth,
+  useConvex,
+} from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { formatDistanceToNow } from "date-fns";
@@ -25,9 +32,12 @@ import { CreateJudgingGroupModal } from "./CreateJudgingGroupModal";
 import { EditJudgingGroupModal } from "./EditJudgingGroupModal";
 import { JudgingCriteriaEditor } from "./JudgingCriteriaEditor";
 import { JudgingResultsDashboard } from "./JudgingResultsDashboard";
+import { useDialog } from "../../hooks/useDialog";
 
 export function Judging() {
   const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
+  const convex = useConvex();
+  const { showMessage, DialogComponents } = useDialog();
 
   const groups = useQuery(
     api.judgingGroups.listGroups,
@@ -36,6 +46,8 @@ export function Judging() {
   const updateGroup = useMutation(api.judgingGroups.updateGroup);
   const deleteGroup = useMutation(api.judgingGroups.deleteGroup);
 
+  const [exportingGroupId, setExportingGroupId] =
+    useState<Id<"judgingGroups"> | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] =
     useState<Id<"judgingGroups"> | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -65,6 +77,121 @@ export function Judging() {
     } else {
       setDeleteConfirmId(groupId);
       setTimeout(() => setDeleteConfirmId(null), 5000);
+    }
+  };
+
+  // Escape a CSV cell value (handles commas, quotes, newlines)
+  const escapeCsv = (value: string): string => {
+    if (
+      value.includes(",") ||
+      value.includes('"') ||
+      value.includes("\n")
+    ) {
+      return `"${value.replace(/"/g, '""')}"`;
+    }
+    return value;
+  };
+
+  // Fetch a group's submissions on demand and download them as a CSV.
+  // Includes custom submit form info (tags, links, team info) but no images.
+  const handleExportCsv = async (
+    groupId: Id<"judgingGroups">,
+    groupName: string,
+  ) => {
+    setExportingGroupId(groupId);
+    try {
+      const rows = await convex.query(
+        api.judgingGroupSubmissions.exportGroupSubmissions,
+        { groupId },
+      );
+
+      if (!rows || rows.length === 0) {
+        showMessage(
+          "No Submissions",
+          "This judging group has no submissions to export.",
+          "warning",
+        );
+        return;
+      }
+
+      const headers = [
+        "App Title",
+        "App/Project Tagline",
+        "Description",
+        "App Website Link",
+        "Video Demo URL",
+        "GitHub",
+        "LinkedIn",
+        "Twitter/X",
+        "Chef Show URL",
+        "Chef App URL",
+        "Tags",
+        "Team Name",
+        "Team Member Count",
+        "Team Members",
+        "Submitter Name",
+        "Email",
+        "Slug",
+        "Votes",
+      ];
+
+      const csvLines = [headers.map(escapeCsv).join(",")];
+      for (const row of rows) {
+        csvLines.push(
+          [
+            row.title,
+            row.tagline,
+            row.longDescription || "",
+            row.url,
+            row.videoUrl || "",
+            row.githubUrl || "",
+            row.linkedinUrl || "",
+            row.twitterUrl || "",
+            row.chefShowUrl || "",
+            row.chefAppUrl || "",
+            row.tags,
+            row.teamName || "",
+            row.teamMemberCount !== undefined
+              ? String(row.teamMemberCount)
+              : "",
+            row.teamMembers,
+            row.submitterName || "",
+            row.email || "",
+            row.slug,
+            String(row.votes),
+          ]
+            .map(escapeCsv)
+            .join(","),
+        );
+      }
+
+      const csvContent = csvLines.join("\n");
+      const blob = new Blob([csvContent], {
+        type: "text/csv;charset=utf-8;",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const timestamp = new Date().toISOString().split("T")[0];
+      const filename = `judging-${groupName
+        .toLowerCase()
+        .replace(/\s+/g, "-")}-submissions-${timestamp}.csv`;
+      link.setAttribute("href", url);
+      link.setAttribute("download", filename);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      showMessage(
+        "Export Failed",
+        error instanceof Error
+          ? error.message
+          : "Could not export submissions. Please try again.",
+        "error",
+      );
+    } finally {
+      setExportingGroupId(null);
     }
   };
 
@@ -359,6 +486,22 @@ export function Judging() {
                         </Link>
 
                         <button
+                          onClick={() =>
+                            handleExportCsv(group._id, group.name)
+                          }
+                          disabled={exportingGroupId === group._id}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Export submissions to CSV"
+                        >
+                          {exportingGroupId === group._id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Download className="w-3.5 h-3.5" />
+                          )}
+                          <span>Export CSV</span>
+                        </button>
+
+                        <button
                           onClick={() => handleDelete(group._id)}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-600 hover:text-red-700 bg-white hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-300 transition-all font-medium"
                           title={
@@ -458,6 +601,9 @@ export function Judging() {
           groupId={editGroupId}
         />
       )}
+
+      {/* Shared design-system dialogs for notifications */}
+      <DialogComponents />
     </div>
   );
 }

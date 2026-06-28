@@ -14,6 +14,8 @@ import {
   Smile,
   ArrowUp,
   ArrowDown,
+  FileText,
+  List,
 } from "lucide-react";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -46,6 +48,8 @@ interface EditableTag
   name: string;
   showInHeader: boolean;
   isHidden?: boolean;
+  hideInStoryDetail?: boolean;
+  hideInStoryList?: boolean;
   backgroundColor?: string | null;
   textColor?: string | null;
   borderColor?: string | null;
@@ -318,6 +322,8 @@ export function TagManagement() {
       name,
       showInHeader: true, // Default
       isHidden: false, // Default
+      hideInStoryDetail: false, // Default: visible on detail page
+      hideInStoryList: false, // Default: visible on app lists
       backgroundColor: null,
       textColor: null,
       borderColor: null,
@@ -374,6 +380,24 @@ export function TagManagement() {
         setEditNameTagId(null);
         setEditIconEmojiTagId(null);
       }
+    }
+  };
+
+  const handleToggleStoryDetail = (tagId: Id<"tags">) => {
+    const currentTag = editableTags.find((t) => t._id === tagId);
+    if (currentTag) {
+      handleFieldChange(
+        tagId,
+        "hideInStoryDetail",
+        !currentTag.hideInStoryDetail,
+      );
+    }
+  };
+
+  const handleToggleStoryList = (tagId: Id<"tags">) => {
+    const currentTag = editableTags.find((t) => t._id === tagId);
+    if (currentTag) {
+      handleFieldChange(tagId, "hideInStoryList", !currentTag.hideInStoryList);
     }
   };
 
@@ -521,6 +545,8 @@ export function TagManagement() {
               .replace(/[^\w-]+/g, ""),
             showInHeader: tag.showInHeader,
             isHidden: tag.isHidden ?? false,
+            hideInStoryDetail: tag.hideInStoryDetail ?? false,
+            hideInStoryList: tag.hideInStoryList ?? false,
             backgroundColor: tag.backgroundColor ?? undefined,
             textColor: tag.textColor ?? undefined,
             borderColor: tag.borderColor ?? undefined,
@@ -543,6 +569,8 @@ export function TagManagement() {
               .replace(/[^\w-]+/g, ""),
             showInHeader: tag.showInHeader,
             isHidden: tag.isHidden,
+            hideInStoryDetail: tag.hideInStoryDetail ?? false,
+            hideInStoryList: tag.hideInStoryList ?? false,
             backgroundColor: tag.backgroundColor ?? undefined,
             textColor: tag.textColor ?? undefined,
             borderColor: tag.borderColor ?? undefined,
@@ -979,6 +1007,38 @@ export function TagManagement() {
                           )}
                         </button>
 
+                        {/* Toggle Visibility on App Detail Page */}
+                        <button
+                          onClick={() => handleToggleStoryDetail(tag._id)}
+                          className="text-[#545454] hover:text-[#525252] disabled:opacity-50 p-1 relative"
+                          title={
+                            tag.hideInStoryDetail
+                              ? "Hidden on app detail page (Click to show)"
+                              : "Visible on app detail page (Click to hide)"
+                          }
+                          disabled={isProcessing || !!tag.isHidden}
+                        >
+                          <FileText
+                            className={`w-4 h-4 ${tag.hideInStoryDetail ? "text-orange-600" : "text-green-600"}`}
+                          />
+                        </button>
+
+                        {/* Toggle Visibility on App Lists */}
+                        <button
+                          onClick={() => handleToggleStoryList(tag._id)}
+                          className="text-[#545454] hover:text-[#525252] disabled:opacity-50 p-1 relative"
+                          title={
+                            tag.hideInStoryList
+                              ? "Hidden on app lists (Click to show)"
+                              : "Visible on app lists (Click to hide)"
+                          }
+                          disabled={isProcessing || !!tag.isHidden}
+                        >
+                          <List
+                            className={`w-4 h-4 ${tag.hideInStoryList ? "text-orange-600" : "text-green-600"}`}
+                          />
+                        </button>
+
                         {/* Toggle Header Visibility */}
                         <button
                           onClick={() => handleToggleHeader(tag._id)}
@@ -1318,6 +1378,14 @@ export function TagManagement() {
               /
               <EyeOff className="w-3 h-3 inline mr-1" />: Toggle header
               visibility (only affects non-archived tags).
+            </li>
+            <li>
+              <FileText className="w-3 h-3 inline mr-1" />: Toggle visibility on
+              the app detail page.
+            </li>
+            <li>
+              <List className="w-3 h-3 inline mr-1" />: Toggle visibility on app
+              card lists (home and category pages).
             </li>
             <li>
               <Trash2 className="w-3 h-3 inline mr-1" />: Mark for deletion.

@@ -41,6 +41,8 @@ export type StoryWithDetails = Doc<"stories"> & {
     slug: string; // Ensure slug is string here, matching StoryWithDetailsPublic & tagDocValidator
     showInHeader: boolean;
     isHidden?: boolean;
+    hideInStoryDetail?: boolean;
+    hideInStoryList?: boolean;
     backgroundColor?: string;
     textColor?: string;
     // Add any other fields from tagDocValidator if they were part of the local type before and are needed
@@ -108,6 +110,8 @@ const fetchTagsAndCountsForStories = async (
         slug: string; // Explicitly string
         showInHeader: boolean;
         isHidden?: boolean;
+        hideInStoryDetail?: boolean;
+        hideInStoryList?: boolean;
         backgroundColor?: string;
         textColor?: string;
       }> = [];
@@ -121,6 +125,8 @@ const fetchTagsAndCountsForStories = async (
             slug: tag.slug, // slug is string here
             showInHeader: tag.showInHeader,
             isHidden: tag.isHidden,
+            hideInStoryDetail: tag.hideInStoryDetail,
+            hideInStoryList: tag.hideInStoryList,
             backgroundColor: tag.backgroundColor,
             textColor: tag.textColor,
           });
