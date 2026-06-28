@@ -19,8 +19,16 @@
 - `changelog.MD`: Developer-friendly change log of new features
 - `files.MD`: This file - comprehensive codebase documentation
 - `TASK.MD`: Project task and feature requirements
+- `AGENTS.md`: Project context and conventions for coding agents
+- `CLAUDE.md`: Project context for Claude-based agents
+- `skills-lock.json`: Manifest of installed agent skills and their versions
 - `llms.txt`: LLM context and training documentation
 - `robots.txt`: Search engine crawling configuration
+
+### Agent Skills (.agents/, .claude/)
+
+- `.agents/skills/`: Shared agent skills (Convex quickstart, auth setup, component creation, migration helper, performance audit, plus design and workflow skills) for consistent agent behavior
+- `.claude/skills/`: Claude-specific copies of the same Convex and tooling skills
 
 ### Product Requirements Documents (prds/)
 

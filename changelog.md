@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [Added] - 2026-06-28
 
+**Agent Skill Scaffolding (Dev Tooling)**
+
+- Added agent skill directories to the repo so coding agents share consistent project context: `.agents/skills/*` and `.claude/skills/*` (Convex quickstart, auth setup, component creation, migration helper, performance audit, plus design and workflow skills).
+- Added `AGENTS.md` and `CLAUDE.md` project context files and a `skills-lock.json` manifest.
+- Tooling only: no application code, Convex functions, or schema changes. Production build verified (`npm run build`, exit 0).
+- **Files Added**: `.agents/skills/`, `.claude/skills/`, `AGENTS.md`, `CLAUDE.md`, `skills-lock.json`
+
+### [Added] - 2026-06-28
+
 **Tag Management: Top Pagination Synced With Bottom**
 
 - Added a second pagination control to the top of the admin Tag Management list, placed next to the "Tags per page" selector. The original bottom control remains.
