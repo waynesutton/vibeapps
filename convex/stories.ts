@@ -244,7 +244,7 @@ export const listApproved = query({
 
     if (args.searchTerm && args.searchTerm.trim() !== "") {
       // Use full text search
-      let query = ctx.db.query("stories").withSearchIndex("search_all", (q) => {
+      const query = ctx.db.query("stories").withSearchIndex("search_all", (q) => {
         let builder = q.search("title", args.searchTerm!);
         builder = builder.eq("status", "approved").eq("isHidden", false);
         return builder;
@@ -370,7 +370,7 @@ export const listApproved = query({
       const isDone = endIndex >= initialFilteredStories.length;
       const continueCursor = isDone ? null : endIndex.toString();
 
-      let storiesWithDetails = await fetchTagsAndCountsForStories(
+      const storiesWithDetails = await fetchTagsAndCountsForStories(
         ctx,
         pageStories,
       );
@@ -804,8 +804,11 @@ export const submitAnonymous = mutation({
 });
 
 // Mutation to generate upload URL for screenshots
-export const generateUploadUrl = mutation(async (ctx) => {
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
   return await ctx.storage.generateUploadUrl();
+}
 });
 
 // Renamed vote to voteStory - Fixed: Removed read before write to avoid conflicts
@@ -1769,7 +1772,7 @@ export const listAllStoriesAdmin = query({
 
     if (args.searchTerm && args.searchTerm.trim() !== "") {
       const searchTerm = args.searchTerm.trim();
-      let query = ctx.db.query("stories").withSearchIndex("search_all", (q) => {
+      const query = ctx.db.query("stories").withSearchIndex("search_all", (q) => {
         let builder = q.search("title", searchTerm);
         if (args.filters.status) {
           builder = builder.eq("status", args.filters.status);
@@ -1805,7 +1808,7 @@ export const listAllStoriesAdmin = query({
         initialStories = initialStories.filter((s) => s.isArchived !== true);
       }
     } else {
-      let query = ctx.db.query("stories");
+      const query = ctx.db.query("stories");
       // Rely on filter for combined criteria
       initialStories = await query
         .filter((q) => {

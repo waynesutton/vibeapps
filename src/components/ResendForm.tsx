@@ -6,9 +6,8 @@ import { Id, Doc } from "../../convex/_generated/dataModel";
 import { Github, Plus, X } from "lucide-react";
 import { SignUpButton } from "@clerk/clerk-react";
 
-interface Tag extends Doc<"tags"> {
-  // Inherits _id, _creationTime, name, showInHeader, isHidden?, backgroundColor?, textColor?
-}
+// Inherits _id, _creationTime, name, showInHeader, isHidden?, backgroundColor?, textColor?
+type Tag = Doc<"tags">;
 
 export function ResendForm() {
   const navigate = useNavigate();
@@ -180,6 +179,8 @@ export function ResendForm() {
           </p>
         </div>
 
+        {/* Form intentionally hidden (hackathon closed); kept for re-enable. */}
+        {/* eslint-disable-next-line no-constant-binary-expression */}
         {false && (
           <form onSubmit={handleSubmit} className="space-y-6">
             <h2 className="text-2xl font-bold text-[#292929]">

@@ -76,7 +76,7 @@ export const handleClerkWebhook = internalAction({
     // Handle different event types
     switch (event.type) {
       case "user.created":
-      case "user.updated":
+      case "user.updated": {
         console.log(`Received Clerk webhook: ${event.type}`, event.data.id);
         const userData = event.data; // This is the Clerk User object
 
@@ -104,6 +104,7 @@ export const handleClerkWebhook = internalAction({
           publicMetadata: userData.public_metadata,
         });
         break;
+      }
       // TODO: Handle 'user.deleted' if needed
       // case "user.deleted":
       //   console.log("User deleted event:", event.data.id);

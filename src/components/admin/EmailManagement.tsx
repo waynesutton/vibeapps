@@ -34,7 +34,20 @@ export function EmailManagement() {
   const [selectedUsers, setSelectedUsers] = useState<
     Array<{ _id: string; name?: string; email: string }>
   >([]);
-  const [sendToAll, setSendToAll] = useState(true);
+  // Recipient targeting: all subscribers, hand-picked users, or everyone who used a tag
+  const [recipientMode, setRecipientMode] = useState<"all" | "selected" | "tag">(
+    "all",
+  );
+  const [selectedTagId, setSelectedTagId] = useState<string>("");
+  // Search box for finding a tag in the tag-broadcast selector
+  const [tagSearchQuery, setTagSearchQuery] = useState<string>("");
+  // Which submission statuses count toward the tag broadcast (default: all)
+  type SubmissionStatus = "pending" | "approved" | "rejected";
+  const [tagStatuses, setTagStatuses] = useState<SubmissionStatus[]>([
+    "pending",
+    "approved",
+    "rejected",
+  ]);
 
   // Dialog states
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -84,6 +97,9 @@ export function EmailManagement() {
   const sendBroadcastToSelectedMutation = useMutation(
     api.emails.broadcast.sendBroadcastToSelected,
   );
+  const sendBroadcastToTagMutation = useMutation(
+    api.emails.broadcast.sendBroadcastToTag,
+  );
   const fixMissingEmailsMutation = useMutation(api.users.fixMissingEmails);
   const forceRefreshUserMutation = useMutation(
     api.users.forceRefreshCurrentUser,
@@ -117,6 +133,25 @@ export function EmailManagement() {
   // Debug: Get all users to see what's in the database
   const debugUsers = useQuery(api.emails.broadcast.debugUsers, {});
 
+  // Tags for tag-based broadcast targeting
+  const allTags = useQuery(api.tags.listAllAdmin, {});
+  // Live recipient count for the selected tag (skips until a tag is chosen)
+  const tagRecipientCount = useQuery(
+    api.emails.broadcast.countUsersByTag,
+    recipientMode === "tag" && selectedTagId
+      ? { tagId: selectedTagId as any, statuses: tagStatuses }
+      : "skip",
+  );
+
+  // Toggle a submission status in the tag broadcast filter
+  const toggleTagStatus = (status: SubmissionStatus) => {
+    setTagStatuses((prev) =>
+      prev.includes(status)
+        ? prev.filter((s) => s !== status)
+        : [...prev, status],
+    );
+  };
+
   const handleToggleEmails = async () => {
     setEmailToggling(true);
     setError(null);
@@ -142,10 +177,20 @@ export function EmailManagement() {
       return;
     }
 
-    if (!sendToAll && selectedUsers.length === 0) {
+    if (recipientMode === "selected" && selectedUsers.length === 0) {
       setError(
         "Please select at least one user or choose 'Send to All Users'.",
       );
+      return;
+    }
+
+    if (recipientMode === "tag" && !selectedTagId) {
+      setError("Please select a tag to send to.");
+      return;
+    }
+
+    if (recipientMode === "tag" && tagStatuses.length === 0) {
+      setError("Please select at least one submission status.");
       return;
     }
 
@@ -154,10 +199,17 @@ export function EmailManagement() {
 
     try {
       let result;
-      if (sendToAll) {
+      if (recipientMode === "all") {
         result = await sendBroadcastMutation({
           subject: broadcastSubject.trim(),
           htmlContent: broadcastContent.trim(),
+        });
+      } else if (recipientMode === "tag") {
+        result = await sendBroadcastToTagMutation({
+          subject: broadcastSubject.trim(),
+          htmlContent: broadcastContent.trim(),
+          tagId: selectedTagId as any,
+          statuses: tagStatuses,
         });
       } else {
         result = await sendBroadcastToSelectedMutation({
@@ -173,6 +225,8 @@ export function EmailManagement() {
         setBroadcastContent("");
         setSelectedUsers([]);
         setSearchQuery("");
+        setSelectedTagId("");
+        setTagSearchQuery("");
         setTimeout(() => setBroadcastSuccess(false), 5000);
       } else {
         setError("Failed to send broadcast email. Please try again.");
@@ -648,8 +702,8 @@ export function EmailManagement() {
                 <label className="flex items-center gap-2">
                   <input
                     type="radio"
-                    checked={sendToAll}
-                    onChange={() => setSendToAll(true)}
+                    checked={recipientMode === "all"}
+                    onChange={() => setRecipientMode("all")}
                     className="text-[#292929] focus:ring-[#292929]"
                     disabled={isSendingBroadcast}
                   />
@@ -662,8 +716,8 @@ export function EmailManagement() {
                 <label className="flex items-center gap-2">
                   <input
                     type="radio"
-                    checked={!sendToAll}
-                    onChange={() => setSendToAll(false)}
+                    checked={recipientMode === "selected"}
+                    onChange={() => setRecipientMode("selected")}
                     className="text-[#292929] focus:ring-[#292929]"
                     disabled={isSendingBroadcast}
                   />
@@ -672,8 +726,145 @@ export function EmailManagement() {
                   </span>
                 </label>
               </div>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    checked={recipientMode === "tag"}
+                    onChange={() => setRecipientMode("tag")}
+                    className="text-[#292929] focus:ring-[#292929]"
+                    disabled={isSendingBroadcast}
+                  />
+                  <span className="text-sm text-[#525252]">
+                    Send to everyone who used a tag
+                  </span>
+                </label>
+              </div>
 
-              {!sendToAll && (
+              {recipientMode === "tag" && (
+                <div className="ml-6 space-y-3">
+                  {/* Tag search + select */}
+                  {(() => {
+                    const selectedTag = allTags?.find(
+                      (t) => t._id === selectedTagId,
+                    );
+                    const term = tagSearchQuery.toLowerCase().trim();
+                    const filteredTags = (allTags ?? [])
+                      .filter((t) => t.name.toLowerCase().includes(term))
+                      .slice(0, 10);
+
+                    if (selectedTag) {
+                      // Show the chosen tag as a removable chip
+                      return (
+                        <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-800 rounded-full text-sm w-fit">
+                          <span>
+                            {selectedTag.name}
+                            {selectedTag.isHidden ? " (hidden)" : ""}
+                          </span>
+                          <button
+                            onClick={() => {
+                              setSelectedTagId("");
+                              setTagSearchQuery("");
+                            }}
+                            className="hover:text-blue-600"
+                            disabled={isSendingBroadcast}
+                            title="Change tag"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="relative">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <input
+                            type="text"
+                            value={tagSearchQuery}
+                            onChange={(e) => setTagSearchQuery(e.target.value)}
+                            placeholder="Search tags by name..."
+                            className="w-full pl-10 pr-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
+                            disabled={isSendingBroadcast || allTags === undefined}
+                          />
+                        </div>
+
+                        {/* Results dropdown */}
+                        {tagSearchQuery.trim().length >= 1 &&
+                          filteredTags.length > 0 && (
+                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md max-h-48 overflow-y-auto">
+                              {filteredTags.map((tag) => (
+                                <button
+                                  key={tag._id}
+                                  onClick={() => {
+                                    setSelectedTagId(tag._id);
+                                    setTagSearchQuery("");
+                                  }}
+                                  className="w-full px-3 py-2 text-left hover:bg-gray-50 text-sm text-[#292929]"
+                                >
+                                  {tag.name}
+                                  {tag.isHidden ? (
+                                    <span className="text-xs text-gray-400">
+                                      {" "}
+                                      (hidden)
+                                    </span>
+                                  ) : null}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                        {tagSearchQuery.trim().length >= 1 &&
+                          allTags !== undefined &&
+                          filteredTags.length === 0 && (
+                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md px-3 py-2 text-xs text-gray-500">
+                              No tags match "{tagSearchQuery}".
+                            </div>
+                          )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Submission status filter */}
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">
+                      Include submission statuses:
+                    </div>
+                    <div className="flex items-center gap-4">
+                      {(["pending", "approved", "rejected"] as const).map(
+                        (status) => (
+                          <label
+                            key={status}
+                            className="flex items-center gap-2"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={tagStatuses.includes(status)}
+                              onChange={() => toggleTagStatus(status)}
+                              className="text-[#292929] focus:ring-[#292929]"
+                              disabled={isSendingBroadcast}
+                            />
+                            <span className="text-sm text-[#525252] capitalize">
+                              {status}
+                            </span>
+                          </label>
+                        ),
+                      )}
+                    </div>
+                  </div>
+
+                  {selectedTagId && (
+                    <div className="text-xs text-gray-500">
+                      {tagRecipientCount === undefined
+                        ? "Counting recipients..."
+                        : `${tagRecipientCount} subscribed user${tagRecipientCount !== 1 ? "s" : ""} authored a matching submission with this tag.`}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {recipientMode === "selected" && (
                 <div className="ml-6 space-y-3">
                   {/* User Search */}
                   <div className="relative">
@@ -812,16 +1003,20 @@ export function EmailManagement() {
               )}
               {isSendingBroadcast
                 ? "Sending..."
-                : sendToAll
+                : recipientMode === "all"
                   ? "Send to All Users"
-                  : `Send to ${selectedUsers.length} Selected User${selectedUsers.length !== 1 ? "s" : ""}`}
+                  : recipientMode === "tag"
+                    ? `Send to Tag${tagRecipientCount !== undefined && selectedTagId ? ` (${tagRecipientCount})` : ""}`
+                    : `Send to ${selectedUsers.length} Selected User${selectedUsers.length !== 1 ? "s" : ""}`}
             </button>
 
             <div className="text-sm text-gray-600">
               <AlertCircle className="w-4 h-4 inline mr-1" />
-              {sendToAll
+              {recipientMode === "all"
                 ? "This will send to all users who haven't unsubscribed"
-                : `This will send to ${selectedUsers.length} selected user${selectedUsers.length !== 1 ? "s" : ""}`}
+                : recipientMode === "tag"
+                  ? "This will send to everyone who used the selected tag"
+                  : `This will send to ${selectedUsers.length} selected user${selectedUsers.length !== 1 ? "s" : ""}`}
             </div>
           </div>
         </div>

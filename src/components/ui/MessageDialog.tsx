@@ -17,10 +17,6 @@ const MessageDialog: React.FC<MessageDialogProps> = ({
   variant = "info",
   buttonText = "OK",
 }) => {
-  if (!isOpen) {
-    return null;
-  }
-
   const handleOverlayClick = (
     e: React.MouseEvent<HTMLDivElement, MouseEvent>,
   ) => {
@@ -47,6 +43,11 @@ const MessageDialog: React.FC<MessageDialogProps> = ({
       return () => document.removeEventListener("keydown", handleGlobalKeyDown);
     }
   }, [isOpen, onClose]);
+
+  // Hooks must run unconditionally; bail out after them.
+  if (!isOpen) {
+    return null;
+  }
 
   const getVariantStyles = () => {
     switch (variant) {

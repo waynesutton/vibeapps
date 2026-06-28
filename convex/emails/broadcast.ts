@@ -7,6 +7,7 @@ import {
 } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
+import { Id } from "../_generated/dataModel";
 import { requireAdminRole } from "../users";
 
 /**
@@ -215,6 +216,293 @@ export const sendBroadcast = mutation({
       totalRecipients: 0, // Will be updated when action runs
       successCount: 0,
       failureCount: 0,
+    };
+  },
+});
+
+// Status filter for tag-based broadcasts (which submission statuses to include)
+const tagStatusValidator = v.array(
+  v.union(
+    v.literal("pending"),
+    v.literal("approved"),
+    v.literal("rejected"),
+  ),
+);
+
+/**
+ * Count subscribed users who authored a story using the given tag.
+ * Public (admin) query so the dashboard can preview the recipient count.
+ * `statuses` limits which submission statuses count; empty means all.
+ */
+export const countUsersByTag = query({
+  args: {
+    tagId: v.id("tags"),
+    statuses: v.optional(tagStatusValidator),
+  },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
+
+    const statusFilter = args.statuses ?? [];
+    // Collect distinct authors of stories that include this tag (and match status)
+    const stories = await ctx.db.query("stories").collect();
+    const userIds = new Set<Id<"users">>();
+    for (const story of stories) {
+      if (
+        story.userId &&
+        story.tagIds.includes(args.tagId) &&
+        (statusFilter.length === 0 || statusFilter.includes(story.status))
+      ) {
+        userIds.add(story.userId);
+      }
+    }
+
+    // Count only users with an email who haven't unsubscribed
+    let count = 0;
+    for (const userId of userIds) {
+      const user = await ctx.db.get(userId);
+      if (!user || !user.email) continue;
+      const settings = await ctx.db
+        .query("emailSettings")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .unique();
+      if (settings?.unsubscribedAt) continue;
+      count++;
+    }
+    return count;
+  },
+});
+
+/**
+ * Internal: distinct, subscribed users who authored a story using a tag.
+ */
+export const getUsersByTag = internalQuery({
+  args: {
+    tagId: v.id("tags"),
+    statuses: v.optional(tagStatusValidator),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("users"),
+      email: v.string(),
+      name: v.optional(v.string()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const statusFilter = args.statuses ?? [];
+    const stories = await ctx.db.query("stories").collect();
+    const userIds = new Set<Id<"users">>();
+    for (const story of stories) {
+      if (
+        story.userId &&
+        story.tagIds.includes(args.tagId) &&
+        (statusFilter.length === 0 || statusFilter.includes(story.status))
+      ) {
+        userIds.add(story.userId);
+      }
+    }
+
+    const result: Array<{
+      _id: Id<"users">;
+      email: string;
+      name?: string;
+    }> = [];
+    for (const userId of userIds) {
+      const user = await ctx.db.get(userId);
+      if (!user || !user.email) continue;
+
+      const settings = await ctx.db
+        .query("emailSettings")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .unique();
+      if (settings?.unsubscribedAt) continue;
+
+      result.push({ _id: user._id, email: user.email, name: user.name });
+    }
+    return result;
+  },
+});
+
+/**
+ * Public mutation for admins to broadcast to everyone who used a tag.
+ */
+export const sendBroadcastToTag = mutation({
+  args: {
+    subject: v.string(),
+    htmlContent: v.string(),
+    tagId: v.id("tags"),
+    statuses: v.optional(tagStatusValidator),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    totalRecipients: v.number(),
+    successCount: v.number(),
+    failureCount: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
+
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Authentication required");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Schedule the send (mutations can't call actions directly)
+    await ctx.scheduler.runAfter(
+      0,
+      internal.emails.broadcast.sendBroadcastToTagUsers,
+      {
+        subject: args.subject,
+        htmlContent: args.htmlContent,
+        tagId: args.tagId,
+        statuses: args.statuses,
+        adminUserId: user._id,
+      },
+    );
+
+    return {
+      success: true,
+      totalRecipients: 0,
+      successCount: 0,
+      failureCount: 0,
+    };
+  },
+});
+
+/**
+ * Send broadcast email to all subscribed users who used a tag.
+ */
+export const sendBroadcastToTagUsers = internalAction({
+  args: {
+    subject: v.string(),
+    htmlContent: v.string(),
+    tagId: v.id("tags"),
+    statuses: v.optional(tagStatusValidator),
+    adminUserId: v.id("users"),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    totalRecipients: v.number(),
+    successCount: v.number(),
+    failureCount: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const users: Array<{
+      _id: any;
+      email: string;
+      name?: string;
+    }> = await ctx.runQuery(internal.emails.broadcast.getUsersByTag, {
+      tagId: args.tagId,
+      statuses: args.statuses,
+    });
+
+    if (users.length === 0) {
+      return {
+        success: true,
+        totalRecipients: 0,
+        successCount: 0,
+        failureCount: 0,
+      };
+    }
+
+    // Create broadcast record for tracking
+    const broadcastId: any = await ctx.runMutation(
+      internal.emails.broadcast.createBroadcastRecord,
+      {
+        createdBy: args.adminUserId,
+        subject: args.subject,
+        html: args.htmlContent,
+        totalRecipients: users.length,
+      },
+    );
+
+    let successCount = 0;
+    let failureCount = 0;
+
+    // Send in batches to respect rate limits
+    const batchSize = 10;
+    for (let i = 0; i < users.length; i += batchSize) {
+      const batch = users.slice(i, i + batchSize);
+
+      for (const user of batch) {
+        try {
+          const unsubscribeToken = await ctx.runMutation(
+            internal.emails.linkHelpers.generateUnsubscribeToken,
+            {
+              userId: user._id,
+              purpose: "all",
+            },
+          );
+
+          const userWithDetails = await ctx.runQuery(
+            internal.emails.queries.getUserWithEmail,
+            { userId: user._id },
+          );
+
+          const emailTemplate = await ctx.runQuery(
+            internal.emails.templates.generateBroadcastEmail,
+            {
+              subject: args.subject,
+              content: args.htmlContent,
+              userId: user._id,
+              userName: user.name || "User",
+              userUsername: userWithDetails?.username,
+              unsubscribeToken,
+            },
+          );
+
+          const result = await ctx.runAction(internal.emails.resend.sendEmail, {
+            to: user.email,
+            subject: emailTemplate.subject,
+            html: emailTemplate.html,
+            emailType: "admin_broadcast",
+            userId: user._id,
+            unsubscribeToken,
+            metadata: {
+              broadcastId,
+              adminUserId: args.adminUserId,
+              tagId: args.tagId,
+            },
+          });
+
+          if (result.success) {
+            successCount++;
+          } else {
+            failureCount++;
+          }
+        } catch (error) {
+          console.error(
+            `Failed to send tag broadcast email to ${user.email}:`,
+            error,
+          );
+          failureCount++;
+        }
+      }
+
+      if (i + batchSize < users.length) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+
+    await ctx.runMutation(internal.emails.broadcast.updateBroadcastRecord, {
+      broadcastId,
+      sentCount: successCount,
+      status: "completed",
+    });
+
+    return {
+      success: true,
+      totalRecipients: users.length,
+      successCount,
+      failureCount,
     };
   },
 });

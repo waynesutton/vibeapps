@@ -26,11 +26,6 @@ export function ImageGallery({
     setCurrentIndex(0);
   }, [mainImageUrl, additionalImageUrls]);
 
-  // Don't render anything if no images
-  if (allImages.length === 0) {
-    return null;
-  }
-
   const handleThumbnailClick = (index: number) => {
     setCurrentIndex(index);
   };
@@ -82,6 +77,11 @@ export function ImageGallery({
       modal.focus();
     }
   }, [isModalOpen]);
+
+  // Hooks must run unconditionally; bail out after them.
+  if (allImages.length === 0) {
+    return null;
+  }
 
   const currentImage = allImages[currentIndex];
 

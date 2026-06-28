@@ -3,6 +3,21 @@ import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { requireAdminRole, isUserAdmin } from "./users";
 
+// Validator for admin-selectable required fields on the custom submission form.
+// Each key is optional; unset keys fall back to defaults on the public page.
+const submissionFieldRequirementsValidator = v.object({
+  title: v.optional(v.boolean()),
+  tagline: v.optional(v.boolean()),
+  longDescription: v.optional(v.boolean()),
+  url: v.optional(v.boolean()),
+  githubUrl: v.optional(v.boolean()),
+  videoUrl: v.optional(v.boolean()),
+  screenshot: v.optional(v.boolean()),
+  submitterName: v.optional(v.boolean()),
+  email: v.optional(v.boolean()),
+  tags: v.optional(v.boolean()),
+});
+
 // Helper to generate slugs (consistent with existing forms.ts)
 function generateSlug(name: string): string {
   return name
@@ -217,6 +232,7 @@ export const updateGroup = mutation({
     submissionFormTitle: v.optional(v.union(v.string(), v.null())),
     submissionFormSubtitle: v.optional(v.union(v.string(), v.null())),
     submissionFormRequiredTagId: v.optional(v.union(v.id("tags"), v.null())),
+    submissionFieldRequirements: v.optional(submissionFieldRequirementsValidator),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -391,6 +407,7 @@ export const getGroupWithDetails = query({
       submissionFormTitle: v.optional(v.string()),
       submissionFormSubtitle: v.optional(v.string()),
       submissionFormRequiredTagId: v.optional(v.id("tags")),
+      submissionFieldRequirements: v.optional(submissionFieldRequirementsValidator),
       criteria: v.array(
         v.object({
           _id: v.id("judgingCriteria"),
@@ -471,6 +488,7 @@ export const getGroupWithDetails = query({
       submissionFormTitle: group.submissionFormTitle,
       submissionFormSubtitle: group.submissionFormSubtitle,
       submissionFormRequiredTagId: group.submissionFormRequiredTagId,
+      submissionFieldRequirements: group.submissionFieldRequirements,
       criteria,
       submissionCount,
       judgeCount,
@@ -658,6 +676,7 @@ export const getSubmissionPage = query({
       submissionFormTitle: v.optional(v.string()),
       submissionFormSubtitle: v.optional(v.string()),
       submissionFormRequiredTagId: v.optional(v.id("tags")),
+      submissionFieldRequirements: v.optional(submissionFieldRequirementsValidator),
     }),
   ),
   handler: async (ctx, args) => {
@@ -699,6 +718,7 @@ export const getSubmissionPage = query({
       submissionFormTitle: group.submissionFormTitle,
       submissionFormSubtitle: group.submissionFormSubtitle,
       submissionFormRequiredTagId: group.submissionFormRequiredTagId,
+      submissionFieldRequirements: group.submissionFieldRequirements,
     };
   },
 });

@@ -1308,7 +1308,7 @@ export default function JudgingInterfacePage() {
 
                         // YouTube URL patterns (including Shorts)
                         const youtubeMatch = url.match(
-                          /(?:youtube\.com\/(?:shorts\/|[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/,
+                          /(?:youtube\.com\/(?:shorts\/|[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/,
                         );
                         if (youtubeMatch) {
                           const videoId = youtubeMatch[1];

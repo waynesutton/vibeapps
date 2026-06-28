@@ -28,7 +28,7 @@ export default async (request: Request, context: any) => {
     if (!isBot) return context.next();
 
     // Extract slug from /judging/{slug}/submit
-    const match = url.pathname.match(/^\/judging\/([^\/]+)\/submit$/);
+    const match = url.pathname.match(/^\/judging\/([^/]+)\/submit$/);
     if (!match) return fetch(request);
     const slug = match[1];
 

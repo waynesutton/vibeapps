@@ -393,7 +393,7 @@ export const generateEngagementEmail = internalQuery({
         <h3 style="margin-top: 0; color: #292929;">Your post has been featured</h3>
         <ul style="list-style: none; padding: 0;">
           ${args.pinnedStories
-            .map((p) => `<li style=\"margin: 6px 0;\">• ${p.storyTitle}</li>`)
+            .map((p) => `<li style="margin: 6px 0;">• ${p.storyTitle}</li>`)
             .join("")}
         </ul>
       </div>
@@ -407,7 +407,7 @@ export const generateEngagementEmail = internalQuery({
         <h3 style="margin-top: 0; color: #292929;">Your post has a custom message from admin</h3>
         <ul style="list-style: none; padding: 0;">
           ${args.adminMessages
-            .map((m) => `<li style=\"margin: 6px 0;\">• ${m.storyTitle}</li>`)
+            .map((m) => `<li style="margin: 6px 0;">• ${m.storyTitle}</li>`)
             .join("")}
         </ul>
       </div>

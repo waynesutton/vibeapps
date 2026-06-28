@@ -9,9 +9,8 @@ import { SignUpButton } from "@clerk/clerk-react";
 // NOTE: DO NOT import or use WeeklyLeaderboard or TopCategoriesOfWeek components in this form
 // This is a dedicated hackathon submission form and should remain focused on form functionality only
 
-interface Tag extends Doc<"tags"> {
-  // Inherits _id, _creationTime, name, showInHeader, isHidden?, backgroundColor?, textColor?
-}
+// Inherits _id, _creationTime, name, showInHeader, isHidden?, backgroundColor?, textColor?
+type Tag = Doc<"tags">;
 
 export function YCHackForm() {
   const navigate = useNavigate();

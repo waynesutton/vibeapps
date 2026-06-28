@@ -1,4 +1,4 @@
-import { components, internal } from "./_generated/api";
+import { components } from "./_generated/api";
 import { Resend } from "@convex-dev/resend";
 import {
   internalMutation,
@@ -25,7 +25,7 @@ export const sendTestEmail = mutation({
     await requireAdminRole(ctx);
 
     try {
-      const result = await resend.sendEmail(ctx, {
+      await resend.sendEmail(ctx, {
         from: "VibeApps Updates <alerts@updates.vibeapps.dev>",
         to: args.to,
         subject: "VibeApps Updates: Test email from admin",
@@ -62,7 +62,7 @@ export const sendTestEmailInternal = internalMutation({
   }),
   handler: async (ctx, args) => {
     try {
-      const result = await resend.sendEmail(ctx, {
+      await resend.sendEmail(ctx, {
         from: "VibeApps Updates <alerts@updates.vibeapps.dev>",
         to: args.to || "wayne@convex.dev", // Default to your email
         subject: "VibeApps Updates: Test email from admin",

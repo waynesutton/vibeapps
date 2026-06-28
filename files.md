@@ -9,7 +9,7 @@
 - `vite.config.ts`: `Vite` build tool configuration
 - `tailwind.config.js`: Tailwind CSS styling configuration
 - `postcss.config.js`: PostCSS configuration for CSS processing
-- `eslint.config.js`: ESLint code quality and style configuration
+- `eslint.config.js`: ESLint code quality and style configuration (flat config; includes `@convex-dev/eslint-plugin` recommended rules for Convex best practices)
 - `components.json`: `shadcn/ui` components configuration
 - `bun.lockb`: Bun package manager lock file
 
@@ -106,14 +106,14 @@ All PRD files are now organized in the `prds/` folder for better project structu
 ### Email System (Resend Integration) ✅ FULLY IMPLEMENTED
 
 - `convex/emails/templates.ts`: Email templates for all email types (admin, welcome, engagement, weekly, mentions, admin reports)
-- `convex/emails/resend.ts`: Core email sending with Resend API, logging, and global kill switch
+- `convex/emails/resend.ts`: Core email sending with Resend API, logging, and global kill switch (applies to all email types, including admin reports)
 - `convex/emails/daily.ts`: Daily metrics calculation and user engagement processing with fixed validators
 - `convex/emails/weekly.ts`: Weekly digest computation and sending functionality
 - `convex/emails/welcome.ts`: Welcome email integration for new user onboarding
 - `convex/emails/reports.ts`: Admin report notification emails with immediate delivery for content moderation
 - `convex/emails/queries.ts`: V8 runtime queries for email data (separated from Node.js actions)
 - `convex/emails/helpers.ts`: Helper queries for email processing and data fetching
-- `convex/emails/broadcast.ts`: Admin broadcast email system with user search and batch processing
+- `convex/emails/broadcast.ts`: Admin broadcast email system with user search, tag-based targeting (send to everyone who used a tag, filterable by submission status), recipient counts, and batch processing
 - `convex/sendEmails.ts`: Convex Resend Component wrapper with subject prefix and from address enforcement
 - `convex/emailSettings.ts`: User email preferences management with unsubscribe functionality
 - `convex/testDailyEmail.ts`: Admin testing functions for daily/weekly email triggers with clear logs utility
@@ -171,11 +171,11 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/components/admin/AdminDashboard.tsx`: Main admin dashboard overview with comprehensive navigation including Email Management tab
 - `src/components/admin/ContentModeration.tsx`: Content approval/rejection interface with image management
 - `src/components/admin/UserModeration.tsx`: User management, verification, and ban/pause functionality
-- `src/components/admin/TagManagement.tsx`: Tag creation and customization with colors, emojis, and ordering
+- `src/components/admin/TagManagement.tsx`: Tag creation and customization with colors, emojis, and ordering. Save and drag-and-drop reorder persist only changed tags in parallel (fast with large tag sets); includes paginated list with selectable page size (5-200), synced top and bottom pagination controls, and search across all tags
 - `src/components/admin/Settings.tsx`: Site-wide settings configuration with view mode controls
 - `src/components/admin/NumbersView.tsx`: Analytics and metrics dashboard with detailed tracking
 - `src/components/admin/ReportManagement.tsx`: User report review and resolution with status tracking and email notification integration
-- `src/components/admin/EmailManagement.tsx`: Complete email system management with global toggle, broadcast emails, user search, testing tools, and admin alert configuration
+- `src/components/admin/EmailManagement.tsx`: Complete email system management with global toggle, broadcast emails (all users, selected users, or everyone who used a tag), user search, testing tools, and admin alert configuration
 - `src/components/admin/SubmitFormFieldManagement.tsx`: Manage fields for a specific submit form
 - `src/components/admin/CreateSubmitFormModal.tsx`: Modal to create new submit forms
 - `src/components/admin/EditSubmitFormModal.tsx`: Modal to edit existing submit forms
@@ -194,7 +194,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 - `src/components/admin/Judging.tsx`: Main judging group management interface with comprehensive controls
 - `src/components/admin/CreateJudgingGroupModal.tsx`: Judging group creation modal with password protection
-- `src/components/admin/EditJudgingGroupModal.tsx`: Comprehensive editing modal for judging group settings including access controls, custom submission page configuration, password management, and all group settings
+- `src/components/admin/EditJudgingGroupModal.tsx`: Comprehensive editing modal for judging group settings including access controls, custom submission page configuration, admin-selectable required submission fields, password management, and all group settings
 - `src/components/admin/JudgingCriteriaEditor.tsx`: Scoring criteria management with 1-10 star ratings
 - `src/components/admin/JudgingResultsDashboard.tsx`: Admin results and analytics with CSV export
 - `src/components/admin/JudgeTracking.tsx`: Comprehensive judge tracking dashboard with breadcrumb navigation, Stats Overview, Judge Activity section with expandable judge details and score moderation tools, Judge Scores & Comments tabbed interface showing detailed scoring per judge with submission grouping, floating scroll buttons, notes viewing, and CSV export of comprehensive judge activity data
@@ -228,6 +228,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/pages/UserProfilePage.tsx`: User profile display and management with email preferences and unsubscribe functionality
 - `src/pages/TagPage.tsx`: Tag-specific app listings
 - `src/pages/JudgingGroupPage.tsx`: Judge interface for scoring submissions with session management
+- `src/pages/JudgingGroupSubmitPage.tsx`: Public custom submission page for a judging group (Luma-style layout) with password gating, configurable layout, locked required tag, and admin-selectable required fields
 - `src/pages/JudgingInterfacePage.tsx`: Individual submission judging interface with comprehensive filtering (tag dropdown, judged status filter), search functionality, group-wide progress tracking, edit permissions based on completion status, read-only views of others' completed submissions, and @mention autocomplete in notes. Filters work together to help judges find specific submissions efficiently.
 - `src/pages/PublicJudgingResultsPage.tsx`: Public judging results page with password protection
 - `src/pages/NotificationsPage.tsx`: User notifications page with comprehensive alert system for all interaction types

@@ -10,6 +10,42 @@ import { Markdown } from "../components/Markdown";
 import { useAuth } from "@clerk/clerk-react";
 import { Link } from "react-router-dom";
 
+// Default required state for each configurable submission field.
+// Mirrors the admin defaults in EditJudgingGroupModal.
+const DEFAULT_FIELD_REQUIREMENTS = {
+  title: true,
+  tagline: true,
+  longDescription: false,
+  url: true,
+  githubUrl: false,
+  videoUrl: false,
+  screenshot: true,
+  submitterName: true,
+  email: false,
+  tags: true,
+} as const;
+
+type SubmissionFieldRequirements = {
+  [K in keyof typeof DEFAULT_FIELD_REQUIREMENTS]: boolean;
+};
+
+// Merge stored (partial) requirements over the defaults so unset keys keep defaults.
+function resolveRequirements(
+  stored?: Partial<SubmissionFieldRequirements> | null,
+): SubmissionFieldRequirements {
+  const result: SubmissionFieldRequirements = { ...DEFAULT_FIELD_REQUIREMENTS };
+  if (stored) {
+    (Object.keys(result) as Array<keyof SubmissionFieldRequirements>).forEach(
+      (key) => {
+        if (typeof stored[key] === "boolean") {
+          result[key] = stored[key] as boolean;
+        }
+      },
+    );
+  }
+  return result;
+}
+
 export function JudgingGroupSubmitPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -272,6 +308,9 @@ export function JudgingGroupSubmitPage() {
                     <SubmissionFormContent
                       judgingGroupId={submissionPage._id}
                       requiredTagId={submissionPage.submissionFormRequiredTagId}
+                      fieldRequirements={resolveRequirements(
+                        submissionPage.submissionFieldRequirements,
+                      )}
                       onSuccess={() => {
                         setShowSuccess(true);
                         // Redirect to homepage after 2.5 seconds
@@ -314,12 +353,15 @@ export function JudgingGroupSubmitPage() {
 function SubmissionFormContent({
   judgingGroupId,
   requiredTagId,
+  fieldRequirements,
   onSuccess,
 }: {
   judgingGroupId: Id<"judgingGroups">;
   requiredTagId?: Id<"tags"> | null;
+  fieldRequirements: SubmissionFieldRequirements;
   onSuccess: () => void;
 }) {
+  const req = fieldRequirements;
   const submit = useMutation(api.stories.submit);
   const generateUploadUrl = useMutation(api.stories.generateUploadUrl);
   const availableTags = useQuery(api.tags.listHeader); // Only show header tags
@@ -459,6 +501,13 @@ function SubmissionFormContent({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    // Enforce tag requirement (custom selector cannot use HTML required)
+    if (req.tags && selectedTagIds.length === 0 && newTagNames.length === 0) {
+      setError("Please select or add at least one tag.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -538,7 +587,7 @@ function SubmissionFormContent({
       {/* App Title */}
       <div>
         <label className="block text-sm font-medium text-[#525252] mb-1">
-          App Title*
+          App Title{req.title ? "*" : " (Optional)"}
         </label>
         <input
           type="text"
@@ -548,7 +597,7 @@ function SubmissionFormContent({
           }
           placeholder="Site name"
           className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
-          required
+          required={req.title}
           disabled={isSubmitting}
         />
       </div>
@@ -556,7 +605,7 @@ function SubmissionFormContent({
       {/* Tagline */}
       <div>
         <label className="block text-sm font-medium text-[#525252] mb-1">
-          App/Project Tagline*
+          App/Project Tagline{req.tagline ? "*" : " (Optional)"}
         </label>
         <input
           type="text"
@@ -569,7 +618,7 @@ function SubmissionFormContent({
           maxLength={MAX_TAGLINE_LENGTH}
           placeholder="One sentence pitch or description"
           className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
-          required
+          required={req.tagline}
           disabled={isSubmitting}
         />
         <div className="text-xs text-right text-[#545454] mt-1">
@@ -580,7 +629,8 @@ function SubmissionFormContent({
       {/* Long Description */}
       <div>
         <label className="block text-sm font-medium text-[#525252] mb-1">
-          Description (Markdown and fenced `code` blocks supported)
+          Description{req.longDescription ? "*" : ""} (Markdown and fenced `code`
+          blocks supported)
         </label>
         <textarea
           value={formData.longDescription}
@@ -593,6 +643,7 @@ function SubmissionFormContent({
           placeholder="- Problem you're solving&#10;- How the app works&#10;- Notable features&#10;- Why did you build this&#10;- Tech stack list&#10;- Challenges we ran into&#10;- Any success stories or metrics&#10;"
           rows={8}
           className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+          required={req.longDescription}
           disabled={isSubmitting}
         />
         {formData.longDescription && (
@@ -608,7 +659,7 @@ function SubmissionFormContent({
       {/* URL */}
       <div>
         <label className="block text-sm font-medium text-[#525252] mb-1">
-          App Website Link*
+          App Website Link{req.url ? "*" : " (Optional)"}
         </label>
         <div className="text-sm text-[#545454] mb-2">
           Enter your app url (ex: https://)
@@ -621,7 +672,7 @@ function SubmissionFormContent({
           }
           placeholder="https://"
           className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
-          required
+          required={req.url}
           disabled={isSubmitting}
         />
       </div>
@@ -632,7 +683,7 @@ function SubmissionFormContent({
           htmlFor="githubUrl"
           className="block text-sm font-medium text-[#525252] mb-1"
         >
-          GitHub Repo URL (Optional)
+          GitHub Repo URL{req.githubUrl ? "*" : " (Optional)"}
         </label>
         <div className="text-sm text-[#545454] mb-2">
           GitHub repository URL for your project
@@ -649,6 +700,7 @@ function SubmissionFormContent({
             }))
           }
           className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+          required={req.githubUrl}
           disabled={isSubmitting}
         />
       </div>
@@ -693,7 +745,7 @@ function SubmissionFormContent({
       {/* Video URL */}
       <div>
         <label className="block text-sm font-medium text-[#525252] mb-1">
-          Video Demo (Recommended)
+          Video Demo{req.videoUrl ? "*" : " (Recommended)"}
         </label>
         <div className="text-sm text-[#545454] mb-2">
           Share a video demo of your app (YouTube, Vimeo, etc.)
@@ -706,6 +758,7 @@ function SubmissionFormContent({
           }
           placeholder="https://youtube.com/..."
           className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+          required={req.videoUrl}
           disabled={isSubmitting}
         />
       </div>
@@ -713,7 +766,7 @@ function SubmissionFormContent({
       {/* Screenshot */}
       <div>
         <label className="block text-sm font-medium text-[#525252] mb-1">
-          Screenshot or Image*
+          Screenshot or Image{req.screenshot ? "*" : " (Optional)"}
         </label>
         <input
           type="file"
@@ -721,7 +774,7 @@ function SubmissionFormContent({
           onChange={handleImageChange}
           disabled={isSubmitting}
           className="w-full text-sm text-[#525252] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-[#F4F2EE] file:text-[#292929] hover:file:bg-[#D8E1EC]"
-          required
+          required={req.screenshot}
         />
       </div>
 
@@ -762,7 +815,7 @@ function SubmissionFormContent({
       {/* Submitter Name */}
       <div>
         <label className="block text-sm font-medium text-[#525252] mb-1">
-          Your Name*
+          Your Name{req.submitterName ? "*" : " (Optional)"}
         </label>
         <input
           type="text"
@@ -772,7 +825,7 @@ function SubmissionFormContent({
           }
           placeholder="Your name"
           className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
-          required
+          required={req.submitterName}
           disabled={isSubmitting}
         />
       </div>
@@ -780,7 +833,7 @@ function SubmissionFormContent({
       {/* Email */}
       <div>
         <label className="block text-sm font-medium text-[#525252] mb-1">
-          Email (Optional)
+          Email{req.email ? "*" : " (Optional)"}
         </label>
         <div className="text-sm text-[#545454] mb-2">
           Hidden and for hackathon notifications
@@ -793,6 +846,7 @@ function SubmissionFormContent({
           }
           placeholder="your@email.com"
           className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+          required={req.email}
           disabled={isSubmitting}
         />
       </div>
@@ -941,7 +995,7 @@ function SubmissionFormContent({
       {/* Tags Section */}
       <div>
         <label className="block text-sm font-medium text-[#525252] mb-2">
-          Select Tags *
+          Select Tags{req.tags ? " *" : " (Optional)"}
         </label>
         <span className="ml-2 text-xs text-gray-600">
           Select tags that best describe your app or hackathon participation
@@ -1117,11 +1171,13 @@ function SubmissionFormContent({
         </div>
 
         {/* Tag Selection Hints */}
-        {selectedTagIds.length === 0 && newTagNames.length === 0 && (
-          <p className="text-xs text-red-500 mt-1">
-            Please select or add at least one tag.
-          </p>
-        )}
+        {req.tags &&
+          selectedTagIds.length === 0 &&
+          newTagNames.length === 0 && (
+            <p className="text-xs text-red-500 mt-1">
+              Please select or add at least one tag.
+            </p>
+          )}
         {selectedTagIds.length + newTagNames.length >= 10 && (
           <p className="text-xs text-amber-600 mt-1">
             Maximum of 10 tags reached. Remove a tag to add another.

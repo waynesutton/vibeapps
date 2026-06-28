@@ -8,9 +8,8 @@ import { Plus, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
 
-interface Tag extends Doc<"tags"> {
-  // Inherits _id, _creationTime, name, showInHeader, isHidden?, backgroundColor?, textColor?
-}
+// Inherits _id, _creationTime, name, showInHeader, isHidden?, backgroundColor?, textColor?
+type Tag = Doc<"tags">;
 
 export function StoryForm() {
   const navigate = useNavigate();

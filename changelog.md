@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Added] - 2026-06-28
+
+**Tag Management: Top Pagination Synced With Bottom**
+
+- Added a second pagination control to the top of the admin Tag Management list, placed next to the "Tags per page" selector. The original bottom control remains.
+- Both controls render from a single shared `renderPagination()` helper backed by the same `currentPage`/`safePage`/`totalPages` state, so paging from either location keeps both in sync.
+- No backend or schema changes; UI-only enhancement.
+- **Files Modified**: `src/components/admin/TagManagement.tsx`
+
+### [Fixed] [Changed] - 2026-06-28
+
+**Lint Cleanup: Zero ESLint Errors + React Hooks Fixes**
+
+- **Fixed 4 real `react-hooks/rules-of-hooks` violations** (pre-existing) where hooks ran after an early `return`, which can cause render crashes. Moved the early returns below the hooks in `MessageDialog.tsx`, `ImageGallery.tsx`, and `ContentModeration.tsx`. Behavior is identical (effects already guard internally; the bail-out just happens after hooks run).
+- **Fixed safe mechanical lint errors** with no behavior change: removed unnecessary escape characters in regex/template strings (`templates.ts`, `submitMeta.ts`, `StoryDetail.tsx`, `JudgingInterfacePage.tsx`), scoped a `switch` case block in `clerk.ts` (`no-case-declarations`), and converted three empty `interface Tag extends Doc<"tags">` declarations to type aliases (`ResendForm.tsx`, `StoryForm.tsx`, `YCHackForm.tsx`).
+- **Rule levels (advisory, not blocking)**: set `@typescript-eslint/no-explicit-any` and `@typescript-eslint/no-unused-vars` to `warn` in `eslint.config.js`, with `ignoreRestSiblings` + `^_` ignore patterns so intentional `const { _id, _creationTime, ...rest } = doc` omit patterns are not flagged. `@convex-dev/no-filter-in-query` stays a warning. These 400+ pre-existing items remain visible as warnings to burn down over time without blocking the build.
+- **Result**: `npm run lint` reports 0 errors (was ~318). Verified `tsc --noEmit` clean, production build succeeds, Convex functions compile, app behavior unchanged.
+- **Files Modified**: `eslint.config.js`, `convex/clerk.ts`, `convex/emails/templates.ts`, `netlify/edge-functions/submitMeta.ts`, `src/components/ui/MessageDialog.tsx`, `src/components/ImageGallery.tsx`, `src/components/admin/ContentModeration.tsx`, `src/components/ResendForm.tsx`, `src/components/StoryForm.tsx`, `src/components/YCHackForm.tsx`, `src/components/StoryDetail.tsx`, `src/pages/JudgingInterfacePage.tsx`
+
+### [Changed] - 2026-06-28
+
+**Dependency Upgrade: Convex 1.42.0 + Convex ESLint Plugin**
+
+- Upgraded `convex` from `1.34.1` to `1.42.0` (latest) along with the components that gate it: `@convex-dev/resend` (`0.1.13` to `0.2.5`), `@convex-dev/rate-limiter` (`0.2.13` to `0.3.2`, transitive), `@convex-dev/workpool` (`0.2.18` to `0.4.7`, transitive), and `convex-helpers` (`0.1.104` to `0.1.120`). All resolve to a single deduped Convex version with no peer conflicts.
+- Added `@convex-dev/eslint-plugin@2.0.0` (dev) and wired `convexPlugin.configs.recommended` into `eslint.config.js` to enforce Convex best practices (argument validators, `.withIndex` over `.filter`, object function syntax).
+- Bumped `typescript-eslint` (`8.8.1` to `^8.62.0`) to fix an incompatibility with `eslint@9.36` that crashed the `no-unused-expressions` rule.
+- Cleaned up unused bindings in `convex/sendEmails.ts` and ran ESLint autofix across the project.
+- **Verified**: `convex dev` functions ready, Vite dev clean, `tsc --noEmit` clean (frontend), `convex codegen` typecheck clean, production build succeeds. No runtime or type breakage from the upgrade.
+- **Files Modified**: `package.json`, `package-lock.json`, `eslint.config.js`, `convex/sendEmails.ts`
+
+### [Added] - 2026-06-28
+
+**Judging Custom Submission Page: Admin-Selectable Required Fields**
+
+- Admins can now choose which fields are required on a judging group's custom submission page
+  - New "Required Submission Fields" checkbox group in EditJudgingGroupModal (Custom Submission Page section)
+  - Configurable fields: App Title, Tagline, Description, App Website Link, GitHub Repo URL, Video Demo, Screenshot, Your Name, Email, Tags
+  - Public submission page applies required state dynamically, including label asterisks and a tag-selection guard
+  - Unset fields fall back to existing defaults so prior judging groups are unchanged
+- **Schema**: added `submissionFieldRequirements` to `judgingGroups`
+- **Files Modified**: `convex/schema.ts`, `convex/judgingGroups.ts`, `src/components/admin/EditJudgingGroupModal.tsx`, `src/pages/JudgingGroupSubmitPage.tsx`
+
+### [Changed] - 2026-06-28
+
+**Tag Management: Faster Save + Pagination**
+
+- **Fixed slow save**: the admin Tag Management Save now only persists tags that were actually changed (added, edited, or deleted) instead of re-saving every tag. Previously it fired a mutation for all tags (400+ in production), which made Save take several seconds. Reordering is still persisted immediately by the Order input and drag-and-drop, so nothing is lost.
+- **Fixed slow drag-and-drop reorder**: dropping a tag now persists only the tags whose order value actually changed (the moved range), running those updates in parallel, instead of writing every tag on every drop.
+- **Added pagination**: tags are split into pages with First/Prev/numbered/Next/Last controls and a result summary.
+- **Added page size selector**: choose how many tags show per page (5, 10, 20, 30, 40, 50, 100, 200). Defaults to 20.
+- **Search across all tags**: search now filters the full tag set before pagination, so matches are found regardless of the current page.
+- **Files Modified**: `src/components/admin/TagManagement.tsx`
+
+### [Fixed] [Added] - 2026-06-27
+
+**Email Kill Switch Honored + Tag-Based Broadcast Emails**
+
+- **Fixed global email toggle**: disabling emails in the admin dashboard now blocks every email type. Previously admin report notifications (`admin_report_notification`, `admin_user_report_notification`) bypassed the global kill switch and kept sending even when emails were disabled. The switch is now authoritative for all email types.
+- **Added tag-based broadcast**: admins can now send a broadcast email to everyone who used a specific tag (authors of submissions carrying that tag). New "Send to everyone who used a tag" option in Email Management with a searchable tag selector, a submission-status filter (pending/approved/rejected), and a live recipient count. Skips users without an email and anyone who unsubscribed.
+- **Files Modified**: `convex/emails/resend.ts`, `convex/emails/broadcast.ts`, `src/components/admin/EmailManagement.tsx`
+
 ### [Added] - 2025-11-23
 
 **Edit Judging Group Modal**

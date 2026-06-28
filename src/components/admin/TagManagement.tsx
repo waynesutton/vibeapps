@@ -24,6 +24,9 @@ const DEFAULT_TAG_BG = "#F4F0ED";
 const DEFAULT_TAG_TEXT = "#525252";
 const DEFAULT_TAG_BORDER = "#D5D3D0";
 
+// Options for how many tags to show per page
+const PAGE_SIZE_OPTIONS = [5, 10, 20, 30, 40, 50, 100, 200] as const;
+
 // Interface matching the updated Convex schema for tags
 // Use string | null for colors locally to represent clearing, but handle conversion for mutation
 interface EditableTag
@@ -84,6 +87,8 @@ export function TagManagement() {
     useState<Id<"tags"> | null>(null); // For icon/emoji editor
   const [searchQuery, setSearchQuery] = useState<string>(""); // Search functionality
   const [showScrollButtons, setShowScrollButtons] = useState(false);
+  const [pageSize, setPageSize] = useState<number>(20); // Tags shown per page
+  const [currentPage, setCurrentPage] = useState<number>(1); // Active page (1-indexed)
 
   const fileInputRef = useRef<HTMLInputElement>(null); // Ref for file input
   const orderSaveTimersRef = useRef<Record<string, number>>({}); // Debounce timers per tag
@@ -209,23 +214,21 @@ export function TagManagement() {
     e.preventDefault();
   };
 
-  const persistAllOrders = async (tags: EditableTag[]) => {
-    // Persist sequentially only for tags whose order changed
-    for (const tag of tags) {
-      // Skip deleted tags
-      if (tag.isDeleted) continue;
-      try {
-        await updateTag({ tagId: tag._id, order: tag.order as any });
-      } catch (err) {
-        console.error("Failed to persist tag order:", tag.name, err);
-        setError(
-          (err as any)?.data?.message ||
-            (err as Error).message ||
-            "Failed to persist order.",
-        );
-        // Continue other updates even if one fails
-      }
-    }
+  // Persist only the tags passed in (already filtered to those whose order
+  // changed). Writes run in parallel since each order update is independent.
+  const persistChangedOrders = async (changedTags: EditableTag[]) => {
+    await Promise.all(
+      changedTags.map((tag) =>
+        updateTag({ tagId: tag._id, order: tag.order as any }).catch((err) => {
+          console.error("Failed to persist tag order:", tag.name, err);
+          setError(
+            (err as any)?.data?.message ||
+              (err as Error).message ||
+              "Failed to persist order.",
+          );
+        }),
+      ),
+    );
   };
 
   const handleDrop = async (targetTagId: Id<"tags">) => {
@@ -237,6 +240,9 @@ export function TagManagement() {
     setIsProcessing(true);
     setEditableTags((prev) => {
       const newList = [...prev];
+      // Snapshot current order per tag so we only persist what actually changes
+      const oldOrders: Record<string, number | undefined> = {};
+      prev.forEach((t) => (oldOrders[String(t._id)] = t.order));
       // Work with indices within non-deleted list to compute new orders
       const nonDeleted = newList.filter((t) => !t.isDeleted);
       const draggedIndex = nonDeleted.findIndex((t) => t._id === draggedId);
@@ -270,10 +276,15 @@ export function TagManagement() {
         orderCounter++;
       }
 
+      // Only persist tags whose order value actually changed
+      const changedTags = newList.filter(
+        (tag) => !tag.isDeleted && tag.order !== oldOrders[String(tag._id)],
+      );
+
       // Persist orders (fire-and-forget via async below)
       (async () => {
         try {
-          await persistAllOrders(newList);
+          await persistChangedOrders(changedTags);
         } finally {
           setIsProcessing(false);
         }
@@ -444,35 +455,22 @@ export function TagManagement() {
     let success = true;
     let encounteredError: string | null = null;
 
-    // Filter out deleted tags for reordering, but keep them for deletion processing later if not new
-    const tagsToReorderAndSave = editableTags.filter((tag) => !tag.isDeleted);
-    const updatedTagsWithOrder = tagsToReorderAndSave.map((tag, index) => ({
-      ...tag,
-      order: index, // Assign order based on current visual position
-      isModified: true, // Ensure it's marked as modified if order changed or other fields changed
-    }));
-
-    // Combine with tags marked for deletion that are not new
-    const tagsMarkedForDeletion = editableTags.filter(
-      (tag) => tag.isDeleted && !tag.isNew,
+    // Only process tags that were genuinely changed. Reordering is already
+    // persisted immediately via the Order input and drag-and-drop, so we no
+    // longer re-save every tag here (which was firing 400+ mutations and
+    // making Save feel slow with large tag sets).
+    const allTagsToProcess = editableTags.filter(
+      (tag) => tag.isModified || tag.isNew || tag.isDeleted,
     );
 
-    // Create a comprehensive list of tags to process for backend operations
-    // This includes tags that had their order changed, new tags, modified tags, and tags to be deleted.
-    const allTagsToProcess = [
-      ...updatedTagsWithOrder,
-      ...tagsMarkedForDeletion,
-    ].reduce((acc, current) => {
-      // Deduplicate based on _id, prioritizing the one from updatedTagsWithOrder if present
-      if (!acc.find((item) => item._id === current._id)) {
-        acc.push(current);
-      }
-      return acc;
-    }, [] as EditableTag[]);
+    if (allTagsToProcess.length === 0) {
+      setIsProcessing(false);
+      return;
+    }
 
     for (const tag of allTagsToProcess) {
-      // Only proceed if the tag is genuinely modified (content or order) or needs deletion/creation
-      if (!tag.isModified && !tag.isNew && !tag.isDeleted) continue;
+      // Skip tags that were created and deleted before ever saving
+      if (tag.isNew && tag.isDeleted) continue;
 
       try {
         let iconStorageIdToSend: Id<"_storage"> | undefined = undefined;
@@ -607,6 +605,85 @@ export function TagManagement() {
 
   const hasPendingChanges = editableTags.some((tag) => tag.isModified);
 
+  // Search runs across ALL tags, then results are paginated for display
+  const filteredTags = editableTags.filter((tag) =>
+    tag.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+  const totalFiltered = filteredTags.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
+  // Clamp page in case deletions/search shrank the result set
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * pageSize;
+  const paginatedTags = filteredTags.slice(startIndex, startIndex + pageSize);
+
+  // Build a compact list of page numbers around the current page
+  const pageNumbers: number[] = [];
+  const pageWindow = 2;
+  for (
+    let p = Math.max(1, safePage - pageWindow);
+    p <= Math.min(totalPages, safePage + pageWindow);
+    p++
+  ) {
+    pageNumbers.push(p);
+  }
+
+  // Shared pagination controls. Rendered at both top and bottom so they stay in
+  // sync via the same currentPage/safePage/totalPages state.
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+    return (
+      <div className="flex flex-wrap items-center justify-center gap-1">
+        <button
+          onClick={() => setCurrentPage(1)}
+          disabled={safePage === 1}
+          className="px-3 py-1.5 text-sm border border-[#D8E1EC] rounded-md text-[#525252] hover:bg-[#F4F0ED] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          First
+        </button>
+        <button
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          disabled={safePage === 1}
+          className="px-3 py-1.5 text-sm border border-[#D8E1EC] rounded-md text-[#525252] hover:bg-[#F4F0ED] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Prev
+        </button>
+        {pageNumbers[0] > 1 && (
+          <span className="px-2 text-sm text-gray-400">...</span>
+        )}
+        {pageNumbers.map((p) => (
+          <button
+            key={p}
+            onClick={() => setCurrentPage(p)}
+            className={`px-3 py-1.5 text-sm border rounded-md transition-colors ${
+              p === safePage
+                ? "bg-[#525252] text-white border-[#525252]"
+                : "border-[#D8E1EC] text-[#525252] hover:bg-[#F4F0ED]"
+            }`}
+          >
+            {p}
+          </button>
+        ))}
+        {pageNumbers[pageNumbers.length - 1] < totalPages && (
+          <span className="px-2 text-sm text-gray-400">...</span>
+        )}
+        <button
+          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          disabled={safePage === totalPages}
+          className="px-3 py-1.5 text-sm border border-[#D8E1EC] rounded-md text-[#525252] hover:bg-[#F4F0ED] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Next
+        </button>
+        <button
+          onClick={() => setCurrentPage(totalPages)}
+          disabled={safePage === totalPages}
+          className="px-3 py-1.5 text-sm border border-[#D8E1EC] rounded-md text-[#525252] hover:bg-[#F4F0ED] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Last
+        </button>
+      </div>
+    );
+  };
+
   // Handle auth loading state
   if (authIsLoading) {
     return (
@@ -654,11 +731,48 @@ export function TagManagement() {
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search tags..."
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1); // Reset to first page on new search
+            }}
+            placeholder="Search all tags..."
             className="w-full px-3 py-2 border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] focus:border-[#292929] text-sm"
             disabled={isProcessing}
           />
+        </div>
+
+        {/* Page Size Selector + Top Pagination + Result Count */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-sm text-[#525252]">
+              <label htmlFor="tag-page-size" className="text-xs text-gray-500">
+                Tags per page:
+              </label>
+              <select
+                id="tag-page-size"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1); // Reset to first page on size change
+                }}
+                className="px-2 py-1 border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] focus:border-[#292929] text-sm"
+                disabled={isProcessing}
+              >
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* Top pagination, in sync with bottom controls */}
+            {renderPagination()}
+          </div>
+          <div className="text-xs text-gray-500">
+            {totalFiltered === 0
+              ? "No tags"
+              : `Showing ${startIndex + 1}-${Math.min(startIndex + pageSize, totalFiltered)} of ${totalFiltered}${searchQuery ? " matching" : ""} tags`}
+          </div>
         </div>
 
         {/* Add New Tag Form */}
@@ -689,11 +803,7 @@ export function TagManagement() {
 
         {/* Tag List */}
         <div className="space-y-3">
-          {editableTags
-            .filter((tag) =>
-              tag.name.toLowerCase().includes(searchQuery.toLowerCase()),
-            )
-            .map((tag) => (
+          {paginatedTags.map((tag) => (
               <div
                 key={tag._id}
                 className={`border rounded-md overflow-hidden transition-all duration-200 ease-in-out ${tag.isDeleted ? "border-red-300 bg-red-50" : tag.isNew ? "border-green-300 bg-green-50" : tag.isModified ? "border-blue-300 bg-blue-50" : "border-gray-200 bg-white"}`}
@@ -1163,6 +1273,18 @@ export function TagManagement() {
               </div>
             ))}
         </div>
+
+        {/* Empty State */}
+        {allTagsAdmin !== undefined && totalFiltered === 0 && (
+          <div className="text-center text-sm text-gray-500 py-6">
+            {searchQuery
+              ? `No tags match "${searchQuery}".`
+              : "No tags yet. Add one above."}
+          </div>
+        )}
+
+        {/* Bottom Pagination Controls, in sync with top controls */}
+        {totalPages > 1 && <div className="mt-6">{renderPagination()}</div>}
 
         {/* Legend/Help Text */}
         <div className="mt-6 text-xs text-[#545454]">

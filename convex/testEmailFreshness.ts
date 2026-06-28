@@ -28,7 +28,7 @@ export const testEmailDataFreshness = mutation({
 
     const now = Date.now();
     const today = args.testDate || new Date().toISOString().split("T")[0];
-    let dataSnapshot: any = {
+    const dataSnapshot: any = {
       timestamp: now,
       emailType: args.emailType,
       testingDate: today,

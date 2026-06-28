@@ -524,7 +524,7 @@ export default function UserProfilePage() {
     if (!loadedProfileUser) return;
     setEditError(null);
     setIsSaving(true);
-    let usernameChanged = false;
+    const usernameChanged = false;
     let detailsChanged = false;
     let nameChanged = false;
 

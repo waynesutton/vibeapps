@@ -186,8 +186,8 @@ export function CreateJudgingGroupModal({
                     setFormData((prev) => ({
                       ...prev,
                       isPublic: !!checked,
-                      judgePassword: !!checked ? "" : prev.judgePassword,
-                      submissionPagePassword: !!checked
+                      judgePassword: checked ? "" : prev.judgePassword,
+                      submissionPagePassword: checked
                         ? ""
                         : prev.submissionPagePassword,
                     }))
@@ -278,7 +278,7 @@ export function CreateJudgingGroupModal({
                     setFormData((prev) => ({
                       ...prev,
                       resultsIsPublic: !!checked,
-                      resultsPassword: !!checked ? "" : prev.resultsPassword,
+                      resultsPassword: checked ? "" : prev.resultsPassword,
                     }))
                   }
                   disabled={isSubmitting}

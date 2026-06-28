@@ -371,6 +371,21 @@ export default defineSchema({
     submissionFormTitle: v.optional(v.string()), // Custom title for submission form (default: "Submit Your App")
     submissionFormSubtitle: v.optional(v.string()), // Optional subtitle text below form title
     submissionFormRequiredTagId: v.optional(v.id("tags")), // Required tag that will be auto-selected and locked in submission form
+    // Admin-selectable required fields for the custom submission form. Unset keys fall back to defaults.
+    submissionFieldRequirements: v.optional(
+      v.object({
+        title: v.optional(v.boolean()),
+        tagline: v.optional(v.boolean()),
+        longDescription: v.optional(v.boolean()),
+        url: v.optional(v.boolean()),
+        githubUrl: v.optional(v.boolean()),
+        videoUrl: v.optional(v.boolean()),
+        screenshot: v.optional(v.boolean()),
+        submitterName: v.optional(v.boolean()),
+        email: v.optional(v.boolean()),
+        tags: v.optional(v.boolean()),
+      }),
+    ),
   })
     .index("by_slug", ["slug"])
     .index("by_isPublic", ["isPublic"])

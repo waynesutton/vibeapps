@@ -27,6 +27,45 @@ interface EditJudgingGroupModalProps {
   groupId: Id<"judgingGroups">;
 }
 
+// Configurable submission form fields and their default required state.
+// These map to the fields rendered on the public custom submission page.
+const SUBMISSION_FIELD_DEFS = [
+  { key: "title", label: "App Title", default: true },
+  { key: "tagline", label: "App/Project Tagline", default: true },
+  { key: "longDescription", label: "Description", default: false },
+  { key: "url", label: "App Website Link", default: true },
+  { key: "githubUrl", label: "GitHub Repo URL", default: false },
+  { key: "videoUrl", label: "Video Demo", default: false },
+  { key: "screenshot", label: "Screenshot or Image", default: true },
+  { key: "submitterName", label: "Your Name", default: true },
+  { key: "email", label: "Email", default: false },
+  { key: "tags", label: "Tags", default: true },
+] as const;
+
+type SubmissionFieldKey = (typeof SUBMISSION_FIELD_DEFS)[number]["key"];
+type SubmissionFieldRequirements = Record<SubmissionFieldKey, boolean>;
+
+const DEFAULT_FIELD_REQUIREMENTS: SubmissionFieldRequirements =
+  SUBMISSION_FIELD_DEFS.reduce((acc, field) => {
+    acc[field.key] = field.default;
+    return acc;
+  }, {} as SubmissionFieldRequirements);
+
+// Merge stored (partial) requirements over the defaults so unset keys keep defaults.
+function mergeRequirements(
+  stored?: Partial<SubmissionFieldRequirements> | null,
+): SubmissionFieldRequirements {
+  const result = { ...DEFAULT_FIELD_REQUIREMENTS };
+  if (stored) {
+    (Object.keys(result) as SubmissionFieldKey[]).forEach((key) => {
+      if (typeof stored[key] === "boolean") {
+        result[key] = stored[key] as boolean;
+      }
+    });
+  }
+  return result;
+}
+
 export function EditJudgingGroupModal({
   isOpen,
   onClose,
@@ -58,6 +97,9 @@ export function EditJudgingGroupModal({
     submissionFormTitle: "",
     submissionFormSubtitle: "",
     submissionFormRequiredTagId: null as Id<"tags"> | null,
+    submissionFieldRequirements: {
+      ...DEFAULT_FIELD_REQUIREMENTS,
+    } as SubmissionFieldRequirements,
   });
   const [submissionPageImage, setSubmissionPageImage] = useState<File | null>(
     null,
@@ -91,6 +133,9 @@ export function EditJudgingGroupModal({
         submissionFormTitle: group.submissionFormTitle || "",
         submissionFormSubtitle: group.submissionFormSubtitle || "",
         submissionFormRequiredTagId: group.submissionFormRequiredTagId || null,
+        submissionFieldRequirements: mergeRequirements(
+          group.submissionFieldRequirements,
+        ),
       });
 
       // Load existing image URL if available
@@ -121,6 +166,9 @@ export function EditJudgingGroupModal({
         submissionFormTitle: group.submissionFormTitle || "",
         submissionFormSubtitle: group.submissionFormSubtitle || "",
         submissionFormRequiredTagId: group.submissionFormRequiredTagId || null,
+        submissionFieldRequirements: mergeRequirements(
+          group.submissionFieldRequirements,
+        ),
       });
     }
     setSubmissionPageImage(null);
@@ -180,6 +228,7 @@ export function EditJudgingGroupModal({
           formData.submissionFormSubtitle.trim() || undefined,
         submissionFormRequiredTagId:
           formData.submissionFormRequiredTagId || undefined,
+        submissionFieldRequirements: formData.submissionFieldRequirements,
       };
 
       // Only include passwords if they're provided
@@ -301,7 +350,7 @@ export function EditJudgingGroupModal({
                     setFormData((prev) => ({
                       ...prev,
                       isPublic: !!checked,
-                      judgePassword: !!checked ? "" : prev.judgePassword,
+                      judgePassword: checked ? "" : prev.judgePassword,
                     }))
                   }
                   disabled={isSubmitting}
@@ -368,7 +417,7 @@ export function EditJudgingGroupModal({
                     setFormData((prev) => ({
                       ...prev,
                       submissionPageIsPublic: !!checked,
-                      submissionPagePassword: !!checked
+                      submissionPagePassword: checked
                         ? ""
                         : prev.submissionPagePassword,
                     }))
@@ -440,7 +489,7 @@ export function EditJudgingGroupModal({
                     setFormData((prev) => ({
                       ...prev,
                       resultsIsPublic: !!checked,
-                      resultsPassword: !!checked ? "" : prev.resultsPassword,
+                      resultsPassword: checked ? "" : prev.resultsPassword,
                     }))
                   }
                   disabled={isSubmitting}
@@ -867,6 +916,46 @@ export function EditJudgingGroupModal({
                     This tag will be automatically selected and locked on the
                     submission form. Users cannot unselect it.
                   </p>
+                </div>
+
+                {/* Required Fields */}
+                <div className="pt-4 border-t border-gray-200">
+                  <Label>Required Submission Fields</Label>
+                  <p className="text-xs text-gray-500 mt-1 mb-3">
+                    Choose which fields users must fill out on the submission
+                    form. Unchecked fields are optional.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {SUBMISSION_FIELD_DEFS.map((field) => (
+                      <div
+                        key={field.key}
+                        className="flex items-center space-x-2"
+                      >
+                        <Checkbox
+                          id={`required-${field.key}`}
+                          checked={
+                            formData.submissionFieldRequirements[field.key]
+                          }
+                          onCheckedChange={(checked) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              submissionFieldRequirements: {
+                                ...prev.submissionFieldRequirements,
+                                [field.key]: !!checked,
+                              },
+                            }))
+                          }
+                          disabled={isSubmitting}
+                        />
+                        <Label
+                          htmlFor={`required-${field.key}`}
+                          className="text-sm font-normal text-gray-700"
+                        >
+                          {field.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}

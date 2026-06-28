@@ -131,6 +131,9 @@ export const update = mutation({
 /**
  * Mutation to generate an upload URL for the ConvexBox logo.
  */
-export const generateUploadUrl = mutation(async (ctx) => {
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
   return await ctx.storage.generateUploadUrl();
+}
 });

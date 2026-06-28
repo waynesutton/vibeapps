@@ -858,10 +858,6 @@ export function ContentModeration() {
     }
   };
 
-  if (authIsLoading) {
-    return <div className="p-4">Loading authentication...</div>;
-  }
-
   const renderItem = (item: ModeratableItem) => {
     // Commented out editing state logic
     const isEditing = item.type === "story" && editingMessageId === item._id;
@@ -1908,6 +1904,11 @@ export function ContentModeration() {
     activeItemType === "submissions" ? storiesStatus : commentsStatus;
   const loadMore =
     activeItemType === "submissions" ? loadMoreStories : loadMoreComments;
+
+  // Hooks must run unconditionally; bail out after them.
+  if (authIsLoading) {
+    return <div className="p-4">Loading authentication...</div>;
+  }
 
   return (
     <>

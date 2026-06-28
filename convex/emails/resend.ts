@@ -35,31 +35,20 @@ export const sendEmail = internalAction({
   }),
   handler: async (ctx, args) => {
     try {
-      // Critical admin notifications always send regardless of global toggle
-      const criticalEmailTypes = [
-        "admin_report_notification",
-        "admin_user_report_notification",
-        "dm_report_notification",
-      ];
-      const isCriticalEmail = criticalEmailTypes.includes(args.emailType);
+      // Global kill switch applies to ALL email types. When an admin disables
+      // emails in the dashboard, nothing is sent (including admin reports).
+      const emailsEnabled = await ctx.runQuery(
+        internal.settings.getBooleanInternal,
+        {
+          key: "emailsEnabled",
+        },
+      );
 
-      // Check global kill switch (but bypass for critical admin emails)
-      if (!isCriticalEmail) {
-        const emailsEnabled = await ctx.runQuery(
-          internal.settings.getBooleanInternal,
-          {
-            key: "emailsEnabled",
-          },
-        );
-
-        if (emailsEnabled === false) {
-          console.log("Emails globally disabled, skipping send");
-          return { success: false, error: "Emails globally disabled" };
-        }
-      } else {
+      if (emailsEnabled === false) {
         console.log(
-          `Sending critical admin email (${args.emailType}) - bypassing global toggle`,
+          `Emails globally disabled, skipping send (${args.emailType})`,
         );
+        return { success: false, error: "Emails globally disabled" };
       }
 
       // Send via Resend with enforced subject prefix and from address
