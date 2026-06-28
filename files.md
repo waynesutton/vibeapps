@@ -41,6 +41,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `prds/friendsonlyinbox.md`: Inbox messaging system PRD with text-only messages, @mentions, rate limiting, edit/delete, and admin integration
 - `prds/following-plan.MD`: User following system implementation plan
 - `prds/judgingsetup.md`: Judging system setup and configuration guide
+- `prds/multi-judge-submissions.md`: Multi-judge submissions feature (configurable N judges per submission, OCC-safe completion, per-judge score breakdown)
 - `prds/clerk-admin-fix.MD`: Clerk authentication admin setup documentation
 - `prds/clerksubmit.md`: Clerk submission integration documentation
 - `prds/themss.MD`: Theme and styling documentation
@@ -62,7 +63,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
   - `api.d.ts` & `api.js`: Generated API definitions for all functions
   - `dataModel.d.ts`: Generated TypeScript types for database schema
   - `server.d.ts` & `server.js`: Generated server-side definitions
-- `convex/schema.ts`: Database schema definition with all tables and indexes
+- `convex/schema.ts`: Database schema definition with all tables and indexes (includes `submissionJudgeCompletions` table for multi-judge OCC-safe completion tracking)
 - `convex/auth.config.js` & `convex/auth.ts`: Convex authentication configuration
 - `convex/tsconfig.json`: TypeScript configuration for Convex functions
 - `convex/README.md`: Convex-specific documentation
@@ -104,11 +105,11 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 ### Comprehensive Judging System
 
-- `convex/judgingGroups.ts`: Judging group management with public/private access and password protection
+- `convex/judgingGroups.ts`: Judging group management with public/private access, password protection, configurable `judgesPerSubmission` for multi-judge mode, and required-tag backfill in `updateGroup` (stories carrying a newly set required tag are auto-included for judging)
 - `convex/judgingCriteria.ts`: Judging criteria and scoring questions management with 1-10 star ratings
-- `convex/judgingGroupSubmissions.ts`: Submission assignment within judging groups with @mentions in notes, search functionality, and status tracking
+- `convex/judgingGroupSubmissions.ts`: Submission assignment within judging groups with @mentions in notes, search functionality, status tracking, `markJudgeCompleted` mutation for multi-judge OCC-safe completion, and required-tag inclusion (`ensureStoryInGroup`/`syncStoryToTaggedGroups` helpers + `syncRequiredTagSubmissions` admin mutation) so any story carrying a group's required tag is judged and counted
 - `convex/judges.ts`: Judge registration, session management, and group-wide progress tracking with canEdit/completedBy flags for multi-judge transparency and edit permission enforcement
-- `convex/judgeScores.ts`: Score submission, calculation, and results with CSV export and weighted scoring
+- `convex/judgeScores.ts`: Score submission, calculation, results with CSV export, weighted scoring, and `getSubmissionJudgeBreakdown` query for per-judge score breakdown with after-self reveal rule
 - `convex/adminJudgeTracking.ts`: Admin utilities for judge monitoring, submission status management, and comprehensive CSV export of judge activity including individual scores, total scores per submission, submissions, criteria, and comments
 
 ### Email System (Resend Integration) ✅ FULLY IMPLEMENTED
@@ -202,7 +203,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 - `src/components/admin/Judging.tsx`: Main judging group management interface with comprehensive controls
 - `src/components/admin/CreateJudgingGroupModal.tsx`: Judging group creation modal with password protection
-- `src/components/admin/EditJudgingGroupModal.tsx`: Comprehensive editing modal for judging group settings including access controls, custom submission page configuration, admin-selectable required submission fields, password management, and all group settings
+- `src/components/admin/EditJudgingGroupModal.tsx`: Comprehensive editing modal for judging group settings including access controls, custom submission page configuration, admin-selectable required submission fields, password management, a "Sync existing submissions with this tag" backfill button, and all group settings
 - `src/components/admin/JudgingCriteriaEditor.tsx`: Scoring criteria management with 1-10 star ratings
 - `src/components/admin/JudgingResultsDashboard.tsx`: Admin results and analytics with CSV export
 - `src/components/admin/JudgeTracking.tsx`: Comprehensive judge tracking dashboard with breadcrumb navigation, Stats Overview, Judge Activity section with expandable judge details and score moderation tools, Judge Scores & Comments tabbed interface showing detailed scoring per judge with submission grouping, floating scroll buttons, notes viewing, and CSV export of comprehensive judge activity data

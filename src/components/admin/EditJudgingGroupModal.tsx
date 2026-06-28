@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Plus,
   Trash2,
+  Users,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -100,6 +101,7 @@ export function EditJudgingGroupModal({
     submissionFieldRequirements: {
       ...DEFAULT_FIELD_REQUIREMENTS,
     } as SubmissionFieldRequirements,
+    judgesPerSubmission: 1,
   });
   const [submissionPageImage, setSubmissionPageImage] = useState<File | null>(
     null,
@@ -107,9 +109,37 @@ export function EditJudgingGroupModal({
   const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   const updateGroup = useMutation(api.judgingGroups.updateGroup);
   const generateUploadUrl = useMutation(api.stories.generateUploadUrl);
+  const syncRequiredTagSubmissions = useMutation(
+    api.judgingGroupSubmissions.syncRequiredTagSubmissions,
+  );
+
+  // Backfill existing stories that carry the saved required tag so they show up
+  // to be judged and counted, even if they never used the custom submission form.
+  const handleSyncByTag = async () => {
+    setSyncMessage(null);
+    setIsSyncing(true);
+    try {
+      const result = await syncRequiredTagSubmissions({ groupId });
+      if (!result.requiredTagSet) {
+        setSyncMessage(
+          "No required tag is saved for this group. Select a tag and save first.",
+        );
+      } else {
+        setSyncMessage(
+          `Added ${result.added} submission${result.added === 1 ? "" : "s"}. ${result.alreadyPresent} already included.`,
+        );
+      }
+    } catch (err) {
+      setSyncMessage("Failed to sync submissions. Please try again.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Load group data when it's available
   useEffect(() => {
@@ -136,6 +166,7 @@ export function EditJudgingGroupModal({
         submissionFieldRequirements: mergeRequirements(
           group.submissionFieldRequirements,
         ),
+        judgesPerSubmission: group.judgesPerSubmission ?? 1,
       });
 
       // Load existing image URL if available
@@ -169,11 +200,13 @@ export function EditJudgingGroupModal({
         submissionFieldRequirements: mergeRequirements(
           group.submissionFieldRequirements,
         ),
+        judgesPerSubmission: group.judgesPerSubmission ?? 1,
       });
     }
     setSubmissionPageImage(null);
     setError("");
     setIsSubmitting(false);
+    setSyncMessage(null);
   };
 
   const handleClose = () => {
@@ -229,6 +262,7 @@ export function EditJudgingGroupModal({
         submissionFormRequiredTagId:
           formData.submissionFormRequiredTagId || undefined,
         submissionFieldRequirements: formData.submissionFieldRequirements,
+        judgesPerSubmission: formData.judgesPerSubmission,
       };
 
       // Only include passwords if they're provided
@@ -542,6 +576,37 @@ export function EditJudgingGroupModal({
                 </p>
               </div>
             )}
+          </div>
+
+          {/* Judging Settings */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Judging Settings
+            </h3>
+            <div>
+              <Label htmlFor="judgesPerSubmission">Judges per submission</Label>
+              <Input
+                id="judgesPerSubmission"
+                type="number"
+                min={1}
+                max={20}
+                value={formData.judgesPerSubmission}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    judgesPerSubmission: Math.max(1, parseInt(e.target.value) || 1),
+                  }))
+                }
+                disabled={isSubmitting}
+                className="max-w-[120px]"
+              />
+              <p className="text-sm text-gray-500 mt-1">
+                {formData.judgesPerSubmission === 1
+                  ? "Default: each submission is judged by a single judge."
+                  : `Each submission must be scored by ${formData.judgesPerSubmission} different judges before it is marked complete.`}
+              </p>
+            </div>
           </div>
 
           {/* Status Toggle */}
@@ -914,8 +979,38 @@ export function EditJudgingGroupModal({
                   </select>
                   <p className="text-xs text-gray-500 mt-1">
                     This tag will be automatically selected and locked on the
-                    submission form. Users cannot unselect it.
+                    submission form. Users cannot unselect it. Any submission
+                    carrying this tag is judged and counted, even if it did not
+                    use this form.
                   </p>
+
+                  {/* Backfill existing tag-matched submissions */}
+                  <div className="mt-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSyncByTag}
+                      disabled={
+                        isSubmitting ||
+                        isSyncing ||
+                        !formData.submissionFormRequiredTagId
+                      }
+                    >
+                      {isSyncing
+                        ? "Syncing..."
+                        : "Sync existing submissions with this tag"}
+                    </Button>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Save your changes first, then sync to add any existing
+                      submissions that already carry the required tag.
+                    </p>
+                    {syncMessage && (
+                      <p className="text-xs text-gray-700 mt-2 p-2 bg-gray-50 border border-gray-200 rounded">
+                        {syncMessage}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Required Fields */}

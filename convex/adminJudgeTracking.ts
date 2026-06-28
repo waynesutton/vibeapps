@@ -69,6 +69,7 @@ export const getGroupJudgeTracking = query({
       slug: v.string(),
       description: v.optional(v.string()),
       isActive: v.boolean(),
+      judgesPerSubmission: v.number(),
     }),
     judges: v.array(
       v.object({
@@ -189,6 +190,7 @@ export const getGroupJudgeTracking = query({
         slug: group.slug,
         description: group.description,
         isActive: group.isActive,
+        judgesPerSubmission: group.judgesPerSubmission ?? 1,
       },
       judges: judgeTrackingData,
     };

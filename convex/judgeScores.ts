@@ -266,6 +266,156 @@ export const getJudgeSubmissionScores = query({
   },
 });
 
+/**
+ * Get per-judge score breakdown for a submission in multi-judge mode.
+ * Enforces "after_self" reveal: only returns other judges' scores after
+ * the requesting judge has completed the submission, or when the submission is locked.
+ */
+export const getSubmissionJudgeBreakdown = query({
+  args: {
+    sessionId: v.string(),
+    storyId: v.id("stories"),
+  },
+  returns: v.union(
+    v.null(),
+    v.object({
+      overallAverage: v.number(),
+      completionCount: v.number(),
+      judgesPerSubmission: v.number(),
+      isLocked: v.boolean(),
+      judges: v.array(
+        v.object({
+          judgeName: v.string(),
+          judgeAverage: v.number(),
+          scores: v.array(
+            v.object({
+              criteriaId: v.id("judgingCriteria"),
+              question: v.string(),
+              score: v.number(),
+              comments: v.optional(v.string()),
+            }),
+          ),
+        }),
+      ),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const judge = await ctx.db
+      .query("judges")
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
+      .unique();
+
+    if (!judge) {
+      return null;
+    }
+
+    const group = await ctx.db.get(judge.groupId);
+    if (!group) {
+      return null;
+    }
+
+    const judgesPerSubmission = group.judgesPerSubmission ?? 1;
+
+    // Only applicable in multi-judge mode
+    if (judgesPerSubmission <= 1) {
+      return null;
+    }
+
+    // Check completions
+    const completions = await ctx.db
+      .query("submissionJudgeCompletions")
+      .withIndex("by_groupId_storyId", (q) =>
+        q.eq("groupId", judge.groupId).eq("storyId", args.storyId),
+      )
+      .collect();
+
+    const completionCount = completions.length;
+    const isLocked = completionCount >= judgesPerSubmission;
+    const thisJudgeCompleted = completions.some(
+      (c) => c.judgeId === judge._id,
+    );
+
+    // Enforce after_self reveal: only show breakdown if this judge completed or submission is locked
+    if (!thisJudgeCompleted && !isLocked) {
+      return null;
+    }
+
+    // Get criteria for this group
+    const criteria = await ctx.db
+      .query("judgingCriteria")
+      .withIndex("by_groupId_order", (q) => q.eq("groupId", judge.groupId))
+      .order("asc")
+      .collect();
+
+    // Get all scores for this submission (not hidden)
+    const allScores = await ctx.db
+      .query("judgeScores")
+      .withIndex("by_groupId_storyId", (q) =>
+        q.eq("groupId", judge.groupId).eq("storyId", args.storyId),
+      )
+      .filter((q) => q.neq(q.field("isHidden"), true))
+      .collect();
+
+    // Only include scores from judges who have completed
+    const completedJudgeIds = new Set(completions.map((c) => c.judgeId));
+    const completedScores = allScores.filter((s) =>
+      completedJudgeIds.has(s.judgeId),
+    );
+
+    // Overall average across all completed judges' scores
+    const overallAverage =
+      completedScores.length > 0
+        ? completedScores.reduce((sum, s) => sum + s.score, 0) /
+          completedScores.length
+        : 0;
+
+    // Group by judge
+    const judgeIds = [...completedJudgeIds];
+    const judgesData = await Promise.all(
+      judgeIds.map(async (judgeId) => {
+        const j = await ctx.db.get(judgeId);
+        const judgeScores = completedScores.filter(
+          (s) => s.judgeId === judgeId,
+        );
+        const judgeAverage =
+          judgeScores.length > 0
+            ? judgeScores.reduce((sum, s) => sum + s.score, 0) /
+              judgeScores.length
+            : 0;
+
+        const scores = criteria
+          .map((c) => {
+            const score = judgeScores.find((s) => s.criteriaId === c._id);
+            if (!score) return null;
+            return {
+              criteriaId: c._id,
+              question: c.question,
+              score: score.score,
+              comments: score.comments,
+            };
+          })
+          .filter(
+            (s): s is NonNullable<typeof s> => s !== null,
+          );
+
+        return {
+          judgeName: j?.name ?? "Unknown",
+          judgeAverage,
+          scores,
+        };
+      }),
+    );
+
+    return {
+      overallAverage,
+      completionCount,
+      judgesPerSubmission,
+      isLocked,
+      judges: judgesData,
+    };
+  },
+});
+
 // --- Admin Functions ---
 
 /**
@@ -775,6 +925,14 @@ export const getPublicGroupScores = query({
           averageScore: v.number(),
           scoreCount: v.number(),
           judgesCompleted: v.number(),
+          judgeBreakdown: v.optional(
+            v.array(
+              v.object({
+                judgeName: v.string(),
+                averageScore: v.number(),
+              }),
+            ),
+          ),
         }),
       ),
       criteriaBreakdown: v.array(
@@ -847,6 +1005,12 @@ export const getPublicGroupScores = query({
       .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
       .collect();
 
+    // Build a judge ID to name lookup
+    const judgeNameMap = new Map<string, string>();
+    for (const judge of judges) {
+      judgeNameMap.set(judge._id, judge.name);
+    }
+
     const totalScores = scores.length;
     const averageScore =
       totalScores > 0
@@ -869,24 +1033,33 @@ export const getPublicGroupScores = query({
     const completionPercentage =
       submissionCount > 0 ? (completedSubmissions / submissionCount) * 100 : 0;
 
-    // Calculate story rankings with judge completion tracking
+    // Calculate story rankings with judge completion tracking and per-judge totals
     const storyScoreMap = new Map<
       string,
-      { totalScore: number; count: number; judgeScores: Map<string, number> }
+      {
+        totalScore: number;
+        count: number;
+        judgeScores: Map<string, { totalScore: number; count: number }>;
+      }
     >();
     scores.forEach((score) => {
       const key = score.storyId;
-      const existing = storyScoreMap.get(key) || { 
-        totalScore: 0, 
+      const existing = storyScoreMap.get(key) || {
+        totalScore: 0,
         count: 0,
-        judgeScores: new Map<string, number>()
+        judgeScores: new Map<string, { totalScore: number; count: number }>(),
       };
-      
-      // Track scores per judge to detect completion
+
       const judgeKey = score.judgeId;
-      const judgeCount = existing.judgeScores.get(judgeKey) || 0;
-      existing.judgeScores.set(judgeKey, judgeCount + 1);
-      
+      const judgeData = existing.judgeScores.get(judgeKey) || {
+        totalScore: 0,
+        count: 0,
+      };
+      existing.judgeScores.set(judgeKey, {
+        totalScore: judgeData.totalScore + score.score,
+        count: judgeData.count + 1,
+      });
+
       storyScoreMap.set(key, {
         totalScore: existing.totalScore + score.score,
         count: existing.count + 1,
@@ -897,12 +1070,27 @@ export const getPublicGroupScores = query({
     const rankings = await Promise.all(
       Array.from(storyScoreMap.entries()).map(async ([storyId, data]) => {
         const story = await ctx.db.get(storyId as Id<"stories">);
-        
+
         // Count judges who completed ALL criteria for this submission
         const judgesCompleted = Array.from(data.judgeScores.values()).filter(
-          count => count >= criteriaCount
+          (jd) => jd.count >= criteriaCount,
         ).length;
-        
+
+        // Build per-judge breakdown when more than 1 judge completed
+        let judgeBreakdown: Array<{
+          judgeName: string;
+          averageScore: number;
+        }> | undefined;
+        if (judgesCompleted > 1) {
+          judgeBreakdown = Array.from(data.judgeScores.entries())
+            .filter(([, jd]) => jd.count >= criteriaCount)
+            .map(([judgeId, jd]) => ({
+              judgeName: judgeNameMap.get(judgeId) || "Unknown",
+              averageScore: jd.count > 0 ? jd.totalScore / jd.count : 0,
+            }))
+            .sort((a, b) => b.averageScore - a.averageScore);
+        }
+
         return {
           storyId: storyId as Id<"stories">,
           storyTitle: story?.title || "Unknown Story",
@@ -911,7 +1099,8 @@ export const getPublicGroupScores = query({
           totalScore: data.totalScore,
           averageScore: data.count > 0 ? data.totalScore / data.count : 0,
           scoreCount: data.count,
-          judgesCompleted, // Number of judges who scored all criteria
+          judgesCompleted,
+          judgeBreakdown,
         };
       }),
     );
@@ -984,6 +1173,14 @@ export const getValidatedGroupScores = query({
           averageScore: v.number(),
           scoreCount: v.number(),
           judgesCompleted: v.number(),
+          judgeBreakdown: v.optional(
+            v.array(
+              v.object({
+                judgeName: v.string(),
+                averageScore: v.number(),
+              }),
+            ),
+          ),
         }),
       ),
       criteriaBreakdown: v.array(
@@ -1056,6 +1253,12 @@ export const getValidatedGroupScores = query({
       .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
       .collect();
 
+    // Build a judge ID to name lookup
+    const judgeNameMap = new Map<string, string>();
+    for (const judge of judges) {
+      judgeNameMap.set(judge._id, judge.name);
+    }
+
     const totalScores = scores.length;
     const averageScore =
       totalScores > 0
@@ -1078,24 +1281,33 @@ export const getValidatedGroupScores = query({
     const completionPercentage =
       submissionCount > 0 ? (completedSubmissions / submissionCount) * 100 : 0;
 
-    // Calculate story rankings with judge completion tracking
+    // Calculate story rankings with judge completion tracking and per-judge totals
     const storyScoreMap = new Map<
       string,
-      { totalScore: number; count: number; judgeScores: Map<string, number> }
+      {
+        totalScore: number;
+        count: number;
+        judgeScores: Map<string, { totalScore: number; count: number }>;
+      }
     >();
     scores.forEach((score) => {
       const key = score.storyId;
-      const existing = storyScoreMap.get(key) || { 
-        totalScore: 0, 
+      const existing = storyScoreMap.get(key) || {
+        totalScore: 0,
         count: 0,
-        judgeScores: new Map<string, number>()
+        judgeScores: new Map<string, { totalScore: number; count: number }>(),
       };
-      
-      // Track scores per judge to detect completion
+
       const judgeKey = score.judgeId;
-      const judgeCount = existing.judgeScores.get(judgeKey) || 0;
-      existing.judgeScores.set(judgeKey, judgeCount + 1);
-      
+      const judgeData = existing.judgeScores.get(judgeKey) || {
+        totalScore: 0,
+        count: 0,
+      };
+      existing.judgeScores.set(judgeKey, {
+        totalScore: judgeData.totalScore + score.score,
+        count: judgeData.count + 1,
+      });
+
       storyScoreMap.set(key, {
         totalScore: existing.totalScore + score.score,
         count: existing.count + 1,
@@ -1106,12 +1318,27 @@ export const getValidatedGroupScores = query({
     const rankings = await Promise.all(
       Array.from(storyScoreMap.entries()).map(async ([storyId, data]) => {
         const story = await ctx.db.get(storyId as Id<"stories">);
-        
+
         // Count judges who completed ALL criteria for this submission
         const judgesCompleted = Array.from(data.judgeScores.values()).filter(
-          count => count >= criteriaCount
+          (jd) => jd.count >= criteriaCount,
         ).length;
-        
+
+        // Build per-judge breakdown when more than 1 judge completed
+        let judgeBreakdown: Array<{
+          judgeName: string;
+          averageScore: number;
+        }> | undefined;
+        if (judgesCompleted > 1) {
+          judgeBreakdown = Array.from(data.judgeScores.entries())
+            .filter(([, jd]) => jd.count >= criteriaCount)
+            .map(([judgeId, jd]) => ({
+              judgeName: judgeNameMap.get(judgeId) || "Unknown",
+              averageScore: jd.count > 0 ? jd.totalScore / jd.count : 0,
+            }))
+            .sort((a, b) => b.averageScore - a.averageScore);
+        }
+
         return {
           storyId: storyId as Id<"stories">,
           storyTitle: story?.title || "Unknown Story",
@@ -1121,6 +1348,7 @@ export const getValidatedGroupScores = query({
           averageScore: data.count > 0 ? data.totalScore / data.count : 0,
           scoreCount: data.count,
           judgesCompleted,
+          judgeBreakdown,
         };
       }),
     );

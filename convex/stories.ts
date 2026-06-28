@@ -19,6 +19,7 @@ import {
   storyWithDetailsValidator,
   StoryWithDetailsPublic,
 } from "./validators"; // Import StoryWithDetailsPublic
+import { syncStoryToTaggedGroups } from "./judgingGroupSubmissions"; // Auto-include tag-matched submissions in judging
 
 // Validator for Doc<"tags">
 // REMOVED - Moved to convex/validators.ts
@@ -1198,6 +1199,11 @@ export const addTagsToStory = mutation({
     const newTagIds = [...new Set([...currentTagIds, ...args.tagIdsToAdd])];
 
     await ctx.db.patch(args.storyId, { tagIds: newTagIds });
+
+    // Auto-include in any judging group whose required tag was just added.
+    const actingUserId = await getAuthenticatedUserId(ctx);
+    await syncStoryToTaggedGroups(ctx, args.storyId, actingUserId);
+
     return { success: true, addedTags: args.tagIdsToAdd.length };
   },
 });
@@ -1591,6 +1597,13 @@ export const updateOwnStory = mutation({
     }
 
     await ctx.db.patch(args.storyId, updateData);
+
+    // If tags changed, auto-include this story in any judging group whose
+    // required tag now matches, so a tag-matched edit becomes judgeable.
+    if (finalTagIds !== undefined) {
+      await syncStoryToTaggedGroups(ctx, args.storyId, userId);
+    }
+
     return { success: true, slug: updateData.slug || story.slug };
   },
 });
@@ -1731,6 +1744,14 @@ export const updateStoryAdmin = mutation({
     }
 
     await ctx.db.patch(args.storyId, updateData);
+
+    // If tags changed, auto-include this story in any judging group whose
+    // required tag now matches (admin adding the hidden tag makes it judgeable).
+    if (finalTagIds !== undefined) {
+      const actingUserId = await getAuthenticatedUserId(ctx);
+      await syncStoryToTaggedGroups(ctx, args.storyId, actingUserId);
+    }
+
     return { success: true, slug: updateData.slug || story.slug };
   },
 });

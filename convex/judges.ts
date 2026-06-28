@@ -105,17 +105,24 @@ export const removeJudge = mutation({
   handler: async (ctx, args) => {
     await requireAdminRole(ctx);
 
-    // Delete all scores by this judge first
+    // Delete all scores by this judge
     const scores = await ctx.db
       .query("judgeScores")
       .filter((q) => q.eq(q.field("judgeId"), args.judgeId))
       .collect();
-
     for (const score of scores) {
       await ctx.db.delete(score._id);
     }
 
-    // Delete the judge
+    // Delete multi-judge completion records
+    const completions = await ctx.db
+      .query("submissionJudgeCompletions")
+      .withIndex("by_judgeId", (q) => q.eq("judgeId", args.judgeId))
+      .collect();
+    for (const completion of completions) {
+      await ctx.db.delete(completion._id);
+    }
+
     await ctx.db.delete(args.judgeId);
 
     return null;
@@ -267,6 +274,7 @@ export const getJudgeSession = query({
         slug: v.string(),
         description: v.optional(v.string()),
         isActive: v.boolean(),
+        judgesPerSubmission: v.number(),
       }),
     }),
   ),
@@ -280,7 +288,6 @@ export const getJudgeSession = query({
       return null;
     }
 
-    // Get group details
     const group = await ctx.db.get(judge.groupId);
     if (!group) {
       throw new Error("Judging group not found");
@@ -298,6 +305,7 @@ export const getJudgeSession = query({
         slug: group.slug,
         description: group.description,
         isActive: group.isActive,
+        judgesPerSubmission: group.judgesPerSubmission ?? 1,
       },
     };
   },
@@ -349,6 +357,7 @@ export const getJudgeProgress = query({
       expectedScores: v.number(),
       completedScores: v.number(),
       completionPercentage: v.number(),
+      judgesPerSubmission: v.number(),
       submissionProgress: v.array(
         v.object({
           storyId: v.id("stories"),
@@ -356,8 +365,9 @@ export const getJudgeProgress = query({
           criteriaScored: v.number(),
           totalCriteria: v.number(),
           isComplete: v.boolean(),
-          canEdit: v.boolean(), // NEW: Indicates if judge can edit this submission
-          completedBy: v.optional(v.string()), // NEW: Name of judge who completed it
+          canEdit: v.boolean(),
+          completedBy: v.optional(v.string()),
+          completionCount: v.optional(v.number()),
         }),
       ),
     }),
@@ -372,25 +382,34 @@ export const getJudgeProgress = query({
       return null;
     }
 
-    // Get group submissions (ALL submissions, not filtered)
+    const group = await ctx.db.get(judge.groupId);
+    const judgesPerSubmission = group?.judgesPerSubmission ?? 1;
+    const isMultiJudge = judgesPerSubmission > 1;
+
     const submissions = await ctx.db
       .query("judgingGroupSubmissions")
       .withIndex("by_groupId", (q) => q.eq("groupId", judge.groupId))
       .collect();
 
-    // Get submission statuses to determine edit permissions
     const submissionStatuses = await ctx.db
       .query("submissionStatuses")
       .withIndex("by_groupId", (q) => q.eq("groupId", judge.groupId))
       .collect();
 
-    // Get group criteria
+    // Load multi-judge completions if needed
+    let allCompletions: Array<Doc<"submissionJudgeCompletions">> = [];
+    if (isMultiJudge) {
+      allCompletions = await ctx.db
+        .query("submissionJudgeCompletions")
+        .withIndex("by_groupId_storyId", (q) => q.eq("groupId", judge.groupId))
+        .collect();
+    }
+
     const criteria = await ctx.db
       .query("judgingCriteria")
       .withIndex("by_groupId_order", (q) => q.eq("groupId", judge.groupId))
       .collect();
 
-    // Get judge's scores (excluding hidden scores)
     const scores = await ctx.db
       .query("judgeScores")
       .filter((q) => q.eq(q.field("judgeId"), judge._id))
@@ -400,12 +419,10 @@ export const getJudgeProgress = query({
     const totalCriteria = criteria.length;
     const completedScores = scores.length;
 
-    // Calculate progress per submission (ALL submissions)
     const submissionProgress = (
       await Promise.all(
         submissions.map(async (submission) => {
           const story = await ctx.db.get(submission.storyId);
-          // Skip if story is deleted, hidden, archived, or rejected
           if (!isStoryValidForJudging(story)) {
             return null;
           }
@@ -415,27 +432,44 @@ export const getJudgeProgress = query({
           );
           const criteriaScored = storyScores.length;
 
-          // Get submission status to check if it's marked as completed
           const submissionStatus = submissionStatuses.find(
             (s) => s.storyId === submission.storyId,
           );
 
-          // A submission is complete if:
-          // 1. It has a status of "completed" AND was completed by this judge
+          if (isMultiJudge) {
+            // Multi-judge: use completions table
+            const storyCompletions = allCompletions.filter(
+              (c) => c.storyId === submission.storyId,
+            );
+            const completionCount = storyCompletions.length;
+            const thisJudgeCompleted = storyCompletions.some(
+              (c) => c.judgeId === judge._id,
+            );
+            const isLocked = completionCount >= judgesPerSubmission;
+
+            return {
+              storyId: submission.storyId,
+              storyTitle: story.title,
+              criteriaScored,
+              totalCriteria,
+              isComplete: thisJudgeCompleted,
+              canEdit: !isLocked,
+              completedBy: undefined as string | undefined,
+              completionCount,
+            };
+          }
+
+          // Single-judge: existing logic
           const isComplete =
             submissionStatus?.status === "completed" &&
             submissionStatus?.assignedJudgeId === judge._id;
 
-          // Determine if judge can edit this submission
           let canEdit = true;
           let completedBy: string | undefined = undefined;
 
           if (submissionStatus) {
             if (submissionStatus.status === "completed") {
-              // Can only edit if they're the assigned judge
               canEdit = submissionStatus.assignedJudgeId === judge._id;
-
-              // Get the name of the judge who completed it
               if (submissionStatus.assignedJudgeId) {
                 const assignedJudge = await ctx.db.get(
                   submissionStatus.assignedJudgeId,
@@ -445,7 +479,6 @@ export const getJudgeProgress = query({
                 }
               }
             }
-            // "pending" and "skip" are always editable by all judges
           }
 
           return {
@@ -456,16 +489,15 @@ export const getJudgeProgress = query({
             isComplete,
             canEdit,
             completedBy,
+            completionCount: undefined as number | undefined,
           };
         }),
       )
     ).filter((item): item is NonNullable<typeof item> => item !== null);
 
-    // Count only submissions with valid stories
     const totalSubmissions = submissionProgress.length;
     const expectedScores = totalSubmissions * totalCriteria;
 
-    // Calculate completion percentage based on completed SUBMISSIONS by THIS JUDGE only
     const completedSubmissionsCount = submissionProgress.filter(
       (s) => s.isComplete,
     ).length;
@@ -480,6 +512,7 @@ export const getJudgeProgress = query({
       expectedScores,
       completedScores,
       completionPercentage,
+      judgesPerSubmission,
       submissionProgress,
     };
   },

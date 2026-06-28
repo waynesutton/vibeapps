@@ -386,6 +386,8 @@ export default defineSchema({
         tags: v.optional(v.boolean()),
       }),
     ),
+    // Multi-judge: how many judges must complete each submission (default 1 = single-judge behavior)
+    judgesPerSubmission: v.optional(v.number()),
   })
     .index("by_slug", ["slug"])
     .index("by_isPublic", ["isPublic"])
@@ -460,6 +462,17 @@ export default defineSchema({
   })
     .index("by_groupId_storyId", ["groupId", "storyId"])
     .index("by_replyToId", ["replyToId"])
+    .index("by_judgeId", ["judgeId"]),
+
+  // Multi-judge completion tracking: each judge writes their own row to avoid OCC conflicts
+  submissionJudgeCompletions: defineTable({
+    groupId: v.id("judgingGroups"),
+    storyId: v.id("stories"),
+    judgeId: v.id("judges"),
+    completedAt: v.number(),
+  })
+    .index("by_groupId_storyId", ["groupId", "storyId"])
+    .index("by_group_story_judge", ["groupId", "storyId", "judgeId"])
     .index("by_judgeId", ["judgeId"]),
 
   // Submit Forms Management System

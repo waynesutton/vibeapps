@@ -9,6 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [Added] - 2026-06-28
 
+**Judge score breakdown on results page**
+
+- When a submission has more than one judge, the Rankings section on the public judging results page now shows a collapsible toggle below each score.
+- Expanding the toggle reveals each judge's name and their average score.
+- Works on both public and password-protected results views.
+- Backend: `convex/judgeScores.ts` (getPublicGroupScores, getValidatedGroupScores)
+- Frontend: `src/components/PublicJudgingResultsDashboard.tsx`
+
+### [Added] - 2026-06-28
+
+**Judging: Submissions Counted by Required Tag**
+
+- Any submission that carries a judging group's required tag is now judged and counted, even if it never used the group's custom submission form.
+- Editing a submission to add the required tag (by the owner or an admin) automatically includes it in the matching judging group as a pending submission.
+- Admin bulk tag-adds (Content Moderation) also auto-include the story in matching groups.
+- Setting or changing a group's required tag in EditJudgingGroupModal backfills existing stories that already carry that tag.
+- New "Sync existing submissions with this tag" button on the group settings modal backfills on demand (useful right after deploy), reporting how many were added vs. already included.
+- All inclusion is idempotent and reuses the same `judgingGroupSubmissions` + `submissionStatuses` tables as the custom form, so it works with scoring, status tracking, and multi-judge completion. Existing scores and statuses are preserved; removing a tag never auto-deletes a submission.
+- **Backend**: `ensureStoryInGroup` + `syncStoryToTaggedGroups` helpers and `syncRequiredTagSubmissions` mutation in `convex/judgingGroupSubmissions.ts`; tag-edit hooks in `convex/stories.ts`; required-tag backfill in `convex/judgingGroups.ts`.
+- **Frontend**: `src/components/admin/EditJudgingGroupModal.tsx`.
+- **PRD**: `prds/judging-required-tag-submissions.md`
+
+### [Added] - 2026-06-28
+
+**Multi-Judge Submissions**
+
+- Admins can set how many judges must score each submission (1 to 20, default 1) via a new "Judging Settings" section in EditJudgingGroupModal.
+- When set above 1, judges see a "Judged & Next" button instead of "Mark Submission Complete" that records their completion and advances to the next unjudged submission.
+- A completion counter shows how many of the required judges have completed each submission. Once the threshold is reached the submission locks and becomes read-only.
+- After a judge submits their scores (or when the submission is locked), the interface reveals an overall average plus each judge's individual criteria scores.
+- Other judges' scores are hidden until the current judge completes their own scoring (after-self reveal rule).
+- Each judge writes their own completion row in a new `submissionJudgeCompletions` table, avoiding OCC write conflicts on the shared status row.
+- JudgeTracking admin view shows a "multi-judge mode" banner when enabled.
+- Default (`judgesPerSubmission = 1`) behavior is completely unchanged.
+- **Schema**: added `judgesPerSubmission` to `judgingGroups`; new `submissionJudgeCompletions` table with indexes.
+- **Backend**: `markJudgeCompleted` mutation, `getSubmissionJudgeBreakdown` query, multi-judge aware `getJudgeProgress` and `getSubmissionStatusForJudge`.
+- **Frontend**: `EditJudgingGroupModal.tsx`, `JudgingInterfacePage.tsx`, `JudgeTracking.tsx`.
+- **PRD**: `prds/multi-judge-submissions.md`
+
+### [Added] - 2026-06-28
+
 **Agent Skill Scaffolding (Dev Tooling)**
 
 - Added agent skill directories to the repo so coding agents share consistent project context: `.agents/skills/*` and `.claude/skills/*` (Convex quickstart, auth setup, component creation, migration helper, performance audit, plus design and workflow skills).

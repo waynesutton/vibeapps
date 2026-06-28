@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -10,6 +11,8 @@ import {
   TrendingUp,
   Award,
   ExternalLink,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 interface PublicJudgingResultsDashboardProps {
@@ -21,6 +24,23 @@ export function PublicJudgingResultsDashboard({
   groupId,
   isValidated = false,
 }: PublicJudgingResultsDashboardProps) {
+  // Track which ranking items have their judge breakdown expanded
+  const [expandedRankings, setExpandedRankings] = useState<Set<string>>(
+    new Set(),
+  );
+
+  const toggleRankingExpanded = (storyId: string) => {
+    setExpandedRankings((prev) => {
+      const next = new Set(prev);
+      if (next.has(storyId)) {
+        next.delete(storyId);
+      } else {
+        next.add(storyId);
+      }
+      return next;
+    });
+  };
+
   // Use validated query if user has entered password, otherwise use public query
   const groupScores = useQuery(
     isValidated
@@ -128,87 +148,129 @@ export function PublicJudgingResultsDashboard({
               No scores submitted yet
             </div>
           ) : (
-            groupScores.rankings.map((submission, index) => (
-              <div
-                key={submission.storyId}
-                className="px-6 py-4 flex items-center justify-between hover:bg-gray-50"
-              >
-                <div className="flex items-center space-x-4">
-                  <div className="flex-shrink-0">
-                    {index === 0 && (
-                      <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                        <Trophy className="w-4 h-4 text-yellow-600" />
+            groupScores.rankings.map((submission, index) => {
+              const hasBreakdown =
+                submission.judgeBreakdown &&
+                submission.judgeBreakdown.length > 1;
+              const isExpanded = expandedRankings.has(submission.storyId);
+
+              return (
+                <div key={submission.storyId}>
+                  <div className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex-shrink-0">
+                        {index === 0 && (
+                          <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                            <Trophy className="w-4 h-4 text-yellow-600" />
+                          </div>
+                        )}
+                        {index === 1 && (
+                          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                            <Award className="w-4 h-4 text-gray-600" />
+                          </div>
+                        )}
+                        {index === 2 && (
+                          <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                            <Award className="w-4 h-4 text-orange-600" />
+                          </div>
+                        )}
+                        {index > 2 && (
+                          <div className="w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center">
+                            <span className="text-sm font-medium text-gray-600">
+                              {index + 1}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                    )}
-                    {index === 1 && (
-                      <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                        <Award className="w-4 h-4 text-gray-600" />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            to={`/s/${submission.storySlug}`}
+                            className="font-medium text-gray-900 hover:text-blue-600 hover:underline"
+                          >
+                            {submission.storyTitle}
+                          </Link>
+                          {submission.storyUrl && (
+                            <a
+                              href={submission.storyUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-gray-500 hover:text-gray-700"
+                              title="Visit live app"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          {(() => {
+                            const expectedScores =
+                              submission.judgesCompleted *
+                              groupScores.criteriaCount;
+                            const hasMix =
+                              submission.scoreCount !== expectedScores &&
+                              submission.scoreCount > 0;
+
+                            if (hasMix) {
+                              return `${submission.judgesCompleted} judge${submission.judgesCompleted !== 1 ? "s" : ""} completed, ${submission.scoreCount} score${submission.scoreCount !== 1 ? "s" : ""} total`;
+                            } else {
+                              return `${submission.judgesCompleted} judge${submission.judgesCompleted !== 1 ? "s" : ""} completed`;
+                            }
+                          })()}
+                        </p>
                       </div>
-                    )}
-                    {index === 2 && (
-                      <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                        <Award className="w-4 h-4 text-orange-600" />
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-semibold text-gray-900">
+                        {submission.averageScore.toFixed(1)}
                       </div>
-                    )}
-                    {index > 2 && (
-                      <div className="w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-gray-600">
-                          {index + 1}
-                        </span>
+                      <div className="text-sm text-gray-500">
+                        Total: {submission.totalScore}
                       </div>
-                    )}
+                    </div>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Link
-                        to={`/s/${submission.storySlug}`}
-                        className="font-medium text-gray-900 hover:text-blue-600 hover:underline"
+
+                  {/* Collapsible per-judge breakdown for multi-judge submissions */}
+                  {hasBreakdown && (
+                    <div className="px-6 pb-3">
+                      <button
+                        onClick={() =>
+                          toggleRankingExpanded(submission.storyId)
+                        }
+                        className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
                       >
-                        {submission.storyTitle}
-                      </Link>
-                      {submission.storyUrl && (
-                        <a
-                          href={submission.storyUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-gray-500 hover:text-gray-700"
-                          title="Visit live app"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
+                        {isExpanded ? (
+                          <ChevronDown className="w-4 h-4" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4" />
+                        )}
+                        <Users className="w-3.5 h-3.5" />
+                        <span>
+                          {submission.judgeBreakdown!.length} judge scores
+                        </span>
+                      </button>
+                      {isExpanded && (
+                        <div className="mt-2 ml-5 space-y-1">
+                          {submission.judgeBreakdown!.map((judge) => (
+                            <div
+                              key={judge.judgeName}
+                              className="flex items-center justify-between text-sm py-1 px-3 bg-gray-50 rounded"
+                            >
+                              <span className="text-gray-700">
+                                {judge.judgeName}
+                              </span>
+                              <span className="font-medium text-gray-900">
+                                Avg: {judge.averageScore.toFixed(1)}/10
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
-                    <p className="text-sm text-gray-500">
-                      {(() => {
-                        // Detect if there's a rare mix case (partial scoring)
-                        const expectedScores =
-                          submission.judgesCompleted *
-                          groupScores.criteriaCount;
-                        const hasMix =
-                          submission.scoreCount !== expectedScores &&
-                          submission.scoreCount > 0;
-
-                        if (hasMix) {
-                          // Show detailed breakdown for mix cases
-                          return `${submission.judgesCompleted} judge${submission.judgesCompleted !== 1 ? "s" : ""} completed, ${submission.scoreCount} score${submission.scoreCount !== 1 ? "s" : ""} total`;
-                        } else {
-                          // Show simple format for clean cases
-                          return `${submission.judgesCompleted} judge${submission.judgesCompleted !== 1 ? "s" : ""} completed`;
-                        }
-                      })()}
-                    </p>
-                  </div>
+                  )}
                 </div>
-                <div className="text-right">
-                  <div className="text-lg font-semibold text-gray-900">
-                    {submission.averageScore.toFixed(1)}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    Total: {submission.totalScore}
-                  </div>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

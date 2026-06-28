@@ -1,7 +1,7 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { requireAdminRole } from "./users";
+import { requireAdminRole, getAuthenticatedUserId } from "./users";
 import { internal } from "./_generated/api";
 
 // Helper function to check if a story should be included in judging
@@ -13,6 +13,97 @@ function isStoryValidForJudging(story: Doc<"stories"> | null): story is Doc<"sto
   if (story.isArchived === true) return false;
   if (story.status === "rejected") return false;
   return true;
+}
+
+// --- Shared inclusion helpers (reused by submission form, tag sync, admin add) ---
+
+/**
+ * Idempotently include a story in a judging group.
+ * Inserts the join row and a pending submission status only when missing so the
+ * submission shows up to be judged and is counted, working with all judging
+ * features (scoring, multi-judge completions, status tracking).
+ * Returns true if it was newly added, false if it already existed.
+ */
+export async function ensureStoryInGroup(
+  ctx: MutationCtx,
+  groupId: Id<"judgingGroups">,
+  storyId: Id<"stories">,
+  addedBy: Id<"users">,
+): Promise<boolean> {
+  const existing = await ctx.db
+    .query("judgingGroupSubmissions")
+    .withIndex("by_groupId_storyId", (q) =>
+      q.eq("groupId", groupId).eq("storyId", storyId),
+    )
+    .unique();
+
+  if (existing) {
+    return false;
+  }
+
+  await ctx.db.insert("judgingGroupSubmissions", {
+    groupId,
+    storyId,
+    addedBy,
+    addedAt: Date.now(),
+  });
+
+  // Create the default pending status only if missing (defensive against drift)
+  const existingStatus = await ctx.db
+    .query("submissionStatuses")
+    .withIndex("by_groupId_storyId", (q) =>
+      q.eq("groupId", groupId).eq("storyId", storyId),
+    )
+    .unique();
+
+  if (!existingStatus) {
+    await ctx.db.insert("submissionStatuses", {
+      groupId,
+      storyId,
+      status: "pending",
+      lastUpdatedAt: Date.now(),
+    });
+  }
+
+  return true;
+}
+
+/**
+ * When a story's tags change, auto-include it in any judging group whose
+ * required submission tag is now present on the story. This mirrors the custom
+ * submission page behavior: a submission only needs the required tag to be
+ * judged and counted, regardless of how it was created or edited.
+ * Returns the number of groups the story was newly added to.
+ */
+export async function syncStoryToTaggedGroups(
+  ctx: MutationCtx,
+  storyId: Id<"stories">,
+  addedBy: Id<"users">,
+): Promise<number> {
+  const story = await ctx.db.get(storyId);
+  if (!isStoryValidForJudging(story)) {
+    return 0;
+  }
+
+  const tagIds = story.tagIds || [];
+  if (tagIds.length === 0) {
+    return 0;
+  }
+
+  // Groups are few; scanning is cheap. Match on the configured required tag.
+  const groups = await ctx.db.query("judgingGroups").collect();
+  let added = 0;
+
+  for (const group of groups) {
+    const requiredTagId = group.submissionFormRequiredTagId;
+    if (!requiredTagId) continue;
+    if (!tagIds.includes(requiredTagId)) continue;
+
+    const didAdd = await ensureStoryInGroup(ctx, group._id, storyId, addedBy);
+    if (didAdd) added++;
+  }
+
+  return added;
 }
 
 // --- Admin Functions ---
@@ -79,21 +170,8 @@ export const addSubmissions = mutation({
           continue;
         }
 
-        // Add to group
-        await ctx.db.insert("judgingGroupSubmissions", {
-          groupId: args.groupId,
-          storyId,
-          addedBy: user._id,
-          addedAt: Date.now(),
-        });
-
-        // Create default submission status (Pending)
-        await ctx.db.insert("submissionStatuses", {
-          groupId: args.groupId,
-          storyId,
-          status: "pending",
-          lastUpdatedAt: Date.now(),
-        });
+        // Add to group + create default pending status via shared helper
+        await ensureStoryInGroup(ctx, args.groupId, storyId, user._id);
 
         added++;
       } catch (error) {
@@ -104,6 +182,60 @@ export const addSubmissions = mutation({
     }
 
     return { added, skipped, errors };
+  },
+});
+
+/**
+ * Backfill submissions by required tag.
+ * Scans all stories and includes every valid story that carries the group's
+ * configured required tag, even if it was not submitted through the custom
+ * submission form. Idempotent and safe to run repeatedly (e.g. after deploy).
+ */
+export const syncRequiredTagSubmissions = mutation({
+  args: {
+    groupId: v.id("judgingGroups"),
+  },
+  returns: v.object({
+    added: v.number(),
+    alreadyPresent: v.number(),
+    requiredTagSet: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
+    const addedBy = await getAuthenticatedUserId(ctx);
+
+    const group = await ctx.db.get(args.groupId);
+    if (!group) {
+      throw new Error("Judging group not found");
+    }
+
+    const requiredTagId = group.submissionFormRequiredTagId;
+    if (!requiredTagId) {
+      return { added: 0, alreadyPresent: 0, requiredTagSet: false };
+    }
+
+    const stories = await ctx.db.query("stories").collect();
+    let added = 0;
+    let alreadyPresent = 0;
+
+    for (const story of stories) {
+      if (!isStoryValidForJudging(story)) continue;
+      if (!(story.tagIds || []).includes(requiredTagId)) continue;
+
+      const didAdd = await ensureStoryInGroup(
+        ctx,
+        args.groupId,
+        story._id,
+        addedBy,
+      );
+      if (didAdd) {
+        added++;
+      } else {
+        alreadyPresent++;
+      }
+    }
+
+    return { added, alreadyPresent, requiredTagSet: true };
   },
 });
 
@@ -165,6 +297,18 @@ export const removeSubmission = mutation({
 
     for (const note of notes) {
       await ctx.db.delete(note._id);
+    }
+
+    // Delete multi-judge completion records
+    const completions = await ctx.db
+      .query("submissionJudgeCompletions")
+      .withIndex("by_groupId_storyId", (q) =>
+        q.eq("groupId", args.groupId).eq("storyId", args.storyId),
+      )
+      .collect();
+
+    for (const completion of completions) {
+      await ctx.db.delete(completion._id);
     }
 
     // Delete the submission
@@ -766,16 +910,21 @@ export const getSubmissionStatusForJudge = query({
       ),
       canJudge: v.boolean(),
       assignedJudgeName: v.optional(v.string()),
+      completionCount: v.optional(v.number()),
+      judgesPerSubmission: v.optional(v.number()),
+      thisJudgeCompleted: v.optional(v.boolean()),
     }),
   ),
   handler: async (ctx, args) => {
-    // Verify the judge exists and belongs to the group
     const judge = await ctx.db.get(args.judgeId);
     if (!judge || judge.groupId !== args.groupId) {
       return null;
     }
 
-    // Get submission status
+    const group = await ctx.db.get(args.groupId);
+    const judgesPerSubmission = group?.judgesPerSubmission ?? 1;
+    const isMultiJudge = judgesPerSubmission > 1;
+
     const status = await ctx.db
       .query("submissionStatuses")
       .withIndex("by_groupId_storyId", (q) =>
@@ -787,8 +936,35 @@ export const getSubmissionStatusForJudge = query({
       return null;
     }
 
-    // Determine if this judge can judge this submission
-    // Rules: Can judge if status is "pending" or "skip", but not if "completed"
+    if (isMultiJudge) {
+      // Multi-judge: check completions table
+      const completions = await ctx.db
+        .query("submissionJudgeCompletions")
+        .withIndex("by_groupId_storyId", (q) =>
+          q.eq("groupId", args.groupId).eq("storyId", args.storyId),
+        )
+        .collect();
+
+      const completionCount = completions.length;
+      const thisJudgeCompleted = completions.some(
+        (c) => c.judgeId === args.judgeId,
+      );
+      const isLocked = completionCount >= judgesPerSubmission;
+
+      // canJudge: true if not locked AND this judge hasn't completed yet
+      const canJudge = !isLocked && !thisJudgeCompleted && status.status !== "skip";
+
+      return {
+        status: isLocked ? ("completed" as const) : status.status,
+        canJudge,
+        assignedJudgeName: undefined,
+        completionCount,
+        judgesPerSubmission,
+        thisJudgeCompleted,
+      };
+    }
+
+    // Single-judge: original logic
     const canJudge = status.status === "pending" || status.status === "skip";
 
     let assignedJudgeName: string | undefined;
@@ -801,6 +977,137 @@ export const getSubmissionStatusForJudge = query({
       status: status.status,
       canJudge,
       assignedJudgeName,
+      completionCount: undefined,
+      judgesPerSubmission: undefined,
+      thisJudgeCompleted: undefined,
+    };
+  },
+});
+
+/**
+ * Mark a submission as completed by this judge in multi-judge mode.
+ * Each judge writes their own row to avoid OCC write conflicts.
+ * When threshold (judgesPerSubmission) is reached, flips the shared status to "completed".
+ */
+export const markJudgeCompleted = mutation({
+  args: {
+    sessionId: v.string(),
+    storyId: v.id("stories"),
+  },
+  returns: v.object({
+    alreadyCompleted: v.boolean(),
+    isLocked: v.boolean(),
+    completionCount: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    // Resolve judge from session
+    const judge = await ctx.db
+      .query("judges")
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
+      .unique();
+
+    if (!judge) {
+      throw new Error("Judge session not found");
+    }
+
+    const group = await ctx.db.get(judge.groupId);
+    if (!group) {
+      throw new Error("Judging group not found");
+    }
+
+    const judgesPerSubmission = group.judgesPerSubmission ?? 1;
+
+    // Verify this submission is in the group
+    const groupSubmission = await ctx.db
+      .query("judgingGroupSubmissions")
+      .withIndex("by_groupId_storyId", (q) =>
+        q.eq("groupId", judge.groupId).eq("storyId", args.storyId),
+      )
+      .unique();
+
+    if (!groupSubmission) {
+      throw new Error("Submission not found in this judging group");
+    }
+
+    // Idempotent: check if this judge already completed
+    const existing = await ctx.db
+      .query("submissionJudgeCompletions")
+      .withIndex("by_group_story_judge", (q) =>
+        q
+          .eq("groupId", judge.groupId)
+          .eq("storyId", args.storyId)
+          .eq("judgeId", judge._id),
+      )
+      .unique();
+
+    if (existing) {
+      // Already completed by this judge; count current completions
+      const allCompletions = await ctx.db
+        .query("submissionJudgeCompletions")
+        .withIndex("by_groupId_storyId", (q) =>
+          q.eq("groupId", judge.groupId).eq("storyId", args.storyId),
+        )
+        .collect();
+
+      return {
+        alreadyCompleted: true,
+        isLocked: allCompletions.length >= judgesPerSubmission,
+        completionCount: allCompletions.length,
+      };
+    }
+
+    // Insert this judge's completion row
+    await ctx.db.insert("submissionJudgeCompletions", {
+      groupId: judge.groupId,
+      storyId: args.storyId,
+      judgeId: judge._id,
+      completedAt: Date.now(),
+    });
+
+    // Count total completions after inserting
+    const allCompletions = await ctx.db
+      .query("submissionJudgeCompletions")
+      .withIndex("by_groupId_storyId", (q) =>
+        q.eq("groupId", judge.groupId).eq("storyId", args.storyId),
+      )
+      .collect();
+
+    const completionCount = allCompletions.length;
+    const isLocked = completionCount >= judgesPerSubmission;
+
+    // If threshold reached, flip the shared status row to "completed" (single-shot)
+    if (isLocked) {
+      const existingStatus = await ctx.db
+        .query("submissionStatuses")
+        .withIndex("by_groupId_storyId", (q) =>
+          q.eq("groupId", judge.groupId).eq("storyId", args.storyId),
+        )
+        .unique();
+
+      if (existingStatus && existingStatus.status !== "completed") {
+        await ctx.db.patch(existingStatus._id, {
+          status: "completed",
+          lastUpdatedBy: judge._id,
+          lastUpdatedAt: Date.now(),
+        });
+
+        // Fire alert for story owner
+        const story = await ctx.db.get(args.storyId);
+        if (story && story.userId) {
+          await ctx.scheduler.runAfter(0, internal.alerts.createAlert, {
+            recipientUserId: story.userId,
+            actorUserId: undefined,
+            type: "judged",
+            storyId: args.storyId,
+          });
+        }
+      }
+    }
+
+    return {
+      alreadyCompleted: false,
+      isLocked,
+      completionCount,
     };
   },
 });

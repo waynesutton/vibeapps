@@ -180,7 +180,26 @@ export default function JudgingInterfacePage() {
       : "skip",
   );
 
+  // Multi-judge: read config from group
+  const judgesPerSubmission = judgeSession?.group?.judgesPerSubmission ?? 1;
+  const isMultiJudge = judgesPerSubmission > 1;
+
+  // Multi-judge: breakdown query (shows after self-completion or lock)
+  const judgeBreakdown = useQuery(
+    api.judgeScores.getSubmissionJudgeBreakdown,
+    isMultiJudge &&
+      sessionId &&
+      displaySubmissions &&
+      displaySubmissions.length > 0 &&
+      displaySubmissions[currentSubmissionIndex]
+      ? { sessionId, storyId: displaySubmissions[currentSubmissionIndex]._id }
+      : "skip",
+  );
+
   const submitScore = useMutation(api.judgeScores.submitScore);
+  const markJudgeCompleted = useMutation(
+    api.judgingGroupSubmissions.markJudgeCompleted,
+  );
   const updateActivity = useMutation(api.judges.updateActivity);
 
   // Status and notes functionality
@@ -333,6 +352,56 @@ export default function JudgingInterfacePage() {
     setIsMarkingCompleted(true);
     try {
       await handleStatusUpdate("completed");
+    } finally {
+      setIsMarkingCompleted(false);
+    }
+  };
+
+  // Multi-judge: "Judged & Next" flow
+  const handleJudgedAndNext = async () => {
+    if (!criteria || !sessionId || !displaySubmissions) return;
+
+    const allCriteriaScored = criteria.every(
+      (criterion) => scores[criterion._id] && scores[criterion._id].score > 0,
+    );
+
+    if (!allCriteriaScored) {
+      showMessage(
+        "Incomplete Scoring",
+        "Please score all criteria before submitting.",
+        "warning",
+      );
+      return;
+    }
+
+    setIsMarkingCompleted(true);
+    try {
+      const currentSubmission = displaySubmissions[currentSubmissionIndex];
+      await markJudgeCompleted({
+        sessionId,
+        storyId: currentSubmission._id,
+      });
+
+      // Advance to next unjudged submission if available
+      const nextUnjudgedIndex = displaySubmissions.findIndex(
+        (s, i) =>
+          i > currentSubmissionIndex &&
+          !judgeProgress?.submissionProgress.find(
+            (p) => p.storyId === s._id && p.thisJudgeCompleted,
+          ),
+      );
+      if (nextUnjudgedIndex !== -1) {
+        setCurrentSubmissionIndex(nextUnjudgedIndex);
+      } else if (currentSubmissionIndex < displaySubmissions.length - 1) {
+        setCurrentSubmissionIndex(currentSubmissionIndex + 1);
+      }
+    } catch (error) {
+      console.error("Error marking judged:", error);
+      showMessage(
+        "Error",
+        "Failed to record completion. Please try again.",
+        "error",
+      );
     } finally {
       setIsMarkingCompleted(false);
     }
@@ -954,11 +1023,12 @@ export default function JudgingInterfacePage() {
                                   <span className="text-sm text-green-700 font-medium">
                                     Completed
                                   </span>
-                                  {submissionStatus.assignedJudgeName && (
-                                    <span className="text-sm text-gray-600">
-                                      by {submissionStatus.assignedJudgeName}
-                                    </span>
-                                  )}
+                                  {!isMultiJudge &&
+                                    submissionStatus.assignedJudgeName && (
+                                      <span className="text-sm text-gray-600">
+                                        by {submissionStatus.assignedJudgeName}
+                                      </span>
+                                    )}
                                 </>
                               )}
                               {submissionStatus.status === "skip" && (
@@ -970,61 +1040,91 @@ export default function JudgingInterfacePage() {
                                 </>
                               )}
                             </div>
+
+                            {/* Multi-judge completion counter */}
+                            {isMultiJudge && (
+                              <span className="text-xs text-gray-500 ml-2">
+                                ({submissionStatus.completionCount ?? 0} of{" "}
+                                {submissionStatus.judgesPerSubmission ?? judgesPerSubmission}{" "}
+                                judges)
+                              </span>
+                            )}
                           </div>
 
-                          {/* Status Controls */}
-                          {(submissionStatus.canJudge ||
-                            (submissionStatus.status === "completed" &&
-                              submissionStatus.assignedJudgeName &&
-                              judgeSession &&
-                              submissionStatus.assignedJudgeName ===
-                                judgeSession.name)) && (
-                            <div className="flex items-center gap-2">
-                              {submissionStatus.status !== "skip" &&
-                                submissionStatus.status !== "completed" && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleStatusUpdate("skip")}
-                                    className="text-gray-600 hover:text-gray-800 flex items-center gap-2"
-                                  >
-                                    <FileX className="w-3 h-3" />
-                                    Skip
-                                  </Button>
-                                )}
-                              {submissionStatus.status === "skip" && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleStatusUpdate("pending")}
-                                  className="text-yellow-600 hover:text-yellow-800 flex items-center gap-2"
-                                >
-                                  <PlayCircle className="w-3 h-3" />
-                                  Resume
-                                </Button>
-                              )}
-                              {submissionStatus.status === "completed" &&
+                          {/* Status Controls (single-judge path) */}
+                          {!isMultiJudge &&
+                            (submissionStatus.canJudge ||
+                              (submissionStatus.status === "completed" &&
                                 submissionStatus.assignedJudgeName &&
                                 judgeSession &&
                                 submissionStatus.assignedJudgeName ===
-                                  judgeSession.name && (
+                                  judgeSession.name)) && (
+                              <div className="flex items-center gap-2">
+                                {submissionStatus.status !== "skip" &&
+                                  submissionStatus.status !== "completed" && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleStatusUpdate("skip")}
+                                      className="text-gray-600 hover:text-gray-800 flex items-center gap-2"
+                                    >
+                                      <FileX className="w-3 h-3" />
+                                      Skip
+                                    </Button>
+                                  )}
+                                {submissionStatus.status === "skip" && (
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={() =>
                                       handleStatusUpdate("pending")
                                     }
-                                    className="text-blue-600 hover:text-blue-800 flex items-center gap-2"
+                                    className="text-yellow-600 hover:text-yellow-800 flex items-center gap-2"
                                   >
                                     <PlayCircle className="w-3 h-3" />
-                                    Edit Scores
+                                    Resume
                                   </Button>
                                 )}
-                            </div>
-                          )}
+                                {submissionStatus.status === "completed" &&
+                                  submissionStatus.assignedJudgeName &&
+                                  judgeSession &&
+                                  submissionStatus.assignedJudgeName ===
+                                    judgeSession.name && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() =>
+                                        handleStatusUpdate("pending")
+                                      }
+                                      className="text-blue-600 hover:text-blue-800 flex items-center gap-2"
+                                    >
+                                      <PlayCircle className="w-3 h-3" />
+                                      Edit Scores
+                                    </Button>
+                                  )}
+                              </div>
+                            )}
+
+                          {/* Multi-judge: skip button (only when not yet completed by this judge) */}
+                          {isMultiJudge &&
+                            submissionStatus.canJudge &&
+                            submissionStatus.status !== "skip" &&
+                            submissionStatus.status !== "completed" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleStatusUpdate("skip")}
+                                className="text-gray-600 hover:text-gray-800 flex items-center gap-2"
+                              >
+                                <FileX className="w-3 h-3" />
+                                Skip
+                              </Button>
+                            )}
                         </div>
 
-                        {!submissionStatus.canJudge &&
+                        {/* Single-judge readonly notice */}
+                        {!isMultiJudge &&
+                          !submissionStatus.canJudge &&
                           submissionStatus.status === "completed" && (
                             <div className="mt-2">
                               <p className="text-xs text-gray-600">
@@ -1032,6 +1132,33 @@ export default function JudgingInterfacePage() {
                                 {submissionStatus.assignedJudgeName ||
                                   "another judge"}
                                 . You can view it but cannot edit the scores.
+                              </p>
+                            </div>
+                          )}
+
+                        {/* Multi-judge: locked notice */}
+                        {isMultiJudge &&
+                          !submissionStatus.canJudge &&
+                          submissionStatus.status === "completed" && (
+                            <div className="mt-2">
+                              <p className="text-xs text-gray-600">
+                                All {submissionStatus.judgesPerSubmission ?? judgesPerSubmission}{" "}
+                                judges have completed this submission. Scores are
+                                locked.
+                              </p>
+                            </div>
+                          )}
+
+                        {/* Multi-judge: this judge already completed notice */}
+                        {isMultiJudge &&
+                          submissionStatus.thisJudgeCompleted &&
+                          submissionStatus.status !== "completed" && (
+                            <div className="mt-2">
+                              <p className="text-xs text-gray-600">
+                                You have submitted your scores. Waiting for{" "}
+                                {(submissionStatus.judgesPerSubmission ?? judgesPerSubmission) -
+                                  (submissionStatus.completionCount ?? 0)}{" "}
+                                more judge(s).
                               </p>
                             </div>
                           )}
@@ -1652,8 +1779,9 @@ export default function JudgingInterfacePage() {
                   Scoring Criteria
                 </h3>
 
-                {/* Show completion notice if completed by another judge */}
-                {submissionStatus &&
+                {/* Show completion notice if completed by another judge (single-judge) */}
+                {!isMultiJudge &&
+                  submissionStatus &&
                   submissionStatus.status === "completed" &&
                   submissionStatus.assignedJudgeName &&
                   judgeSession &&
@@ -1673,16 +1801,43 @@ export default function JudgingInterfacePage() {
                     </div>
                   )}
 
+                {/* Multi-judge: locked notice at top of scoring */}
+                {isMultiJudge &&
+                  submissionStatus &&
+                  !submissionStatus.canJudge && (
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="w-5 h-5 text-blue-600" />
+                        <h4 className="font-medium text-gray-900">
+                          {submissionStatus.thisJudgeCompleted
+                            ? "Your scores have been submitted"
+                            : "Submission locked"}
+                        </h4>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {submissionStatus.thisJudgeCompleted
+                          ? "You can view scores below but cannot change them."
+                          : `All ${submissionStatus.judgesPerSubmission ?? judgesPerSubmission} judges have completed scoring. This submission is read-only.`}
+                      </p>
+                    </div>
+                  )}
+
                 <div className={`space-y-4`}>
                   {criteria.map((criterion) => {
                     const currentScore = scores[criterion._id]?.score;
                     const isComplete = !!currentScore;
-                    const isReadonly =
-                      submissionStatus &&
-                      submissionStatus.status === "completed" &&
-                      submissionStatus.assignedJudgeName &&
-                      judgeSession &&
-                      submissionStatus.assignedJudgeName !== judgeSession.name;
+                    // Single-judge: readonly if completed by another judge
+                    // Multi-judge: readonly if this judge already completed or submission is locked
+                    const isReadonly = isMultiJudge
+                      ? submissionStatus &&
+                        (submissionStatus.thisJudgeCompleted ||
+                          !submissionStatus.canJudge)
+                      : submissionStatus &&
+                        submissionStatus.status === "completed" &&
+                        submissionStatus.assignedJudgeName &&
+                        judgeSession &&
+                        submissionStatus.assignedJudgeName !==
+                          judgeSession.name;
 
                     // Get completed score if viewing another judge's work
                     const completedScore =
@@ -1813,8 +1968,9 @@ export default function JudgingInterfacePage() {
                     ></div>
                   </div>
 
-                  {/* Mark Completed Button */}
-                  {submissionStatus &&
+                  {/* Action button: single-judge "Mark Complete" or multi-judge "Judged & Next" */}
+                  {!isMultiJudge &&
+                    submissionStatus &&
                     submissionStatus.canJudge &&
                     submissionStatus.status !== "completed" && (
                       <div className="pt-3 border-t border-gray-100">
@@ -1833,6 +1989,76 @@ export default function JudgingInterfacePage() {
                         </p>
                       </div>
                     )}
+
+                  {isMultiJudge &&
+                    submissionStatus &&
+                    submissionStatus.canJudge &&
+                    !submissionStatus.thisJudgeCompleted && (
+                      <div className="pt-3 border-t border-gray-100">
+                        <Button
+                          onClick={handleJudgedAndNext}
+                          disabled={isMarkingCompleted}
+                          className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          {isMarkingCompleted
+                            ? "Submitting..."
+                            : "Judged & Next"}
+                        </Button>
+                        <p className="text-xs text-gray-500 text-center mt-2">
+                          All criteria must be scored. Your scores will be
+                          submitted and you will advance to the next submission.
+                        </p>
+                      </div>
+                    )}
+
+                  {/* Multi-judge breakdown: overall + per-judge scores */}
+                  {isMultiJudge && judgeBreakdown && (
+                    <div className="pt-3 border-t border-gray-100 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium text-gray-900">
+                          Overall Score
+                        </h4>
+                        <span className="text-lg font-bold text-gray-900">
+                          {judgeBreakdown.overallAverage.toFixed(1)}/10
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Based on {judgeBreakdown.completionCount} of{" "}
+                        {judgeBreakdown.judgesPerSubmission} judge(s)
+                      </p>
+
+                      {/* Per-judge scores */}
+                      <div className="space-y-2">
+                        {judgeBreakdown.judges.map((judge, idx) => (
+                          <div
+                            key={idx}
+                            className="p-2 bg-gray-50 rounded border border-gray-200"
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium text-gray-700">
+                                {judge.judgeName}
+                              </span>
+                              <span className="text-sm font-semibold text-gray-900">
+                                Avg: {judge.judgeAverage.toFixed(1)}/10
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {judge.scores.map((s) => (
+                                <span
+                                  key={s.criteriaId}
+                                  className="text-xs bg-white px-1.5 py-0.5 rounded border border-gray-200"
+                                  title={s.question}
+                                >
+                                  {s.score}/10
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="pt-3 border-t border-gray-100">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">

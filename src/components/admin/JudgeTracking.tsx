@@ -372,6 +372,8 @@ export function JudgeTracking({
   }
 
   const { group, judges } = trackingData;
+  const judgesPerSubmission = group.judgesPerSubmission ?? 1;
+  const isMultiJudge = judgesPerSubmission > 1;
 
   // Filter judges based on search term
   const filteredJudges = judges.filter((judge) => {
@@ -582,6 +584,22 @@ export function JudgeTracking({
             </div>
           </div>
         </div>
+
+        {/* Multi-judge indicator */}
+        {isMultiJudge && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center gap-2">
+              <Target className="w-4 h-4 text-blue-600" />
+              <span className="text-sm font-medium text-blue-900">
+                Multi-judge mode: {judgesPerSubmission} judges per submission
+              </span>
+              <span className="text-xs text-blue-700 ml-2">
+                Each submission requires {judgesPerSubmission} independent judges
+                before it is marked complete.
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Judge Activity */}
         <div

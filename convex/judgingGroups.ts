@@ -1,7 +1,8 @@
 import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { requireAdminRole, isUserAdmin } from "./users";
+import { requireAdminRole, isUserAdmin, getAuthenticatedUserId } from "./users";
+import { ensureStoryInGroup } from "./judgingGroupSubmissions";
 
 // Validator for admin-selectable required fields on the custom submission form.
 // Each key is optional; unset keys fall back to defaults on the public page.
@@ -195,6 +196,7 @@ export const createGroup = mutation({
       resultsPassword: hashedResultsPassword,
       isActive: args.isActive ?? true,
       createdBy: user._id,
+      judgesPerSubmission: 1,
     });
   },
 });
@@ -206,9 +208,9 @@ export const updateGroup = mutation({
   args: {
     groupId: v.id("judgingGroups"),
     name: v.optional(v.string()),
-    description: v.optional(v.union(v.string(), v.null())), // Allow null to clear description
+    description: v.optional(v.union(v.string(), v.null())),
     isPublic: v.optional(v.boolean()),
-    judgePassword: v.optional(v.union(v.string(), v.null())), // Allow null to clear password
+    judgePassword: v.optional(v.union(v.string(), v.null())),
     submissionPagePassword: v.optional(v.union(v.string(), v.null())),
     resultsIsPublic: v.optional(v.boolean()),
     resultsPassword: v.optional(v.union(v.string(), v.null())),
@@ -233,12 +235,17 @@ export const updateGroup = mutation({
     submissionFormSubtitle: v.optional(v.union(v.string(), v.null())),
     submissionFormRequiredTagId: v.optional(v.union(v.id("tags"), v.null())),
     submissionFieldRequirements: v.optional(submissionFieldRequirementsValidator),
+    judgesPerSubmission: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     await requireAdminRole(ctx);
 
-    const { groupId, judgePassword, submissionPagePassword, resultsPassword, ...updates } = args;
+    // Snapshot the existing required tag so we can detect a change below.
+    const existingGroup = await ctx.db.get(args.groupId);
+    const previousRequiredTagId = existingGroup?.submissionFormRequiredTagId;
+
+    const { groupId, judgePassword, submissionPagePassword, resultsPassword, judgesPerSubmission, ...updates } = args;
 
     // Build finalUpdates object properly, handling nulls explicitly
     const finalUpdates: any = {};
@@ -246,11 +253,15 @@ export const updateGroup = mutation({
     // Copy non-password fields
     Object.keys(updates).forEach((key) => {
       const value = (updates as any)[key];
-      // Explicitly set field even if undefined to allow clearing values
       if (value !== undefined) {
         finalUpdates[key] = value;
       }
     });
+
+    // Clamp judgesPerSubmission to >= 1
+    if (judgesPerSubmission !== undefined) {
+      finalUpdates.judgesPerSubmission = Math.max(1, Math.round(judgesPerSubmission));
+    }
 
     // Hash passwords if provided, set undefined if null to clear
     if (judgePassword !== undefined) {
@@ -268,6 +279,28 @@ export const updateGroup = mutation({
     }
 
     await ctx.db.patch(groupId, finalUpdates);
+
+    // If the required tag was set (or changed to a new tag), backfill any
+    // existing stories carrying that tag so they are immediately judgeable and
+    // counted, matching the custom submission page behavior.
+    const newRequiredTagId =
+      args.submissionFormRequiredTagId === undefined
+        ? previousRequiredTagId
+        : args.submissionFormRequiredTagId ?? undefined;
+
+    if (
+      newRequiredTagId &&
+      newRequiredTagId !== previousRequiredTagId
+    ) {
+      const addedBy = await getAuthenticatedUserId(ctx);
+      const stories = await ctx.db.query("stories").collect();
+      for (const story of stories) {
+        if (!isStoryValidForJudging(story)) continue;
+        if (!(story.tagIds || []).includes(newRequiredTagId)) continue;
+        await ensureStoryInGroup(ctx, groupId, story._id, addedBy);
+      }
+    }
+
     return null;
   },
 });
@@ -318,7 +351,16 @@ export const deleteGroup = mutation({
       await ctx.db.delete(criterion._id);
     }
 
-    // 5. Finally, the group itself
+    // 5. Multi-judge completion records
+    const completions = await ctx.db
+      .query("submissionJudgeCompletions")
+      .withIndex("by_groupId_storyId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+    for (const completion of completions) {
+      await ctx.db.delete(completion._id);
+    }
+
+    // 6. Finally, the group itself
     await ctx.db.delete(args.groupId);
 
     return null;
@@ -341,6 +383,7 @@ export const getGroupBySlug = query({
       isPublic: v.boolean(),
       isActive: v.boolean(),
       createdBy: v.id("users"),
+      judgesPerSubmission: v.number(),
     }),
   ),
   handler: async (ctx, args) => {
@@ -364,6 +407,7 @@ export const getGroupBySlug = query({
       isPublic: group.isPublic,
       isActive: group.isActive,
       createdBy: group.createdBy,
+      judgesPerSubmission: group.judgesPerSubmission ?? 1,
     };
   },
 });
@@ -408,6 +452,7 @@ export const getGroupWithDetails = query({
       submissionFormSubtitle: v.optional(v.string()),
       submissionFormRequiredTagId: v.optional(v.id("tags")),
       submissionFieldRequirements: v.optional(submissionFieldRequirementsValidator),
+      judgesPerSubmission: v.number(),
       criteria: v.array(
         v.object({
           _id: v.id("judgingCriteria"),
@@ -489,6 +534,7 @@ export const getGroupWithDetails = query({
       submissionFormSubtitle: group.submissionFormSubtitle,
       submissionFormRequiredTagId: group.submissionFormRequiredTagId,
       submissionFieldRequirements: group.submissionFieldRequirements,
+      judgesPerSubmission: group.judgesPerSubmission ?? 1,
       criteria,
       submissionCount,
       judgeCount,
@@ -513,6 +559,7 @@ export const getPublicGroup = query({
       isPublic: v.boolean(),
       isActive: v.boolean(),
       hasJudgePassword: v.boolean(),
+      judgesPerSubmission: v.number(),
     }),
   ),
   handler: async (ctx, args) => {
@@ -529,11 +576,10 @@ export const getPublicGroup = query({
     if (!group.isActive) {
       const userIsAdmin = await isUserAdmin(ctx);
       if (!userIsAdmin) {
-        return null; // Return null to show 404 for non-admin users
+        return null;
       }
     }
 
-    // Return basic info without sensitive data
     return {
       _id: group._id,
       name: group.name,
@@ -541,7 +587,8 @@ export const getPublicGroup = query({
       description: group.description,
       isPublic: group.isPublic,
       isActive: group.isActive,
-      hasJudgePassword: !!(group.judgePassword || (group as any).password), // Backward compatibility
+      hasJudgePassword: !!(group.judgePassword || (group as any).password),
+      judgesPerSubmission: group.judgesPerSubmission ?? 1,
     };
   },
 });
