@@ -236,6 +236,11 @@ export const updateGroup = mutation({
     submissionFormRequiredTagId: v.optional(v.union(v.id("tags"), v.null())),
     submissionFieldRequirements: v.optional(submissionFieldRequirementsValidator),
     judgesPerSubmission: v.optional(v.number()),
+    // Multi-tag + date range auto-include config (nullable to clear)
+    autoIncludeTagIds: v.optional(v.union(v.array(v.id("tags")), v.null())),
+    autoIncludeMatchMode: v.optional(v.union(v.literal("any"), v.literal("all"))),
+    autoIncludeStartDate: v.optional(v.union(v.number(), v.null())),
+    autoIncludeEndDate: v.optional(v.union(v.number(), v.null())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -245,7 +250,18 @@ export const updateGroup = mutation({
     const existingGroup = await ctx.db.get(args.groupId);
     const previousRequiredTagId = existingGroup?.submissionFormRequiredTagId;
 
-    const { groupId, judgePassword, submissionPagePassword, resultsPassword, judgesPerSubmission, ...updates } = args;
+    const {
+      groupId,
+      judgePassword,
+      submissionPagePassword,
+      resultsPassword,
+      judgesPerSubmission,
+      autoIncludeTagIds,
+      autoIncludeMatchMode,
+      autoIncludeStartDate,
+      autoIncludeEndDate,
+      ...updates
+    } = args;
 
     // Build finalUpdates object properly, handling nulls explicitly
     const finalUpdates: any = {};
@@ -261,6 +277,20 @@ export const updateGroup = mutation({
     // Clamp judgesPerSubmission to >= 1
     if (judgesPerSubmission !== undefined) {
       finalUpdates.judgesPerSubmission = Math.max(1, Math.round(judgesPerSubmission));
+    }
+
+    // Auto-include config: null clears (store undefined), otherwise set the value.
+    if (autoIncludeTagIds !== undefined) {
+      finalUpdates.autoIncludeTagIds = autoIncludeTagIds ?? undefined;
+    }
+    if (autoIncludeMatchMode !== undefined) {
+      finalUpdates.autoIncludeMatchMode = autoIncludeMatchMode;
+    }
+    if (autoIncludeStartDate !== undefined) {
+      finalUpdates.autoIncludeStartDate = autoIncludeStartDate ?? undefined;
+    }
+    if (autoIncludeEndDate !== undefined) {
+      finalUpdates.autoIncludeEndDate = autoIncludeEndDate ?? undefined;
     }
 
     // Hash passwords if provided, set undefined if null to clear
@@ -298,6 +328,45 @@ export const updateGroup = mutation({
         if (!isStoryValidForJudging(story)) continue;
         if (!(story.tagIds || []).includes(newRequiredTagId)) continue;
         await ensureStoryInGroup(ctx, groupId, story._id, addedBy);
+      }
+    }
+
+    // If the multi-tag + date range auto-include config was part of this update
+    // and tags are configured, backfill matching stories immediately so the
+    // group is populated without a separate sync click.
+    const autoIncludeTouched =
+      autoIncludeTagIds !== undefined ||
+      autoIncludeMatchMode !== undefined ||
+      autoIncludeStartDate !== undefined ||
+      autoIncludeEndDate !== undefined;
+
+    if (autoIncludeTouched) {
+      const updatedGroup = await ctx.db.get(groupId);
+      if (
+        updatedGroup &&
+        updatedGroup.autoIncludeTagIds &&
+        updatedGroup.autoIncludeTagIds.length > 0
+      ) {
+        const addedBy = await getAuthenticatedUserId(ctx);
+        const tagIds = updatedGroup.autoIncludeTagIds;
+        const matchMode = updatedGroup.autoIncludeMatchMode ?? "any";
+        const startDate = updatedGroup.autoIncludeStartDate;
+        const endDate = updatedGroup.autoIncludeEndDate;
+
+        const stories = await ctx.db.query("stories").collect();
+        for (const story of stories) {
+          if (!isStoryValidForJudging(story)) continue;
+          const storyTagIds = story.tagIds || [];
+          const tagMatches =
+            matchMode === "all"
+              ? tagIds.every((tagId) => storyTagIds.includes(tagId))
+              : tagIds.some((tagId) => storyTagIds.includes(tagId));
+          if (!tagMatches) continue;
+          if (startDate !== undefined && story._creationTime < startDate)
+            continue;
+          if (endDate !== undefined && story._creationTime > endDate) continue;
+          await ensureStoryInGroup(ctx, groupId, story._id, addedBy);
+        }
       }
     }
 
@@ -452,6 +521,10 @@ export const getGroupWithDetails = query({
       submissionFormSubtitle: v.optional(v.string()),
       submissionFormRequiredTagId: v.optional(v.id("tags")),
       submissionFieldRequirements: v.optional(submissionFieldRequirementsValidator),
+      autoIncludeTagIds: v.optional(v.array(v.id("tags"))),
+      autoIncludeMatchMode: v.optional(v.union(v.literal("any"), v.literal("all"))),
+      autoIncludeStartDate: v.optional(v.number()),
+      autoIncludeEndDate: v.optional(v.number()),
       judgesPerSubmission: v.number(),
       criteria: v.array(
         v.object({
@@ -534,6 +607,10 @@ export const getGroupWithDetails = query({
       submissionFormSubtitle: group.submissionFormSubtitle,
       submissionFormRequiredTagId: group.submissionFormRequiredTagId,
       submissionFieldRequirements: group.submissionFieldRequirements,
+      autoIncludeTagIds: group.autoIncludeTagIds,
+      autoIncludeMatchMode: group.autoIncludeMatchMode,
+      autoIncludeStartDate: group.autoIncludeStartDate,
+      autoIncludeEndDate: group.autoIncludeEndDate,
       judgesPerSubmission: group.judgesPerSubmission ?? 1,
       criteria,
       submissionCount,

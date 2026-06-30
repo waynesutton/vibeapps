@@ -7,6 +7,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { Checkbox } from "../ui/checkbox";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface CreateJudgingGroupModalProps {
   isOpen: boolean;
@@ -53,6 +54,9 @@ export function CreateJudgingGroupModal({
     resetForm();
     onClose();
   };
+
+  // Close on Escape while open.
+  useEscapeKey(isOpen, handleClose);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

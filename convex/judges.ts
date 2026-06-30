@@ -312,8 +312,21 @@ export const getJudgeSession = query({
 });
 
 /**
- * Update judge's last active timestamp (throttled to reduce write conflicts)
- * Note: Throttling should be done on the client side to minimize database reads
+ * Minimum staleness before lastActiveAt is rewritten.
+ * The heartbeat fires every 60s, but activity tracking only needs minute-level
+ * precision. Gating the write behind this threshold turns the vast majority of
+ * heartbeats into read-only no-ops, which is what prevents OCC write conflicts
+ * on a hot judge document (see https://docs.convex.dev/error#1, remediation #3).
+ */
+const ACTIVITY_UPDATE_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
+
+/**
+ * Update judge's last active timestamp.
+ *
+ * Write-conflict safety: most heartbeats early-return without writing because
+ * the stored timestamp is still fresh. When two calls do race, only one crosses
+ * the threshold and writes; the loser's automatic retry then sees the fresh
+ * value and early-returns, so the conflict resolves instead of persisting.
  */
 export const updateActivity = mutation({
   args: {
@@ -332,9 +345,10 @@ export const updateActivity = mutation({
       return null;
     }
 
-    // Only update if the provided timestamp is newer than the current one
-    // This prevents conflicts from out-of-order updates
-    if (args.lastActiveAt > judge.lastActiveAt) {
+    // Only write when the stored timestamp is meaningfully stale. This keeps
+    // writes to the same document infrequent and eliminates write conflicts
+    // from frequent/parallel heartbeats hitting the same hot row.
+    if (args.lastActiveAt - judge.lastActiveAt >= ACTIVITY_UPDATE_THRESHOLD_MS) {
       await ctx.db.patch(judge._id, {
         lastActiveAt: args.lastActiveAt,
       });

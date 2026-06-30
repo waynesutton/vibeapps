@@ -28,6 +28,7 @@
 ### Agent Skills (.agents/, .claude/)
 
 - `.agents/skills/`: Shared agent skills (Convex quickstart, auth setup, component creation, migration helper, performance audit, plus design and workflow skills) for consistent agent behavior
+- `.agents/skills/convex-write-conflicts/SKILL.md`: How to diagnose and permanently fix Convex OCC "Retried due to write conflicts" errors (staleness-threshold gate for heartbeat/last-active writes, indexed reads, client jitter); references the `judges.updateActivity` fix as the canonical example
 - `.claude/skills/`: Claude-specific copies of the same Convex and tooling skills
 
 ### Product Requirements Documents (prds/)
@@ -105,9 +106,9 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 ### Comprehensive Judging System
 
-- `convex/judgingGroups.ts`: Judging group management with public/private access, password protection, configurable `judgesPerSubmission` for multi-judge mode, and required-tag backfill in `updateGroup` (stories carrying a newly set required tag are auto-included for judging)
+- `convex/judgingGroups.ts`: Judging group management with public/private access, password protection, configurable `judgesPerSubmission` for multi-judge mode, required-tag backfill in `updateGroup` (stories carrying a newly set required tag are auto-included for judging), and auto-include backfill by multiple tags + submission date range (`autoIncludeTagIds`/`autoIncludeMatchMode` any|all/`autoIncludeStartDate`/`autoIncludeEndDate`, also returned from `getGroupWithDetails`)
 - `convex/judgingCriteria.ts`: Judging criteria and scoring questions management with 1-10 star ratings
-- `convex/judgingGroupSubmissions.ts`: Submission assignment within judging groups with @mentions in notes, search functionality, status tracking, `markJudgeCompleted` mutation for multi-judge OCC-safe completion, required-tag inclusion (`ensureStoryInGroup`/`syncStoryToTaggedGroups` helpers + `syncRequiredTagSubmissions` admin mutation) so any story carrying a group's required tag is judged and counted, and `exportGroupSubmissions` admin query that returns flattened submission rows (custom form info, links, tags, hackathon team info; no images) for CSV download
+- `convex/judgingGroupSubmissions.ts`: Submission assignment within judging groups with @mentions in notes, search functionality, status tracking, `markJudgeCompleted` mutation for multi-judge OCC-safe completion, required-tag inclusion (`ensureStoryInGroup`/`syncStoryToTaggedGroups` helpers + `syncRequiredTagSubmissions` admin mutation) so any story carrying a group's required tag is judged and counted, multi-tag + date-range auto-include (`storyMatchesAutoInclude` helper supporting any/all match modes, `syncStoryToTaggedGroups` honors auto-include criteria, `syncAutoIncludeSubmissions` admin mutation), and `exportGroupSubmissions` admin query that returns flattened submission rows (custom form info, links, tags, hackathon team info; no images) for CSV download
 - `convex/judges.ts`: Judge registration, session management, and group-wide progress tracking with canEdit/completedBy flags for multi-judge transparency and edit permission enforcement
 - `convex/judgeScores.ts`: Score submission, calculation, results with CSV export, weighted scoring, and `getSubmissionJudgeBreakdown` query for per-judge score breakdown with after-self reveal rule
 - `convex/adminJudgeTracking.ts`: Admin utilities for judge monitoring, submission status management, and comprehensive CSV export of judge activity including individual scores, total scores per submission, submissions, criteria, and comments
@@ -203,7 +204,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 - `src/components/admin/Judging.tsx`: Main judging group management interface with comprehensive controls, including a per-group "Export CSV" action that fetches submissions on demand and downloads custom submit form info (no images)
 - `src/components/admin/CreateJudgingGroupModal.tsx`: Judging group creation modal with password protection
-- `src/components/admin/EditJudgingGroupModal.tsx`: Comprehensive editing modal for judging group settings including access controls, custom submission page configuration, admin-selectable required submission fields, password management, a "Sync existing submissions with this tag" backfill button, and all group settings
+- `src/components/admin/EditJudgingGroupModal.tsx`: Comprehensive editing modal for judging group settings including access controls, custom submission page configuration, admin-selectable required submission fields, password management, a "Sync existing submissions with this tag" backfill button, an auto-populate section (searchable multi-tag selector with removable chips, any/all "Tag match rule", Start/End submission date range, and "Sync matching submissions" button via `syncAutoIncludeSubmissions`), and all group settings
 - `src/components/admin/JudgingCriteriaEditor.tsx`: Scoring criteria management with 1-10 star ratings
 - `src/components/admin/JudgingResultsDashboard.tsx`: Admin results and analytics with CSV export
 - `src/components/admin/JudgeTracking.tsx`: Comprehensive judge tracking dashboard with breadcrumb navigation, Stats Overview, Judge Activity section with expandable judge details and score moderation tools, Judge Scores & Comments tabbed interface showing detailed scoring per judge with submission grouping, floating scroll buttons, notes viewing, and CSV export of comprehensive judge activity data
@@ -227,6 +228,11 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/components/ui/dialog.tsx`: Modal dialog component
 - `src/components/ui/AlertDialog.tsx`: Alert and confirmation dialogs
 - `src/components/ui/AuthRequiredDialog.tsx`: Authentication requirement modal
+
+### Hooks (src/hooks/)
+
+- `src/hooks/useDialog.tsx`: Imperative message/confirm dialog helper backed by MessageDialog and AlertDialog
+- `src/hooks/useEscapeKey.ts`: Shared hook that closes an open overlay when the Escape key is pressed (window keydown subscription gated on open state)
 
 ### Page Components (src/pages/)
 

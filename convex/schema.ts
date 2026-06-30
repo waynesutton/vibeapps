@@ -373,6 +373,14 @@ export default defineSchema({
     submissionFormTitle: v.optional(v.string()), // Custom title for submission form (default: "Submit Your App")
     submissionFormSubtitle: v.optional(v.string()), // Optional subtitle text below form title
     submissionFormRequiredTagId: v.optional(v.id("tags")), // Required tag that will be auto-selected and locked in submission form
+    // Auto-populate by multiple tags (OR match) within an optional date range.
+    // Separate from the single required form tag above. Matching stories are
+    // materialized into judgingGroupSubmissions so judging/results work unchanged.
+    autoIncludeTagIds: v.optional(v.array(v.id("tags"))), // Tags to match
+    // How selected tags are matched: "any" (OR, at least one) or "all" (AND, every selected tag required). Defaults to "any".
+    autoIncludeMatchMode: v.optional(v.union(v.literal("any"), v.literal("all"))),
+    autoIncludeStartDate: v.optional(v.number()), // Inclusive lower bound on story creation time (ms)
+    autoIncludeEndDate: v.optional(v.number()), // Inclusive upper bound on story creation time (ms)
     // Admin-selectable required fields for the custom submission form. Unset keys fall back to defaults.
     submissionFieldRequirements: v.optional(
       v.object({

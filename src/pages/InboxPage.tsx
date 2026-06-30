@@ -17,6 +17,7 @@ import {
 import "@fontsource/inter/400.css";
 import "@fontsource/inter/500.css";
 import { useDialog } from "../hooks/useDialog";
+import { useEscapeKey } from "../hooks/useEscapeKey";
 
 // Define predefined emoji reactions
 const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "👏"];
@@ -114,6 +115,13 @@ export default function InboxPage() {
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState("");
+
+  // Close the block/report modals on Escape, mirroring their Cancel buttons.
+  useEscapeKey(showBlockModal, () => setShowBlockModal(false));
+  useEscapeKey(showReportModal, () => {
+    setShowReportModal(false);
+    setReportReason("");
+  });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 

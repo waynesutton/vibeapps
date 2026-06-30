@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Added] - 2026-06-30
+
+**Judging: Searchable auto-include tags + match-all mode**
+
+- The auto-populate tag picker is now searchable (filters by tag name, capped to the first 50 matches) so admins can work with thousands of tags without scrolling a giant list. Selected tags show as removable chips that stay visible even when filtered out of the results.
+- New "Tag match rule" option: **Match any** (a submission needs at least one selected tag, the original OR behavior) or **Match all** (a submission must carry every selected tag, e.g. require tag 1 AND tag 2 AND tag 3). The optional date range applies in both modes.
+- New optional `autoIncludeMatchMode` field on `judgingGroups` (defaults to "any" so existing groups are unchanged). The match helper, `updateGroup` backfill, and `getGroupWithDetails` all honor the mode.
+- **Backend**: `convex/schema.ts`, `convex/judgingGroups.ts`, `convex/judgingGroupSubmissions.ts`.
+- **Frontend**: `src/components/admin/EditJudgingGroupModal.tsx`.
+- **PRD**: `prds/judging-tag-daterange-groups.md`
+
+### [Added] - 2026-06-29
+
+**Accessibility: Press Escape to close any modal**
+
+- Every modal, dialog, and popup overlay now closes when you press the Escape key, matching its existing Cancel/close button behavior.
+- Added a small shared hook `src/hooks/useEscapeKey.ts` that subscribes to a window keydown listener only while a modal is open and reuses the modal's existing close handler.
+- Fixed the shared `src/components/ui/dialog.tsx` once so all of its consumers inherit Escape support (Create/Edit submit form modals, report story modal, report user modal).
+- Wired Escape into the remaining custom design-system overlays: `AlertDialog` (used app-wide via `useDialog`), Edit/Create Judging Group modals, Content Moderation delete-comment confirm, User Moderation confirm action, Judge Tracking (edit score, delete judge, delete score), and the Inbox block/report modals.
+- Modals that already supported Escape were left unchanged (MessageDialog, PromptDialog, ImageGallery, StoryForm image lightbox, and the Radix-based AuthRequiredDialog and Footer about modal).
+- No UI, layout, styling, or behavior changes beyond closing on Escape.
+- **Frontend**: `src/hooks/useEscapeKey.ts`, `src/components/ui/dialog.tsx`, `src/components/ui/AlertDialog.tsx`, `src/components/admin/EditJudgingGroupModal.tsx`, `src/components/admin/CreateJudgingGroupModal.tsx`, `src/components/admin/ContentModeration.tsx`, `src/components/admin/UserModeration.tsx`, `src/components/admin/JudgeTracking.tsx`, `src/pages/InboxPage.tsx`.
+- **PRD**: `prds/modal-esc-close.md`
+
+### [Fixed] - 2026-06-29
+
+**Judging: Permanently fix write conflicts in the judges table**
+
+- Resolved the recurring Convex Insight warning "Retried due to write conflicts in table judges" caused by `judges.updateActivity` (retried ~1.6K times on a single hot judge row, conflicting with itself).
+- Root cause: the activity heartbeat wrote `lastActiveAt` on essentially every 60s tick, so parallel heartbeats hitting the same document collided under optimistic concurrency control. See https://docs.convex.dev/error#1 (remediation #3: avoid many writes to the same document).
+- Fix: added a 2-minute server-side staleness threshold so the vast majority of heartbeats are read-only no-ops. Concurrent calls now resolve to a single write, and any retry reads the fresh value and early-returns instead of conflicting.
+- Also jittered the client heartbeat interval (60s + up to 15s) so heartbeats from multiple tabs/clients do not fire in lockstep.
+- **Backend**: `convex/judges.ts` (`updateActivity` threshold gate).
+- **Frontend**: `src/pages/JudgingInterfacePage.tsx` (jittered activity interval).
+- **Skill**: `.agents/skills/convex-write-conflicts/SKILL.md` documents the diagnosis and canonical fix for any future heartbeat/counter write conflicts.
+
+### [Added] - 2026-06-29
+
+**Judging: Auto-populate groups by multiple tags and a date range**
+
+- Admins can now build a judging group that automatically pulls in submissions matching one or more tags (OR logic, a submission needs one or both selected tags) and an optional submission date range, on top of the existing single required-tag option.
+- The Edit Judging Group modal adds a multi-tag checkbox selector, Start Date and End Date inputs, and a "Sync matching submissions" button that backfills past and current submissions on demand.
+- Matching submissions are materialized into `judgingGroupSubmissions`, so they flow into the existing Judging Interface and judging results pages with no extra wiring. Changing the filters only adds submissions, never removes them, so judge scores are never lost.
+- New optional `autoIncludeTagIds`, `autoIncludeStartDate`, and `autoIncludeEndDate` fields on the `judgingGroups` table. Forward backfill runs when these are set or changed in `updateGroup`, and the reverse story-tag sync (`syncStoryToTaggedGroups`) now also honors the auto-include criteria so newly tagged stories land in the right groups.
+- **Backend**: `convex/schema.ts`, `convex/judgingGroups.ts` (updateGroup backfill, getGroupWithDetails return), `convex/judgingGroupSubmissions.ts` (`storyMatchesAutoInclude` helper, extended `syncStoryToTaggedGroups`, new `syncAutoIncludeSubmissions` mutation).
+- **Frontend**: `src/components/admin/EditJudgingGroupModal.tsx`.
+- **PRD**: `prds/judging-tag-daterange-groups.md`
+
 ### [Added] - 2026-06-28
 
 **Judging: Export submissions to CSV per group**

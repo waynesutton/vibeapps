@@ -28,6 +28,7 @@ import {
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -69,6 +70,12 @@ export function JudgeTracking({
     useState<Id<"judges"> | null>(null);
   const [deleteConfirmScore, setDeleteConfirmScore] =
     useState<Id<"judgeScores"> | null>(null);
+
+  // Close the topmost open modal on Escape.
+  useEscapeKey(editingScore !== null, () => setEditingScore(null));
+  useEscapeKey(deleteConfirmJudge !== null, () => setDeleteConfirmJudge(null));
+  useEscapeKey(deleteConfirmScore !== null, () => setDeleteConfirmScore(null));
+
   const [expandedScoreForNotes, setExpandedScoreForNotes] =
     useState<Id<"judgeScores"> | null>(null);
   const [replyContent, setReplyContent] = useState("");

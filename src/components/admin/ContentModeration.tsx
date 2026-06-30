@@ -29,6 +29,7 @@ import {
 } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 import type { StoryWithDetails } from "../../../convex/stories";
 import { Doc } from "../../../convex/_generated/dataModel";
 import { Link, useNavigate } from "react-router-dom";
@@ -137,6 +138,11 @@ export function ContentModeration() {
   >([]);
   const [confirmDeleteCommentId, setConfirmDeleteCommentId] =
     useState<Id<"comments"> | null>(null);
+
+  // Close the delete-comment confirmation on Escape.
+  useEscapeKey(confirmDeleteCommentId !== null, () =>
+    setConfirmDeleteCommentId(null),
+  );
 
   // Bulk selection state (only for submissions)
   const [selectedStoryIds, setSelectedStoryIds] = useState<Set<Id<"stories">>>(

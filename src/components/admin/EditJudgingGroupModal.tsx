@@ -13,6 +13,8 @@ import {
   Plus,
   Trash2,
   Users,
+  Tag,
+  Calendar,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -20,6 +22,7 @@ import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { Checkbox } from "../ui/checkbox";
 import { Id } from "../../../convex/_generated/dataModel";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface EditJudgingGroupModalProps {
   isOpen: boolean;
@@ -67,6 +70,31 @@ function mergeRequirements(
   return result;
 }
 
+// Format a ms timestamp into a yyyy-mm-dd string for <input type="date"> using
+// local date parts (avoids UTC day-shift from toISOString).
+function tsToDateInput(ts?: number | null): string {
+  if (ts === undefined || ts === null) return "";
+  const d = new Date(ts);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+// Convert a yyyy-mm-dd input into an inclusive start-of-day timestamp, or null.
+function dateInputToStartTs(value: string): number | null {
+  if (!value) return null;
+  const ts = new Date(`${value}T00:00:00`).getTime();
+  return Number.isNaN(ts) ? null : ts;
+}
+
+// Convert a yyyy-mm-dd input into an inclusive end-of-day timestamp, or null.
+function dateInputToEndTs(value: string): number | null {
+  if (!value) return null;
+  const ts = new Date(`${value}T23:59:59.999`).getTime();
+  return Number.isNaN(ts) ? null : ts;
+}
+
 export function EditJudgingGroupModal({
   isOpen,
   onClose,
@@ -102,7 +130,13 @@ export function EditJudgingGroupModal({
       ...DEFAULT_FIELD_REQUIREMENTS,
     } as SubmissionFieldRequirements,
     judgesPerSubmission: 1,
+    autoIncludeTagIds: [] as Id<"tags">[],
+    autoIncludeMatchMode: "any" as "any" | "all",
+    autoIncludeStartDate: "" as string,
+    autoIncludeEndDate: "" as string,
   });
+  // Search term for filtering the auto-include tag list (handles 1000s of tags).
+  const [tagSearch, setTagSearch] = useState("");
   const [submissionPageImage, setSubmissionPageImage] = useState<File | null>(
     null,
   );
@@ -117,6 +151,34 @@ export function EditJudgingGroupModal({
   const syncRequiredTagSubmissions = useMutation(
     api.judgingGroupSubmissions.syncRequiredTagSubmissions,
   );
+  const syncAutoIncludeSubmissions = useMutation(
+    api.judgingGroupSubmissions.syncAutoIncludeSubmissions,
+  );
+  const [isSyncingAuto, setIsSyncingAuto] = useState(false);
+  const [autoSyncMessage, setAutoSyncMessage] = useState<string | null>(null);
+
+  // Backfill existing stories that match the multi-tag + date range config so
+  // they are judgeable and counted, even if added before the config was saved.
+  const handleSyncAutoInclude = async () => {
+    setAutoSyncMessage(null);
+    setIsSyncingAuto(true);
+    try {
+      const result = await syncAutoIncludeSubmissions({ groupId });
+      if (!result.tagsConfigured) {
+        setAutoSyncMessage(
+          "No tags are saved for auto-include. Select tags and save first.",
+        );
+      } else {
+        setAutoSyncMessage(
+          `Added ${result.added} submission${result.added === 1 ? "" : "s"}. ${result.alreadyPresent} already included.`,
+        );
+      }
+    } catch (err) {
+      setAutoSyncMessage("Failed to sync submissions. Please try again.");
+    } finally {
+      setIsSyncingAuto(false);
+    }
+  };
 
   // Backfill existing stories that carry the saved required tag so they show up
   // to be judged and counted, even if they never used the custom submission form.
@@ -167,6 +229,10 @@ export function EditJudgingGroupModal({
           group.submissionFieldRequirements,
         ),
         judgesPerSubmission: group.judgesPerSubmission ?? 1,
+        autoIncludeTagIds: group.autoIncludeTagIds || [],
+        autoIncludeMatchMode: group.autoIncludeMatchMode ?? "any",
+        autoIncludeStartDate: tsToDateInput(group.autoIncludeStartDate),
+        autoIncludeEndDate: tsToDateInput(group.autoIncludeEndDate),
       });
 
       // Load existing image URL if available
@@ -201,18 +267,27 @@ export function EditJudgingGroupModal({
           group.submissionFieldRequirements,
         ),
         judgesPerSubmission: group.judgesPerSubmission ?? 1,
+        autoIncludeTagIds: group.autoIncludeTagIds || [],
+        autoIncludeMatchMode: group.autoIncludeMatchMode ?? "any",
+        autoIncludeStartDate: tsToDateInput(group.autoIncludeStartDate),
+        autoIncludeEndDate: tsToDateInput(group.autoIncludeEndDate),
       });
     }
+    setTagSearch("");
     setSubmissionPageImage(null);
     setError("");
     setIsSubmitting(false);
     setSyncMessage(null);
+    setAutoSyncMessage(null);
   };
 
   const handleClose = () => {
     resetForm();
     onClose();
   };
+
+  // Close on Escape while open.
+  useEscapeKey(isOpen, handleClose);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -263,6 +338,14 @@ export function EditJudgingGroupModal({
           formData.submissionFormRequiredTagId || undefined,
         submissionFieldRequirements: formData.submissionFieldRequirements,
         judgesPerSubmission: formData.judgesPerSubmission,
+        // Multi-tag + date range auto-include config (null clears each field)
+        autoIncludeTagIds:
+          formData.autoIncludeTagIds.length > 0
+            ? formData.autoIncludeTagIds
+            : null,
+        autoIncludeMatchMode: formData.autoIncludeMatchMode,
+        autoIncludeStartDate: dateInputToStartTs(formData.autoIncludeStartDate),
+        autoIncludeEndDate: dateInputToEndTs(formData.autoIncludeEndDate),
       };
 
       // Only include passwords if they're provided
@@ -302,6 +385,16 @@ export function EditJudgingGroupModal({
   };
 
   if (!isOpen || !group) return null;
+
+  // Derived tag lists for the searchable auto-include selector.
+  const selectedTagSet = new Set(formData.autoIncludeTagIds);
+  const selectedTags = (allTags || []).filter((t) => selectedTagSet.has(t._id));
+  const tagSearchLower = tagSearch.trim().toLowerCase();
+  const filteredTags = (allTags || []).filter(
+    (t) => !tagSearchLower || t.name.toLowerCase().includes(tagSearchLower),
+  );
+  const MAX_TAG_RESULTS = 50;
+  const shownTags = filteredTags.slice(0, MAX_TAG_RESULTS);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -606,6 +699,243 @@ export function EditJudgingGroupModal({
                   ? "Default: each submission is judged by a single judge."
                   : `Each submission must be scored by ${formData.judgesPerSubmission} different judges before it is marked complete.`}
               </p>
+            </div>
+          </div>
+
+          {/* Auto-populate by Tags & Date Range */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+                <Tag className="w-5 h-5" />
+                Auto-populate Submissions by Tags & Date Range
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Build this group from existing or new submissions. Search and
+                select one or more tags, choose how they are matched, and
+                optionally limit by the date the submission was originally
+                posted.
+              </p>
+            </div>
+
+            {/* Match mode */}
+            <div>
+              <Label htmlFor="autoIncludeMatchMode">Tag match rule</Label>
+              <select
+                id="autoIncludeMatchMode"
+                value={formData.autoIncludeMatchMode}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    autoIncludeMatchMode: e.target.value as "any" | "all",
+                  }))
+                }
+                disabled={isSubmitting}
+                className="w-full mt-1 px-3 py-2 bg-white rounded-md text-gray-700 border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-400"
+              >
+                <option value="any">
+                  Match any (a submission needs at least one selected tag)
+                </option>
+                <option value="all">
+                  Match all (a submission must carry every selected tag)
+                </option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                {formData.autoIncludeMatchMode === "all"
+                  ? "Example: select tag 1, tag 2 and tag 3 to require all three on a submission."
+                  : "Example: select tag 1 and tag 2 to include submissions carrying either one."}
+              </p>
+            </div>
+
+            {/* Tag search + multi-select */}
+            <div>
+              <Label htmlFor="autoIncludeTagSearch">
+                Tags ({formData.autoIncludeMatchMode === "all" ? "match all" : "match any"})
+              </Label>
+
+              {/* Selected tag chips (visible even when filtered out of results) */}
+              {selectedTags.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {selectedTags.map((tag) => (
+                    <span
+                      key={tag._id}
+                      className="inline-flex items-center gap-1 rounded-full bg-gray-100 border border-gray-200 px-2.5 py-1 text-xs text-gray-700"
+                    >
+                      {tag.emoji ? `${tag.emoji} ` : ""}
+                      {tag.name}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            autoIncludeTagIds: prev.autoIncludeTagIds.filter(
+                              (id) => id !== tag._id,
+                            ),
+                          }))
+                        }
+                        disabled={isSubmitting}
+                        className="text-gray-400 hover:text-gray-700"
+                        aria-label={`Remove ${tag.name}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData((prev) => ({ ...prev, autoIncludeTagIds: [] }))
+                    }
+                    disabled={isSubmitting}
+                    className="text-xs text-gray-500 hover:text-gray-700 underline"
+                  >
+                    Clear all ({formData.autoIncludeTagIds.length})
+                  </button>
+                </div>
+              )}
+
+              <Input
+                id="autoIncludeTagSearch"
+                type="text"
+                value={tagSearch}
+                onChange={(e) => setTagSearch(e.target.value)}
+                placeholder="Search tags by name..."
+                disabled={isSubmitting}
+                className="mt-2"
+              />
+
+              {allTags && allTags.length > 0 ? (
+                <div className="mt-2 max-h-48 overflow-y-auto border border-gray-200 rounded-md p-3">
+                  {shownTags.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {shownTags.map((tag) => {
+                        const checked = selectedTagSet.has(tag._id);
+                        return (
+                          <div
+                            key={tag._id}
+                            className="flex items-center space-x-2"
+                          >
+                            <Checkbox
+                              id={`auto-tag-${tag._id}`}
+                              checked={checked}
+                              onCheckedChange={(value) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  autoIncludeTagIds: value
+                                    ? [...prev.autoIncludeTagIds, tag._id]
+                                    : prev.autoIncludeTagIds.filter(
+                                        (id) => id !== tag._id,
+                                      ),
+                                }))
+                              }
+                              disabled={isSubmitting}
+                            />
+                            <Label
+                              htmlFor={`auto-tag-${tag._id}`}
+                              className="text-sm font-normal text-gray-700"
+                            >
+                              {tag.emoji ? `${tag.emoji} ` : ""}
+                              {tag.name}
+                            </Label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">
+                      No tags match "{tagSearch}".
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 mt-1">No tags available.</p>
+              )}
+              {filteredTags.length > shownTags.length && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Showing first {MAX_TAG_RESULTS} of {filteredTags.length}{" "}
+                  matches. Keep typing to narrow the list.
+                </p>
+              )}
+            </div>
+
+            {/* Date range */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label
+                  htmlFor="autoIncludeStartDate"
+                  className="flex items-center gap-2"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Start Date (Optional)
+                </Label>
+                <Input
+                  id="autoIncludeStartDate"
+                  type="date"
+                  value={formData.autoIncludeStartDate}
+                  max={formData.autoIncludeEndDate || undefined}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      autoIncludeStartDate: e.target.value,
+                    }))
+                  }
+                  disabled={isSubmitting}
+                />
+              </div>
+              <div>
+                <Label
+                  htmlFor="autoIncludeEndDate"
+                  className="flex items-center gap-2"
+                >
+                  <Calendar className="w-4 h-4" />
+                  End Date (Optional)
+                </Label>
+                <Input
+                  id="autoIncludeEndDate"
+                  type="date"
+                  value={formData.autoIncludeEndDate}
+                  min={formData.autoIncludeStartDate || undefined}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      autoIncludeEndDate: e.target.value,
+                    }))
+                  }
+                  disabled={isSubmitting}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">
+              Leave a date empty for an open-ended range. Set an end date in the
+              past to judge only older submissions. Leave the end date empty so
+              new matching submissions keep getting added automatically.
+            </p>
+
+            {/* Backfill matching submissions */}
+            <div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleSyncAutoInclude}
+                disabled={
+                  isSubmitting ||
+                  isSyncingAuto ||
+                  formData.autoIncludeTagIds.length === 0
+                }
+              >
+                {isSyncingAuto
+                  ? "Syncing..."
+                  : "Sync matching submissions"}
+              </Button>
+              <p className="text-xs text-gray-500 mt-1">
+                Save your changes first, then sync to add existing submissions
+                that match these tags and date range.
+              </p>
+              {autoSyncMessage && (
+                <p className="text-xs text-gray-700 mt-2 p-2 bg-gray-50 border border-gray-200 rounded">
+                  {autoSyncMessage}
+                </p>
+              )}
             </div>
           </div>
 

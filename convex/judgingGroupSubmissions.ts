@@ -15,6 +15,44 @@ function isStoryValidForJudging(story: Doc<"stories"> | null): story is Doc<"sto
   return true;
 }
 
+/**
+ * Returns true if a story matches a group's auto-include config: it carries the
+ * group's configured tags (match "any" = at least one OR, match "all" = every
+ * selected tag AND) and its original creation time falls within the optional
+ * inclusive date range. If no tags are configured, auto-include is inactive and
+ * this always returns false.
+ */
+function storyMatchesAutoInclude(
+  story: Doc<"stories">,
+  group: Doc<"judgingGroups">,
+): boolean {
+  const tagIds = group.autoIncludeTagIds;
+  if (!tagIds || tagIds.length === 0) return false;
+
+  const storyTagIds = story.tagIds || [];
+  const matchMode = group.autoIncludeMatchMode ?? "any";
+  const hasMatchingTag =
+    matchMode === "all"
+      ? tagIds.every((tagId) => storyTagIds.includes(tagId))
+      : tagIds.some((tagId) => storyTagIds.includes(tagId));
+  if (!hasMatchingTag) return false;
+
+  if (
+    group.autoIncludeStartDate !== undefined &&
+    story._creationTime < group.autoIncludeStartDate
+  ) {
+    return false;
+  }
+  if (
+    group.autoIncludeEndDate !== undefined &&
+    story._creationTime > group.autoIncludeEndDate
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 // --- Shared inclusion helpers (reused by submission form, tag sync, admin add) ---
 
 /**
@@ -90,14 +128,17 @@ export async function syncStoryToTaggedGroups(
     return 0;
   }
 
-  // Groups are few; scanning is cheap. Match on the configured required tag.
+  // Groups are few; scanning is cheap. Match on the single required form tag OR
+  // the multi-tag + date range auto-include config.
   const groups = await ctx.db.query("judgingGroups").collect();
   let added = 0;
 
   for (const group of groups) {
     const requiredTagId = group.submissionFormRequiredTagId;
-    if (!requiredTagId) continue;
-    if (!tagIds.includes(requiredTagId)) continue;
+    const matchesRequiredTag = !!requiredTagId && tagIds.includes(requiredTagId);
+    const matchesAutoInclude = storyMatchesAutoInclude(story, group);
+
+    if (!matchesRequiredTag && !matchesAutoInclude) continue;
 
     const didAdd = await ensureStoryInGroup(ctx, group._id, storyId, addedBy);
     if (didAdd) added++;
@@ -236,6 +277,60 @@ export const syncRequiredTagSubmissions = mutation({
     }
 
     return { added, alreadyPresent, requiredTagSet: true };
+  },
+});
+
+/**
+ * Backfill submissions by the group's multi-tag + date range auto-include config.
+ * Scans all stories and includes every valid story that carries ANY of the
+ * configured tags (OR) within the optional creation-time range. Idempotent and
+ * safe to run repeatedly. Never removes existing submissions.
+ */
+export const syncAutoIncludeSubmissions = mutation({
+  args: {
+    groupId: v.id("judgingGroups"),
+  },
+  returns: v.object({
+    added: v.number(),
+    alreadyPresent: v.number(),
+    tagsConfigured: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
+    const addedBy = await getAuthenticatedUserId(ctx);
+
+    const group = await ctx.db.get(args.groupId);
+    if (!group) {
+      throw new Error("Judging group not found");
+    }
+
+    const tagIds = group.autoIncludeTagIds;
+    if (!tagIds || tagIds.length === 0) {
+      return { added: 0, alreadyPresent: 0, tagsConfigured: false };
+    }
+
+    const stories = await ctx.db.query("stories").collect();
+    let added = 0;
+    let alreadyPresent = 0;
+
+    for (const story of stories) {
+      if (!isStoryValidForJudging(story)) continue;
+      if (!storyMatchesAutoInclude(story, group)) continue;
+
+      const didAdd = await ensureStoryInGroup(
+        ctx,
+        args.groupId,
+        story._id,
+        addedBy,
+      );
+      if (didAdd) {
+        added++;
+      } else {
+        alreadyPresent++;
+      }
+    }
+
+    return { added, alreadyPresent, tagsConfigured: true };
   },
 });
 

@@ -1,4 +1,5 @@
 import React from "react";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface AlertDialogProps {
   isOpen: boolean;
@@ -21,6 +22,9 @@ const AlertDialog: React.FC<AlertDialogProps> = ({
   cancelButtonText = "Cancel",
   confirmButtonVariant = "default",
 }) => {
+  // Close on Escape while open.
+  useEscapeKey(isOpen, onClose);
+
   if (!isOpen) {
     return null;
   }

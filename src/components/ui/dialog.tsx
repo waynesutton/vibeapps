@@ -1,4 +1,5 @@
 import React from "react";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 const DialogComponent = ({
   open,
@@ -9,6 +10,9 @@ const DialogComponent = ({
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
 }) => {
+  // Close the dialog when Escape is pressed while it is open.
+  useEscapeKey(open, () => onOpenChange(false));
+
   if (!open) return null;
   return (
     <div

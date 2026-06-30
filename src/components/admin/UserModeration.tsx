@@ -3,6 +3,7 @@ import { usePaginatedQuery, useMutation, useConvexAuth } from "convex/react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../../convex/_generated/api";
 import { Id, Doc } from "../../../convex/_generated/dataModel";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -58,6 +59,9 @@ export function UserModeration() {
     userName: string;
     action: "ban" | "unban" | "delete" | "pause" | "unpause" | "verify" | "unverify";
   } | null>(null);
+
+  // Close the confirm-action modal on Escape.
+  useEscapeKey(confirmingAction !== null, () => setConfirmingAction(null));
 
   const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
   const navigate = useNavigate();

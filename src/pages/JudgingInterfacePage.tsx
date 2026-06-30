@@ -264,19 +264,22 @@ export default function JudgingInterfacePage() {
     }
   }, [existingScores, currentSubmissionIndex]);
 
-  // Update activity periodically with client-side throttling
+  // Update activity periodically. The interval is jittered (60s + up to 15s)
+  // so heartbeats from multiple clients/tabs don't fire in lockstep, which
+  // (together with the server-side staleness threshold) prevents OCC write
+  // conflicts on the judges table. See https://docs.convex.dev/error#1
   useEffect(() => {
-    if (sessionId) {
-      const interval = setInterval(() => {
-        // Pass current timestamp to the mutation
-        updateActivity({
-          sessionId,
-          lastActiveAt: Date.now(),
-        });
-      }, 60000); // Update every 60 seconds (reduced from 30s to minimize conflicts)
+    if (!sessionId) return;
 
-      return () => clearInterval(interval);
-    }
+    const intervalMs = 60000 + Math.floor(Math.random() * 15000);
+    const interval = setInterval(() => {
+      updateActivity({
+        sessionId,
+        lastActiveAt: Date.now(),
+      });
+    }, intervalMs);
+
+    return () => clearInterval(interval);
   }, [sessionId, updateActivity]);
 
   const handleScoreChange = async (
