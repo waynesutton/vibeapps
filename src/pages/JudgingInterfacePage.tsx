@@ -355,6 +355,24 @@ export default function JudgingInterfacePage() {
     setIsMarkingCompleted(true);
     try {
       await handleStatusUpdate("completed");
+
+      // Auto-advance to the next submission after marking complete.
+      // Prefer the next unjudged submission (not completed by any judge),
+      // otherwise just move forward by one.
+      if (displaySubmissions) {
+        const nextUnjudgedIndex = displaySubmissions.findIndex(
+          (s, i) =>
+            i > currentSubmissionIndex &&
+            !judgeProgress?.submissionProgress.find(
+              (p) => p.storyId === s._id && p.completedBy,
+            ),
+        );
+        if (nextUnjudgedIndex !== -1) {
+          setCurrentSubmissionIndex(nextUnjudgedIndex);
+        } else if (currentSubmissionIndex < displaySubmissions.length - 1) {
+          setCurrentSubmissionIndex(currentSubmissionIndex + 1);
+        }
+      }
     } finally {
       setIsMarkingCompleted(false);
     }

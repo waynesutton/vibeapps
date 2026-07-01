@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Changed] - 2026-06-30
+
+**Judging: Auto-jump to next submission after marking complete**
+
+- In the single-judge flow, clicking "Mark Submission Complete" now automatically advances to the next submission, matching the existing multi-judge "Judged & Next" behavior.
+- It prefers the next submission not yet completed by any judge; if none remain ahead, it moves forward by one.
+- **Frontend**: `src/pages/JudgingInterfacePage.tsx` (`handleMarkCompleted`).
+
 ### [Added] - 2026-06-30
 
 **Judging: Searchable auto-include tags + match-all mode**
