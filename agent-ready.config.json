@@ -1,10 +1,10 @@
 {
   "settings": {
-    "appName": "Vibe Apps",
+    "appName": "vibeapps",
     "appUrl": "https://vibeapps.dev",
-    "description": "The community where you go to show off what you've built, and see what others are building. Discover and share apps. Powered by Convex.",
+    "description": "The place to share and discover new apps.",
     "analyticsEnabled": false,
-    "aiDescriptionsEnabled": false,
+    "aiDescriptionsEnabled": true,
     "aiProvider": "claude",
     "testMode": true,
     "cronEnabled": true,
@@ -31,8 +31,8 @@
     "permissiveMode": false,
     "versioningEnabled": false,
     "sitemapEnabled": true,
-    "rssEnabled": false,
-    "robotsTxtEnabled": false
+    "rssEnabled": true,
+    "robotsTxtEnabled": true
   },
   "pages": [
     {
