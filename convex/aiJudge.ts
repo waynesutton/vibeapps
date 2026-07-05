@@ -347,6 +347,131 @@ export const getGroupAiResults = query({
   },
 });
 
+/**
+ * Admin-only data for the hackathon report: group info plus every valid
+ * submission with team info and its AI result. Kept separate from
+ * enrichResults so team member emails never flow through public queries.
+ */
+export const getGroupAiReportData = query({
+  args: { groupId: v.id("judgingGroups") },
+  returns: v.union(
+    v.null(),
+    v.object({
+      groupName: v.string(),
+      groupSlug: v.string(),
+      groupDescription: v.optional(v.string()),
+      submissions: v.array(
+        v.object({
+          storyId: v.id("stories"),
+          title: v.string(),
+          slug: v.string(),
+          url: v.optional(v.string()),
+          githubUrl: v.optional(v.string()),
+          teamName: v.optional(v.string()),
+          teamMemberCount: v.optional(v.number()),
+          teamMembers: v.optional(
+            v.array(v.object({ name: v.string(), email: v.string() })),
+          ),
+          submitterName: v.optional(v.string()),
+          status: v.union(
+            v.literal("pending"),
+            v.literal("running"),
+            v.literal("completed"),
+            v.literal("failed"),
+          ),
+          criteriaScores: v.optional(v.array(criteriaScoreValidator)),
+          totalScore: v.optional(v.number()),
+          averageScore: v.optional(v.number()),
+          overallReasoning: v.optional(v.string()),
+          convexFeaturesDetected: v.optional(v.array(v.string())),
+          urlCheck: v.optional(urlCheckValidator),
+          sourcesUsed: v.optional(
+            v.object({ github: v.boolean(), liveUrl: v.boolean() }),
+          ),
+          error: v.optional(v.string()),
+        }),
+      ),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    await requireAdminRole(ctx);
+
+    const group = await ctx.db.get(args.groupId);
+    if (!group || !group.aiJudgeEnabled) return null;
+
+    const rows = await ctx.db
+      .query("aiJudgeResults")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+
+    const submissions: Array<{
+      storyId: Id<"stories">;
+      title: string;
+      slug: string;
+      url?: string;
+      githubUrl?: string;
+      teamName?: string;
+      teamMemberCount?: number;
+      teamMembers?: Array<{ name: string; email: string }>;
+      submitterName?: string;
+      status: "pending" | "running" | "completed" | "failed";
+      criteriaScores?: Array<{
+        key: string;
+        label: string;
+        score: number;
+        reasoning: string;
+      }>;
+      totalScore?: number;
+      averageScore?: number;
+      overallReasoning?: string;
+      convexFeaturesDetected?: Array<string>;
+      urlCheck?: {
+        checkedUrl?: string;
+        isLive: boolean;
+        statusCode?: number;
+        note: string;
+      };
+      sourcesUsed?: { github: boolean; liveUrl: boolean };
+      error?: string;
+    }> = [];
+
+    for (const row of rows) {
+      const story = await ctx.db.get(row.storyId);
+      if (!isStoryValidForJudging(story)) continue;
+      submissions.push({
+        storyId: row.storyId,
+        title: story.title,
+        slug: story.slug,
+        url: story.url,
+        githubUrl: story.githubUrl,
+        teamName: story.teamName,
+        teamMemberCount: story.teamMemberCount,
+        teamMembers: story.teamMembers,
+        submitterName: story.submitterName,
+        status: row.status,
+        criteriaScores: row.criteriaScores,
+        totalScore: row.totalScore,
+        averageScore: row.averageScore,
+        overallReasoning: row.overallReasoning,
+        convexFeaturesDetected: row.convexFeaturesDetected,
+        urlCheck: row.urlCheck,
+        sourcesUsed: row.sourcesUsed,
+        error: row.error,
+      });
+    }
+
+    // Completed first by score, then the rest
+    submissions.sort((a, b) => (b.totalScore ?? -1) - (a.totalScore ?? -1));
+
+    return {
+      groupName: group.name,
+      groupSlug: group.slug,
+      groupDescription: group.description,
+      submissions,
+    };
+  },
+});
+
 // --- Internal: used by the analysis action chain ---
 
 /**
