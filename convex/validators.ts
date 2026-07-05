@@ -9,6 +9,8 @@ export const tagDocValidator = v.object({
   slug: v.string(),
   showInHeader: v.boolean(),
   isHidden: v.optional(v.boolean()),
+  hideInStoryDetail: v.optional(v.boolean()),
+  hideInStoryList: v.optional(v.boolean()),
   backgroundColor: v.optional(v.string()),
   textColor: v.optional(v.string()),
   borderColor: v.optional(v.string()),
@@ -247,6 +249,8 @@ export type StoryWithDetailsPublic = {
     slug: string;
     showInHeader: boolean;
     isHidden?: boolean;
+    hideInStoryDetail?: boolean;
+    hideInStoryList?: boolean;
     backgroundColor?: string;
     textColor?: string;
   }>;

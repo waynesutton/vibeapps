@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Fixed] - 2026-07-05
+
+**Tags: server error on tag and app pages after hiding a tag**
+
+- Fixed a Convex return validation crash on `tags:getBySlug` and `stories:getBySlug`. The per-view tag visibility fields (`hideInStoryDetail`, `hideInStoryList`) introduced on 2026-06-28 were written to tag documents by Tag Management but missing from the query validators, so any tag carrying them failed validation and broke its tag page and every app detail page using it.
+- Added both optional fields to the `getBySlug` return validator, the shared `tagDocValidator` (used by `storyWithDetailsValidator` for story list and detail queries), and the `StoryWithDetailsPublic` type.
+- **Backend**: `convex/tags.ts`, `convex/validators.ts`.
+
 ### [Added] - 2026-07-05
 
 **Judging: Opt-in AI Judge for Best Use of Convex**

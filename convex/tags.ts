@@ -63,6 +63,8 @@ export const getBySlug = query({
       slug: v.optional(v.string()),
       showInHeader: v.boolean(),
       isHidden: v.optional(v.boolean()),
+      hideInStoryDetail: v.optional(v.boolean()),
+      hideInStoryList: v.optional(v.boolean()),
       backgroundColor: v.optional(v.string()),
       textColor: v.optional(v.string()),
       borderColor: v.optional(v.string()),

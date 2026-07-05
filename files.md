@@ -134,7 +134,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 ### Utilities & Configuration
 
 - `convex/utils.ts`: Shared utility functions for backend operations
-- `convex/validators.ts`: Input validation schemas for functions
+- `convex/validators.ts`: Shared document and return validators (tag docs with per-view visibility flags, story-with-details) used across queries
 - `convex/convexBoxConfig.ts`: Configuration for ConvexBox notification system
 - `convex/http.ts`: HTTP actions for handling external requests and Resend webhook handler
 - `convex/settings.ts`: Global app settings including email kill switch and admin controls
