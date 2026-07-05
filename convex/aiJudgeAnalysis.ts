@@ -12,7 +12,57 @@ const MAX_CONVEX_FILES = 10;
 type RepoContext = {
   fetched: boolean;
   summary: string;
+  components: Array<string>;
 };
+
+// Extract Convex component names from package.json deps (@convex-dev/*) and
+// convex.config.ts imports of */convex.config
+function extractComponents(
+  packageJsonRaw: string | null,
+  convexConfigRaw: string | null,
+): Array<string> {
+  const found = new Set<string>();
+
+  if (packageJsonRaw) {
+    try {
+      const pkg = JSON.parse(packageJsonRaw) as {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      };
+      const deps = [
+        ...Object.keys(pkg.dependencies || {}),
+        ...Object.keys(pkg.devDependencies || {}),
+      ];
+      for (const dep of deps) {
+        if (dep.startsWith("@convex-dev/") && dep !== "@convex-dev/eslint-plugin") {
+          found.add(dep.replace("@convex-dev/", ""));
+        }
+      }
+    } catch {
+      // Unparseable package.json: fall back to config imports only
+    }
+  }
+
+  if (convexConfigRaw) {
+    const importRegex = /from\s+["']([^"']+)\/convex\.config(?:\.js)?["']/g;
+    let match;
+    while ((match = importRegex.exec(convexConfigRaw))) {
+      const source = match[1];
+      if (source.startsWith("@convex-dev/")) {
+        found.add(source.replace("@convex-dev/", ""));
+      } else if (source.startsWith("@")) {
+        found.add(source);
+      } else {
+        // Local component folder: use the last path segment as its name
+        const parts = source.split("/").filter((p) => p && p !== ".");
+        const name = parts[parts.length - 1];
+        if (name) found.add(name);
+      }
+    }
+  }
+
+  return [...found].sort();
+}
 
 type ScrapeContext = {
   fetched: boolean;
@@ -51,9 +101,9 @@ function decodeBase64Utf8(base64: string): string {
 
 // Fetch the GitHub repo: metadata, file tree, and key Convex-related files
 async function fetchGithubContext(githubUrl: string | undefined): Promise<RepoContext> {
-  if (!githubUrl) return { fetched: false, summary: "" };
+  if (!githubUrl) return { fetched: false, summary: "", components: [] };
   const parsed = parseGithubUrl(githubUrl);
-  if (!parsed) return { fetched: false, summary: "" };
+  if (!parsed) return { fetched: false, summary: "", components: [] };
 
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
@@ -69,7 +119,7 @@ async function fetchGithubContext(githubUrl: string | undefined): Promise<RepoCo
   try {
     const repoRes = await fetch(base, { headers });
     if (!repoRes.ok) {
-      return { fetched: false, summary: "" };
+      return { fetched: false, summary: "", components: [] };
     }
     const repoJson = (await repoRes.json()) as {
       default_branch?: string;
@@ -119,6 +169,9 @@ async function fetchGithubContext(githubUrl: string | undefined): Promise<RepoCo
 
     let totalChars = 0;
     const fileSections: Array<string> = [];
+    // Untruncated copies for component detection
+    let packageJsonRaw: string | null = null;
+    let convexConfigRaw: string | null = null;
     for (const path of selected) {
       if (totalChars >= MAX_TOTAL_REPO_CHARS) break;
       try {
@@ -133,6 +186,8 @@ async function fetchGithubContext(githubUrl: string | undefined): Promise<RepoCo
         };
         if (!fileJson.content || fileJson.encoding !== "base64") continue;
         let content = decodeBase64Utf8(fileJson.content);
+        if (path === "package.json") packageJsonRaw = content;
+        if (path.endsWith("convex.config.ts")) convexConfigRaw = content;
         if (content.length > MAX_FILE_CHARS) {
           content = content.slice(0, MAX_FILE_CHARS) + "\n... (truncated)";
         }
@@ -142,6 +197,8 @@ async function fetchGithubContext(githubUrl: string | undefined): Promise<RepoCo
         // Skip unreadable files; partial repo context is still useful
       }
     }
+
+    const components = extractComponents(packageJsonRaw, convexConfigRaw);
 
     const convexFilePaths = filePaths.filter(
       (p) => p.includes("convex/") && !p.includes("_generated"),
@@ -159,9 +216,9 @@ async function fetchGithubContext(githubUrl: string | undefined): Promise<RepoCo
       .filter(Boolean)
       .join("\n");
 
-    return { fetched: true, summary };
+    return { fetched: true, summary, components };
   } catch {
-    return { fetched: false, summary: "" };
+    return { fetched: false, summary: "", components: [] };
   }
 }
 
@@ -269,8 +326,9 @@ Rules:
 - If the repository was not accessible, say so in your reasoning and score conservatively from the remaining evidence.
 - For the "liveness" criterion, use the LIVE URL CHECK facts provided: if the URL is dead, 404, or missing, score it 1-2 and state the observed status in your reasoning; if it is live, score it 5-10 based on how functional the scraped content suggests the app is. This criterion only reflects the live app URL, never social or video links.
 - If the live URL is dead, 404, or missing, also flag that fact explicitly in overallReasoning. Do NOT lower the other five Convex criteria because of it; the ranking should stay mostly about Convex usage.
+- Convex components detected deterministically from package.json and convex.config.ts are listed in the input. Installed and wired-up components are a strong positive signal: raise the "advanced" score accordingly. A submission that uses one or more components well should generally score 7 or higher on "advanced", and thoughtful multi-component usage can justify 9-10. Name each component in your "advanced" reasoning.
 - Be specific in reasoning: name actual files, functions, tables, or features you observed.
-- List every Convex feature you detected (e.g. "schema with indexes", "scheduler", "file storage", "full-text search", "vector search", "http actions", "crons", "components", "agents", "real-time queries").
+- List every Convex feature you detected (e.g. "schema with indexes", "scheduler", "file storage", "full-text search", "vector search", "http actions", "crons", "components", "agents", "real-time queries"). Include each detected component as "component: <name>" (e.g. "component: resend").
 
 Respond with ONLY a JSON object in exactly this shape (no markdown fences, no extra text):
 {
@@ -318,6 +376,13 @@ function buildUserMessage(
     repo.fetched
       ? `\n=== GITHUB REPOSITORY CONTEXT ===\n${repo.summary}`
       : "\n=== GITHUB REPOSITORY CONTEXT ===\nRepository was not accessible (missing, private, or invalid URL).",
+  );
+
+  // Deterministic component detection from package.json / convex.config.ts
+  sections.push(
+    `\n=== CONVEX COMPONENTS DETECTED (from package.json and convex.config.ts) ===\n${
+      repo.components.length > 0 ? repo.components.join(", ") : "none detected"
+    }`,
   );
 
   sections.push(
@@ -596,6 +661,7 @@ export const analyzeSubmission = internalAction({
           criteriaScores,
           overallReasoning,
           convexFeaturesDetected: parsed.convexFeaturesDetected,
+          componentsDetected: repo.components,
           provider: llm.provider,
           model: llm.model,
           sourcesUsed: { github: repo.fetched, liveUrl: scrape.fetched },

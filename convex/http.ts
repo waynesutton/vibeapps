@@ -1,9 +1,17 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { internal, components } from "./_generated/api";
 import { resend } from "./sendEmails";
+import { registerRoutes } from "@waynesutton/agent-ready";
 
 const http = httpRouter();
+
+// Agent Ready component routes (agents.md, llms-full.txt, llms-status, etc.)
+// /llms.txt and /robots.txt are skipped because this app already serves them
+// from the siteFiles table via the routes defined below.
+registerRoutes(http, components.agentReady, {
+  skipRoutes: ["/llms.txt", "/robots.txt"],
+});
 
 // Define a route for Clerk webhooks
 // The path can be anything you choose, e.g., "/clerk-webhooks" or "/api/clerk"

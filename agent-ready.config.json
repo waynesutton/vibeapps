@@ -1,0 +1,68 @@
+{
+  "settings": {
+    "appName": "Vibe Apps",
+    "appUrl": "https://vibeapps.dev",
+    "description": "The community where you go to show off what you've built, and see what others are building. Discover and share apps. Powered by Convex.",
+    "analyticsEnabled": false,
+    "aiDescriptionsEnabled": false,
+    "aiProvider": "claude",
+    "testMode": true,
+    "cronEnabled": true,
+    "cronIntervalHours": 24,
+    "widgetPosition": "floating-bottom-right",
+    "widgetVisible": true,
+    "widgetStatusVisible": true,
+    "widgetShowFiles": true,
+    "widgetShowAppName": true,
+    "widgetShowDescription": true,
+    "widgetShowMeta": true,
+    "widgetShowScoreTab": false,
+    "widgetDesktopCollapse": true,
+    "widgetCleanMode": false,
+    "widgetShowHumanTab": true,
+    "widgetShowMachineTab": true,
+    "widgetShowChatLinks": true,
+    "widgetShowChatGPT": true,
+    "widgetShowClaude": true,
+    "widgetShowPerplexity": true,
+    "widgetColors": {},
+    "theme": "system",
+    "fullTxtEnabled": true,
+    "permissiveMode": false,
+    "versioningEnabled": false,
+    "sitemapEnabled": true,
+    "rssEnabled": false,
+    "robotsTxtEnabled": false
+  },
+  "pages": [
+    {
+      "title": "Home",
+      "path": "/",
+      "description": "Browse the latest apps submitted by the community, vote, and comment.",
+      "status": "published",
+      "order": 1
+    },
+    {
+      "title": "Submit an app",
+      "path": "/submit",
+      "description": "Share what you have built with the Vibe Apps community.",
+      "status": "published",
+      "order": 2
+    },
+    {
+      "title": "Search",
+      "path": "/search",
+      "description": "Search apps, tags, and creators across the site.",
+      "status": "published",
+      "order": 3
+    },
+    {
+      "title": "Leaderboard",
+      "path": "/leaderboard",
+      "description": "Top apps and builders ranked by community votes and engagement.",
+      "status": "published",
+      "order": 4
+    }
+  ],
+  "endpoints": []
+}

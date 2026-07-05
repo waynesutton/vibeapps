@@ -36,7 +36,7 @@ export const AI_JUDGE_RUBRIC: Array<{ key: string; label: string; description: s
     key: "advanced",
     label: "Advanced Convex features",
     description:
-      "Use of advanced features: scheduler and crons, file storage, full-text or vector search, HTTP actions, components, and agents.",
+      "Use of advanced features: scheduler and crons, file storage, full-text or vector search, HTTP actions, components, and agents. Convex components installed via convex.config.ts (e.g. @convex-dev/agent, resend, rate limiter, workpool, aggregate) are a strong signal: score noticeably higher when components are used well.",
   },
   {
     key: "depth",
@@ -88,6 +88,7 @@ const aiResultValidator = v.object({
   averageScore: v.optional(v.number()),
   overallReasoning: v.optional(v.string()),
   convexFeaturesDetected: v.optional(v.array(v.string())),
+  componentsDetected: v.optional(v.array(v.string())),
   provider: v.optional(v.string()),
   model: v.optional(v.string()),
   error: v.optional(v.string()),
@@ -123,6 +124,7 @@ async function enrichResults(ctx: QueryCtx, results: Array<Doc<"aiJudgeResults">
     averageScore?: number;
     overallReasoning?: string;
     convexFeaturesDetected?: Array<string>;
+    componentsDetected?: Array<string>;
     provider?: string;
     model?: string;
     error?: string;
@@ -153,6 +155,7 @@ async function enrichResults(ctx: QueryCtx, results: Array<Doc<"aiJudgeResults">
       averageScore: result.averageScore,
       overallReasoning: result.overallReasoning,
       convexFeaturesDetected: result.convexFeaturesDetected,
+      componentsDetected: result.componentsDetected,
       provider: result.provider,
       model: result.model,
       error: result.error,
@@ -384,6 +387,7 @@ export const getGroupAiReportData = query({
           averageScore: v.optional(v.number()),
           overallReasoning: v.optional(v.string()),
           convexFeaturesDetected: v.optional(v.array(v.string())),
+          componentsDetected: v.optional(v.array(v.string())),
           urlCheck: v.optional(urlCheckValidator),
           sourcesUsed: v.optional(
             v.object({ github: v.boolean(), liveUrl: v.boolean() }),
@@ -425,6 +429,7 @@ export const getGroupAiReportData = query({
       averageScore?: number;
       overallReasoning?: string;
       convexFeaturesDetected?: Array<string>;
+      componentsDetected?: Array<string>;
       urlCheck?: {
         checkedUrl?: string;
         isLive: boolean;
@@ -454,6 +459,7 @@ export const getGroupAiReportData = query({
         averageScore: row.averageScore,
         overallReasoning: row.overallReasoning,
         convexFeaturesDetected: row.convexFeaturesDetected,
+        componentsDetected: row.componentsDetected,
         urlCheck: row.urlCheck,
         sourcesUsed: row.sourcesUsed,
         error: row.error,
@@ -548,6 +554,7 @@ export const saveResult = internalMutation({
         criteriaScores: v.array(criteriaScoreValidator),
         overallReasoning: v.string(),
         convexFeaturesDetected: v.array(v.string()),
+        componentsDetected: v.optional(v.array(v.string())),
         provider: v.string(),
         model: v.string(),
         sourcesUsed: v.object({ github: v.boolean(), liveUrl: v.boolean() }),
@@ -580,6 +587,7 @@ export const saveResult = internalMutation({
         averageScore,
         overallReasoning: args.outcome.overallReasoning,
         convexFeaturesDetected: args.outcome.convexFeaturesDetected,
+        componentsDetected: args.outcome.componentsDetected,
         provider: args.outcome.provider,
         model: args.outcome.model,
         sourcesUsed: args.outcome.sourcesUsed,

@@ -13,6 +13,8 @@ import type * as admin_forceLogout from "../admin/forceLogout.js";
 import type * as adminFollowsQueries from "../adminFollowsQueries.js";
 import type * as adminJudgeTracking from "../adminJudgeTracking.js";
 import type * as adminQueries from "../adminQueries.js";
+import type * as agentReady_analytics from "../agentReady/analytics.js";
+import type * as agentReady_content from "../agentReady/content.js";
 import type * as aiJudge from "../aiJudge.js";
 import type * as aiJudgeAnalysis from "../aiJudgeAnalysis.js";
 import type * as alerts from "../alerts.js";
@@ -76,6 +78,8 @@ declare const fullApi: ApiFromModules<{
   adminFollowsQueries: typeof adminFollowsQueries;
   adminJudgeTracking: typeof adminJudgeTracking;
   adminQueries: typeof adminQueries;
+  "agentReady/analytics": typeof agentReady_analytics;
+  "agentReady/content": typeof agentReady_content;
   aiJudge: typeof aiJudge;
   aiJudgeAnalysis: typeof aiJudgeAnalysis;
   alerts: typeof alerts;
@@ -156,4 +160,7 @@ export declare const internal: FilterApi<
 
 export declare const components: {
   resend: import("@convex-dev/resend/_generated/component.js").ComponentApi<"resend">;
+  crons: import("@convex-dev/crons/_generated/component.js").ComponentApi<"crons">;
+  workpool: import("@convex-dev/workpool/_generated/component.js").ComponentApi<"workpool">;
+  agentReady: import("@waynesutton/agent-ready/_generated/component.js").ComponentApi<"agentReady">;
 };

@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Added] - 2026-07-05
+
+**Agent Ready component installed**
+
+- Installed the `@waynesutton/agent-ready` Convex component along with `@convex-dev/crons` and `@convex-dev/workpool` in `convex/convex.config.ts`.
+- Registered its HTTP routes in `convex/http.ts` (agents.md, llms-full.txt, llms-status); `/llms.txt` and `/robots.txt` are skipped because the app already serves them from the `siteFiles` table.
+- Added admin-gated app-facing wrappers in `convex/agentReady/content.ts` (settings, generated files, pages) and `convex/agentReady/analytics.ts` (request summary and time series), plus `agent-ready.config.json` for component settings.
+- **Backend**: `convex/convex.config.ts`, `convex/http.ts`, `convex/agentReady/content.ts` (new), `convex/agentReady/analytics.ts` (new), `agent-ready.config.json` (new), `package.json`.
+
+### [Added] - 2026-07-05
+
+**AI Judge: Convex components detection and scoring**
+
+- The AI review now detects Convex components deterministically from each repo's `package.json` (any `@convex-dev/*` dependency except the eslint plugin) and `convex.config.ts` imports of `*/convex.config`, including local components. The deduped list is stored on the result as `componentsDetected`.
+- Component usage now raises scores: the advanced criterion description and the system prompt tell the model that installed and wired-up components are a strong signal, that a submission using components well should generally score 7 or higher on "advanced", and each component is named in the reasoning and feature list as `component: <name>`.
+- Stats tab: new "Using Convex components" card (apps count plus distinct component count) and a "Components used" list showing each component with how many apps used it. Older results without the new field fall back to feature strings mentioning "component" for the apps count.
+- Hackathon report: overview row for apps using Convex components with the distinct component list, and a per-submission "Convex components" line. Re-run reviews (or individual submissions) to populate component data for existing groups.
+- **Backend**: `convex/schema.ts`, `convex/aiJudge.ts`, `convex/aiJudgeAnalysis.ts`.
+- **Frontend**: `src/components/admin/AIJudgeResults.tsx`.
+
 ### [Fixed] - 2026-07-05
 
 **Tags: server error on tag and app pages after hiding a tag**

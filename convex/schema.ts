@@ -432,6 +432,7 @@ export default defineSchema({
     averageScore: v.optional(v.number()), // Average across criteria
     overallReasoning: v.optional(v.string()), // Overall note on why it scored the submission this way
     convexFeaturesDetected: v.optional(v.array(v.string())), // Convex features found in the submission
+    componentsDetected: v.optional(v.array(v.string())), // Convex components found in package.json / convex.config.ts
     provider: v.optional(v.string()), // "anthropic" | "openai" | "openrouter"
     model: v.optional(v.string()), // Model used for the review
     error: v.optional(v.string()), // Error message when status is "failed"

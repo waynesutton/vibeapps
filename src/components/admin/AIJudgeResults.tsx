@@ -49,6 +49,7 @@ type StatsResult = {
   averageScore?: number;
   criteriaScores?: Array<CriteriaScore>;
   convexFeaturesDetected?: Array<string>;
+  componentsDetected?: Array<string>;
   urlCheck?: { isLive: boolean };
   sourcesUsed?: { github: boolean; liveUrl: boolean };
 };
@@ -84,6 +85,21 @@ function computeStats(results: Array<StatsResult>) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 12);
 
+  // Components detected from package.json / convex.config.ts (new runs only);
+  // older results fall back to feature strings mentioning "component"
+  const usesComponents = (r: StatsResult) =>
+    (r.componentsDetected?.length ?? 0) > 0 ||
+    (r.convexFeaturesDetected || []).some((f) => /component/i.test(f));
+  const componentCounts = new Map<string, number>();
+  for (const r of completed) {
+    for (const component of r.componentsDetected || []) {
+      const key = component.trim().toLowerCase();
+      if (!key) continue;
+      componentCounts.set(key, (componentCounts.get(key) || 0) + 1);
+    }
+  }
+  const componentsUsed = [...componentCounts.entries()].sort((a, b) => b[1] - a[1]);
+
   // Average-score distribution bands for the mini chart
   const bands = [
     { label: "9-10", min: 9, max: 10.01, count: 0 },
@@ -102,6 +118,8 @@ function computeStats(results: Array<StatsResult>) {
     completed: completed.length,
     usingConvex: completed.filter(usesConvex).length,
     advancedConvex: completed.filter(usesAdvanced).length,
+    usingComponents: completed.filter(usesComponents).length,
+    componentsUsed,
     liveApps: completed.filter((r) => r.urlCheck?.isLive).length,
     urlChecked: completed.filter((r) => r.urlCheck !== undefined).length,
     reposAnalyzed: completed.filter((r) => r.sourcesUsed?.github).length,
@@ -126,6 +144,7 @@ type ReportSubmission = {
   averageScore?: number;
   overallReasoning?: string;
   convexFeaturesDetected?: Array<string>;
+  componentsDetected?: Array<string>;
   urlCheck?: { checkedUrl?: string; isLive: boolean; statusCode?: number; note: string };
   sourcesUsed?: { github: boolean; liveUrl: boolean };
   error?: string;
@@ -185,6 +204,9 @@ function buildHackathonReport(
   lines.push(`| AI reviews completed | ${stats.completed} |`);
   lines.push(`| Apps using Convex | ${stats.usingConvex} |`);
   lines.push(`| Apps using advanced Convex features | ${stats.advancedConvex} |`);
+  lines.push(
+    `| Apps using Convex components | ${stats.usingComponents}${stats.componentsUsed.length > 0 ? ` (${stats.componentsUsed.length} distinct: ${stats.componentsUsed.map(([name]) => name).join(", ")})` : ""} |`,
+  );
   lines.push(`| Live apps at review time | ${stats.liveApps} of ${stats.urlChecked} checked |`);
   lines.push(`| GitHub repos analyzed | ${stats.reposAnalyzed} |`);
   lines.push(`| Average score | ${stats.averageScore}/10 |`);
@@ -260,6 +282,9 @@ function buildHackathonReport(
     }
     if (s.convexFeaturesDetected && s.convexFeaturesDetected.length > 0) {
       lines.push(`- Convex features: ${s.convexFeaturesDetected.join(", ")}`);
+    }
+    if (s.componentsDetected && s.componentsDetected.length > 0) {
+      lines.push(`- Convex components: ${s.componentsDetected.join(", ")}`);
     }
     if (s.criteriaScores && s.criteriaScores.length > 0) {
       lines.push(
@@ -1029,6 +1054,14 @@ function StatsPanel({
       sub: "scheduler, storage, search, components...",
     },
     {
+      label: "Using Convex components",
+      value: `${stats.usingComponents}`,
+      sub:
+        stats.componentsUsed.length > 0
+          ? `${stats.componentsUsed.length} distinct component${stats.componentsUsed.length === 1 ? "" : "s"}`
+          : "from package.json / convex.config.ts",
+    },
+    {
       label: "Live apps",
       value: `${stats.liveApps}`,
       sub: stats.urlChecked > 0 ? `of ${stats.urlChecked} URLs checked` : "no URLs checked",
@@ -1103,6 +1136,42 @@ function StatsPanel({
           )}
         </div>
 
+        {/* Convex components detected (deterministic, from repo files) */}
+        <div>
+          <h4 className="text-sm font-medium text-gray-900 mb-3">
+            Convex components used
+          </h4>
+          {stats.componentsUsed.length === 0 ? (
+            <p className="text-sm text-gray-500">
+              No components detected yet. Components are read from each repo's
+              package.json and convex.config.ts during the AI review.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {stats.componentsUsed.map(([component, count]) => (
+                <div key={component} className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                      <span className="text-sm text-gray-700 truncate">{component}</span>
+                      <span className="text-xs text-gray-500 flex-shrink-0">
+                        {count} app{count === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gray-800 rounded-full"
+                        style={{
+                          width: `${(count / Math.max(1, ...stats.componentsUsed.map(([, c]) => c))) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Score distribution */}
         <div>
           <h4 className="text-sm font-medium text-gray-900 mb-3">
@@ -1133,6 +1202,8 @@ function StatsPanel({
         Generated by the vibeapps AI Judge. "Using Convex" counts apps with at
         least one detected Convex feature; "Advanced" counts scheduler, crons,
         file storage, search, vector, HTTP actions, components, or agents.
+        Components are detected from each repo's package.json and
+        convex.config.ts and raise the advanced score.
       </p>
     </div>
   );
