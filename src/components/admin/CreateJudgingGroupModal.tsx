@@ -1,7 +1,15 @@
 import React, { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { X, Lock, Eye, BarChart2, ToggleLeft, ToggleRight } from "lucide-react";
+import {
+  X,
+  Lock,
+  Eye,
+  BarChart2,
+  ToggleLeft,
+  ToggleRight,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -29,6 +37,9 @@ export function CreateJudgingGroupModal({
     resultsIsPublic: false,
     resultsPassword: "",
     isActive: true,
+    aiJudgeEnabled: false,
+    aiResultsIsPublic: false,
+    aiResultsPassword: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -45,6 +56,9 @@ export function CreateJudgingGroupModal({
       resultsIsPublic: false,
       resultsPassword: "",
       isActive: true,
+      aiJudgeEnabled: false,
+      aiResultsIsPublic: false,
+      aiResultsPassword: "",
     });
     setError("");
     setIsSubmitting(false);
@@ -94,6 +108,14 @@ export function CreateJudgingGroupModal({
           ? formData.resultsPassword.trim()
           : undefined,
         isActive: formData.isActive,
+        aiJudgeEnabled: formData.aiJudgeEnabled,
+        aiResultsIsPublic: formData.aiResultsIsPublic,
+        aiResultsPassword:
+          formData.aiJudgeEnabled &&
+          !formData.aiResultsIsPublic &&
+          formData.aiResultsPassword.trim()
+            ? formData.aiResultsPassword.trim()
+            : undefined,
       });
 
       // Success
@@ -325,6 +347,106 @@ export function CreateJudgingGroupModal({
                   required={!formData.resultsIsPublic}
                   disabled={isSubmitting}
                 />
+              </div>
+            )}
+          </div>
+
+          {/* AI Judge (Best Use of Convex) */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+              <Sparkles className="w-5 h-5" />
+              AI Judge: Best Use of Convex
+            </h3>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    aiJudgeEnabled: !prev.aiJudgeEnabled,
+                  }))
+                }
+                disabled={isSubmitting}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md border transition-colors ${
+                  formData.aiJudgeEnabled
+                    ? "bg-green-50 border-green-200 text-green-700"
+                    : "bg-gray-50 border-gray-200 text-gray-600"
+                }`}
+              >
+                {formData.aiJudgeEnabled ? (
+                  <ToggleRight className="w-5 h-5" />
+                ) : (
+                  <ToggleLeft className="w-5 h-5" />
+                )}
+                {formData.aiJudgeEnabled ? "Enabled" : "Disabled"}
+              </button>
+              <span className="text-sm text-gray-500">
+                {formData.aiJudgeEnabled
+                  ? "AI will review submissions for Best Use of Convex, separate from human judging"
+                  : "Enable an AI review that scores submissions on Best Use of Convex"}
+              </span>
+            </div>
+
+            {formData.aiJudgeEnabled && (
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="aiResultsIsPublic"
+                      checked={formData.aiResultsIsPublic}
+                      onCheckedChange={(checked) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          aiResultsIsPublic: !!checked,
+                          aiResultsPassword: checked
+                            ? ""
+                            : prev.aiResultsPassword,
+                        }))
+                      }
+                      disabled={isSubmitting}
+                    />
+                    <Label
+                      htmlFor="aiResultsIsPublic"
+                      className="flex items-center gap-2"
+                    >
+                      <BarChart2 className="w-4 h-4" />
+                      Public AI Results Page
+                    </Label>
+                  </div>
+                  <p className="text-sm text-gray-500 ml-6">
+                    {formData.aiResultsIsPublic
+                      ? "Anyone with the link can view the AI review results"
+                      : "Requires a password to view the AI review results"}
+                  </p>
+                </div>
+
+                {!formData.aiResultsIsPublic && (
+                  <div>
+                    <Label
+                      htmlFor="aiResultsPassword"
+                      className="flex items-center gap-2"
+                    >
+                      <Lock className="w-4 h-4" />
+                      AI Results Password
+                    </Label>
+                    <Input
+                      id="aiResultsPassword"
+                      type="password"
+                      value={formData.aiResultsPassword}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          aiResultsPassword: e.target.value,
+                        }))
+                      }
+                      placeholder="Password for the AI results page (optional)"
+                      disabled={isSubmitting}
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Optional password so others can view the AI results page
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -18,6 +18,7 @@ import {
   FileText,
   Download,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import {
   useQuery,
@@ -32,6 +33,7 @@ import { CreateJudgingGroupModal } from "./CreateJudgingGroupModal";
 import { EditJudgingGroupModal } from "./EditJudgingGroupModal";
 import { JudgingCriteriaEditor } from "./JudgingCriteriaEditor";
 import { JudgingResultsDashboard } from "./JudgingResultsDashboard";
+import { AIJudgeResults } from "./AIJudgeResults";
 import { useDialog } from "../../hooks/useDialog";
 
 export function Judging() {
@@ -55,7 +57,7 @@ export function Judging() {
     null,
   );
   const [currentView, setCurrentView] = useState<
-    "list" | "criteria" | "results"
+    "list" | "criteria" | "results" | "ai-results"
   >("list");
   const [selectedGroup, setSelectedGroup] = useState<{
     id: Id<"judgingGroups">;
@@ -211,6 +213,14 @@ export function Judging() {
     setCurrentView("results");
   };
 
+  const handleViewAiResults = (
+    groupId: Id<"judgingGroups">,
+    groupName: string,
+  ) => {
+    setSelectedGroup({ id: groupId, name: groupName });
+    setCurrentView("ai-results");
+  };
+
   const handleBackToList = () => {
     setCurrentView("list");
     setSelectedGroup(null);
@@ -253,6 +263,17 @@ export function Judging() {
   if (currentView === "results" && selectedGroup) {
     return (
       <JudgingResultsDashboard
+        groupId={selectedGroup.id}
+        groupName={selectedGroup.name}
+        onBack={handleBackToList}
+      />
+    );
+  }
+
+  // Show AI judge results if selected
+  if (currentView === "ai-results" && selectedGroup) {
+    return (
+      <AIJudgeResults
         groupId={selectedGroup.id}
         groupName={selectedGroup.name}
         onBack={handleBackToList}
@@ -473,6 +494,19 @@ export function Judging() {
                           >
                             <BarChart2 className="w-3.5 h-3.5" />
                             <span>Admin Results</span>
+                          </button>
+                        )}
+
+                        {group.aiJudgeEnabled && (
+                          <button
+                            onClick={() =>
+                              handleViewAiResults(group._id, group.name)
+                            }
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                            title="Run and review the AI Best Use of Convex results"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>AI Results</span>
                           </button>
                         )}
 

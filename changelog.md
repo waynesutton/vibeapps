@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Added] - 2026-07-05
+
+**Judging: Opt-in AI Judge for Best Use of Convex**
+
+- Admins can enable an "AI Judge: Best Use of Convex" option on any judging group (new or existing). When enabled, a "Run AI Review" action analyzes every submission in the group against a fixed five-criterion Convex rubric (schema and data modeling; queries, mutations, actions; real-time reactivity; advanced Convex features; overall depth and correctness), scoring each 1-10 with a written reasoning note per criterion plus an overall note and detected Convex features.
+- Each review fetches the submission's GitHub repo as the primary signal (metadata, file tree, `convex/` files, README, using optional `GITHUB_TOKEN`) and scrapes the live demo URL with Firecrawl (optional `FIRECRAWL_API_KEY`). Missing or private repos are noted in the reasoning rather than failing the review, and a `sourcesUsed` badge shows admins which sources were available.
+- LLM provider fallback via Convex environment variables: `ANTHROPIC_API_KEY` first, then `OPENAI_API_KEY`, then `OPENROUTER_API_KEY` as backup. Submissions are processed sequentially through the Convex scheduler so runs stay within action time limits and provider rate limits; individual failures are stored with their error and can be retried one at a time.
+- Live app URL check: each review makes a direct HTTP request to the submission's live app URL (never social or video links) and records whether it is live, the status code, and a short note. A sixth "Live app status" rubric criterion scores it 1-10; a dead or 404 URL is capped server-side at 2 (3 when no URL was provided) no matter what the model says, and the broken status is flagged in the overall note. The other five Convex criteria are unaffected, so the ranking stays mostly about Convex usage. A successful Firecrawl scrape counts as live for hosts that block plain requests.
+- Admin and public results show a URL status badge per submission (URL live / URL 404 / URL down / no URL) sourced from the deterministic check, independent of the AI text. Older results without the check render unchanged.
+- New admin "AI Results" view per group with live progress counts (pending/running/completed/failed), ranked results, expandable per-criterion reasoning, inline score and note editing (tracked with `editedBy`/`editedAt`), and per-submission retry.
+- New public AI results page at `/judging/:slug/ai-results` with the same public/password/admin-bypass gate as human results (separate `aiResultsIsPublic`/`aiResultsPassword` settings), clearly labeled as an AI review.
+- AI results are stored in a new `aiJudgeResults` table completely separate from human `judgeScores` and `submissionStatuses`; no author notifications are ever sent by the AI flow, and existing judging workflows are unchanged. Deleting a group also removes its AI results.
+- **Backend**: `convex/schema.ts`, `convex/judgingGroups.ts`, `convex/aiJudge.ts` (new), `convex/aiJudgeAnalysis.ts` (new).
+- **Frontend**: `src/components/admin/CreateJudgingGroupModal.tsx`, `src/components/admin/EditJudgingGroupModal.tsx`, `src/components/admin/AIJudgeResults.tsx` (new), `src/components/admin/Judging.tsx`, `src/pages/AIJudgeResultsPage.tsx` (new), `src/App.tsx`.
+
 ### [Changed] - 2026-06-30
 
 **Judging: Auto-jump to next submission after marking complete**

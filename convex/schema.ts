@@ -398,10 +398,62 @@ export default defineSchema({
     ),
     // Multi-judge: how many judges must complete each submission (default 1 = single-judge behavior)
     judgesPerSubmission: v.optional(v.number()),
+    // AI Judge (Best Use of Convex) settings. Fully separate from human judging.
+    aiJudgeEnabled: v.optional(v.boolean()), // Enable AI judge for this group
+    aiResultsIsPublic: v.optional(v.boolean()), // Whether AI results page is public (defaults to private)
+    aiResultsPassword: v.optional(v.string()), // Password for private AI results page (hashed)
   })
     .index("by_slug", ["slug"])
     .index("by_isPublic", ["isPublic"])
     .index("by_isActive", ["isActive"]),
+
+  // AI Judge results: one row per group+story, upserted on re-run.
+  // Stored separately from judgeScores so human judging is untouched.
+  aiJudgeResults: defineTable({
+    groupId: v.id("judgingGroups"), // Associated judging group
+    storyId: v.id("stories"), // Submission reviewed
+    status: v.union(
+      v.literal("pending"),
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("failed"),
+    ), // Review lifecycle state
+    criteriaScores: v.optional(
+      v.array(
+        v.object({
+          key: v.string(), // Fixed rubric key (e.g., "schema")
+          label: v.string(), // Display label
+          score: v.number(), // 1-10
+          reasoning: v.string(), // Why the AI gave this score
+        }),
+      ),
+    ),
+    totalScore: v.optional(v.number()), // Sum of criteria scores
+    averageScore: v.optional(v.number()), // Average across criteria
+    overallReasoning: v.optional(v.string()), // Overall note on why it scored the submission this way
+    convexFeaturesDetected: v.optional(v.array(v.string())), // Convex features found in the submission
+    provider: v.optional(v.string()), // "anthropic" | "openai" | "openrouter"
+    model: v.optional(v.string()), // Model used for the review
+    error: v.optional(v.string()), // Error message when status is "failed"
+    sourcesUsed: v.optional(
+      v.object({
+        github: v.boolean(), // Whether the GitHub repo was fetched
+        liveUrl: v.boolean(), // Whether the live URL was scraped
+      }),
+    ),
+    urlCheck: v.optional(
+      v.object({
+        checkedUrl: v.optional(v.string()), // The live app URL that was checked
+        isLive: v.boolean(), // Whether the URL responded successfully
+        statusCode: v.optional(v.number()), // HTTP status code when a response was received
+        note: v.string(), // Short reason ("OK", "404 Not Found", "network error", "no URL provided")
+      }),
+    ),
+    editedBy: v.optional(v.id("users")), // Admin who last edited scores
+    editedAt: v.optional(v.number()), // When scores were last edited
+  })
+    .index("by_groupId", ["groupId"])
+    .index("by_groupId_storyId", ["groupId", "storyId"]),
 
   judgingCriteria: defineTable({
     groupId: v.id("judgingGroups"), // Associated judging group

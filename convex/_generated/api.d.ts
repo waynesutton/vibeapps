@@ -13,6 +13,8 @@ import type * as admin_forceLogout from "../admin/forceLogout.js";
 import type * as adminFollowsQueries from "../adminFollowsQueries.js";
 import type * as adminJudgeTracking from "../adminJudgeTracking.js";
 import type * as adminQueries from "../adminQueries.js";
+import type * as aiJudge from "../aiJudge.js";
+import type * as aiJudgeAnalysis from "../aiJudgeAnalysis.js";
 import type * as alerts from "../alerts.js";
 import type * as auth from "../auth.js";
 import type * as bookmarks from "../bookmarks.js";
@@ -74,6 +76,8 @@ declare const fullApi: ApiFromModules<{
   adminFollowsQueries: typeof adminFollowsQueries;
   adminJudgeTracking: typeof adminJudgeTracking;
   adminQueries: typeof adminQueries;
+  aiJudge: typeof aiJudge;
+  aiJudgeAnalysis: typeof aiJudgeAnalysis;
   alerts: typeof alerts;
   auth: typeof auth;
   bookmarks: typeof bookmarks;

@@ -15,6 +15,7 @@ import {
   Users,
   Tag,
   Calendar,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -134,6 +135,9 @@ export function EditJudgingGroupModal({
     autoIncludeMatchMode: "any" as "any" | "all",
     autoIncludeStartDate: "" as string,
     autoIncludeEndDate: "" as string,
+    aiJudgeEnabled: false,
+    aiResultsIsPublic: false,
+    aiResultsPassword: "",
   });
   // Search term for filtering the auto-include tag list (handles 1000s of tags).
   const [tagSearch, setTagSearch] = useState("");
@@ -233,6 +237,9 @@ export function EditJudgingGroupModal({
         autoIncludeMatchMode: group.autoIncludeMatchMode ?? "any",
         autoIncludeStartDate: tsToDateInput(group.autoIncludeStartDate),
         autoIncludeEndDate: tsToDateInput(group.autoIncludeEndDate),
+        aiJudgeEnabled: group.aiJudgeEnabled ?? false,
+        aiResultsIsPublic: group.aiResultsIsPublic ?? false,
+        aiResultsPassword: "", // Don't show existing password
       });
 
       // Load existing image URL if available
@@ -271,6 +278,9 @@ export function EditJudgingGroupModal({
         autoIncludeMatchMode: group.autoIncludeMatchMode ?? "any",
         autoIncludeStartDate: tsToDateInput(group.autoIncludeStartDate),
         autoIncludeEndDate: tsToDateInput(group.autoIncludeEndDate),
+        aiJudgeEnabled: group.aiJudgeEnabled ?? false,
+        aiResultsIsPublic: group.aiResultsIsPublic ?? false,
+        aiResultsPassword: "",
       });
     }
     setTagSearch("");
@@ -346,6 +356,8 @@ export function EditJudgingGroupModal({
         autoIncludeMatchMode: formData.autoIncludeMatchMode,
         autoIncludeStartDate: dateInputToStartTs(formData.autoIncludeStartDate),
         autoIncludeEndDate: dateInputToEndTs(formData.autoIncludeEndDate),
+        aiJudgeEnabled: formData.aiJudgeEnabled,
+        aiResultsIsPublic: formData.aiResultsIsPublic,
       };
 
       // Only include passwords if they're provided
@@ -358,6 +370,9 @@ export function EditJudgingGroupModal({
       }
       if (formData.resultsPassword.trim()) {
         updateData.resultsPassword = formData.resultsPassword.trim();
+      }
+      if (formData.aiResultsPassword.trim()) {
+        updateData.aiResultsPassword = formData.aiResultsPassword.trim();
       }
 
       // Upload submission page image if provided
@@ -666,6 +681,153 @@ export function EditJudgingGroupModal({
                   {group.resultsPassword
                     ? "A password is currently set. Leave blank to keep it, or enter a new password."
                     : "Required: Set a password to protect results access"}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* AI Judge (Best Use of Convex) */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5" />
+                  AI Judge: Best Use of Convex
+                </h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  An AI review that scores submissions on Best Use of Convex,
+                  fully separate from human judging
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    aiJudgeEnabled: !prev.aiJudgeEnabled,
+                  }))
+                }
+                disabled={isSubmitting}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md border transition-colors ${
+                  formData.aiJudgeEnabled
+                    ? "bg-green-50 border-green-200 text-green-700"
+                    : "bg-gray-50 border-gray-200 text-gray-600"
+                }`}
+              >
+                {formData.aiJudgeEnabled ? (
+                  <ToggleRight className="w-5 h-5" />
+                ) : (
+                  <ToggleLeft className="w-5 h-5" />
+                )}
+                {formData.aiJudgeEnabled ? "Enabled" : "Disabled"}
+              </button>
+            </div>
+
+            {formData.aiJudgeEnabled && (
+              <div className="space-y-4 pt-4 border-t border-gray-200">
+                {/* AI Results Page URL */}
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-blue-800 flex-1">
+                      <strong>AI Results Page URL:</strong>{" "}
+                      <code className="bg-blue-100 px-2 py-1 rounded text-xs">
+                        /judging/{group.slug}/ai-results
+                      </code>
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const fullUrl = `${window.location.origin}/judging/${group.slug}/ai-results`;
+                          navigator.clipboard.writeText(fullUrl);
+                        }}
+                        className="p-1.5 text-blue-700 hover:text-blue-900 hover:bg-blue-100 rounded transition-colors"
+                        title="Copy URL"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                      <a
+                        href={`/judging/${group.slug}/ai-results`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 text-blue-700 hover:text-blue-900 hover:bg-blue-100 rounded transition-colors"
+                        title="Open in new tab"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="aiResultsIsPublic"
+                      checked={formData.aiResultsIsPublic}
+                      onCheckedChange={(checked) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          aiResultsIsPublic: !!checked,
+                          aiResultsPassword: checked
+                            ? ""
+                            : prev.aiResultsPassword,
+                        }))
+                      }
+                      disabled={isSubmitting}
+                    />
+                    <Label
+                      htmlFor="aiResultsIsPublic"
+                      className="flex items-center gap-2"
+                    >
+                      <BarChart2 className="w-4 h-4" />
+                      Public AI Results Page
+                    </Label>
+                  </div>
+                  <p className="text-sm text-gray-500 ml-6">
+                    {formData.aiResultsIsPublic
+                      ? "Anyone with the link can view the AI review results"
+                      : "Requires a password to view the AI review results"}
+                  </p>
+                </div>
+
+                {!formData.aiResultsIsPublic && (
+                  <div>
+                    <Label
+                      htmlFor="aiResultsPassword"
+                      className="flex items-center gap-2"
+                    >
+                      <Lock className="w-4 h-4" />
+                      AI Results Password
+                    </Label>
+                    <Input
+                      id="aiResultsPassword"
+                      type="password"
+                      value={formData.aiResultsPassword}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          aiResultsPassword: e.target.value,
+                        }))
+                      }
+                      placeholder={
+                        group.hasAiResultsPassword
+                          ? "Leave blank to keep existing password"
+                          : "Password for the AI results page (optional)"
+                      }
+                      disabled={isSubmitting}
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      {group.hasAiResultsPassword
+                        ? "A password is currently set. Leave blank to keep it, or enter a new password."
+                        : "Optional password so others can view the AI results page"}
+                    </p>
+                  </div>
+                )}
+
+                <p className="text-xs text-gray-500">
+                  Run the AI review and edit AI scores from the AI Results view
+                  on the judging groups list. Submission authors are not
+                  notified about AI reviews.
                 </p>
               </div>
             )}

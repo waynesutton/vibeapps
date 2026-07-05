@@ -42,14 +42,15 @@ function isStoryValidForJudging(story: Doc<"stories"> | null): story is Doc<"sto
 
 // Simple password hashing (for basic protection)
 // In production, consider using a more robust solution
-function hashPassword(password: string): string {
+// Exported so aiJudge.ts can reuse the same scheme for AI results passwords.
+export function hashPassword(password: string): string {
   // Use TextEncoder for browser-compatible base64 encoding
   const encoder = new TextEncoder();
   const data = encoder.encode(password);
   return btoa(String.fromCharCode(...data));
 }
 
-function verifyPassword(password: string, hash: string): boolean {
+export function verifyPassword(password: string, hash: string): boolean {
   return hashPassword(password) === hash;
 }
 
@@ -72,6 +73,7 @@ export const listGroups = query({
       isActive: v.boolean(),
       createdBy: v.id("users"),
       hasCustomSubmissionPage: v.optional(v.boolean()),
+      aiJudgeEnabled: v.optional(v.boolean()),
       submissionCount: v.number(),
       judgeCount: v.number(),
     }),
@@ -121,6 +123,7 @@ export const listGroups = query({
           isActive: group.isActive,
           createdBy: group.createdBy,
           hasCustomSubmissionPage: group.hasCustomSubmissionPage,
+          aiJudgeEnabled: group.aiJudgeEnabled,
           submissionCount,
           judgeCount,
         };
@@ -144,6 +147,9 @@ export const createGroup = mutation({
     resultsIsPublic: v.optional(v.boolean()),
     resultsPassword: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
+    aiJudgeEnabled: v.optional(v.boolean()),
+    aiResultsIsPublic: v.optional(v.boolean()),
+    aiResultsPassword: v.optional(v.string()),
   },
   returns: v.id("judgingGroups"),
   handler: async (ctx, args) => {
@@ -184,6 +190,9 @@ export const createGroup = mutation({
     const hashedResultsPassword = args.resultsPassword
       ? hashPassword(args.resultsPassword)
       : undefined;
+    const hashedAiResultsPassword = args.aiResultsPassword
+      ? hashPassword(args.aiResultsPassword)
+      : undefined;
 
     return await ctx.db.insert("judgingGroups", {
       name: args.name,
@@ -197,6 +206,9 @@ export const createGroup = mutation({
       isActive: args.isActive ?? true,
       createdBy: user._id,
       judgesPerSubmission: 1,
+      aiJudgeEnabled: args.aiJudgeEnabled ?? false,
+      aiResultsIsPublic: args.aiResultsIsPublic ?? false, // Default to private
+      aiResultsPassword: hashedAiResultsPassword,
     });
   },
 });
@@ -241,6 +253,10 @@ export const updateGroup = mutation({
     autoIncludeMatchMode: v.optional(v.union(v.literal("any"), v.literal("all"))),
     autoIncludeStartDate: v.optional(v.union(v.number(), v.null())),
     autoIncludeEndDate: v.optional(v.union(v.number(), v.null())),
+    // AI Judge settings
+    aiJudgeEnabled: v.optional(v.boolean()),
+    aiResultsIsPublic: v.optional(v.boolean()),
+    aiResultsPassword: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -255,6 +271,7 @@ export const updateGroup = mutation({
       judgePassword,
       submissionPagePassword,
       resultsPassword,
+      aiResultsPassword,
       judgesPerSubmission,
       autoIncludeTagIds,
       autoIncludeMatchMode,
@@ -305,6 +322,11 @@ export const updateGroup = mutation({
     if (resultsPassword !== undefined) {
       finalUpdates.resultsPassword = resultsPassword
         ? hashPassword(resultsPassword)
+        : undefined;
+    }
+    if (aiResultsPassword !== undefined) {
+      finalUpdates.aiResultsPassword = aiResultsPassword
+        ? hashPassword(aiResultsPassword)
         : undefined;
     }
 
@@ -429,7 +451,16 @@ export const deleteGroup = mutation({
       await ctx.db.delete(completion._id);
     }
 
-    // 6. Finally, the group itself
+    // 6. AI judge results
+    const aiResults = await ctx.db
+      .query("aiJudgeResults")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+    for (const aiResult of aiResults) {
+      await ctx.db.delete(aiResult._id);
+    }
+
+    // 7. Finally, the group itself
     await ctx.db.delete(args.groupId);
 
     return null;
@@ -526,6 +557,9 @@ export const getGroupWithDetails = query({
       autoIncludeStartDate: v.optional(v.number()),
       autoIncludeEndDate: v.optional(v.number()),
       judgesPerSubmission: v.number(),
+      aiJudgeEnabled: v.optional(v.boolean()),
+      aiResultsIsPublic: v.optional(v.boolean()),
+      hasAiResultsPassword: v.boolean(),
       criteria: v.array(
         v.object({
           _id: v.id("judgingCriteria"),
@@ -612,6 +646,9 @@ export const getGroupWithDetails = query({
       autoIncludeStartDate: group.autoIncludeStartDate,
       autoIncludeEndDate: group.autoIncludeEndDate,
       judgesPerSubmission: group.judgesPerSubmission ?? 1,
+      aiJudgeEnabled: group.aiJudgeEnabled,
+      aiResultsIsPublic: group.aiResultsIsPublic,
+      hasAiResultsPassword: !!group.aiResultsPassword,
       criteria,
       submissionCount,
       judgeCount,

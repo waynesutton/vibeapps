@@ -37,6 +37,7 @@ import { TagPage } from "./pages/TagPage";
 import JudgingGroupPage from "./pages/JudgingGroupPage";
 import JudgingInterfacePage from "./pages/JudgingInterfacePage";
 import PublicJudgingResultsPage from "./pages/PublicJudgingResultsPage";
+import AIJudgeResultsPage from "./pages/AIJudgeResultsPage";
 import JudgeTrackingPage from "./pages/JudgeTrackingPage";
 import { JudgingGroupSubmitPage } from "./pages/JudgingGroupSubmitPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
@@ -180,6 +181,10 @@ function App() {
           <Route
             path="/judging/:slug/results"
             element={<PublicJudgingResultsPage />}
+          />
+          <Route
+            path="/judging/:slug/ai-results"
+            element={<AIJudgeResultsPage />}
           />
           <Route
             path="/admin/judging/:slug/tracking"
