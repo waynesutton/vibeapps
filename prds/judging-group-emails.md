@@ -1,7 +1,7 @@
 # Judging group emails with templates
 
 Created: 2026-08-10 19:45 UTC
-Last Updated: 2026-08-10 20:25 UTC
+Last Updated: 2026-08-10 22:20 UTC
 Status: Done
 
 ## Problem
@@ -90,3 +90,4 @@ Round two edge cases:
 - 2026-08-10 19:45 UTC PRD created, implementation started.
 - 2026-08-10 20:10 UTC All backend and frontend pieces implemented. Convex codegen and push green, app tsc clean on touched files, zero lints, prettier applied. Docs synced (TASK.MD, changelog.MD, files.MD).
 - 2026-08-10 20:25 UTC Round two shipped: scheduled sends with cancel, 200/24h per-group cap, per-send delivery stats with webhook open tracking, preview-as-judge picker. Convex push green, tsc and eslint clean, prettier applied, docs synced.
+- 2026-08-10 22:20 UTC Group link variables shipped: {{judgingurl}}, {{resultsurl}}, {{submissionurl}} resolve to the group's real share links via a shared judgingGroupUrls helper; bare URLs now autolink in the markdown renderer. Runtime render test, convex push, tsc, eslint all green.

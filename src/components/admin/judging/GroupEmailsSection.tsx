@@ -6,6 +6,7 @@ import { Id } from "../../../../convex/_generated/dataModel";
 import {
   TEMPLATE_VARIABLES,
   applyTemplateVars,
+  judgingGroupUrls,
   renderMarkdownLite,
   templateEmailShell,
 } from "../../../../convex/emails/render";
@@ -222,6 +223,8 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
     name: previewRecipient?.name ?? "Ada Lovelace",
     email: previewRecipient?.email ?? "ada@example.com",
     groupname: group.name,
+    // Real group links, same builder the backend uses at send time
+    ...judgingGroupUrls(group.slug),
   };
   const previewHtml = templateEmailShell(
     renderMarkdownLite(applyTemplateVars(body, previewVars)),

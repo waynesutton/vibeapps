@@ -15,6 +15,7 @@ import {
   applyTemplateVars,
   firstNameOf,
   isValidEmailAddress,
+  judgingGroupUrls,
   renderMarkdownLite,
   templateEmailShell,
 } from "./render";
@@ -358,6 +359,7 @@ export const sendGroupEmail = mutation({
     const deliveryArgs = {
       groupId: args.groupId,
       groupName: group.name,
+      groupSlug: group.slug,
       subject: args.subject.trim(),
       body: args.body,
       signature: args.signature,
@@ -520,6 +522,7 @@ export const sendGroupTestEmail = mutation({
       {
         groupId: args.groupId,
         groupName: group.name,
+        groupSlug: group.slug,
         subject: args.subject.trim(),
         body: args.body,
         signature: args.signature,
@@ -545,6 +548,7 @@ export const deliverGroupEmails = internalAction({
   args: {
     groupId: v.id("judgingGroups"),
     groupName: v.string(),
+    groupSlug: v.string(),
     subject: v.string(),
     body: v.string(),
     signature: v.optional(v.string()),
@@ -565,6 +569,9 @@ export const deliverGroupEmails = internalAction({
     let successCount = 0;
     let failureCount = 0;
 
+    // Group links are the same for every recipient in this send
+    const groupUrls = judgingGroupUrls(args.groupSlug);
+
     const batchSize = 10;
     for (let i = 0; i < args.recipients.length; i += batchSize) {
       const batch = args.recipients.slice(i, i + batchSize);
@@ -575,6 +582,7 @@ export const deliverGroupEmails = internalAction({
             name: recipient.name,
             email: recipient.email,
             groupname: args.groupName,
+            ...groupUrls,
           };
           const subject = applyTemplateVars(args.subject, vars);
           const bodyHtml = renderMarkdownLite(

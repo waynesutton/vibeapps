@@ -7,17 +7,20 @@ import { Id } from "../../../convex/_generated/dataModel";
 import {
   TEMPLATE_VARIABLES,
   applyTemplateVars,
+  judgingGroupUrls,
   renderMarkdownLite,
   templateEmailShell,
 } from "../../../convex/emails/render";
 import AlertDialog from "../ui/AlertDialog";
 
 // Sample values so the preview shows what a real recipient would get.
+// Link variables resolve to the real group's URLs at send time.
 const PREVIEW_VARS = {
   firstname: "Ada",
   name: "Ada Lovelace",
   email: "ada@example.com",
   groupname: "Fall Hackathon",
+  ...judgingGroupUrls("fall-hackathon"),
 };
 
 type EditorState = {

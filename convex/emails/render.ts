@@ -8,6 +8,9 @@ export const TEMPLATE_VARIABLES = [
   { key: "name", description: "Recipient full name" },
   { key: "email", description: "Recipient email address" },
   { key: "groupname", description: "Judging group name" },
+  { key: "judgingurl", description: "Link to the group's judging page" },
+  { key: "resultsurl", description: "Link to the group's results page" },
+  { key: "submissionurl", description: "Link to the group's submission page" },
 ] as const;
 
 export type TemplateVars = {
@@ -15,7 +18,26 @@ export type TemplateVars = {
   name: string;
   email: string;
   groupname: string;
+  judgingurl: string;
+  resultsurl: string;
+  submissionurl: string;
 };
+
+// Group links for templates, matching the share links in the group workspace
+// (judging interface, results page, custom submission page). Used by the
+// backend send pipeline and both admin previews so URLs never drift.
+export function judgingGroupUrls(slug: string): {
+  judgingurl: string;
+  resultsurl: string;
+  submissionurl: string;
+} {
+  const base = `https://vibeapps.dev/judging/${slug}`;
+  return {
+    judgingurl: base,
+    resultsurl: `${base}/results`,
+    submissionurl: `${base}/submit`,
+  };
+}
 
 // Replace {{variable}} placeholders (case-insensitive, optional spaces).
 // Unknown variables are left as typed so typos show up in test sends.
@@ -36,7 +58,8 @@ export function escapeHtml(text: string): string {
     .replace(/'/g, "&#39;");
 }
 
-// Inline markdown: **bold**, *italic* or _italic_, [text](https://url).
+// Inline markdown: **bold**, *italic* or _italic_, [text](https://url),
+// plus bare https URLs (so a link variable used on its own is clickable).
 // Runs on already-escaped text, so only these patterns produce HTML.
 function renderInline(escaped: string): string {
   let out = escaped;
@@ -44,6 +67,17 @@ function renderInline(escaped: string): string {
   out = out.replace(
     /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
     '<a href="$2" style="color: #292929;">$1</a>',
+  );
+  // Autolink bare URLs. Skips URLs already inside an anchor from the pass
+  // above (those are preceded by a quote or ">"), and keeps trailing
+  // sentence punctuation outside the link.
+  out = out.replace(
+    /(^|[^">])(https?:\/\/[^\s<]+)/g,
+    (_match, prefix: string, url: string) => {
+      const clean = url.replace(/[.,;:!?)]+$/, "");
+      const trailing = url.slice(clean.length);
+      return `${prefix}<a href="${clean}" style="color: #292929;">${clean}</a>${trailing}`;
+    },
   );
   out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   out = out.replace(/\*([^*]+)\*/g, "<em>$1</em>");

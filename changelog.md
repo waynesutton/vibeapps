@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Added] - 2026-08-10
+
+**Group link variables in email templates**
+
+- Email templates and judging group emails now support three link variables that resolve to the group's real share links at send time: `{{judgingurl}}` (judging page), `{{resultsurl}}` (results page), and `{{submissionurl}}` (submission page). They match the exact URLs from the group workspace Links section, built by one shared helper so the backend send and both admin previews never drift (2026-08-10).
+- Bare URLs in bodies and signatures now render as clickable links, so `{{judgingurl}}` works on its own line without markdown syntax; `[Start judging]({{judgingurl}})` still works for custom link text. Trailing sentence punctuation stays outside the link.
+- The group compose preview substitutes the group's real URLs; the Templates manager preview uses sample links. Both variable legends list the new keys automatically.
+- **Backend**: `convex/emails/render.ts` (new variables, `judgingGroupUrls` helper, bare URL autolink), `convex/emails/judgingGroupEmails.ts` (passes the group slug through delivery).
+- **Frontend**: `src/components/admin/judging/GroupEmailsSection.tsx`, `src/components/admin/EmailTemplatesManager.tsx`.
+
 ### [Changed] - 2026-08-10
 
 **AI Spam counts strip doubles as quick filters**
