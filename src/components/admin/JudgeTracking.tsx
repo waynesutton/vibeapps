@@ -39,10 +39,14 @@ import { MentionTextarea } from "../ui/MentionTextarea";
 import { renderTextWithMentions } from "../../utils/mentions";
 import { useDialog } from "../../hooks/useDialog";
 
+// onBack is only passed on the standalone /admin/judging/:slug/tracking page.
+// When embedded in the group workspace it is omitted and the legacy back
+// link, title, and section-anchor card are hidden (the workspace provides
+// navigation).
 interface JudgeTrackingProps {
   groupId: Id<"judgingGroups">;
   groupName: string;
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 export function JudgeTracking({
@@ -57,6 +61,9 @@ export function JudgeTracking({
     api.adminJudgeTracking.getGroupJudgeTracking,
     authIsLoading || !isAuthenticated ? "skip" : { groupId },
   );
+
+  // Group score scale (5 or 10) for score displays and the edit modal
+  const scoreScale = trackingData?.group.scoreScale ?? 10;
 
   const [expandedJudges, setExpandedJudges] = useState<Set<Id<"judges">>>(
     new Set(),
@@ -433,22 +440,28 @@ export function JudgeTracking({
     <>
       <DialogComponents />
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-wrap justify-between items-center gap-4">
-          <div>
-            <button
-              onClick={onBack}
-              className="text-sm text-gray-500 hover:text-gray-700 mb-2 flex items-center gap-1"
-            >
-              ← Back to Judging System
-            </button>
-            <h2 className="text-xl font-medium text-[#525252]">
-              Judge Tracking: {groupName}
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              Monitor and moderate judge activity and scores
-            </p>
-          </div>
+        {/* Header: full title on the standalone page, slim toolbar when embedded */}
+        <div
+          className={`flex flex-wrap items-center gap-4 ${
+            onBack ? "justify-between" : "justify-end"
+          }`}
+        >
+          {onBack && (
+            <div>
+              <button
+                onClick={onBack}
+                className="text-sm text-gray-500 hover:text-gray-700 mb-2 flex items-center gap-1"
+              >
+                ← Back to Judging System
+              </button>
+              <h2 className="text-xl font-medium text-[#525252]">
+                Judge Tracking: {groupName}
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Monitor and moderate judge activity and scores
+              </p>
+            </div>
+          )}
           <div className="flex items-center gap-3 text-sm">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -494,34 +507,36 @@ export function JudgeTracking({
           </div>
         </div>
 
-        {/* Breadcrumb Navigation */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <nav className="flex flex-wrap gap-4 text-sm">
-            <a
-              href="#stats"
-              className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
-            >
-              <BarChart3 className="w-4 h-4" />
-              Stats Overview
-            </a>
-            <span className="text-gray-300">|</span>
-            <a
-              href="#activity"
-              className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
-            >
-              <Users className="w-4 h-4" />
-              Judge Activity
-            </a>
-            <span className="text-gray-300">|</span>
-            <a
-              href="#scores"
-              className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
-            >
-              <Star className="w-4 h-4" />
-              Judge Scores & Comments
-            </a>
-          </nav>
-        </div>
+        {/* Section anchor links, standalone page only */}
+        {onBack && (
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <nav className="flex flex-wrap gap-4 text-sm">
+              <a
+                href="#stats"
+                className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+              >
+                <BarChart3 className="w-4 h-4" />
+                Stats Overview
+              </a>
+              <span className="text-gray-300">|</span>
+              <a
+                href="#activity"
+                className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+              >
+                <Users className="w-4 h-4" />
+                Judge Activity
+              </a>
+              <span className="text-gray-300">|</span>
+              <a
+                href="#scores"
+                className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+              >
+                <Star className="w-4 h-4" />
+                Judge Scores & Comments
+              </a>
+            </nav>
+          </div>
+        )}
 
         {/* Stats Overview */}
         <div
@@ -669,6 +684,18 @@ export function JudgeTracking({
                           <span className="font-medium text-gray-900">
                             {judge.name}
                           </span>
+                          {judge.type === "agent" && (
+                            <span
+                              className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800"
+                              title={
+                                judge.agentMetadata?.model
+                                  ? `Agent model: ${judge.agentMetadata.model}`
+                                  : "AI agent judge"
+                              }
+                            >
+                              Agent
+                            </span>
+                          )}
                           {judge.userProfile && (
                             <ProfileHoverCard
                               username={judge.userProfile.username}
@@ -809,7 +836,7 @@ export function JudgeTracking({
                                       <div className="flex items-center gap-1">
                                         <Award className="w-3 h-3 text-yellow-500" />
                                         <span className="font-medium">
-                                          {score.score}/10
+                                          {score.score}/{scoreScale}
                                         </span>
                                       </div>
                                       <div className="flex items-center gap-1 text-gray-500">
@@ -1171,7 +1198,7 @@ export function JudgeTracking({
                                     <div className="flex items-center gap-1">
                                       <Star className="w-4 h-4 text-yellow-400 fill-current" />
                                       <span className="font-medium text-sm">
-                                        {score.score}/10
+                                        {score.score}/{scoreScale}
                                       </span>
                                     </div>
                                   </div>
@@ -1203,12 +1230,12 @@ export function JudgeTracking({
               </h3>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="score">Score (1-10)</Label>
+                  <Label htmlFor="score">Score (1-{scoreScale})</Label>
                   <Input
                     id="score"
                     type="number"
                     min="1"
-                    max="10"
+                    max={scoreScale}
                     value={editingScore.score}
                     onChange={(e) =>
                       setEditingScore({

@@ -869,6 +869,8 @@ function DropdownNotificationItem({
         return "bookmarked your app";
       case "report":
         return "reported a submission";
+      case "spam":
+        return "Your post has been marked as spam and has been removed. Check your email for details.";
       default:
         return "interacted with your content";
     }
@@ -902,7 +904,7 @@ function DropdownNotificationItem({
 
         <div className="flex-1 min-w-0">
           <div className="text-xs text-[#525252]">
-            {alert.type === "judged" ? (
+            {alert.type === "judged" || alert.type === "spam" ? (
               <span>{getNotificationText()}</span>
             ) : actorUser ? (
               <>

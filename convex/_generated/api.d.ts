@@ -8,11 +8,14 @@
  * @module
  */
 
+import type * as activityLog from "../activityLog.js";
 import type * as admin_adminActions from "../admin/adminActions.js";
 import type * as admin_forceLogout from "../admin/forceLogout.js";
+import type * as adminAccess from "../adminAccess.js";
 import type * as adminFollowsQueries from "../adminFollowsQueries.js";
 import type * as adminJudgeTracking from "../adminJudgeTracking.js";
 import type * as adminQueries from "../adminQueries.js";
+import type * as agentJudges from "../agentJudges.js";
 import type * as agentReady_analytics from "../agentReady/analytics.js";
 import type * as agentReady_content from "../agentReady/content.js";
 import type * as aiJudge from "../aiJudge.js";
@@ -29,18 +32,22 @@ import type * as dmReactions from "../dmReactions.js";
 import type * as emailSettings from "../emailSettings.js";
 import type * as emails_broadcast from "../emails/broadcast.js";
 import type * as emails_daily from "../emails/daily.js";
+import type * as emails_emailTypes from "../emails/emailTypes.js";
 import type * as emails_helpers from "../emails/helpers.js";
 import type * as emails_linkHelpers from "../emails/linkHelpers.js";
 import type * as emails_mentions from "../emails/mentions.js";
 import type * as emails_queries from "../emails/queries.js";
 import type * as emails_reports from "../emails/reports.js";
 import type * as emails_resend from "../emails/resend.js";
+import type * as emails_spam from "../emails/spam.js";
+import type * as emails_submissions from "../emails/submissions.js";
 import type * as emails_templates from "../emails/templates.js";
 import type * as emails_unsubscribe from "../emails/unsubscribe.js";
 import type * as emails_weekly from "../emails/weekly.js";
 import type * as emails_welcome from "../emails/welcome.js";
 import type * as follows from "../follows.js";
 import type * as forms from "../forms.js";
+import type * as hackathon from "../hackathon.js";
 import type * as http from "../http.js";
 import type * as judgeScores from "../judgeScores.js";
 import type * as judges from "../judges.js";
@@ -53,6 +60,8 @@ import type * as reports from "../reports.js";
 import type * as sendEmails from "../sendEmails.js";
 import type * as settings from "../settings.js";
 import type * as siteFiles from "../siteFiles.js";
+import type * as spamCheck from "../spamCheck.js";
+import type * as spamCheckAnalysis from "../spamCheckAnalysis.js";
 import type * as stories from "../stories.js";
 import type * as storyFormFields from "../storyFormFields.js";
 import type * as storyRatings from "../storyRatings.js";
@@ -73,11 +82,14 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  activityLog: typeof activityLog;
   "admin/adminActions": typeof admin_adminActions;
   "admin/forceLogout": typeof admin_forceLogout;
+  adminAccess: typeof adminAccess;
   adminFollowsQueries: typeof adminFollowsQueries;
   adminJudgeTracking: typeof adminJudgeTracking;
   adminQueries: typeof adminQueries;
+  agentJudges: typeof agentJudges;
   "agentReady/analytics": typeof agentReady_analytics;
   "agentReady/content": typeof agentReady_content;
   aiJudge: typeof aiJudge;
@@ -94,18 +106,22 @@ declare const fullApi: ApiFromModules<{
   emailSettings: typeof emailSettings;
   "emails/broadcast": typeof emails_broadcast;
   "emails/daily": typeof emails_daily;
+  "emails/emailTypes": typeof emails_emailTypes;
   "emails/helpers": typeof emails_helpers;
   "emails/linkHelpers": typeof emails_linkHelpers;
   "emails/mentions": typeof emails_mentions;
   "emails/queries": typeof emails_queries;
   "emails/reports": typeof emails_reports;
   "emails/resend": typeof emails_resend;
+  "emails/spam": typeof emails_spam;
+  "emails/submissions": typeof emails_submissions;
   "emails/templates": typeof emails_templates;
   "emails/unsubscribe": typeof emails_unsubscribe;
   "emails/weekly": typeof emails_weekly;
   "emails/welcome": typeof emails_welcome;
   follows: typeof follows;
   forms: typeof forms;
+  hackathon: typeof hackathon;
   http: typeof http;
   judgeScores: typeof judgeScores;
   judges: typeof judges;
@@ -118,6 +134,8 @@ declare const fullApi: ApiFromModules<{
   sendEmails: typeof sendEmails;
   settings: typeof settings;
   siteFiles: typeof siteFiles;
+  spamCheck: typeof spamCheck;
+  spamCheckAnalysis: typeof spamCheckAnalysis;
   stories: typeof stories;
   storyFormFields: typeof storyFormFields;
   storyRatings: typeof storyRatings;
@@ -162,5 +180,8 @@ export declare const components: {
   resend: import("@convex-dev/resend/_generated/component.js").ComponentApi<"resend">;
   crons: import("@convex-dev/crons/_generated/component.js").ComponentApi<"crons">;
   workpool: import("@convex-dev/workpool/_generated/component.js").ComponentApi<"workpool">;
+  spamWorkpool: import("@convex-dev/workpool/_generated/component.js").ComponentApi<"spamWorkpool">;
   agentReady: import("@waynesutton/agent-ready/_generated/component.js").ComponentApi<"agentReady">;
+  rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
+  firecrawl: import("@firecrawl/firecrawl-convex/_generated/component.js").ComponentApi<"firecrawl">;
 };

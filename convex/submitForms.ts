@@ -1,8 +1,8 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { Doc, Id } from "./_generated/dataModel";
-import { requireAdminRole, getAuthenticatedUserId } from "./users";
-import { api, internal } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
+import { getAuthenticatedUserId } from "./users";
+import { requirePermission } from "./adminAccess";
 
 // Helper to generate slugs
 function generateSlug(title: string): string {
@@ -62,7 +62,7 @@ export const listSubmitForms = query({
     }),
   ),
   handler: async (ctx) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "forms.view");
 
     const forms = await ctx.db.query("submitForms").order("desc").collect();
     return forms;
@@ -113,7 +113,7 @@ export const getSubmitFormWithFields = query({
     }),
   ),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "forms.view");
 
     const form = await ctx.db.get(args.formId);
     if (!form) {
@@ -168,7 +168,7 @@ export const createSubmitForm = mutation({
   },
   returns: v.id("submitForms"),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "forms.manage");
 
     const slug = args.slug || generateSlug(args.title);
 
@@ -215,7 +215,7 @@ export const updateSubmitForm = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "forms.manage");
 
     const { formId, ...updates } = args;
 
@@ -239,7 +239,7 @@ export const deleteSubmitForm = mutation({
   args: { formId: v.id("submitForms") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "forms.delete");
 
     const form = await ctx.db.get(args.formId);
     if (!form) {
@@ -272,7 +272,7 @@ export const updateSubmitFormFields = mutation({
     fieldIds: v.array(v.id("storyFormFields")),
   },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "forms.manage");
 
     // delete existing links
     const existingLinks = await ctx.db

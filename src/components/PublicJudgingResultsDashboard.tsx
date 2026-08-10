@@ -260,7 +260,8 @@ export function PublicJudgingResultsDashboard({
                                 {judge.judgeName}
                               </span>
                               <span className="font-medium text-gray-900">
-                                Avg: {judge.averageScore.toFixed(1)}/10
+                                Avg: {judge.averageScore.toFixed(1)}/
+                                {groupScores.scoreScale}
                               </span>
                             </div>
                           ))}
@@ -312,11 +313,13 @@ export function PublicJudgingResultsDashboard({
                       <div
                         className="bg-yellow-400 h-2 rounded-full"
                         style={{
-                          width: `${(criteria.averageScore / 10) * 100}%`,
+                          width: `${(criteria.averageScore / groupScores.scoreScale) * 100}%`,
                         }}
                       ></div>
                     </div>
-                    <span className="text-xs text-gray-500">/10</span>
+                    <span className="text-xs text-gray-500">
+                      /{groupScores.scoreScale}
+                    </span>
                   </div>
                 </div>
               </div>

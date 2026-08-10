@@ -1,7 +1,14 @@
 import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { Doc, Id } from "./_generated/dataModel";
-import { requireAdminRole, isUserAdmin, getAuthenticatedUserId } from "./users";
+import { Doc } from "./_generated/dataModel";
+import { isUserAdmin, getAuthenticatedUserId } from "./users";
+import {
+  requirePermission,
+  requireJudgingGroupPermission,
+  getAllowedJudgingGroupIds,
+  getAccessContext,
+} from "./adminAccess";
+import { logActivity } from "./activityLog";
 import { ensureStoryInGroup } from "./judgingGroupSubmissions";
 
 // Validator for admin-selectable required fields on the custom submission form.
@@ -18,6 +25,41 @@ const submissionFieldRequirementsValidator = v.object({
   email: v.optional(v.boolean()),
   tags: v.optional(v.boolean()),
 });
+
+// Validator for admin-selectable visible fields on the custom submission form.
+// Unset keys default to visible on the public page. Title can never be hidden.
+const submissionFieldVisibilityValidator = v.object({
+  title: v.optional(v.boolean()),
+  tagline: v.optional(v.boolean()),
+  longDescription: v.optional(v.boolean()),
+  url: v.optional(v.boolean()),
+  githubUrl: v.optional(v.boolean()),
+  videoUrl: v.optional(v.boolean()),
+  screenshot: v.optional(v.boolean()),
+  submitterName: v.optional(v.boolean()),
+  email: v.optional(v.boolean()),
+  tags: v.optional(v.boolean()),
+  teamInfo: v.optional(v.boolean()),
+  additionalImages: v.optional(v.boolean()),
+  additionalLinks: v.optional(v.boolean()),
+});
+
+// Validator for admin-defined custom questions on the custom submission form.
+const submissionCustomQuestionsValidator = v.array(
+  v.object({
+    key: v.string(),
+    label: v.string(),
+    placeholder: v.optional(v.string()),
+    description: v.optional(v.string()),
+    fieldType: v.union(
+      v.literal("text"),
+      v.literal("url"),
+      v.literal("email"),
+      v.literal("textarea"),
+    ),
+    required: v.boolean(),
+  }),
+);
 
 // Helper to generate slugs (consistent with existing forms.ts)
 function generateSlug(name: string): string {
@@ -79,9 +121,18 @@ export const listGroups = query({
     }),
   ),
   handler: async (ctx) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "judging.view");
 
-    const groups = await ctx.db.query("judgingGroups").order("desc").collect();
+    // Scope the list to groups the caller can access (full admins see all)
+    const allowedIds = await getAllowedJudgingGroupIds(ctx);
+    const allGroups = await ctx.db
+      .query("judgingGroups")
+      .order("desc")
+      .collect();
+    const groups =
+      allowedIds === "all"
+        ? allGroups
+        : allGroups.filter((group) => allowedIds.includes(group._id));
 
     // Enrich with counts
     const enrichedGroups = await Promise.all(
@@ -153,7 +204,7 @@ export const createGroup = mutation({
   },
   returns: v.id("judgingGroups"),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "judging.manage");
 
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
@@ -194,7 +245,7 @@ export const createGroup = mutation({
       ? hashPassword(args.aiResultsPassword)
       : undefined;
 
-    return await ctx.db.insert("judgingGroups", {
+    const newGroupId = await ctx.db.insert("judgingGroups", {
       name: args.name,
       slug,
       description: args.description,
@@ -210,6 +261,26 @@ export const createGroup = mutation({
       aiResultsIsPublic: args.aiResultsIsPublic ?? false, // Default to private
       aiResultsPassword: hashedAiResultsPassword,
     });
+
+    // Delegated users with a scoped grant automatically get access to the
+    // group they just created so it shows up in their list.
+    const access = await getAccessContext(ctx);
+    if (!access.isAdmin && access.grant && !access.grant.allJudgingGroups) {
+      await ctx.db.patch(access.grant._id, {
+        judgingGroupIds: [...access.grant.judgingGroupIds, newGroupId],
+      });
+    }
+
+    await logActivity(ctx, {
+      category: "judging",
+      action: "judgingGroup.created",
+      message: `Created judging group "${args.name}"`,
+      targetType: "judgingGroup",
+      targetId: newGroupId,
+      targetLabel: args.name,
+    });
+
+    return newGroupId;
   },
 });
 
@@ -231,7 +302,11 @@ export const updateGroup = mutation({
     submissionPageImageId: v.optional(v.union(v.id("_storage"), v.null())),
     submissionPageImageSize: v.optional(v.number()),
     submissionPageLayout: v.optional(
-      v.union(v.literal("two-column"), v.literal("one-third")),
+      v.union(
+        v.literal("two-column"),
+        v.literal("one-third"),
+        v.literal("single"),
+      ),
     ),
     submissionPageTitle: v.optional(v.union(v.string(), v.null())),
     submissionPageDescription: v.optional(v.union(v.string(), v.null())),
@@ -247,20 +322,29 @@ export const updateGroup = mutation({
     submissionFormSubtitle: v.optional(v.union(v.string(), v.null())),
     submissionFormRequiredTagId: v.optional(v.union(v.id("tags"), v.null())),
     submissionFieldRequirements: v.optional(submissionFieldRequirementsValidator),
+    submissionFieldVisibility: v.optional(submissionFieldVisibilityValidator),
+    submissionCustomQuestions: v.optional(submissionCustomQuestionsValidator),
     judgesPerSubmission: v.optional(v.number()),
+    // Human judging score scale: 5 or 10 (unset = 10)
+    scoreScale: v.optional(v.union(v.literal(5), v.literal(10))),
     // Multi-tag + date range auto-include config (nullable to clear)
     autoIncludeTagIds: v.optional(v.union(v.array(v.id("tags")), v.null())),
     autoIncludeMatchMode: v.optional(v.union(v.literal("any"), v.literal("all"))),
     autoIncludeStartDate: v.optional(v.union(v.number(), v.null())),
     autoIncludeEndDate: v.optional(v.union(v.number(), v.null())),
+    // Event window for the build-timeline check (builtDuringEvent)
+    startDate: v.optional(v.union(v.number(), v.null())),
+    endDate: v.optional(v.union(v.number(), v.null())),
     // AI Judge settings
     aiJudgeEnabled: v.optional(v.boolean()),
     aiResultsIsPublic: v.optional(v.boolean()),
     aiResultsPassword: v.optional(v.union(v.string(), v.null())),
+    // Organizer emails for new-submission alerts (null clears the list)
+    notificationEmails: v.optional(v.union(v.array(v.string()), v.null())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.manage");
 
     // Snapshot the existing required tag so we can detect a change below.
     const existingGroup = await ctx.db.get(args.groupId);
@@ -277,17 +361,39 @@ export const updateGroup = mutation({
       autoIncludeMatchMode,
       autoIncludeStartDate,
       autoIncludeEndDate,
+      startDate,
+      endDate,
       ...updates
     } = args;
+
+    // Validate custom submission form config before saving
+    if (args.submissionCustomQuestions !== undefined) {
+      const seenKeys = new Set<string>();
+      for (const question of args.submissionCustomQuestions) {
+        if (!question.key.trim() || !question.label.trim()) {
+          throw new Error("Custom questions need a label");
+        }
+        if (seenKeys.has(question.key)) {
+          throw new Error(`Duplicate custom question key: ${question.key}`);
+        }
+        seenKeys.add(question.key);
+      }
+    }
+    if (args.submissionFieldVisibility?.title === false) {
+      throw new Error(
+        "The title field cannot be hidden; submissions need a title for judging",
+      );
+    }
 
     // Build finalUpdates object properly, handling nulls explicitly
     const finalUpdates: any = {};
     
-    // Copy non-password fields
+    // Copy non-password fields. Null means "clear this optional field";
+    // patching undefined unsets it, while null would fail schema validation.
     Object.keys(updates).forEach((key) => {
       const value = (updates as any)[key];
       if (value !== undefined) {
-        finalUpdates[key] = value;
+        finalUpdates[key] = value === null ? undefined : value;
       }
     });
 
@@ -308,6 +414,14 @@ export const updateGroup = mutation({
     }
     if (autoIncludeEndDate !== undefined) {
       finalUpdates.autoIncludeEndDate = autoIncludeEndDate ?? undefined;
+    }
+
+    // Event window: null clears (store undefined), otherwise set the value
+    if (startDate !== undefined) {
+      finalUpdates.startDate = startDate ?? undefined;
+    }
+    if (endDate !== undefined) {
+      finalUpdates.endDate = endDate ?? undefined;
     }
 
     // Hash passwords if provided, set undefined if null to clear
@@ -331,6 +445,16 @@ export const updateGroup = mutation({
     }
 
     await ctx.db.patch(groupId, finalUpdates);
+
+    await logActivity(ctx, {
+      category: "judging",
+      action: "judgingGroup.updated",
+      message: `Updated judging group "${existingGroup?.name ?? "unknown"}"`,
+      targetType: "judgingGroup",
+      targetId: groupId,
+      targetLabel: existingGroup?.name,
+      metadata: { fields: Object.keys(finalUpdates) },
+    });
 
     // If the required tag was set (or changed to a new tag), backfill any
     // existing stories carrying that tag so they are immediately judgeable and
@@ -403,7 +527,10 @@ export const deleteGroup = mutation({
   args: { groupId: v.id("judgingGroups") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.delete");
+
+    // Snapshot the name for the activity log before rows disappear
+    const groupToDelete = await ctx.db.get(args.groupId);
 
     // Delete all associated data in order
     // 1. Judge scores
@@ -463,6 +590,14 @@ export const deleteGroup = mutation({
     // 7. Finally, the group itself
     await ctx.db.delete(args.groupId);
 
+    await logActivity(ctx, {
+      category: "judging",
+      action: "judgingGroup.deleted",
+      message: `Deleted judging group "${groupToDelete?.name ?? "unknown"}" and all associated data`,
+      targetType: "judgingGroup",
+      targetLabel: groupToDelete?.name,
+    });
+
     return null;
   },
 });
@@ -487,7 +622,7 @@ export const getGroupBySlug = query({
     }),
   ),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "judging.view");
 
     const group = await ctx.db
       .query("judgingGroups")
@@ -495,6 +630,12 @@ export const getGroupBySlug = query({
       .unique();
 
     if (!group) {
+      return null;
+    }
+
+    // Scoped users only see groups in their grant
+    const allowedIds = await getAllowedJudgingGroupIds(ctx);
+    if (allowedIds !== "all" && !allowedIds.includes(group._id)) {
       return null;
     }
 
@@ -537,7 +678,13 @@ export const getGroupWithDetails = query({
       hasCustomSubmissionPage: v.optional(v.boolean()),
       submissionPageImageId: v.optional(v.id("_storage")),
       submissionPageImageSize: v.optional(v.number()),
-      submissionPageLayout: v.optional(v.union(v.literal("two-column"), v.literal("one-third"))),
+      submissionPageLayout: v.optional(
+        v.union(
+          v.literal("two-column"),
+          v.literal("one-third"),
+          v.literal("single"),
+        ),
+      ),
       submissionPageTitle: v.optional(v.string()),
       submissionPageDescription: v.optional(v.string()),
       submissionPageLinks: v.optional(
@@ -552,14 +699,41 @@ export const getGroupWithDetails = query({
       submissionFormSubtitle: v.optional(v.string()),
       submissionFormRequiredTagId: v.optional(v.id("tags")),
       submissionFieldRequirements: v.optional(submissionFieldRequirementsValidator),
+      submissionFieldVisibility: v.optional(submissionFieldVisibilityValidator),
+      submissionCustomQuestions: v.optional(submissionCustomQuestionsValidator),
       autoIncludeTagIds: v.optional(v.array(v.id("tags"))),
       autoIncludeMatchMode: v.optional(v.union(v.literal("any"), v.literal("all"))),
       autoIncludeStartDate: v.optional(v.number()),
       autoIncludeEndDate: v.optional(v.number()),
       judgesPerSubmission: v.number(),
+      scoreScale: v.number(),
+      startDate: v.optional(v.number()),
+      endDate: v.optional(v.number()),
       aiJudgeEnabled: v.optional(v.boolean()),
       aiResultsIsPublic: v.optional(v.boolean()),
       hasAiResultsPassword: v.boolean(),
+      aiResultsPassword: v.optional(v.string()),
+      aiRubricWeights: v.optional(
+        v.array(v.object({ key: v.string(), weight: v.number() })),
+      ),
+      aiCustomCriteria: v.optional(
+        v.array(
+          v.object({
+            key: v.string(),
+            label: v.string(),
+            description: v.string(),
+          }),
+        ),
+      ),
+      aiDisabledCriteria: v.optional(v.array(v.string())),
+      hasCustomAiPrompt: v.boolean(),
+      agentScoresAdvisory: v.optional(v.boolean()),
+      agentKeysEnabled: v.optional(v.boolean()),
+      hackathonSkillEnabled: v.optional(v.boolean()),
+      hackathonRegistrationCodes: v.optional(v.array(v.string())),
+      hackathonRules: v.optional(v.string()),
+      hackathonRulesUpdatedAt: v.optional(v.number()),
+      notificationEmails: v.optional(v.array(v.string())),
       criteria: v.array(
         v.object({
           _id: v.id("judgingCriteria"),
@@ -576,10 +750,16 @@ export const getGroupWithDetails = query({
     }),
   ),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "judging.view");
 
     const group = await ctx.db.get(args.groupId);
     if (!group) {
+      return null;
+    }
+
+    // Scoped users only see groups in their grant
+    const allowedIds = await getAllowedJudgingGroupIds(ctx);
+    if (allowedIds !== "all" && !allowedIds.includes(group._id)) {
       return null;
     }
 
@@ -641,14 +821,31 @@ export const getGroupWithDetails = query({
       submissionFormSubtitle: group.submissionFormSubtitle,
       submissionFormRequiredTagId: group.submissionFormRequiredTagId,
       submissionFieldRequirements: group.submissionFieldRequirements,
+      submissionFieldVisibility: group.submissionFieldVisibility,
+      submissionCustomQuestions: group.submissionCustomQuestions,
       autoIncludeTagIds: group.autoIncludeTagIds,
       autoIncludeMatchMode: group.autoIncludeMatchMode,
       autoIncludeStartDate: group.autoIncludeStartDate,
       autoIncludeEndDate: group.autoIncludeEndDate,
       judgesPerSubmission: group.judgesPerSubmission ?? 1,
+      scoreScale: group.scoreScale ?? 10,
+      startDate: group.startDate,
+      endDate: group.endDate,
       aiJudgeEnabled: group.aiJudgeEnabled,
       aiResultsIsPublic: group.aiResultsIsPublic,
       hasAiResultsPassword: !!group.aiResultsPassword,
+      aiResultsPassword: group.aiResultsPassword,
+      aiRubricWeights: group.aiRubricWeights,
+      aiCustomCriteria: group.aiCustomCriteria,
+      aiDisabledCriteria: group.aiDisabledCriteria,
+      hasCustomAiPrompt: !!group.aiJudgeSystemPrompt,
+      agentScoresAdvisory: group.agentScoresAdvisory,
+      agentKeysEnabled: group.agentKeysEnabled,
+      hackathonSkillEnabled: group.hackathonSkillEnabled,
+      hackathonRegistrationCodes: group.hackathonRegistrationCodes,
+      hackathonRules: group.hackathonRules,
+      hackathonRulesUpdatedAt: group.hackathonRulesUpdatedAt,
+      notificationEmails: group.notificationEmails,
       criteria,
       submissionCount,
       judgeCount,
@@ -674,6 +871,9 @@ export const getPublicGroup = query({
       isActive: v.boolean(),
       hasJudgePassword: v.boolean(),
       judgesPerSubmission: v.number(),
+      scoreScale: v.number(),
+      startDate: v.optional(v.number()),
+      endDate: v.optional(v.number()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -703,6 +903,9 @@ export const getPublicGroup = query({
       isActive: group.isActive,
       hasJudgePassword: !!(group.judgePassword || (group as any).password),
       judgesPerSubmission: group.judgesPerSubmission ?? 1,
+      scoreScale: group.scoreScale ?? 10,
+      startDate: group.startDate,
+      endDate: group.endDate,
     };
   },
 });
@@ -822,7 +1025,11 @@ export const getSubmissionPage = query({
       submissionPageImageUrl: v.optional(v.string()),
       submissionPageImageSize: v.optional(v.number()),
       submissionPageLayout: v.optional(
-        v.union(v.literal("two-column"), v.literal("one-third")),
+        v.union(
+          v.literal("two-column"),
+          v.literal("one-third"),
+          v.literal("single"),
+        ),
       ),
       submissionPageTitle: v.optional(v.string()),
       submissionPageDescription: v.optional(v.string()),
@@ -838,6 +1045,8 @@ export const getSubmissionPage = query({
       submissionFormSubtitle: v.optional(v.string()),
       submissionFormRequiredTagId: v.optional(v.id("tags")),
       submissionFieldRequirements: v.optional(submissionFieldRequirementsValidator),
+      submissionFieldVisibility: v.optional(submissionFieldVisibilityValidator),
+      submissionCustomQuestions: v.optional(submissionCustomQuestionsValidator),
     }),
   ),
   handler: async (ctx, args) => {
@@ -880,6 +1089,8 @@ export const getSubmissionPage = query({
       submissionFormSubtitle: group.submissionFormSubtitle,
       submissionFormRequiredTagId: group.submissionFormRequiredTagId,
       submissionFieldRequirements: group.submissionFieldRequirements,
+      submissionFieldVisibility: group.submissionFieldVisibility,
+      submissionCustomQuestions: group.submissionCustomQuestions,
     };
   },
 });

@@ -1,7 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { requireAdminRole } from "./users";
+import { requireJudgingGroupPermission } from "./adminAccess";
 
 // Helper to generate secure session IDs using V8-compatible approach
 function generateSessionId(): string {
@@ -45,7 +45,7 @@ export const listByGroup = query({
     }),
   ),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.view");
 
     const judges = await ctx.db
       .query("judges")
@@ -103,7 +103,11 @@ export const removeJudge = mutation({
   args: { judgeId: v.id("judges") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    const judgeDoc = await ctx.db.get(args.judgeId);
+    if (!judgeDoc) {
+      return null;
+    }
+    await requireJudgingGroupPermission(ctx, judgeDoc.groupId, "judging.manage");
 
     // Delete all scores by this judge
     const scores = await ctx.db
@@ -275,6 +279,7 @@ export const getJudgeSession = query({
         description: v.optional(v.string()),
         isActive: v.boolean(),
         judgesPerSubmission: v.number(),
+        scoreScale: v.number(),
       }),
     }),
   ),
@@ -306,6 +311,7 @@ export const getJudgeSession = query({
         description: group.description,
         isActive: group.isActive,
         judgesPerSubmission: group.judgesPerSubmission ?? 1,
+        scoreScale: group.scoreScale ?? 10,
       },
     };
   },

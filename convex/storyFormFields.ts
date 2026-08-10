@@ -1,7 +1,7 @@
 import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { Id, Doc } from "./_generated/dataModel";
-import { requireAdminRole } from "./users";
+import { Doc } from "./_generated/dataModel";
+import { requirePermission } from "./adminAccess";
 
 // Query to get all form fields ordered by display order
 export const list = query({
@@ -75,7 +75,7 @@ export const listAdmin = query({
     })
   ),
   handler: async (ctx) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "forms.view");
     const fields = await ctx.db.query("storyFormFields").withIndex("by_order").collect();
 
     return fields.sort((a, b) => a.order - b.order);
@@ -97,7 +97,7 @@ export const create = mutation({
   },
   returns: v.id("storyFormFields"),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "forms.manage");
 
     // Check if key already exists
     const existing = await ctx.db
@@ -129,7 +129,7 @@ export const update = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "forms.manage");
 
     const { fieldId, ...updates } = args;
 
@@ -172,7 +172,7 @@ export const deleteField = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "forms.delete");
     await ctx.db.delete(args.fieldId);
     return null;
   },
@@ -185,7 +185,7 @@ export const reorder = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "forms.manage");
 
     // Update order for each field
     for (let i = 0; i < args.fieldIds.length; i++) {
@@ -284,10 +284,78 @@ export const initializeDefaultFields = internalMutation({
         description: "Convexchef.show project link",
         storyPropertyName: "chefShowUrl",
       },
+      {
+        key: "selfReportedHarness",
+        label: "AI coding tool used (Optional)",
+        placeholder: "cursor, claude-code, windsurf...",
+        isEnabled: false,
+        isRequired: false,
+        order: 5,
+        fieldType: "text" as const,
+        description: "Which AI coding tool you used to build this (self-reported)",
+        storyPropertyName: "selfReportedHarness",
+      },
+      {
+        key: "selfReportedModel",
+        label: "AI model used (Optional)",
+        placeholder: "claude-sonnet-4-5, gpt-5...",
+        isEnabled: false,
+        isRequired: false,
+        order: 6,
+        fieldType: "text" as const,
+        description: "Which AI model you used to build this (self-reported)",
+        storyPropertyName: "selfReportedModel",
+      },
     ];
 
     for (const field of defaultFields) {
       await ctx.db.insert("storyFormFields", field);
+    }
+
+    return null;
+  },
+});
+
+// Internal mutation to add the self-reported AI attribution fields to
+// existing deployments (initializeDefaultFields only runs on empty tables).
+// Fields are created disabled so admins opt in per event.
+export const ensureAiAttributionFields = internalMutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const attributionFields = [
+      {
+        key: "selfReportedHarness",
+        label: "AI coding tool used (Optional)",
+        placeholder: "cursor, claude-code, windsurf...",
+        isEnabled: false,
+        isRequired: false,
+        order: 90,
+        fieldType: "text" as const,
+        description: "Which AI coding tool you used to build this (self-reported)",
+        storyPropertyName: "selfReportedHarness",
+      },
+      {
+        key: "selfReportedModel",
+        label: "AI model used (Optional)",
+        placeholder: "claude-sonnet-4-5, gpt-5...",
+        isEnabled: false,
+        isRequired: false,
+        order: 91,
+        fieldType: "text" as const,
+        description: "Which AI model you used to build this (self-reported)",
+        storyPropertyName: "selfReportedModel",
+      },
+    ];
+
+    for (const field of attributionFields) {
+      const existing = await ctx.db
+        .query("storyFormFields")
+        .withIndex("by_key", (q) => q.eq("key", field.key))
+        .first();
+      if (!existing) {
+        await ctx.db.insert("storyFormFields", field);
+      }
     }
 
     return null;

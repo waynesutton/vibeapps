@@ -908,6 +908,15 @@ export function ContentModeration() {
                   {item.title}
                 </Link>
               )}
+              {/* Spam badge for submissions confirmed via the AI Spam tab */}
+              {item.type === "story" && item.isSpam === true && (
+                <span
+                  className="text-xs font-medium text-white bg-red-600 rounded-full px-2 py-0.5 flex-shrink-0"
+                  title={item.spamReason || "Marked as spam"}
+                >
+                  Spam
+                </span>
+              )}
             </div>
             {/* Comprehensive Inline Edit Form */}
             {item.type === "story" && editingStoryId === item._id ? (

@@ -2,24 +2,23 @@ import {
   query,
   mutation,
   internalQuery,
-  QueryCtx,
-  MutationCtx,
+  type MutationCtx,
 } from "./_generated/server";
 import { v, type Infer } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { Doc, Id, DataModel } from "./_generated/dataModel";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { GenericDatabaseReader, StorageReader } from "convex/server";
-import {
-  getAuthenticatedUserId,
-  requireAdminRole,
-  ensureUserNotBanned,
-} from "./users"; // Import the centralized helper and requireAdminRole
+import { getAuthenticatedUserId, ensureUserNotBanned } from "./users"; // Centralized auth helpers
+import { requirePermission } from "./adminAccess"; // Granular admin permissions
+import { logActivity } from "./activityLog"; // Admin activity log
+import { getTagLimits } from "./tags"; // Configurable tag limits
 import {
   storyWithDetailsValidator,
   StoryWithDetailsPublic,
 } from "./validators"; // Import StoryWithDetailsPublic
 import { syncStoryToTaggedGroups } from "./judgingGroupSubmissions"; // Auto-include tag-matched submissions in judging
+import { groupHasDuplicateUrl } from "./hackathon"; // Per-group duplicate project URL guard
 
 // Validator for Doc<"tags">
 // REMOVED - Moved to convex/validators.ts
@@ -528,6 +527,43 @@ async function generateUniqueSlug(ctx: any, title: string): Promise<string> {
   }
 }
 
+// Reject brand-new tag names longer than the configured max length.
+// Names matching an existing tag are skipped (ensureTags reuses them),
+// which keeps custom-form hidden tracking tags working.
+async function validateNewTagNameLengths(
+  ctx: MutationCtx,
+  newTagNames: string[],
+  maxTagLength: number,
+): Promise<void> {
+  for (const rawName of newTagNames) {
+    const name = rawName.trim();
+    if (!name || name.length <= maxTagLength) continue;
+    const existing = await ctx.db
+      .query("tags")
+      .withIndex("by_name", (q) => q.eq("name", name))
+      .first();
+    if (!existing) {
+      throw new Error(
+        `Tag "${name}" is too long. Tag names are limited to ${maxTagLength} characters.`,
+      );
+    }
+  }
+}
+
+// Enforce the visible tag limit. Hidden tags (custom form tracking tags)
+// never count toward the limit.
+function enforceVisibleTagLimit(
+  tagDocs: Doc<"tags">[],
+  maxTagsPerSubmission: number,
+): void {
+  const visibleCount = tagDocs.filter((tag) => tag.isHidden !== true).length;
+  if (visibleCount > maxTagsPerSubmission) {
+    throw new Error(
+      `You can select up to ${maxTagsPerSubmission} tags per submission.`,
+    );
+  }
+}
+
 export const submit = mutation({
   args: {
     title: v.string(),
@@ -557,8 +593,21 @@ export const submit = mutation({
         }),
       ),
     ),
+    // Self-reported AI build attribution (unverified metadata, never scored)
+    selfReportedHarness: v.optional(v.string()),
+    selfReportedModel: v.optional(v.string()),
     // Auto-add to judging group
     judgingGroupId: v.optional(v.id("judgingGroups")),
+    // Answers to per-group custom submission questions
+    customFormAnswers: v.optional(
+      v.array(
+        v.object({
+          key: v.string(),
+          label: v.string(),
+          value: v.string(),
+        }),
+      ),
+    ),
   },
   handler: async (ctx, args) => {
     await ensureUserNotBanned(ctx); // Check if user is banned
@@ -597,6 +646,10 @@ export const submit = mutation({
 
     const slug = await generateUniqueSlug(ctx, args.title);
 
+    // Tag limits from settings (default 6 tags, 20 chars per tag name)
+    const { maxTagsPerSubmission, maxTagLength } = await getTagLimits(ctx);
+    await validateNewTagNameLengths(ctx, args.newTagNames, maxTagLength);
+
     let allTagIds: Id<"tags">[] = [...args.tagIds];
 
     if (args.newTagNames && args.newTagNames.length > 0) {
@@ -606,17 +659,51 @@ export const submit = mutation({
       allTagIds = [...new Set([...allTagIds, ...newCreatedTagIds])];
     }
 
+    // Per-group duplicate guard: one submission per project URL per event.
+    // Lives in the mutation so the form and any future path both get it.
+    if (args.judgingGroupId) {
+      const isDuplicate = await groupHasDuplicateUrl(
+        ctx,
+        args.judgingGroupId,
+        args.url,
+      );
+      if (isDuplicate) {
+        throw new Error(
+          "This project URL was already submitted to this event. Each project can only be submitted once.",
+        );
+      }
+    }
+
+    // Backstop for judging group submissions: always apply the group's
+    // required tracking tag server-side. This keeps group tracking working
+    // even when the group hides the tag picker on its custom submit form.
+    if (args.judgingGroupId) {
+      const judgingGroup = await ctx.db.get(args.judgingGroupId);
+      if (
+        judgingGroup?.submissionFormRequiredTagId &&
+        !allTagIds.includes(judgingGroup.submissionFormRequiredTagId)
+      ) {
+        allTagIds.push(judgingGroup.submissionFormRequiredTagId);
+      }
+    }
+
+    const resolvedTagDocs: Doc<"tags">[] = [];
     for (const tagId of allTagIds) {
       const tag = await ctx.db.get(tagId);
       if (!tag) {
         console.warn(`Tag with ID ${tagId} not found during final check.`);
         allTagIds = allTagIds.filter((id) => id !== tagId);
+      } else {
+        resolvedTagDocs.push(tag);
       }
     }
 
     if (allTagIds.length === 0) {
       throw new Error("At least one valid tag is required to submit a story.");
     }
+
+    // Hidden tags (custom form tracking tags) do not count toward the limit
+    enforceVisibleTagLimit(resolvedTagDocs, maxTagsPerSubmission);
 
     const storyId = await ctx.db.insert("stories", {
       title: args.title,
@@ -649,6 +736,20 @@ export const submit = mutation({
       teamName: args.teamName,
       teamMemberCount: args.teamMemberCount,
       teamMembers: args.teamMembers,
+      // Self-reported AI build attribution (unverified metadata, never scored)
+      selfReportedHarness: args.selfReportedHarness?.trim() || undefined,
+      selfReportedModel: args.selfReportedModel?.trim() || undefined,
+      // Per-group custom question answers (empty values dropped)
+      customFormAnswers: (() => {
+        const answers = (args.customFormAnswers || [])
+          .map((a) => ({
+            key: a.key.trim(),
+            label: a.label.trim(),
+            value: a.value.trim(),
+          }))
+          .filter((a) => a.key && a.label && a.value);
+        return answers.length > 0 ? answers : undefined;
+      })(),
     });
 
     // Log the submission
@@ -656,6 +757,16 @@ export const submit = mutation({
       submitterEmail: userRecord.email || "unknown@example.com",
       userId: userId,
       submissionTime: Date.now(),
+    });
+
+    // Activity log entry for the admin dashboard
+    await logActivity(ctx, {
+      category: "submission",
+      action: "story.submitted",
+      message: `New submission: ${args.title}`,
+      targetType: "story",
+      targetId: storyId,
+      targetLabel: args.title,
     });
 
     // Auto-add to judging group if provided
@@ -689,6 +800,29 @@ export const submit = mutation({
       }
     }
 
+    // Fire-and-forget AI spam scan; a scan failure can never break a submission
+    await ctx.scheduler.runAfter(0, internal.spamCheck.autoScanStory, {
+      storyId,
+    });
+
+    // Submission emails (both centrally gated by the master switch and the
+    // per-type toggles in the Email dashboard, off by default). Scheduled
+    // once per insert so a retry can never double-send.
+    if (args.email) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.emails.submissions.sendSubmissionConfirmationEmail,
+        { storyId, groupId: args.judgingGroupId },
+      );
+    }
+    if (args.judgingGroupId) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.emails.submissions.sendNewSubmissionAdminAlert,
+        { storyId, groupId: args.judgingGroupId },
+      );
+    }
+
     return { storyId, slug };
   },
 });
@@ -712,6 +846,9 @@ export const submitAnonymous = mutation({
     chefShowUrl: v.optional(v.string()),
     chefAppUrl: v.optional(v.string()),
     email: v.string(), // Required for anonymous submissions
+    // Self-reported AI build attribution (unverified metadata, never scored)
+    selfReportedHarness: v.optional(v.string()),
+    selfReportedModel: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // No authentication required for anonymous submissions
@@ -749,6 +886,10 @@ export const submitAnonymous = mutation({
       );
     }
 
+    // Tag limits from settings (default 6 tags, 20 chars per tag name)
+    const { maxTagsPerSubmission, maxTagLength } = await getTagLimits(ctx);
+    await validateNewTagNameLengths(ctx, args.newTagNames, maxTagLength);
+
     let allTagIds: Id<"tags">[] = [...args.tagIds];
 
     if (args.newTagNames && args.newTagNames.length > 0) {
@@ -758,17 +899,23 @@ export const submitAnonymous = mutation({
       allTagIds = [...new Set([...allTagIds, ...newCreatedTagIds])];
     }
 
+    const resolvedTagDocs: Doc<"tags">[] = [];
     for (const tagId of allTagIds) {
       const tag = await ctx.db.get(tagId);
       if (!tag) {
         console.warn(`Tag with ID ${tagId} not found during final check.`);
         allTagIds = allTagIds.filter((id) => id !== tagId);
+      } else {
+        resolvedTagDocs.push(tag);
       }
     }
 
     if (allTagIds.length === 0) {
       throw new Error("At least one valid tag is required to submit a story.");
     }
+
+    // Hidden tags (custom form tracking tags) do not count toward the limit
+    enforceVisibleTagLimit(resolvedTagDocs, maxTagsPerSubmission);
 
     const storyId = await ctx.db.insert("stories", {
       title: args.title,
@@ -797,6 +944,9 @@ export const submitAnonymous = mutation({
       customMessage: undefined,
       isApproved: true,
       email: args.email,
+      // Self-reported AI build attribution (unverified metadata, never scored)
+      selfReportedHarness: args.selfReportedHarness?.trim() || undefined,
+      selfReportedModel: args.selfReportedModel?.trim() || undefined,
     });
 
     // Log the anonymous submission
@@ -804,6 +954,22 @@ export const submitAnonymous = mutation({
       submitterEmail: args.email,
       userId: undefined, // No user ID for anonymous submissions
       submissionTime: Date.now(),
+    });
+
+    // Activity log entry for the admin dashboard
+    await logActivity(ctx, {
+      category: "submission",
+      action: "story.submitted",
+      message: `New anonymous submission: ${args.title}`,
+      actorName: args.submitterName || "Anonymous",
+      targetType: "story",
+      targetId: storyId,
+      targetLabel: args.title,
+    });
+
+    // Fire-and-forget AI spam scan; a scan failure can never break a submission
+    await ctx.scheduler.runAfter(0, internal.spamCheck.autoScanStory, {
+      storyId,
     });
 
     return { storyId, slug };
@@ -985,7 +1151,7 @@ export const updateStatus = mutation({
     rejectionReason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "moderation.moderate");
     const existingStory = await ctx.db.get(args.storyId);
     if (!existingStory) {
       throw new Error("Story not found");
@@ -1002,6 +1168,14 @@ export const updateStatus = mutation({
 
     // Patch immediately after validation
     await ctx.db.patch(args.storyId, updatePayload);
+    await logActivity(ctx, {
+      category: "moderation",
+      action: `story.${args.status}`,
+      message: `Set "${existingStory.title}" to ${args.status}${args.status === "rejected" && args.rejectionReason ? ` (${args.rejectionReason})` : ""}`,
+      targetType: "story",
+      targetId: args.storyId,
+      targetLabel: existingStory.title,
+    });
     return { success: true };
   },
 });
@@ -1011,8 +1185,15 @@ export const updateStatus = mutation({
 export const hideStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "moderation.moderate");
     await ctx.db.patch(args.storyId, { isHidden: true });
+    await logActivity(ctx, {
+      category: "moderation",
+      action: "story.hidden",
+      message: "Hid a submission",
+      targetType: "story",
+      targetId: args.storyId,
+    });
     return { success: true };
   },
 });
@@ -1020,8 +1201,15 @@ export const hideStory = mutation({
 export const showStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "moderation.moderate");
     await ctx.db.patch(args.storyId, { isHidden: false });
+    await logActivity(ctx, {
+      category: "moderation",
+      action: "story.shown",
+      message: "Unhid a submission",
+      targetType: "story",
+      targetId: args.storyId,
+    });
     return { success: true };
   },
 });
@@ -1031,7 +1219,7 @@ export const archiveStory = mutation({
   args: { storyId: v.id("stories") },
   returns: v.object({ success: v.boolean() }),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "moderation.moderate");
     await ctx.db.patch(args.storyId, { isArchived: true });
     return { success: true };
   },
@@ -1042,7 +1230,7 @@ export const unarchiveStory = mutation({
   args: { storyId: v.id("stories") },
   returns: v.object({ success: v.boolean() }),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "moderation.moderate");
     await ctx.db.patch(args.storyId, { isArchived: false });
     return { success: true };
   },
@@ -1051,7 +1239,7 @@ export const unarchiveStory = mutation({
 export const deleteStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "moderation.delete");
     const story = await ctx.db.get(args.storyId);
     if (!story) throw new Error("Story not found");
 
@@ -1113,6 +1301,13 @@ export const deleteStory = mutation({
 
     // Delete the story itself
     await ctx.db.delete(args.storyId);
+    await logActivity(ctx, {
+      category: "moderation",
+      action: "story.deleted",
+      message: `Deleted submission "${story.title}" and its related data`,
+      targetType: "story",
+      targetLabel: story.title,
+    });
     return { success: true };
   },
 });
@@ -1124,7 +1319,7 @@ export const updateStoryCustomMessage = mutation({
     customMessage: v.optional(v.string()), // Pass undefined or empty string to clear
   },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "moderation.moderate");
     await ctx.db.patch(args.storyId, {
       customMessage: args.customMessage || undefined, // Store empty string as undefined
     });
@@ -1152,7 +1347,7 @@ export const updateStoryCustomMessage = mutation({
 export const toggleStoryPinStatus = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "moderation.moderate");
     const story = await ctx.db.get(args.storyId);
     if (!story) {
       throw new Error("Story not found");
@@ -1186,7 +1381,7 @@ export const addTagsToStory = mutation({
     tagIdsToAdd: v.array(v.id("tags")),
   },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "moderation.moderate");
     const story = await ctx.db.get(args.storyId);
     if (!story) {
       throw new Error("Story not found");
@@ -1221,7 +1416,7 @@ export const removeTagsFromStory = mutation({
     tagIdsToRemove: v.array(v.id("tags")),
   },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "moderation.moderate");
     const story = await ctx.db.get(args.storyId);
     if (!story) {
       throw new Error("Story not found");
@@ -1494,6 +1689,9 @@ export const updateOwnStory = mutation({
     // Handle new tags if provided
     let finalTagIds = args.tagIds;
     if (args.newTagNames && args.newTagNames.length > 0) {
+      // Enforce configured max length on brand-new tag names
+      const { maxTagLength } = await getTagLimits(ctx);
+      await validateNewTagNameLengths(ctx, args.newTagNames, maxTagLength);
       const newCreatedTagIds = await ctx.runMutation(internal.tags.ensureTags, {
         tagNames: args.newTagNames,
       });
@@ -1504,17 +1702,24 @@ export const updateOwnStory = mutation({
 
     // Validate tags if provided
     if (finalTagIds && finalTagIds.length > 0) {
+      const resolvedTagDocs: Doc<"tags">[] = [];
       for (const tagId of finalTagIds) {
         const tag = await ctx.db.get(tagId);
         if (!tag) {
           console.warn(`Tag with ID ${tagId} not found during update.`);
           finalTagIds = finalTagIds.filter((id) => id !== tagId);
+        } else {
+          resolvedTagDocs.push(tag);
         }
       }
 
       if (finalTagIds.length === 0) {
         throw new Error("At least one valid tag is required.");
       }
+
+      // Hidden tags (custom form tracking tags) do not count toward the limit
+      const { maxTagsPerSubmission } = await getTagLimits(ctx);
+      enforceVisibleTagLimit(resolvedTagDocs, maxTagsPerSubmission);
     }
 
     // Track tag changes
@@ -1650,7 +1855,7 @@ export const updateStoryAdmin = mutation({
   },
   handler: async (ctx, args) => {
     // Require admin role
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "moderation.moderate");
 
     const story = await ctx.db.get(args.storyId);
 
@@ -1794,7 +1999,7 @@ export const listAllStoriesAdmin = query({
     isDone: boolean;
     continueCursor: string;
   }> => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "moderation.view");
     let initialStories: Doc<"stories">[];
 
     if (args.searchTerm && args.searchTerm.trim() !== "") {
@@ -2144,6 +2349,11 @@ export const submitDynamic = mutation({
     if (formData.githubUrl) storyData.githubUrl = formData.githubUrl;
     if (formData.chefShowUrl) storyData.chefShowUrl = formData.chefShowUrl;
     if (formData.chefAppUrl) storyData.chefAppUrl = formData.chefAppUrl;
+    // Self-reported AI build attribution (unverified metadata, never scored)
+    if (formData.selfReportedHarness)
+      storyData.selfReportedHarness = formData.selfReportedHarness;
+    if (formData.selfReportedModel)
+      storyData.selfReportedModel = formData.selfReportedModel;
     if (screenshotId) storyData.screenshotId = screenshotId;
 
     // Set submitter info
@@ -2166,7 +2376,7 @@ export const submitDynamic = mutation({
 export const listApprovedStoriesWithDetails = query({
   args: { paginationOpts: v.optional(v.any()) },
   returns: v.array(storyWithDetailsValidator), // Validator for return shape
-  handler: async (ctx, args): Promise<StoryWithDetailsPublic[]> => {
+  handler: async (ctx, _args): Promise<StoryWithDetailsPublic[]> => {
     const approvedStories = await ctx.db
       .query("stories")
       .filter((q) =>

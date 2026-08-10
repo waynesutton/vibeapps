@@ -1,4 +1,4 @@
-import { components } from "./_generated/api";
+import { components, internal } from "./_generated/api";
 import { Resend } from "@convex-dev/resend";
 import {
   internalMutation,
@@ -6,10 +6,13 @@ import {
   mutation,
 } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAdminRole } from "./users";
+import { requirePermission } from "./adminAccess";
 
 export const resend: Resend = new Resend(components.resend, {
   testMode: false, // Disable test mode to send to real email addresses
+  // Component calls this mutation after verifying each Resend webhook event,
+  // keeping emailLogs delivery statuses in sync (delivered/bounced/complained).
+  onEmailEvent: internal.emails.queries.handleEmailEvent,
 });
 
 // Public mutation for admins to send test emails
@@ -22,7 +25,7 @@ export const sendTestEmail = mutation({
     message: v.string(),
   }),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "emails.send");
 
     try {
       await resend.sendEmail(ctx, {

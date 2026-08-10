@@ -1,7 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { requireAdminRole } from "./users";
+import { requirePermission } from "./adminAccess";
 
 const CONFIG_IDENTIFIER = "global_convex_box_settings";
 
@@ -81,7 +81,7 @@ export const update = mutation({
     boxSize: v.optional(v.union(v.literal("standard"), v.literal("square"))),
   },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "settings.manage");
     const existingConfig = await ctx.db
       .query("convexBoxConfig")
       .withIndex("by_identifier", (q) => q.eq("identifier", CONFIG_IDENTIFIER))

@@ -23,7 +23,8 @@ type AlertType = {
     | "pinned"
     | "admin_message"
     | "message"
-    | "dm_report";
+    | "dm_report"
+    | "spam";
   isRead: boolean;
   actorUserId?: Id<"users">;
   storyId?: Id<"stories">;
@@ -162,6 +163,8 @@ function NotificationItem({ alert }: NotificationItemProps) {
         return "sent you a new message";
       case "dm_report":
         return "reported a message";
+      case "spam":
+        return "Your post has been marked as spam and has been removed. Check your email for the reason.";
       default:
         return "interacted with your content";
     }
@@ -193,7 +196,8 @@ function NotificationItem({ alert }: NotificationItemProps) {
           </div>
         ) : (
           alert.type !== "judged" &&
-          alert.type !== "verified" && (
+          alert.type !== "verified" &&
+          alert.type !== "spam" && (
             <div className="flex-shrink-0">
               <div className="w-8 h-8 rounded-full bg-[#525252] flex items-center justify-center">
                 <span className="text-white text-xs">?</span>
@@ -224,7 +228,21 @@ function NotificationItem({ alert }: NotificationItemProps) {
         {/* Notification Content */}
         <div className="flex-1 min-w-0">
           <div className="text-sm text-[#292929]">
-            {alert.type === "judged" ? (
+            {alert.type === "spam" ? (
+              <span>
+                Your post has been marked as spam and has been removed. Check
+                your email for the reason. If you think this was a mistake,{" "}
+                <a
+                  href="https://github.com/waynesutton/vibeapps/issues"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium underline hover:text-[#292929]"
+                >
+                  file an issue on GitHub
+                </a>
+                .
+              </span>
+            ) : alert.type === "judged" ? (
               <span>{getNotificationText()}</span>
             ) : alert.type === "verified" ? (
               <span className="font-medium text-blue-600">

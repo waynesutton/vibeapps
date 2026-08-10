@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import {
   X,
@@ -16,6 +16,8 @@ import {
   Tag,
   Calendar,
   Sparkles,
+  KeyRound,
+  Bot,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -49,6 +51,25 @@ const SUBMISSION_FIELD_DEFS = [
 
 type SubmissionFieldKey = (typeof SUBMISSION_FIELD_DEFS)[number]["key"];
 type SubmissionFieldRequirements = Record<SubmissionFieldKey, boolean>;
+
+// AI rubric criteria for the weights editor. Keys must match AI_JUDGE_RUBRIC
+// in convex/aiJudge.ts; the mutation validates against the server list.
+const AI_RUBRIC_DEFS = [
+  { key: "schema", label: "Schema and data modeling" },
+  { key: "functions", label: "Queries, mutations, and actions" },
+  { key: "realtime", label: "Real-time reactivity" },
+  { key: "advanced", label: "Advanced Convex features" },
+  { key: "depth", label: "Overall depth and correctness" },
+  { key: "liveness", label: "Live app status" },
+] as const;
+
+const DEFAULT_RUBRIC_WEIGHTS: Record<string, number> = AI_RUBRIC_DEFS.reduce(
+  (acc, def) => {
+    acc[def.key] = 1;
+    return acc;
+  },
+  {} as Record<string, number>,
+);
 
 const DEFAULT_FIELD_REQUIREMENTS: SubmissionFieldRequirements =
   SUBMISSION_FIELD_DEFS.reduce((acc, field) => {
@@ -120,7 +141,10 @@ export function EditJudgingGroupModal({
     isActive: true,
     hasCustomSubmissionPage: false,
     submissionPageImageSize: 400,
-    submissionPageLayout: "two-column" as "two-column" | "one-third",
+    submissionPageLayout: "two-column" as
+      | "two-column"
+      | "one-third"
+      | "single",
     submissionPageTitle: "",
     submissionPageDescription: "",
     submissionPageLinks: [] as Array<{ label: string; url: string }>,
@@ -138,7 +162,19 @@ export function EditJudgingGroupModal({
     aiJudgeEnabled: false,
     aiResultsIsPublic: false,
     aiResultsPassword: "",
+    eventStartDate: "" as string,
+    eventEndDate: "" as string,
   });
+  // AI rubric weights editor state (Phase 5). Saved with the main form.
+  const [rubricWeights, setRubricWeights] = useState<Record<string, number>>({
+    ...DEFAULT_RUBRIC_WEIGHTS,
+  });
+  // Agent judging key management state (Phase 6)
+  const [agentKeyName, setAgentKeyName] = useState("");
+  const [newAgentKey, setNewAgentKey] = useState<string | null>(null);
+  const [agentKeyError, setAgentKeyError] = useState("");
+  const [isCreatingKey, setIsCreatingKey] = useState(false);
+  const [agentKeyCopied, setAgentKeyCopied] = useState(false);
   // Search term for filtering the auto-include tag list (handles 1000s of tags).
   const [tagSearch, setTagSearch] = useState("");
   const [submissionPageImage, setSubmissionPageImage] = useState<File | null>(
@@ -151,6 +187,16 @@ export function EditJudgingGroupModal({
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   const updateGroup = useMutation(api.judgingGroups.updateGroup);
+  const updateAiRubricWeights = useMutation(api.aiJudge.updateAiRubricWeights);
+  const createAgentKey = useAction(api.agentJudges.createAgentKey);
+  const revokeAgentKey = useMutation(api.agentJudges.revokeAgentKey);
+  const updateAgentScoresAdvisory = useMutation(
+    api.agentJudges.updateAgentScoresAdvisory,
+  );
+  const agentKeys = useQuery(
+    api.agentJudges.listAgentKeys,
+    isOpen && group?.aiJudgeEnabled ? { groupId } : "skip",
+  );
   const generateUploadUrl = useMutation(api.stories.generateUploadUrl);
   const syncRequiredTagSubmissions = useMutation(
     api.judgingGroupSubmissions.syncRequiredTagSubmissions,
@@ -240,7 +286,16 @@ export function EditJudgingGroupModal({
         aiJudgeEnabled: group.aiJudgeEnabled ?? false,
         aiResultsIsPublic: group.aiResultsIsPublic ?? false,
         aiResultsPassword: "", // Don't show existing password
+        eventStartDate: tsToDateInput(group.startDate),
+        eventEndDate: tsToDateInput(group.endDate),
       });
+
+      // Rubric weights: stored values over defaults of 1
+      const weightMap = { ...DEFAULT_RUBRIC_WEIGHTS };
+      for (const w of group.aiRubricWeights || []) {
+        if (w.key in weightMap) weightMap[w.key] = w.weight;
+      }
+      setRubricWeights(weightMap);
 
       // Load existing image URL if available
       if (group.submissionPageImageId) {
@@ -281,7 +336,14 @@ export function EditJudgingGroupModal({
         aiJudgeEnabled: group.aiJudgeEnabled ?? false,
         aiResultsIsPublic: group.aiResultsIsPublic ?? false,
         aiResultsPassword: "",
+        eventStartDate: tsToDateInput(group.startDate),
+        eventEndDate: tsToDateInput(group.endDate),
       });
+      const weightMap = { ...DEFAULT_RUBRIC_WEIGHTS };
+      for (const w of group.aiRubricWeights || []) {
+        if (w.key in weightMap) weightMap[w.key] = w.weight;
+      }
+      setRubricWeights(weightMap);
     }
     setTagSearch("");
     setSubmissionPageImage(null);
@@ -289,6 +351,10 @@ export function EditJudgingGroupModal({
     setIsSubmitting(false);
     setSyncMessage(null);
     setAutoSyncMessage(null);
+    setAgentKeyName("");
+    setNewAgentKey(null);
+    setAgentKeyError("");
+    setAgentKeyCopied(false);
   };
 
   const handleClose = () => {
@@ -358,6 +424,9 @@ export function EditJudgingGroupModal({
         autoIncludeEndDate: dateInputToEndTs(formData.autoIncludeEndDate),
         aiJudgeEnabled: formData.aiJudgeEnabled,
         aiResultsIsPublic: formData.aiResultsIsPublic,
+        // Event window for the build-timeline (builtDuringEvent) check
+        startDate: dateInputToStartTs(formData.eventStartDate),
+        endDate: dateInputToEndTs(formData.eventEndDate),
       };
 
       // Only include passwords if they're provided
@@ -389,6 +458,20 @@ export function EditJudgingGroupModal({
 
       await updateGroup(updateData);
 
+      // Save AI rubric weights; all-default weights clear the stored field so
+      // ranking falls back to the plain total
+      if (formData.aiJudgeEnabled) {
+        const weightsArray = AI_RUBRIC_DEFS.map((def) => ({
+          key: def.key,
+          weight: rubricWeights[def.key] ?? 1,
+        }));
+        const allDefault = weightsArray.every((w) => w.weight === 1);
+        await updateAiRubricWeights({
+          groupId,
+          weights: allDefault ? undefined : weightsArray,
+        });
+      }
+
       // Success
       resetForm();
       onClose();
@@ -399,7 +482,72 @@ export function EditJudgingGroupModal({
     }
   };
 
+  // Create an agent judge key; the raw key is shown once and never again
+  const handleCreateAgentKey = async () => {
+    setAgentKeyError("");
+    if (agentKeyName.trim().length < 2) {
+      setAgentKeyError("Key name must be at least 2 characters long");
+      return;
+    }
+    setIsCreatingKey(true);
+    try {
+      const result = await createAgentKey({
+        groupId,
+        name: agentKeyName.trim(),
+      });
+      setNewAgentKey(result.rawKey);
+      setAgentKeyName("");
+    } catch (err) {
+      setAgentKeyError(
+        err instanceof Error
+          ? err.message.replace(/^\[.*?\]\s*/, "").replace(/^Uncaught Error:\s*/, "")
+          : "Failed to create key. Please try again.",
+      );
+    } finally {
+      setIsCreatingKey(false);
+    }
+  };
+
+  const handleRevokeAgentKey = async (keyId: Id<"agentJudgeKeys">) => {
+    setAgentKeyError("");
+    try {
+      await revokeAgentKey({ keyId });
+    } catch (err) {
+      setAgentKeyError("Failed to revoke key. Please try again.");
+    }
+  };
+
+  const handleToggleAdvisory = async () => {
+    setAgentKeyError("");
+    try {
+      await updateAgentScoresAdvisory({
+        groupId,
+        advisory: !(group?.agentScoresAdvisory ?? true),
+      });
+    } catch (err) {
+      setAgentKeyError("Failed to update the advisory setting.");
+    }
+  };
+
+  const handleCopyAgentKey = async () => {
+    if (!newAgentKey) return;
+    try {
+      await navigator.clipboard.writeText(newAgentKey);
+      setAgentKeyCopied(true);
+      setTimeout(() => setAgentKeyCopied(false), 2000);
+    } catch {
+      // Clipboard unavailable; the key stays visible for manual copy
+    }
+  };
+
   if (!isOpen || !group) return null;
+
+  // Agent judging API lives on the Convex site domain, not the app domain
+  const convexSiteUrl = (
+    (import.meta.env.VITE_CONVEX_URL as string | undefined) ?? ""
+  ).replace(".convex.cloud", ".convex.site");
+  const agentApiBase = `${convexSiteUrl}/api/judging/${group.slug}`;
+  const agentScoresAdvisory = group.agentScoresAdvisory ?? true;
 
   // Derived tag lists for the searchable auto-include selector.
   const selectedTagSet = new Set(formData.autoIncludeTagIds);
@@ -823,6 +971,263 @@ export function EditJudgingGroupModal({
                     </p>
                   </div>
                 )}
+
+                {/* Event window for the build-timeline check (Phase 3) */}
+                <div className="pt-4 border-t border-gray-200">
+                  <Label className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Hackathon Event Window (Optional)
+                  </Label>
+                  <p className="text-xs text-gray-500 mt-1 mb-2">
+                    Used by the AI review to flag whether each repo's first
+                    commit falls inside the event. Leave empty to skip the
+                    check.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="eventStartDate" className="text-xs">
+                        Event start
+                      </Label>
+                      <Input
+                        id="eventStartDate"
+                        type="date"
+                        value={formData.eventStartDate}
+                        max={formData.eventEndDate || undefined}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            eventStartDate: e.target.value,
+                          }))
+                        }
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="eventEndDate" className="text-xs">
+                        Event end
+                      </Label>
+                      <Input
+                        id="eventEndDate"
+                        type="date"
+                        value={formData.eventEndDate}
+                        min={formData.eventStartDate || undefined}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            eventEndDate: e.target.value,
+                          }))
+                        }
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* AI rubric weights (Phase 5) */}
+                <div className="pt-4 border-t border-gray-200">
+                  <Label>AI Rubric Weights</Label>
+                  <p className="text-xs text-gray-500 mt-1 mb-2">
+                    Multiply each criterion's 1 to 10 score in the ranking.
+                    Rankings update immediately on save; no re-run needed.
+                    Default weight is 1.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {AI_RUBRIC_DEFS.map((def) => (
+                      <div
+                        key={def.key}
+                        className="flex items-center justify-between gap-2 bg-gray-50 border border-gray-200 rounded-md px-3 py-2"
+                      >
+                        <span className="text-sm text-gray-700">
+                          {def.label}
+                        </span>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={10}
+                          step={0.5}
+                          value={rubricWeights[def.key] ?? 1}
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value);
+                            setRubricWeights((prev) => ({
+                              ...prev,
+                              [def.key]: Number.isFinite(value)
+                                ? Math.min(10, Math.max(0, value))
+                                : 1,
+                            }));
+                          }}
+                          disabled={isSubmitting}
+                          className="w-20 text-right"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setRubricWeights({ ...DEFAULT_RUBRIC_WEIGHTS })
+                    }
+                    disabled={isSubmitting}
+                    className="text-xs text-gray-500 hover:text-gray-700 underline mt-2"
+                  >
+                    Reset all weights to 1
+                  </button>
+                </div>
+
+                {/* Agent judging (Phase 6) */}
+                <div className="pt-4 border-t border-gray-200 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <Label className="flex items-center gap-2">
+                        <Bot className="w-4 h-4" />
+                        Agent Judging
+                      </Label>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Let external AI agents judge this group through an
+                        authenticated API. Each key creates one agent judge
+                        identity.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleToggleAdvisory}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs transition-colors flex-shrink-0 ${
+                        agentScoresAdvisory
+                          ? "bg-amber-50 border-amber-200 text-amber-700"
+                          : "bg-green-50 border-green-200 text-green-700"
+                      }`}
+                      title={
+                        agentScoresAdvisory
+                          ? "Agent scores are advisory: shown with a badge, excluded from final rankings."
+                          : "Agent scores count toward final rankings like human scores."
+                      }
+                    >
+                      {agentScoresAdvisory ? (
+                        <ToggleLeft className="w-4 h-4" />
+                      ) : (
+                        <ToggleRight className="w-4 h-4" />
+                      )}
+                      {agentScoresAdvisory
+                        ? "Advisory scores"
+                        : "Scores count in rankings"}
+                    </button>
+                  </div>
+
+                  {/* API base URL */}
+                  <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
+                    <p className="text-xs text-gray-600">
+                      <strong>API base:</strong>{" "}
+                      <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs break-all">
+                        {agentApiBase}
+                      </code>
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Agents authenticate with the x-judge-key header. Docs:{" "}
+                      <code className="bg-gray-100 px-1.5 py-0.5 rounded">
+                        {`${agentApiBase}/openapi.json`}
+                      </code>
+                    </p>
+                  </div>
+
+                  {/* One-time raw key display */}
+                  {newAgentKey && (
+                    <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                      <p className="text-xs font-medium text-green-800 mb-1">
+                        Agent key created. Copy it now: it is shown only once.
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 bg-white border border-green-200 rounded px-2 py-1 text-xs break-all">
+                          {newAgentKey}
+                        </code>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleCopyAgentKey}
+                        >
+                          {agentKeyCopied ? (
+                            "Copied"
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setNewAgentKey(null)}
+                        >
+                          Done
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Create key */}
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={agentKeyName}
+                      onChange={(e) => setAgentKeyName(e.target.value)}
+                      placeholder="Agent name, e.g. Claude judge"
+                      disabled={isCreatingKey}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCreateAgentKey}
+                      disabled={isCreatingKey || agentKeyName.trim().length < 2}
+                    >
+                      <KeyRound className="w-3.5 h-3.5 mr-1.5" />
+                      {isCreatingKey ? "Creating..." : "Create key"}
+                    </Button>
+                  </div>
+                  {agentKeyError && (
+                    <p className="text-xs text-red-600">{agentKeyError}</p>
+                  )}
+
+                  {/* Existing keys */}
+                  {agentKeys && agentKeys.length > 0 && (
+                    <div className="space-y-2">
+                      {agentKeys.map((key) => (
+                        <div
+                          key={key._id}
+                          className="flex items-center justify-between gap-3 bg-white border border-gray-200 rounded-md px-3 py-2"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm text-gray-800 truncate flex items-center gap-2">
+                              {key.name}
+                              {key.revokedAt && (
+                                <span className="px-1.5 py-0.5 text-xs bg-red-50 text-red-600 border border-red-200 rounded-full">
+                                  revoked
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {key.scoreCount} score
+                              {key.scoreCount === 1 ? "" : "s"} ·{" "}
+                              {key.callCount} call
+                              {key.callCount === 1 ? "" : "s"}
+                              {key.lastUsedAt
+                                ? ` · last used ${new Date(key.lastUsedAt).toLocaleDateString()}`
+                                : " · never used"}
+                            </p>
+                          </div>
+                          {!key.revokedAt && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRevokeAgentKey(key._id)}
+                            >
+                              Revoke
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 <p className="text-xs text-gray-500">
                   Run the AI review and edit AI scores from the AI Results view
@@ -1270,7 +1675,8 @@ export function EditJudgingGroupModal({
                         ...prev,
                         submissionPageLayout: e.target.value as
                           | "two-column"
-                          | "one-third",
+                          | "one-third"
+                          | "single",
                       }))
                     }
                     disabled={isSubmitting}
@@ -1281,6 +1687,9 @@ export function EditJudgingGroupModal({
                     </option>
                     <option value="one-third">
                       One Third (33/67) - Larger submission form
+                    </option>
+                    <option value="single">
+                      Single Column - Hero on top, form below
                     </option>
                   </select>
                   <p className="text-xs text-gray-500 mt-1">

@@ -1,7 +1,8 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { requireAdminRole } from "./users";
+import { requireJudgingGroupPermission } from "./adminAccess";
+import { logActivity } from "./activityLog";
 
 // Helper function to check if a story should be included in judging
 // Returns true if story is valid for judging (not deleted, hidden, archived, or rejected)
@@ -109,11 +110,6 @@ export const submitScore = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Validate score range
-    if (args.score < 1 || args.score > 10 || !Number.isInteger(args.score)) {
-      throw new Error("Score must be an integer between 1 and 10");
-    }
-
     // Perform all validation reads first
     const judge = await ctx.db
       .query("judges")
@@ -128,6 +124,16 @@ export const submitScore = mutation({
     const group = await ctx.db.get(judge.groupId);
     if (!group || !group.isActive) {
       throw new Error("Judging group is not active");
+    }
+
+    // Validate score range against the group's configured scale (5 or 10)
+    const scoreScale = group.scoreScale ?? 10;
+    if (
+      args.score < 1 ||
+      args.score > scoreScale ||
+      !Number.isInteger(args.score)
+    ) {
+      throw new Error(`Score must be an integer between 1 and ${scoreScale}`);
     }
 
     // Verify the criteria belongs to this group
@@ -175,6 +181,19 @@ export const submitScore = mutation({
         criteriaId: args.criteriaId,
         score: args.score,
         comments: args.comments?.trim() || undefined,
+      });
+
+      // Activity log: new scores only (updates would be too noisy)
+      const scoredStory = await ctx.db.get(args.storyId);
+      await logActivity(ctx, {
+        category: "scoring",
+        action: "score.submitted",
+        message: `${judge.name} scored "${scoredStory?.title ?? "a submission"}" ${args.score}/${scoreScale} in ${group.name}`,
+        actorName: judge.name,
+        targetType: "story",
+        targetId: args.storyId,
+        targetLabel: scoredStory?.title,
+        metadata: { groupId: judge.groupId, score: args.score, scoreScale },
       });
     }
 
@@ -431,6 +450,7 @@ export const getGroupScores = query({
     submissionCount: v.number(),
     criteriaCount: v.number(),
     completionPercentage: v.number(),
+    scoreScale: v.number(),
     submissionRankings: v.array(
       v.object({
         storyId: v.id("stories"),
@@ -453,7 +473,7 @@ export const getGroupScores = query({
     ),
   }),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.results");
 
     // Get all submission statuses to filter by completion
     const submissionStatuses = await ctx.db
@@ -508,17 +528,35 @@ export const getGroupScores = query({
       .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
       .collect();
 
-    const totalScores = scores.length;
+    // Agent judging (Phase 6): while agent scores are advisory (the default),
+    // they are excluded from rankings and aggregates until promoted by an admin.
+    const group = await ctx.db.get(args.groupId);
+    const agentScoresAdvisory = group?.agentScoresAdvisory ?? true;
+    const scoreScale = group?.scoreScale ?? 10;
+    const agentJudgeIds = new Set(
+      judges.filter((j) => j.type === "agent").map((j) => j._id),
+    );
+    const rankedScores = agentScoresAdvisory
+      ? scores.filter((s) => !agentJudgeIds.has(s.judgeId))
+      : scores;
+    // Judges that count toward ranking math (max possible score)
+    const rankingJudges = agentScoresAdvisory
+      ? judges.filter((j) => j.type !== "agent")
+      : judges;
+
+    const totalScores = rankedScores.length;
     const averageScore =
       totalScores > 0
-        ? scores.reduce((sum, score) => sum + score.score, 0) / totalScores
+        ? rankedScores.reduce((sum, score) => sum + score.score, 0) /
+          totalScores
         : undefined;
 
     // Calculate submissions judged (submissions that have at least one score)
-    const submissionsJudged = new Set(scores.map((score) => score.storyId))
-      .size;
+    const submissionsJudged = new Set(
+      rankedScores.map((score) => score.storyId),
+    ).size;
 
-    const judgeCount = judges.length;
+    const judgeCount = rankingJudges.length;
     const submissionCount = submissions.length;
     const criteriaCount = criteria.length;
 
@@ -538,7 +576,7 @@ export const getGroupScores = query({
           throw new Error(`Story ${submission.storyId} not found`);
         }
 
-        const submissionScores = scores.filter(
+        const submissionScores = rankedScores.filter(
           (s) => s.storyId === submission.storyId,
         );
         const totalScore = submissionScores.reduce(
@@ -549,7 +587,7 @@ export const getGroupScores = query({
           submissionScores.length > 0
             ? totalScore / submissionScores.length
             : 0;
-        const maxPossibleScore = judgeCount * criteriaCount * 10; // 10 is max score
+        const maxPossibleScore = judgeCount * criteriaCount * scoreScale; // scale is max score per criterion
 
         // Check if this submission is marked as completed
         const submissionStatus = submissionStatuses.find(
@@ -576,7 +614,7 @@ export const getGroupScores = query({
 
     // Calculate criteria breakdown
     const criteriaBreakdown = criteria.map((criterion) => {
-      const criteriaScores = scores.filter(
+      const criteriaScores = rankedScores.filter(
         (s) => s.criteriaId === criterion._id,
       );
       const averageScore =
@@ -601,6 +639,7 @@ export const getGroupScores = query({
       submissionCount,
       criteriaCount,
       completionPercentage,
+      scoreScale,
       submissionRankings,
       criteriaBreakdown,
     };
@@ -617,6 +656,7 @@ export const getGroupJudgeDetails = query({
       judgeId: v.id("judges"),
       judgeName: v.string(),
       judgeEmail: v.optional(v.string()),
+      judgeType: v.optional(v.union(v.literal("human"), v.literal("agent"))),
       scores: v.array(
         v.object({
           storyId: v.id("stories"),
@@ -632,7 +672,7 @@ export const getGroupJudgeDetails = query({
     }),
   ),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.results");
 
     // Get all judges for this group
     const judges = await ctx.db
@@ -704,6 +744,7 @@ export const getGroupJudgeDetails = query({
           judgeId: judge._id,
           judgeName: judge.name,
           judgeEmail: judge.email,
+          judgeType: judge.type,
           scores: validScores,
           totalScores,
           averageScore,
@@ -768,7 +809,7 @@ export const getSubmissionScores = query({
     ),
   }),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.results");
 
     // Get story details
     const story = await ctx.db.get(args.storyId);
@@ -798,7 +839,9 @@ export const getSubmissionScores = query({
 
     const totalScore = scores.reduce((sum, score) => sum + score.score, 0);
     const averageScore = scores.length > 0 ? totalScore / scores.length : 0;
-    const maxPossibleScore = judges.length * criteria.length * 10;
+    const submissionGroup = await ctx.db.get(args.groupId);
+    const maxPossibleScore =
+      judges.length * criteria.length * (submissionGroup?.scoreScale ?? 10);
 
     // Group scores by judge
     const scoresByJudge = await Promise.all(
@@ -915,6 +958,7 @@ export const getPublicGroupScores = query({
       submissionCount: v.number(),
       criteriaCount: v.number(),
       completionPercentage: v.number(),
+      scoreScale: v.number(),
       rankings: v.array(
         v.object({
           storyId: v.id("stories"),
@@ -973,7 +1017,7 @@ export const getPublicGroupScores = query({
       .collect();
 
     // Filter scores to only include completed submissions
-    const scores = allScores.filter((score) =>
+    const completedScores = allScores.filter((score) =>
       completedSubmissionIds.has(score.storyId),
     );
 
@@ -1011,6 +1055,19 @@ export const getPublicGroupScores = query({
       judgeNameMap.set(judge._id, judge.name);
     }
 
+    // Agent judging (Phase 6): advisory agent scores are excluded from
+    // rankings until an admin promotes them via the group settings toggle.
+    const agentScoresAdvisory = group.agentScoresAdvisory ?? true;
+    const agentJudgeIds = new Set(
+      judges.filter((j) => j.type === "agent").map((j) => j._id),
+    );
+    const scores = agentScoresAdvisory
+      ? completedScores.filter((s) => !agentJudgeIds.has(s.judgeId))
+      : completedScores;
+    const rankingJudgeCount = agentScoresAdvisory
+      ? judges.length - agentJudgeIds.size
+      : judges.length;
+
     const totalScores = scores.length;
     const averageScore =
       totalScores > 0
@@ -1021,7 +1078,7 @@ export const getPublicGroupScores = query({
     const submissionsJudged = new Set(scores.map((score) => score.storyId))
       .size;
 
-    const judgeCount = judges.length;
+    const judgeCount = rankingJudgeCount;
     const submissionCount = submissions.length;
     const criteriaCount = criteria.length;
 
@@ -1141,6 +1198,7 @@ export const getPublicGroupScores = query({
       submissionCount,
       criteriaCount,
       completionPercentage,
+      scoreScale: group.scoreScale ?? 10,
       rankings,
       criteriaBreakdown,
     };
@@ -1163,6 +1221,7 @@ export const getValidatedGroupScores = query({
       submissionCount: v.number(),
       criteriaCount: v.number(),
       completionPercentage: v.number(),
+      scoreScale: v.number(),
       rankings: v.array(
         v.object({
           storyId: v.id("stories"),
@@ -1221,7 +1280,7 @@ export const getValidatedGroupScores = query({
       .collect();
 
     // Filter scores to only include completed submissions
-    const scores = allScores.filter((score) =>
+    const completedScores = allScores.filter((score) =>
       completedSubmissionIds.has(score.storyId),
     );
 
@@ -1259,6 +1318,19 @@ export const getValidatedGroupScores = query({
       judgeNameMap.set(judge._id, judge.name);
     }
 
+    // Agent judging (Phase 6): advisory agent scores are excluded from
+    // rankings until an admin promotes them via the group settings toggle.
+    const agentScoresAdvisory = group.agentScoresAdvisory ?? true;
+    const agentJudgeIds = new Set(
+      judges.filter((j) => j.type === "agent").map((j) => j._id),
+    );
+    const scores = agentScoresAdvisory
+      ? completedScores.filter((s) => !agentJudgeIds.has(s.judgeId))
+      : completedScores;
+    const rankingJudgeCount = agentScoresAdvisory
+      ? judges.length - agentJudgeIds.size
+      : judges.length;
+
     const totalScores = scores.length;
     const averageScore =
       totalScores > 0
@@ -1269,7 +1341,7 @@ export const getValidatedGroupScores = query({
     const submissionsJudged = new Set(scores.map((score) => score.storyId))
       .size;
 
-    const judgeCount = judges.length;
+    const judgeCount = rankingJudgeCount;
     const submissionCount = submissions.length;
     const criteriaCount = criteria.length;
 
@@ -1389,6 +1461,7 @@ export const getValidatedGroupScores = query({
       submissionCount,
       criteriaCount,
       completionPercentage,
+      scoreScale: group.scoreScale ?? 10,
       rankings,
       criteriaBreakdown,
     };
@@ -1549,7 +1622,7 @@ export const exportScores = query({
     ),
   }),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.results");
 
     // Get group details
     const group = await ctx.db.get(args.groupId);

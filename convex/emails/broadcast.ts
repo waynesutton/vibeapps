@@ -8,7 +8,7 @@ import {
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
-import { requireAdminRole } from "../users";
+import { requirePermission } from "../adminAccess";
 
 /**
  * Debug query to see all users (admin only)
@@ -128,7 +128,7 @@ export const sendBroadcastToSelected = mutation({
     failureCount: v.number(),
   }),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "emails.send");
 
     // Get the current user
     const identity = await ctx.auth.getUserIdentity();
@@ -182,7 +182,7 @@ export const sendBroadcast = mutation({
     failureCount: v.number(),
   }),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "emails.send");
 
     // Get the current user
     const identity = await ctx.auth.getUserIdentity();
@@ -241,7 +241,7 @@ export const countUsersByTag = query({
   },
   returns: v.number(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "emails.send");
 
     const statusFilter = args.statuses ?? [];
     // Collect distinct authors of stories that include this tag (and match status)
@@ -340,7 +340,7 @@ export const sendBroadcastToTag = mutation({
     failureCount: v.number(),
   }),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "emails.send");
 
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {

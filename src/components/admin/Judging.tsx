@@ -1,616 +1,139 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  Plus,
-  Settings,
-  Eye,
-  EyeOff,
-  ExternalLink,
-  Trash2,
-  BarChart2,
-  Lock,
-  Unlock,
-  Users,
-  Award,
-  PlayCircle,
-  PauseCircle,
-  Edit,
-  FileText,
-  Download,
-  Loader2,
-  Sparkles,
-} from "lucide-react";
-import {
-  useQuery,
-  useMutation,
-  useConvexAuth,
-  useConvex,
-} from "convex/react";
+import { Award, ChevronRight, Lock, Plus, Unlock } from "lucide-react";
+import { useQuery, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
 import { formatDistanceToNow } from "date-fns";
 import { CreateJudgingGroupModal } from "./CreateJudgingGroupModal";
-import { EditJudgingGroupModal } from "./EditJudgingGroupModal";
-import { JudgingCriteriaEditor } from "./JudgingCriteriaEditor";
-import { JudgingResultsDashboard } from "./JudgingResultsDashboard";
-import { AIJudgeResults } from "./AIJudgeResults";
-import { useDialog } from "../../hooks/useDialog";
+import { useAdminAccess } from "./useAdminAccess";
 
+// Compact judging group list. Each row opens the full group workspace at
+// /admin/judging/:slug where settings, criteria, results, AI, and tracking
+// live as sidebar sections.
 export function Judging() {
   const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
-  const convex = useConvex();
-  const { showMessage, DialogComponents } = useDialog();
+  const { can } = useAdminAccess();
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const groups = useQuery(
     api.judgingGroups.listGroups,
     authIsLoading || !isAuthenticated ? "skip" : {},
   );
-  const updateGroup = useMutation(api.judgingGroups.updateGroup);
-  const deleteGroup = useMutation(api.judgingGroups.deleteGroup);
-
-  const [exportingGroupId, setExportingGroupId] =
-    useState<Id<"judgingGroups"> | null>(null);
-  const [deleteConfirmId, setDeleteConfirmId] =
-    useState<Id<"judgingGroups"> | null>(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editGroupId, setEditGroupId] = useState<Id<"judgingGroups"> | null>(
-    null,
-  );
-  const [currentView, setCurrentView] = useState<
-    "list" | "criteria" | "results" | "ai-results"
-  >("list");
-  const [selectedGroup, setSelectedGroup] = useState<{
-    id: Id<"judgingGroups">;
-    name: string;
-  } | null>(null);
-
-  const toggleGroupVisibility = (group: any) => {
-    updateGroup({ groupId: group._id, isPublic: !group.isPublic });
-  };
-
-  const toggleGroupStatus = (group: any) => {
-    updateGroup({ groupId: group._id, isActive: !group.isActive });
-  };
-
-  const handleDelete = (groupId: Id<"judgingGroups">) => {
-    if (deleteConfirmId === groupId) {
-      deleteGroup({ groupId });
-      setDeleteConfirmId(null);
-    } else {
-      setDeleteConfirmId(groupId);
-      setTimeout(() => setDeleteConfirmId(null), 5000);
-    }
-  };
-
-  // Escape a CSV cell value (handles commas, quotes, newlines)
-  const escapeCsv = (value: string): string => {
-    if (
-      value.includes(",") ||
-      value.includes('"') ||
-      value.includes("\n")
-    ) {
-      return `"${value.replace(/"/g, '""')}"`;
-    }
-    return value;
-  };
-
-  // Fetch a group's submissions on demand and download them as a CSV.
-  // Includes custom submit form info (tags, links, team info) but no images.
-  const handleExportCsv = async (
-    groupId: Id<"judgingGroups">,
-    groupName: string,
-  ) => {
-    setExportingGroupId(groupId);
-    try {
-      const rows = await convex.query(
-        api.judgingGroupSubmissions.exportGroupSubmissions,
-        { groupId },
-      );
-
-      if (!rows || rows.length === 0) {
-        showMessage(
-          "No Submissions",
-          "This judging group has no submissions to export.",
-          "warning",
-        );
-        return;
-      }
-
-      const headers = [
-        "App Title",
-        "App/Project Tagline",
-        "Description",
-        "App Website Link",
-        "Video Demo URL",
-        "GitHub",
-        "LinkedIn",
-        "Twitter/X",
-        "Chef Show URL",
-        "Chef App URL",
-        "Tags",
-        "Team Name",
-        "Team Member Count",
-        "Team Members",
-        "Submitter Name",
-        "Email",
-        "Slug",
-        "Votes",
-      ];
-
-      const csvLines = [headers.map(escapeCsv).join(",")];
-      for (const row of rows) {
-        csvLines.push(
-          [
-            row.title,
-            row.tagline,
-            row.longDescription || "",
-            row.url,
-            row.videoUrl || "",
-            row.githubUrl || "",
-            row.linkedinUrl || "",
-            row.twitterUrl || "",
-            row.chefShowUrl || "",
-            row.chefAppUrl || "",
-            row.tags,
-            row.teamName || "",
-            row.teamMemberCount !== undefined
-              ? String(row.teamMemberCount)
-              : "",
-            row.teamMembers,
-            row.submitterName || "",
-            row.email || "",
-            row.slug,
-            String(row.votes),
-          ]
-            .map(escapeCsv)
-            .join(","),
-        );
-      }
-
-      const csvContent = csvLines.join("\n");
-      const blob = new Blob([csvContent], {
-        type: "text/csv;charset=utf-8;",
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      const timestamp = new Date().toISOString().split("T")[0];
-      const filename = `judging-${groupName
-        .toLowerCase()
-        .replace(/\s+/g, "-")}-submissions-${timestamp}.csv`;
-      link.setAttribute("href", url);
-      link.setAttribute("download", filename);
-      link.style.visibility = "hidden";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      showMessage(
-        "Export Failed",
-        error instanceof Error
-          ? error.message
-          : "Could not export submissions. Please try again.",
-        "error",
-      );
-    } finally {
-      setExportingGroupId(null);
-    }
-  };
-
-  const handleEditCriteria = (
-    groupId: Id<"judgingGroups">,
-    groupName: string,
-  ) => {
-    setSelectedGroup({ id: groupId, name: groupName });
-    setCurrentView("criteria");
-  };
-
-  const handleViewResults = (
-    groupId: Id<"judgingGroups">,
-    groupName: string,
-  ) => {
-    setSelectedGroup({ id: groupId, name: groupName });
-    setCurrentView("results");
-  };
-
-  const handleViewAiResults = (
-    groupId: Id<"judgingGroups">,
-    groupName: string,
-  ) => {
-    setSelectedGroup({ id: groupId, name: groupName });
-    setCurrentView("ai-results");
-  };
-
-  const handleBackToList = () => {
-    setCurrentView("list");
-    setSelectedGroup(null);
-  };
-
-  const getStatusBadge = (group: any) => {
-    if (group.isActive) {
-      return (
-        <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
-          Active
-        </span>
-      );
-    }
-
-    return (
-      <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
-        Inactive
-      </span>
-    );
-  };
 
   if (authIsLoading) {
-    return (
-      <div className="space-y-6 text-center">Loading authentication...</div>
-    );
+    return <div className="text-sm text-gray-500">Loading...</div>;
   }
 
-  // Show criteria editor if selected
-  if (currentView === "criteria" && selectedGroup) {
-    return (
-      <JudgingCriteriaEditor
-        groupId={selectedGroup.id}
-        groupName={selectedGroup.name}
-        onBack={handleBackToList}
-      />
-    );
-  }
-
-  // Show results dashboard if selected
-  if (currentView === "results" && selectedGroup) {
-    return (
-      <JudgingResultsDashboard
-        groupId={selectedGroup.id}
-        groupName={selectedGroup.name}
-        onBack={handleBackToList}
-      />
-    );
-  }
-
-  // Show AI judge results if selected
-  if (currentView === "ai-results" && selectedGroup) {
-    return (
-      <AIJudgeResults
-        groupId={selectedGroup.id}
-        groupName={selectedGroup.name}
-        onBack={handleBackToList}
-      />
-    );
-  }
+  const totalSubmissions = groups?.reduce(
+    (sum, g) => sum + g.submissionCount,
+    0,
+  );
+  const totalJudges = groups?.reduce((sum, g) => sum + g.judgeCount, 0);
+  const activeCount = groups?.filter((g) => g.isActive).length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap justify-between items-center gap-4">
-        <h2 className="text-xl font-medium text-[#525252]">Judging System</h2>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all text-sm font-medium"
-        >
-          <Plus className="w-4 h-4" />
-          Create Judging Group
-        </button>
+    <div className="space-y-4">
+      {/* Header: title, inline totals, create action */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-medium text-[#292929]">Judging</h2>
+          {groups && groups.length > 0 && (
+            <p className="text-[13px] text-gray-500 mt-0.5 tabular-nums">
+              {groups.length} group{groups.length === 1 ? "" : "s"} ·{" "}
+              {activeCount} active · {totalSubmissions} submission
+              {totalSubmissions === 1 ? "" : "s"} · {totalJudges} judge
+              {totalJudges === 1 ? "" : "s"}
+            </p>
+          )}
+        </div>
+        {can("judging.manage") && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors text-[13px] font-medium"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Create judging group
+          </button>
+        )}
       </div>
 
-      {groups === undefined && <div>Loading judging groups...</div>}
+      {groups === undefined && (
+        <div className="text-sm text-gray-500">Loading judging groups...</div>
+      )}
+
       {groups && groups.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
-          <Award className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-          <p className="text-lg font-medium mb-2">No judging groups yet</p>
-          <p className="text-sm">
-            Create your first judging group to get started with scoring
-            submissions.
+        <div className="text-center py-10 border border-dashed border-gray-200 rounded-lg">
+          <Award className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+          <p className="text-sm font-medium text-[#292929] mb-1">
+            No judging groups yet
+          </p>
+          <p className="text-[13px] text-gray-500">
+            Create your first judging group to start scoring submissions.
           </p>
         </div>
       )}
 
+      {/* Compact rows: the whole row navigates into the group workspace */}
       {groups && groups.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-gray-200 bg-gray-50">
-                <tr>
-                  <th className="text-left p-2 px-3 text-[#525252] font-medium">
-                    Group Name
-                  </th>
-                  <th className="text-left p-2 px-2 text-[#525252] font-medium">
-                    Status
-                  </th>
-                  <th className="text-left p-2 px-2 text-[#525252] font-medium">
-                    Access
-                  </th>
-                  <th className="text-left p-2 px-2 text-[#525252] font-medium">
-                    Subs
-                  </th>
-                  <th className="text-left p-2 px-2 text-[#525252] font-medium">
-                    Judges
-                  </th>
-                  <th className="text-left p-2 px-2 text-[#525252] font-medium">
-                    Created
-                  </th>
-                  <th className="text-left p-2 px-3 text-[#525252] font-medium">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {groups.map((group) => (
-                  <tr
-                    key={group._id}
-                    className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50"
-                  >
-                    <td className="p-2 px-3">
-                      <div className="flex flex-col">
-                        <span className="font-medium text-[#525252]">
-                          {group.name}
-                        </span>
-                        {group.description && (
-                          <span className="text-xs text-gray-500 mt-1">
-                            {group.description}
-                          </span>
-                        )}
-                        <span className="text-xs text-gray-400 mt-1">
-                          /{group.slug}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="p-2 px-2">
-                      <div className="flex items-center gap-1">
-                        {getStatusBadge(group)}
-                        <button
-                          onClick={() => toggleGroupStatus(group)}
-                          className="text-gray-400 hover:text-gray-600 p-1"
-                          title={
-                            group.isActive
-                              ? "Pause judging"
-                              : "Activate judging"
-                          }
-                        >
-                          {group.isActive ? (
-                            <PauseCircle className="w-4 h-4" />
-                          ) : (
-                            <PlayCircle className="w-4 h-4" />
-                          )}
-                        </button>
-                      </div>
-                    </td>
-                    <td className="p-2 px-2">
-                      <div className="flex items-center gap-1">
-                        <span className="flex items-center gap-1 text-sm text-gray-600">
-                          {group.isPublic ? (
-                            <>
-                              <Unlock className="w-3 h-3" />
-                              Pub
-                            </>
-                          ) : (
-                            <>
-                              <Lock className="w-3 h-3" />
-                              Priv
-                            </>
-                          )}
-                        </span>
-                        <button
-                          onClick={() => toggleGroupVisibility(group)}
-                          className="text-gray-400 hover:text-gray-600 p-1"
-                          title={
-                            group.isPublic ? "Make private" : "Make public"
-                          }
-                        >
-                          {group.isPublic ? (
-                            <EyeOff className="w-4 h-4" />
-                          ) : (
-                            <Eye className="w-4 h-4" />
-                          )}
-                        </button>
-                      </div>
-                    </td>
-                    <td className="p-2 px-2 text-center">
-                      <span className="text-[#525252] font-medium">
-                        {group.submissionCount}
-                      </span>
-                    </td>
-                    <td className="p-2 px-2 text-center">
-                      <span className="text-[#525252] font-medium">
-                        {group.judgeCount}
-                      </span>
-                    </td>
-                    <td className="p-2 px-2 text-gray-500 text-sm">
-                      {formatDistanceToNow(group._creationTime)} ago
-                    </td>
-                    <td className="p-2 px-3">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <button
-                          onClick={() => setEditGroupId(group._id)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
-                          title="Edit group settings"
-                        >
-                          <Settings className="w-3.5 h-3.5" />
-                          <span>Settings</span>
-                        </button>
+        <div className="rounded-lg border border-gray-200 bg-white divide-y divide-gray-100">
+          {groups.map((group) => (
+            <Link
+              key={group._id}
+              to={`/admin/judging/${group.slug}`}
+              className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors group"
+            >
+              {/* Status dot */}
+              <span
+                aria-hidden
+                className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                  group.isActive ? "bg-green-500" : "bg-gray-300"
+                }`}
+                title={group.isActive ? "Active" : "Inactive"}
+              />
 
-                        <a
-                          href={`/judging/${group.slug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
-                          title="Open judging page"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          <span>Open Page</span>
-                        </a>
-
-                        <button
-                          onClick={() =>
-                            handleEditCriteria(group._id, group.name)
-                          }
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
-                          title="Edit judging criteria"
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                          <span>Criteria</span>
-                        </button>
-
-                        {group.hasCustomSubmissionPage && (
-                          <a
-                            href={`/judging/${group.slug}/submit`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
-                            title="Open custom submission page"
-                          >
-                            <FileText className="w-3.5 h-3.5" />
-                            <span>Submit Page</span>
-                          </a>
-                        )}
-
-                        <a
-                          href={`/judging/${group.slug}/results`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
-                          title={
-                            group.resultsIsPublic
-                              ? "View public results page"
-                              : "View password-protected results page"
-                          }
-                        >
-                          <BarChart2 className="w-3.5 h-3.5" />
-                          <span>
-                            {group.resultsIsPublic
-                              ? "Public Results"
-                              : "Results Page"}
-                          </span>
-                        </a>
-
-                        {!group.resultsIsPublic && (
-                          <button
-                            onClick={() =>
-                              handleViewResults(group._id, group.name)
-                            }
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
-                            title="View admin results dashboard"
-                          >
-                            <BarChart2 className="w-3.5 h-3.5" />
-                            <span>Admin Results</span>
-                          </button>
-                        )}
-
-                        {group.aiJudgeEnabled && (
-                          <button
-                            onClick={() =>
-                              handleViewAiResults(group._id, group.name)
-                            }
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
-                            title="Run and review the AI Best Use of Convex results"
-                          >
-                            <Sparkles className="w-3.5 h-3.5" />
-                            <span>AI Results</span>
-                          </button>
-                        )}
-
-                        <Link
-                          to={`/admin/judging/${group.slug}/tracking`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
-                          title="Track judges"
-                        >
-                          <Users className="w-3.5 h-3.5" />
-                          <span>Judge Tracking</span>
-                        </Link>
-
-                        <button
-                          onClick={() =>
-                            handleExportCsv(group._id, group.name)
-                          }
-                          disabled={exportingGroupId === group._id}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Export submissions to CSV"
-                        >
-                          {exportingGroupId === group._id ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <Download className="w-3.5 h-3.5" />
-                          )}
-                          <span>Export CSV</span>
-                        </button>
-
-                        <button
-                          onClick={() => handleDelete(group._id)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-600 hover:text-red-700 bg-white hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-300 transition-all font-medium"
-                          title={
-                            deleteConfirmId === group._id
-                              ? "Click again to confirm"
-                              : "Delete group"
-                          }
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>
-                            {deleteConfirmId === group._id
-                              ? "Confirm"
-                              : "Delete"}
-                          </span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Quick Stats */}
-      {groups && groups.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Total Groups</p>
-                <p className="text-2xl font-semibold text-[#525252]">
-                  {groups.length}
-                </p>
+              {/* Name + slug */}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-[#292929] truncate">
+                    {group.name}
+                  </span>
+                  {group.isPublic ? (
+                    <Unlock
+                      className="w-3 h-3 text-gray-400 flex-shrink-0"
+                      aria-label="Public judge access"
+                    />
+                  ) : (
+                    <Lock
+                      className="w-3 h-3 text-gray-400 flex-shrink-0"
+                      aria-label="Private judge access"
+                    />
+                  )}
+                </div>
+                <span className="text-xs text-gray-400 font-mono truncate block">
+                  /judging/{group.slug}
+                </span>
               </div>
-              <Award className="w-8 h-8 text-gray-400" />
-            </div>
-          </div>
 
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Active Groups</p>
-                <p className="text-2xl font-semibold text-green-600">
-                  {groups.filter((g) => g.isActive).length}
-                </p>
+              {/* Counts */}
+              <div className="hidden sm:flex items-center gap-4 text-xs text-gray-500 tabular-nums flex-shrink-0">
+                <span title="Submissions">
+                  {group.submissionCount} sub
+                  {group.submissionCount === 1 ? "" : "s"}
+                </span>
+                <span title="Judges">
+                  {group.judgeCount} judge{group.judgeCount === 1 ? "" : "s"}
+                </span>
+                <span
+                  className="hidden md:inline text-gray-400"
+                  title="Created"
+                >
+                  {formatDistanceToNow(group._creationTime)} ago
+                </span>
               </div>
-              <PlayCircle className="w-8 h-8 text-green-400" />
-            </div>
-          </div>
 
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Total Submissions</p>
-                <p className="text-2xl font-semibold text-blue-600">
-                  {groups.reduce((sum, g) => sum + g.submissionCount, 0)}
-                </p>
-              </div>
-              <Settings className="w-8 h-8 text-blue-400" />
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Total Judges</p>
-                <p className="text-2xl font-semibold text-purple-600">
-                  {groups.reduce((sum, g) => sum + g.judgeCount, 0)}
-                </p>
-              </div>
-              <Users className="w-8 h-8 text-purple-400" />
-            </div>
-          </div>
+              <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0" />
+            </Link>
+          ))}
         </div>
       )}
 
@@ -619,25 +142,9 @@ export function Judging() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSuccess={() => {
-          // Groups will automatically refresh due to Convex reactivity
+          // Groups refresh automatically via Convex reactivity
         }}
       />
-
-      {/* Edit Group Modal */}
-      {editGroupId && (
-        <EditJudgingGroupModal
-          isOpen={!!editGroupId}
-          onClose={() => setEditGroupId(null)}
-          onSuccess={() => {
-            setEditGroupId(null);
-            // Groups will automatically refresh due to Convex reactivity
-          }}
-          groupId={editGroupId}
-        />
-      )}
-
-      {/* Shared design-system dialogs for notifications */}
-      <DialogComponents />
     </div>
   );
 }

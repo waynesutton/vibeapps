@@ -7,7 +7,6 @@ import {
   Trash2,
   GripVertical,
   Save,
-  ArrowLeft,
   AlertCircle,
 } from "lucide-react";
 import { Button } from "../ui/button";
@@ -25,13 +24,12 @@ interface CriteriaItem {
 interface JudgingCriteriaEditorProps {
   groupId: Id<"judgingGroups">;
   groupName: string;
-  onBack: () => void;
+  scoreScale?: number;
 }
 
 export function JudgingCriteriaEditor({
   groupId,
-  groupName,
-  onBack,
+  scoreScale = 10,
 }: JudgingCriteriaEditorProps) {
   const [criteria, setCriteria] = useState<CriteriaItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -189,7 +187,7 @@ export function JudgingCriteriaEditor({
   const renderStarPreview = () => (
     <div className="flex items-center gap-1">
       <div className="flex items-center gap-1">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => (
+        {Array.from({ length: scoreScale }, (_, i) => i + 1).map((score) => (
           <span
             key={score}
             className="px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded"
@@ -198,47 +196,30 @@ export function JudgingCriteriaEditor({
           </span>
         ))}
       </div>
-      <span className="ml-2 text-sm text-gray-600">1-10 Rating Scale</span>
+      <span className="ml-2 text-sm text-gray-600">
+        1-{scoreScale} Rating Scale
+      </span>
     </div>
   );
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onBack}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Groups
-          </Button>
-          <div>
-            <h2 className="text-xl font-medium text-gray-900">
-              Judging Criteria
-            </h2>
-            <p className="text-sm text-gray-600">{groupName}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {hasChanges && (
-            <span className="text-sm text-orange-600 flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" />
-              Unsaved changes
-            </span>
-          )}
-          <Button
-            onClick={handleSave}
-            disabled={isSubmitting || !hasChanges}
-            className="flex items-center gap-2"
-          >
-            <Save className="w-4 h-4" />
-            {isSubmitting ? "Saving..." : "Save Criteria"}
-          </Button>
-        </div>
+      {/* Save actions (workspace sidebar provides navigation and context) */}
+      <div className="flex items-center justify-end gap-2">
+        {hasChanges && (
+          <span className="text-sm text-orange-600 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
+            Unsaved changes
+          </span>
+        )}
+        <Button
+          onClick={handleSave}
+          disabled={isSubmitting || !hasChanges}
+          className="flex items-center gap-2"
+        >
+          <Save className="w-4 h-4" />
+          {isSubmitting ? "Saving..." : "Save Criteria"}
+        </Button>
       </div>
 
       {error && (
@@ -258,7 +239,10 @@ export function JudgingCriteriaEditor({
               <p>
                 • Create questions that judges will use to evaluate submissions
               </p>
-              <p>• Each question uses a 1-10 point rating scale</p>
+              <p>
+                • Each question uses a 1-{scoreScale} point rating scale (set
+                in group settings)
+              </p>
               <p>• Judges will score every submission against all criteria</p>
               <p>• Total scores are automatically calculated and ranked</p>
             </div>

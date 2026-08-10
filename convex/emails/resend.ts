@@ -2,31 +2,28 @@
 
 import { internalAction } from "../_generated/server";
 import { v } from "convex/values";
-import { internal, api } from "../_generated/api";
+import { internal } from "../_generated/api";
 import { resend, withSubjectPrefix } from "../sendEmails";
+import {
+  EMAIL_TYPE_DEFAULTS,
+  emailTypeSettingKey,
+  emailTypeValidator,
+} from "./emailTypes";
 
 /**
- * Core email sending action with logging and global kill switch
+ * Core email sending action with logging, global kill switch, and per-type
+ * toggles from the admin Email dashboard
  */
 export const sendEmail = internalAction({
   args: {
     to: v.string(),
     subject: v.string(),
     html: v.string(),
-    emailType: v.union(
-      v.literal("daily_admin"),
-      v.literal("daily_engagement"),
-      v.literal("welcome"),
-      v.literal("message_notification"),
-      v.literal("weekly_digest"),
-      v.literal("mention_notification"),
-      v.literal("admin_broadcast"),
-      v.literal("admin_report_notification"),
-      v.literal("admin_user_report_notification"),
-    ),
+    emailType: emailTypeValidator,
     userId: v.optional(v.id("users")),
     metadata: v.optional(v.any()),
     unsubscribeToken: v.optional(v.string()),
+    replyTo: v.optional(v.string()),
   },
   returns: v.object({
     success: v.boolean(),
@@ -51,29 +48,43 @@ export const sendEmail = internalAction({
         return { success: false, error: "Emails globally disabled" };
       }
 
-      // Send via Resend with enforced subject prefix and from address
-      const emailData: any = {
+      // Per-type toggle from the Email dashboard. No stored row falls back
+      // to the type's default. Skips are not logged as send attempts.
+      const typeEnabled = await ctx.runQuery(
+        internal.settings.getBooleanInternal,
+        { key: emailTypeSettingKey(args.emailType) },
+      );
+      if ((typeEnabled ?? EMAIL_TYPE_DEFAULTS[args.emailType]) === false) {
+        console.log(
+          `Email type ${args.emailType} disabled, skipping send to ${args.to}`,
+        );
+        return { success: false, error: "Email type disabled" };
+      }
+
+      // Add List-Unsubscribe headers per Resend requirements (array format)
+      const headers = args.unsubscribeToken
+        ? [
+            {
+              name: "List-Unsubscribe",
+              value: `<https://vibeapps.dev/api/unsubscribe?token=${args.unsubscribeToken}>`,
+            },
+            {
+              name: "List-Unsubscribe-Post",
+              value: "List-Unsubscribe=One-Click",
+            },
+          ]
+        : undefined;
+
+      // Send via Resend with enforced subject prefix and from address.
+      // replyTo is an array per the component's SendEmailOptions type.
+      const result = await resend.sendEmail(ctx, {
         to: args.to,
         from: "VibeApps Updates <alerts@updates.vibeapps.dev>",
         subject: withSubjectPrefix(args.subject),
         html: args.html,
-      };
-
-      // Add List-Unsubscribe headers per Resend requirements (array format)
-      if (args.unsubscribeToken) {
-        emailData.headers = [
-          {
-            name: "List-Unsubscribe",
-            value: `<https://vibeapps.dev/api/unsubscribe?token=${args.unsubscribeToken}>`,
-          },
-          {
-            name: "List-Unsubscribe-Post",
-            value: "List-Unsubscribe=One-Click",
-          },
-        ];
-      }
-
-      const result = await resend.sendEmail(ctx, emailData);
+        replyTo: args.replyTo ? [args.replyTo] : undefined,
+        headers,
+      });
 
       // Log the send attempt (V8 mutation)
       await ctx.runMutation(internal.emails.queries.insertEmailLog, {

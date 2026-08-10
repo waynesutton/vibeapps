@@ -27,6 +27,46 @@ export default defineSchema({
       filterFields: ["isBanned"],
     }),
 
+  // Delegated admin access grants. Full admins (Clerk JWT role === "admin")
+  // bypass this table entirely; everyone else needs a grant row here.
+  adminPermissions: defineTable({
+    userId: v.id("users"), // User receiving delegated access
+    clerkId: v.string(), // Clerk ID for fast lookup from ctx.auth identity
+    permissions: v.array(v.string()), // Permission keys, e.g. "tags.manage"
+    judgingGroupIds: v.array(v.id("judgingGroups")), // Scoped judging groups
+    allJudgingGroups: v.optional(v.boolean()), // True = every judging group
+    grantedBy: v.id("users"), // Admin who granted access
+    notes: v.optional(v.string()), // Optional audit note
+  })
+    .index("by_userId", ["userId"])
+    .index("by_clerkId", ["clerkId"]),
+
+  // Admin activity log: one row per notable event (email sends, submissions,
+  // spam actions, judging, scoring, access grants, settings changes).
+  activityLog: defineTable({
+    category: v.union(
+      v.literal("email"),
+      v.literal("submission"),
+      v.literal("spam"),
+      v.literal("judging"),
+      v.literal("scoring"),
+      v.literal("moderation"),
+      v.literal("access"),
+      v.literal("settings"),
+    ),
+    action: v.string(), // Short event key, e.g. "story.submitted"
+    message: v.string(), // Human-readable one-liner
+    actorUserId: v.optional(v.id("users")),
+    actorName: v.optional(v.string()), // Denormalized; "System" for background jobs
+    targetType: v.optional(v.string()), // e.g. "story", "judgingGroup"
+    targetId: v.optional(v.string()),
+    targetLabel: v.optional(v.string()),
+    metadata: v.optional(v.any()),
+    isArchived: v.boolean(), // Always written on insert so indexes stay dense
+  })
+    .index("by_archived", ["isArchived"])
+    .index("by_archived_category", ["isArchived", "category"]),
+
   stories: defineTable({
     title: v.string(),
     slug: v.string(),
@@ -61,6 +101,11 @@ export default defineSchema({
     isApproved: v.optional(v.boolean()),
     rejectionReason: v.optional(v.string()),
     email: v.optional(v.string()),
+    // AI spam moderation: set when an admin confirms a flagged submission
+    isSpam: v.optional(v.boolean()),
+    spamReason: v.optional(v.string()), // Why it was marked (shown to the submitter)
+    spamMarkedAt: v.optional(v.number()), // When it was marked
+    spamMarkedBy: v.optional(v.id("users")), // Admin who confirmed the mark
     // Hackathon team info
     teamName: v.optional(v.string()),
     teamMemberCount: v.optional(v.number()),
@@ -69,6 +114,23 @@ export default defineSchema({
         v.object({
           name: v.string(),
           email: v.string(),
+        }),
+      ),
+    ),
+    // Self-reported AI build attribution. Metadata for organizers only:
+    // these values are unverified and must NEVER feed into any scoring,
+    // rubric criterion, clamp, or AI judge prompt context.
+    selfReportedHarness: v.optional(v.string()), // e.g. "cursor", "claude-code"
+    selfReportedModel: v.optional(v.string()), // e.g. "claude-sonnet-4-5"
+    // Answers to per-group custom submission questions (judging group custom
+    // submit pages). Label is denormalized so answers keep meaning even if
+    // the question is later edited or removed from the group config.
+    customFormAnswers: v.optional(
+      v.array(
+        v.object({
+          key: v.string(),
+          label: v.string(),
+          value: v.string(),
         }),
       ),
     ),
@@ -111,6 +173,7 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_user", ["userId"])
     .index("by_userId_isApproved", ["userId", "isApproved"])
+    .index("by_url", ["url"]) // Duplicate-URL detection for spam checks
     .index("by_votes", ["votes"])
     .index("by_status_isHidden_votes", ["status", "isHidden", "votes"])
     .index("by_status_isHidden", ["status", "isHidden"])
@@ -214,6 +277,9 @@ export default defineSchema({
     submissionLimitCount: v.optional(v.number()),
     // Hackathon team info settings
     showHackathonTeamInfo: v.optional(v.boolean()),
+    // Tag limit settings (managed from Tags admin section)
+    maxTagsPerSubmission: v.optional(v.number()), // Max visible tags per submission (hidden tags exempt)
+    maxTagLength: v.optional(v.number()), // Max characters for a new tag name
   }),
 
   forms: defineTable({
@@ -358,8 +424,12 @@ export default defineSchema({
     submissionPageImageId: v.optional(v.id("_storage")), // Header image for submission page
     submissionPageImageSize: v.optional(v.number()), // Image size in pixels (square)
     submissionPageLayout: v.optional(
-      v.union(v.literal("two-column"), v.literal("one-third")),
-    ), // Layout style: two-column (50/50) or one-third (33/67)
+      v.union(
+        v.literal("two-column"),
+        v.literal("one-third"),
+        v.literal("single"),
+      ),
+    ), // Layout style: two-column (50/50), one-third (33/67), or single column
     submissionPageTitle: v.optional(v.string()), // Custom title for submission page
     submissionPageDescription: v.optional(v.string()), // Rich text description
     submissionPageLinks: v.optional(
@@ -396,12 +466,100 @@ export default defineSchema({
         tags: v.optional(v.boolean()),
       }),
     ),
+    // Admin-selectable visible fields for the custom submission form.
+    // Unset key = visible (backward compatible). Title can never be hidden
+    // because judging, results, and the AI judge all key off it.
+    // teamInfo/additionalImages/additionalLinks control whole form sections.
+    submissionFieldVisibility: v.optional(
+      v.object({
+        title: v.optional(v.boolean()),
+        tagline: v.optional(v.boolean()),
+        longDescription: v.optional(v.boolean()),
+        url: v.optional(v.boolean()),
+        githubUrl: v.optional(v.boolean()),
+        videoUrl: v.optional(v.boolean()),
+        screenshot: v.optional(v.boolean()),
+        submitterName: v.optional(v.boolean()),
+        email: v.optional(v.boolean()),
+        tags: v.optional(v.boolean()),
+        teamInfo: v.optional(v.boolean()),
+        additionalImages: v.optional(v.boolean()),
+        additionalLinks: v.optional(v.boolean()),
+      }),
+    ),
+    // Admin-defined extra questions appended to the custom submission form.
+    // Answers are stored on stories.customFormAnswers with the label
+    // denormalized so they stay readable if a question is edited or removed.
+    submissionCustomQuestions: v.optional(
+      v.array(
+        v.object({
+          key: v.string(), // Stable slug, unique within the group
+          label: v.string(),
+          placeholder: v.optional(v.string()),
+          description: v.optional(v.string()),
+          fieldType: v.union(
+            v.literal("text"),
+            v.literal("url"),
+            v.literal("email"),
+            v.literal("textarea"),
+          ),
+          required: v.boolean(),
+        }),
+      ),
+    ),
     // Multi-judge: how many judges must complete each submission (default 1 = single-judge behavior)
     judgesPerSubmission: v.optional(v.number()),
+    // Human judging score scale: 5 (1-5) or 10 (1-10). Unset = 10 for backward compatibility.
+    scoreScale: v.optional(v.union(v.literal(5), v.literal(10))),
     // AI Judge (Best Use of Convex) settings. Fully separate from human judging.
     aiJudgeEnabled: v.optional(v.boolean()), // Enable AI judge for this group
     aiResultsIsPublic: v.optional(v.boolean()), // Whether AI results page is public (defaults to private)
     aiResultsPassword: v.optional(v.string()), // Password for private AI results page (hashed)
+    // Optional per-criterion weights for the AI rubric (built-in + custom
+    // criteria). Absent = weight 1 for every key. weightedScore is derived
+    // in queries, never stored.
+    aiRubricWeights: v.optional(
+      v.array(v.object({ key: v.string(), weight: v.number() })),
+    ),
+    // Admin-defined extra AI rubric criteria appended to the built-in six.
+    // The AI judge scores these alongside the fixed rubric.
+    aiCustomCriteria: v.optional(
+      v.array(
+        v.object({
+          key: v.string(), // Lowercase slug, unique, no clash with built-in keys
+          label: v.string(), // Display label
+          description: v.string(), // What the AI judge should evaluate
+        }),
+      ),
+    ),
+    // Rubric keys (built-in or custom) switched off for this group. Disabled
+    // criteria are excluded from the AI prompt, scoring, and rankings.
+    aiDisabledCriteria: v.optional(v.array(v.string())),
+    // Custom AI judge system prompt body. Absent = built-in default prompt.
+    // Supports a {{rubric}} placeholder; the JSON response contract is
+    // always appended by the analysis action and is never editable.
+    aiJudgeSystemPrompt: v.optional(v.string()),
+    // When true (the default), scores written by agent judges are advisory:
+    // shown with an agent badge but excluded from final rankings.
+    agentScoresAdvisory: v.optional(v.boolean()),
+    // Whether the agent judging HTTP API is enabled for this group.
+    // Absent = enabled. When false, key creation is blocked and every
+    // keyed API call returns 403.
+    agentKeysEnabled: v.optional(v.boolean()),
+    // Hackathon skill support: gates the /api/hackathon/{slug} endpoints
+    // the /hackathon agent skill talks to. Absent = off.
+    hackathonSkillEnabled: v.optional(v.boolean()),
+    // Shared multi-use registration codes (e.g. "AUG18-GLOBAL") a team
+    // passes to /hackathon start. Matched case-insensitively.
+    hackathonRegistrationCodes: v.optional(v.array(v.string())),
+    // Markdown rules the skill writes into each team's rules.md
+    hackathonRules: v.optional(v.string()),
+    // Bumped whenever the rules or codes change so the skill can detect
+    // stale rules and show the team a diff
+    hackathonRulesUpdatedAt: v.optional(v.number()),
+    // Organizer emails for the per-group new-submission alert. Empty or
+    // absent means no alert; the dashboard toggle controls the type globally.
+    notificationEmails: v.optional(v.array(v.string())),
   })
     .index("by_slug", ["slug"])
     .index("by_isPublic", ["isPublic"])
@@ -431,10 +589,76 @@ export default defineSchema({
     totalScore: v.optional(v.number()), // Sum of criteria scores
     averageScore: v.optional(v.number()), // Average across criteria
     overallReasoning: v.optional(v.string()), // Overall note on why it scored the submission this way
-    convexFeaturesDetected: v.optional(v.array(v.string())), // Convex features found in the submission
-    componentsDetected: v.optional(v.array(v.string())), // Convex components found in package.json / convex.config.ts
-    provider: v.optional(v.string()), // "anthropic" | "openai" | "openrouter"
-    model: v.optional(v.string()), // Model used for the review
+    convexFeaturesDetected: v.optional(v.array(v.string())), // Convex features (deterministic, derived from repoFacts on new runs)
+    componentsDetected: v.optional(v.array(v.string())), // Components INSTALLED (package.json / convex.config.ts)
+    componentsUsed: v.optional(v.array(v.string())), // Components actually referenced in code (components.<name>) - the only list scoring may reward
+    provider: v.optional(v.string()), // DEPRECATED: judging model provider. Remove after backfillJudgeModelFields has run in production.
+    model: v.optional(v.string()), // DEPRECATED: judging model. Remove after backfillJudgeModelFields has run in production.
+    judgeProvider: v.optional(v.string()), // AI provider used to run the review ("anthropic" | "openai" | "openrouter")
+    judgeModel: v.optional(v.string()), // Model used to run the review (NOT the participant's model)
+    // Deterministic Convex facts counted from the repo before the model sees it
+    repoFacts: v.optional(
+      v.object({
+        convexFileCount: v.number(),
+        hasSchema: v.boolean(),
+        hasHttpRouter: v.boolean(),
+        hasCrons: v.boolean(),
+        hasConvexConfig: v.boolean(),
+        tableCount: v.number(),
+        indexCount: v.number(),
+        searchIndexCount: v.number(),
+        vectorIndexCount: v.number(),
+        queryCount: v.number(),
+        mutationCount: v.number(),
+        actionCount: v.number(),
+        httpActionCount: v.number(),
+        usesScheduler: v.boolean(),
+        usesStorage: v.boolean(),
+        usesVectorSearch: v.boolean(),
+        usesAuth: v.boolean(),
+        usesPagination: v.boolean(),
+        returnsValidatorCount: v.number(),
+      }),
+    ),
+    // Git history facts from the GitHub commits API (committer dates)
+    gitFacts: v.optional(
+      v.object({
+        firstCommitAt: v.optional(v.number()),
+        lastCommitAt: v.optional(v.number()),
+        commitCount: v.number(),
+        commitCountCapped: v.boolean(),
+        activeDayCount: v.number(),
+        contributorCount: v.number(),
+        builtDuringEvent: v.union(
+          v.literal("in_window"),
+          v.literal("started_before"),
+          v.literal("no_window_set"),
+        ),
+        repoCreatedAt: v.optional(v.number()),
+        isFork: v.boolean(),
+        parentRepo: v.optional(v.string()),
+      }),
+    ),
+    // Detected AI harness signals. Metadata for organizers only: NEVER fed
+    // into scoring, clamps, or the judging prompt. Never collapse to one tool.
+    harnessSignals: v.optional(
+      v.array(
+        v.object({
+          tool: v.string(),
+          source: v.union(v.literal("commit_trailer"), v.literal("config_file")),
+          evidence: v.string(),
+          confidence: v.union(
+            v.literal("high"),
+            v.literal("medium"),
+            v.literal("low"),
+          ),
+        }),
+      ),
+    ),
+    // Whether the GitHub repo was reachable at review time
+    repoAccess: v.optional(
+      v.union(v.literal("public"), v.literal("private_or_missing")),
+    ),
     error: v.optional(v.string()), // Error message when status is "failed"
     sourcesUsed: v.optional(
       v.object({
@@ -481,10 +705,45 @@ export default defineSchema({
     sessionId: v.string(), // Unique session identifier
     lastActiveAt: v.number(), // Last activity timestamp
     userId: v.optional(v.id("users")), // Optional link to authenticated user profile
+    type: v.optional(v.union(v.literal("human"), v.literal("agent"))), // Absent means human
+    // Self-declared metadata for agent judges (model, harness, operator)
+    agentMetadata: v.optional(
+      v.object({
+        model: v.optional(v.string()),
+        harness: v.optional(v.string()),
+        operator: v.optional(v.string()),
+      }),
+    ),
   })
     .index("by_groupId", ["groupId"])
     .index("by_sessionId", ["sessionId"])
     .index("by_userId", ["userId"]),
+
+  // API keys for external AI agent judges. Only the SHA-256 hash is stored;
+  // the raw key is shown exactly once at creation.
+  agentJudgeKeys: defineTable({
+    groupId: v.id("judgingGroups"), // Group this key can judge
+    name: v.string(), // Label shown to admins (e.g. "claude-agent-1")
+    keyHash: v.string(), // SHA-256 hex digest of the raw key
+    judgeId: v.id("judges"), // The agent judge identity scores are written as
+    createdBy: v.id("users"), // Admin who created the key
+    revokedAt: v.optional(v.number()), // Set when the key is revoked
+    lastUsedAt: v.optional(v.number()), // Last authenticated call
+    callCount: v.number(), // Approximate authenticated call count
+  })
+    .index("by_keyHash", ["keyHash"])
+    .index("by_groupId", ["groupId"]),
+
+  // Teams that ran "/hackathon start CODE" against a judging group's
+  // registration endpoint. Organizer-facing audit trail only; submissions
+  // still flow through the group submit form.
+  hackathonRegistrations: defineTable({
+    groupId: v.id("judgingGroups"), // Group the code belongs to
+    code: v.string(), // Registration code used (uppercased)
+    teamName: v.string(), // Team name reported by the skill
+    email: v.optional(v.string()), // Optional contact email
+    registeredAt: v.number(), // When the team registered
+  }).index("by_groupId", ["groupId"]),
 
   judgeScores: defineTable({
     judgeId: v.id("judges"), // Judge who gave the score
@@ -600,6 +859,7 @@ export default defineSchema({
       v.literal("admin_message"),
       v.literal("message"), // Direct message alert
       v.literal("dm_report"), // DM report alert for admins
+      v.literal("spam"), // Submission marked as spam by an admin
     ),
     storyId: v.optional(v.id("stories")), // Related story for vote, comment, rating, judged alerts
     commentId: v.optional(v.id("comments")), // Specific comment for comment alerts
@@ -637,6 +897,10 @@ export default defineSchema({
       v.literal("admin_broadcast"),
       v.literal("admin_report_notification"),
       v.literal("admin_user_report_notification"),
+      v.literal("spam_notification"),
+      v.literal("submission_confirmation"),
+      v.literal("submission_admin_alert"),
+      v.literal("results_live"),
     ),
     recipientEmail: v.string(),
     sentAt: v.number(),
@@ -828,4 +1092,53 @@ export default defineSchema({
   })
     .index("by_message", ["messageId"]) // Get all reactions for a message
     .index("by_user_message", ["userId", "messageId"]), // Check if user already reacted to message
+
+  // AI spam check results: one row per story, upserted on re-scan.
+  // The AI only flags; a human admin confirms via markAsSpam.
+  spamCheckResults: defineTable({
+    storyId: v.id("stories"), // Submission that was scanned
+    status: v.union(
+      v.literal("pending"),
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("failed"),
+    ), // Scan lifecycle state
+    verdict: v.optional(
+      v.union(v.literal("spam"), v.literal("suspicious"), v.literal("clean")),
+    ), // Final verdict once completed
+    confidence: v.optional(v.number()), // 0-100 confidence in the verdict
+    reasons: v.optional(v.array(v.string())), // Human-readable reasons behind the verdict
+    llmReasoning: v.optional(v.string()), // Full model explanation
+    // Deterministic signals measured before the model sees anything
+    signals: v.optional(
+      v.object({
+        urlLive: v.boolean(), // Live app URL responded
+        urlNote: v.string(), // Liveness detail ("OK", "404 Not Found", ...)
+        urlStatusCode: v.optional(v.number()),
+        scrapedContent: v.boolean(), // Firecrawl scrape succeeded
+        duplicateUrlCount: v.number(), // Other stories sharing the same URL
+        repoChecked: v.boolean(), // GitHub repo check ran (requires GITHUB_TOKEN)
+        repoAccessible: v.optional(v.boolean()), // Repo is public and reachable
+        repoFileCount: v.optional(v.number()), // Files in the repo tree
+        repoIsEmpty: v.optional(v.boolean()), // Effectively empty repo (< 3 files)
+        repoNote: v.optional(v.string()), // Repo check detail
+        linksChecked: v.array(
+          v.object({
+            label: v.string(), // Which field the link came from
+            url: v.string(),
+            ok: v.boolean(),
+            note: v.string(),
+          }),
+        ),
+      }),
+    ),
+    provider: v.optional(v.string()), // LLM provider used ("anthropic" | "openai" | "openrouter" | "heuristic")
+    model: v.optional(v.string()), // Model used for the verdict
+    error: v.optional(v.string()), // Error message when status is "failed"
+    triggeredBy: v.union(v.literal("auto"), v.literal("manual")), // Auto on submit or manual batch scan
+    checkedAt: v.optional(v.number()), // When the scan completed
+  })
+    .index("by_storyId", ["storyId"])
+    .index("by_status", ["status"])
+    .index("by_verdict", ["verdict"]),
 });

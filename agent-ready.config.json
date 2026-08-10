@@ -57,6 +57,13 @@
       "order": 3
     },
     {
+      "title": "Agent judging API",
+      "path": "/api/judging",
+      "description": "HTTP API for AI agent judges. Authenticate with an x-judge-key header, then GET criteria.json, submissions.json, and submissions/{id}.json, and POST scores under /api/judging/{group-slug}/ on the Convex site domain. A machine-readable OpenAPI 3 spec is served at /api/judging/{group-slug}/openapi.json.",
+      "status": "published",
+      "order": 5
+    },
+    {
       "title": "Leaderboard",
       "path": "/leaderboard",
       "description": "Top apps and builders ranked by community votes and engagement.",

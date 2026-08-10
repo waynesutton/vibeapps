@@ -1,9 +1,9 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { Id, Doc, TableNames } from "./_generated/dataModel";
+import { Doc } from "./_generated/dataModel";
 import { QueryCtx, MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api"; // Import internal API
-import { requireAdminRole } from "./users"; // Import requireAdminRole
+import { requirePermission } from "./adminAccess"; // Granular admin permissions
 import { getAdminUserIds } from "./alerts"; // Import admin user helper
 // import { Expression } from "convex/values"; // REMOVE THIS LINE
 // import { Users } from "./schema"; // REMOVE THIS LINE
@@ -117,7 +117,7 @@ export const listAllReportsAdmin = query({
     ),
   },
   handler: async (ctx, args): Promise<ReportWithDetails[]> => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "users.reports");
 
     let reports;
     if (args.filters?.status) {
@@ -159,7 +159,7 @@ export const updateReportStatusByAdmin = mutation({
     permanentlyDeleteStory: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "users.reports");
 
     const report = await ctx.db.get(args.reportId);
     if (!report) {
@@ -380,7 +380,7 @@ export const listAllUserReportsAdmin = query({
     }),
   ),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "users.reports");
 
     let reports;
     if (args.filters?.status) {
@@ -444,7 +444,7 @@ export const updateUserReportStatusByAdmin = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "users.reports");
 
     const report = await ctx.db.get(args.reportId);
     if (!report) {

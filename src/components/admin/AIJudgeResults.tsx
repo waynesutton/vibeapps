@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import {
-  ArrowLeft,
   Sparkles,
   Loader2,
   RefreshCw,
@@ -27,10 +26,11 @@ import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
 import { useDialog } from "../../hooks/useDialog";
 
+// Rendered inside the group workspace; the workspace header and sidebar
+// provide navigation, so this component has no back button.
 interface AIJudgeResultsProps {
   groupId: Id<"judgingGroups">;
   groupName: string;
-  onBack: () => void;
 }
 
 type CriteriaScore = {
@@ -309,11 +309,7 @@ function buildHackathonReport(
   return lines.join("\n");
 }
 
-export function AIJudgeResults({
-  groupId,
-  groupName,
-  onBack,
-}: AIJudgeResultsProps) {
+export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
   const data = useQuery(api.aiJudge.getGroupAiResults, { groupId });
   const startReview = useMutation(api.aiJudge.startReview);
   const retrySubmission = useMutation(api.aiJudge.retrySubmission);
@@ -331,6 +327,10 @@ export function AIJudgeResults({
   const [activeTab, setActiveTab] = useState<"results" | "stats" | "report">(
     "results",
   );
+  // Build-timeline filter (Phase 3): all / built in window / started before
+  const [timelineFilter, setTimelineFilter] = useState<
+    "all" | "in_window" | "started_before"
+  >("all");
   const [reportMarkdown, setReportMarkdown] = useState<string | null>(null);
   const [reportCopied, setReportCopied] = useState(false);
 
@@ -488,26 +488,33 @@ export function AIJudgeResults({
     (r) => r.status === "completed",
   );
 
+  // Rank numbers come from the full ranked list so filtering never renumbers
+  const rankById = new Map(
+    (data?.results || []).map((r, index) => [r._id, index + 1]),
+  );
+  const visibleResults = (data?.results || []).filter((r) => {
+    if (timelineFilter === "all") return true;
+    return r.gitFacts?.builtDuringEvent === timelineFilter;
+  });
+
+  // Short date for timeline facts
+  const shortDate = (ts?: number) =>
+    ts
+      ? new Date(ts).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : "n/a";
+
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header: title left, run action right; navigation lives in the workspace */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onBack}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Back to judging groups"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h2 className="text-xl font-medium text-[#525252] flex items-center gap-2">
-              <Sparkles className="w-5 h-5" />
-              AI Judge: Best Use of Convex
-            </h2>
-            <p className="text-sm text-gray-500">{groupName}</p>
-          </div>
-        </div>
+        <h2 className="text-lg font-medium text-[#525252] flex items-center gap-2">
+          <Sparkles className="w-4 h-4" />
+          AI Judge: Best Use of Convex
+        </h2>
         <Button
           onClick={handleStartReview}
           disabled={isStarting || isRunning}
@@ -703,7 +710,36 @@ export function AIJudgeResults({
           {/* Ranked results */}
           {activeTab === "results" && data.results.length > 0 && (
             <div className="space-y-3">
-              {data.results.map((result, index) => {
+              {/* Build-timeline filter */}
+              <div className="flex items-center justify-end gap-2">
+                <label
+                  htmlFor="timeline-filter"
+                  className="text-xs text-gray-500"
+                >
+                  Build timeline
+                </label>
+                <select
+                  id="timeline-filter"
+                  value={timelineFilter}
+                  onChange={(e) =>
+                    setTimelineFilter(
+                      e.target.value as "all" | "in_window" | "started_before",
+                    )
+                  }
+                  className="text-xs border border-gray-200 rounded-md px-2 py-1.5 bg-white text-gray-700"
+                >
+                  <option value="all">All submissions</option>
+                  <option value="in_window">Built in event window</option>
+                  <option value="started_before">Started before event</option>
+                </select>
+              </div>
+              {visibleResults.length === 0 && (
+                <p className="text-sm text-gray-500 bg-white rounded-lg border border-gray-200 p-4">
+                  No submissions match this timeline filter.
+                </p>
+              )}
+              {visibleResults.map((result) => {
+                const index = (rankById.get(result._id) ?? 1) - 1;
                 const isExpanded = expandedId === result._id;
                 const isEditing = editingId === result._id;
                 return (
@@ -782,9 +818,43 @@ export function AIJudgeResults({
                                       : "no URL"}
                               </span>
                             )}
-                            {result.provider && (
-                              <span title={result.model}>
-                                via {result.provider}
+                            {result.repoAccess === "private_or_missing" && (
+                              <span
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-red-50 text-red-700 border-red-200"
+                                title="The GitHub repo returned 404: it is private or was deleted. Repo-based criteria were capped."
+                              >
+                                repo private/missing
+                              </span>
+                            )}
+                            {result.gitFacts?.isFork && (
+                              <span
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200"
+                                title={`Forked from ${result.gitFacts.parentRepo || "another repo"}`}
+                              >
+                                fork
+                              </span>
+                            )}
+                            {result.gitFacts?.builtDuringEvent ===
+                              "in_window" && (
+                              <span
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200"
+                                title="First commit falls inside the event window. Commit dates can be rewritten with force-push, so treat this as a strong signal, not proof."
+                              >
+                                built in window
+                              </span>
+                            )}
+                            {result.gitFacts?.builtDuringEvent ===
+                              "started_before" && (
+                              <span
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200"
+                                title="First commit predates the event window. Commit dates can be rewritten with force-push, so verify before disqualifying."
+                              >
+                                started before
+                              </span>
+                            )}
+                            {result.judgeProvider && (
+                              <span title={result.judgeModel}>
+                                via {result.judgeProvider}
                               </span>
                             )}
                           </div>
@@ -801,6 +871,14 @@ export function AIJudgeResults({
                               </p>
                               <p className="text-xs text-gray-500">
                                 total {result.totalScore}
+                                {result.weightedScore !== undefined &&
+                                  result.weightedScore !==
+                                    result.totalScore && (
+                                    <span title="Weighted total using this group's rubric weights; ranking uses this value.">
+                                      {" "}
+                                      / weighted {result.weightedScore}
+                                    </span>
+                                  )}
                               </p>
                             </div>
                           )}
@@ -1002,6 +1080,230 @@ export function AIJudgeResults({
                               </div>
                             </div>
                           )}
+
+                        {/* Components: installed vs actually used (Phase 1) */}
+                        {((result.componentsDetected?.length ?? 0) > 0 ||
+                          (result.componentsUsed?.length ?? 0) > 0) && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-900 mb-2">
+                              Convex Components
+                            </h4>
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs text-gray-500 w-16">
+                                  Used
+                                </span>
+                                {(result.componentsUsed?.length ?? 0) > 0 ? (
+                                  result.componentsUsed?.map((component) => (
+                                    <span
+                                      key={component}
+                                      className="px-2.5 py-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded-full"
+                                      title="Referenced in code (components.* usage found)"
+                                    >
+                                      {component}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-xs text-gray-400">
+                                    none referenced in code
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs text-gray-500 w-16">
+                                  Installed
+                                </span>
+                                {(result.componentsDetected?.length ?? 0) >
+                                0 ? (
+                                  result.componentsDetected?.map(
+                                    (component) => (
+                                      <span
+                                        key={component}
+                                        className="px-2.5 py-1 text-xs bg-gray-50 text-gray-600 border border-gray-200 rounded-full"
+                                        title="Found in package.json / convex.config.ts. Only used components count toward scoring."
+                                      >
+                                        {component}
+                                      </span>
+                                    ),
+                                  )
+                                ) : (
+                                  <span className="text-xs text-gray-400">
+                                    none installed
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Verified repo facts (Phase 1, deterministic) */}
+                        {result.repoFacts && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-900 mb-2">
+                              Verified Repo Facts
+                              <span
+                                className="ml-2 text-xs font-normal text-gray-400"
+                                title="Counted deterministically from the repo source, not by the LLM"
+                              >
+                                deterministic
+                              </span>
+                            </h4>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                              {(
+                                [
+                                  ["Convex files", result.repoFacts.convexFileCount],
+                                  ["Tables", result.repoFacts.tableCount],
+                                  ["Indexes", result.repoFacts.indexCount],
+                                  ["Queries", result.repoFacts.queryCount],
+                                  ["Mutations", result.repoFacts.mutationCount],
+                                  ["Actions", result.repoFacts.actionCount],
+                                  ["HTTP actions", result.repoFacts.httpActionCount],
+                                  [
+                                    "Return validators",
+                                    result.repoFacts.returnsValidatorCount,
+                                  ],
+                                ] as const
+                              ).map(([label, value]) => (
+                                <div
+                                  key={label}
+                                  className="bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5"
+                                >
+                                  <span className="font-semibold text-gray-900">
+                                    {value}
+                                  </span>{" "}
+                                  <span className="text-gray-500">{label}</span>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {(
+                                [
+                                  ["schema", result.repoFacts.hasSchema],
+                                  ["http router", result.repoFacts.hasHttpRouter],
+                                  ["crons", result.repoFacts.hasCrons],
+                                  ["scheduler", result.repoFacts.usesScheduler],
+                                  ["file storage", result.repoFacts.usesStorage],
+                                  [
+                                    "vector search",
+                                    result.repoFacts.usesVectorSearch,
+                                  ],
+                                  ["auth", result.repoFacts.usesAuth],
+                                  ["pagination", result.repoFacts.usesPagination],
+                                ] as const
+                              ).map(([label, present]) => (
+                                <span
+                                  key={label}
+                                  className={`px-2 py-0.5 text-xs rounded-full border ${
+                                    present
+                                      ? "bg-blue-50 text-blue-700 border-blue-200"
+                                      : "bg-gray-50 text-gray-400 border-gray-200"
+                                  }`}
+                                >
+                                  {label}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Git timeline (Phase 3) */}
+                        {result.gitFacts && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-900 mb-2">
+                              Git Timeline
+                              <span
+                                className="ml-2 text-xs font-normal text-gray-400"
+                                title="Commit dates can be rewritten with force-push; treat these as strong signals, not proof."
+                              >
+                                from commit history
+                              </span>
+                            </h4>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                              <div className="bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
+                                <span className="text-gray-500">First commit</span>{" "}
+                                <span className="font-medium text-gray-900">
+                                  {shortDate(result.gitFacts.firstCommitAt)}
+                                </span>
+                              </div>
+                              <div className="bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
+                                <span className="text-gray-500">Last commit</span>{" "}
+                                <span className="font-medium text-gray-900">
+                                  {shortDate(result.gitFacts.lastCommitAt)}
+                                </span>
+                              </div>
+                              <div className="bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
+                                <span className="text-gray-500">Repo created</span>{" "}
+                                <span className="font-medium text-gray-900">
+                                  {shortDate(result.gitFacts.repoCreatedAt)}
+                                </span>
+                              </div>
+                              <div className="bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
+                                <span className="text-gray-500">Commits</span>{" "}
+                                <span className="font-medium text-gray-900">
+                                  {result.gitFacts.commitCount}
+                                  {result.gitFacts.commitCountCapped ? "+" : ""}
+                                </span>
+                              </div>
+                              <div className="bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
+                                <span className="text-gray-500">Active days</span>{" "}
+                                <span className="font-medium text-gray-900">
+                                  {result.gitFacts.activeDayCount}
+                                </span>
+                              </div>
+                              <div className="bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
+                                <span className="text-gray-500">Contributors</span>{" "}
+                                <span className="font-medium text-gray-900">
+                                  {result.gitFacts.contributorCount}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Harness and model attribution (Phase 4, never scored) */}
+                        {((result.harnessSignals?.length ?? 0) > 0 ||
+                          result.selfReportedHarness ||
+                          result.selfReportedModel) && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-900 mb-2">
+                              AI Tool Attribution
+                              <span className="ml-2 text-xs font-normal text-gray-400">
+                                informational only, never affects scores
+                              </span>
+                            </h4>
+                            {(result.harnessSignals?.length ?? 0) > 0 && (
+                              <div className="flex flex-wrap gap-2 mb-2">
+                                {result.harnessSignals?.map((signal, i) => (
+                                  <span
+                                    key={`${signal.tool}-${i}`}
+                                    className={`px-2.5 py-1 text-xs rounded-full border ${
+                                      signal.confidence === "high"
+                                        ? "bg-blue-50 text-blue-700 border-blue-200"
+                                        : signal.confidence === "medium"
+                                          ? "bg-gray-100 text-gray-700 border-gray-300"
+                                          : "bg-gray-50 text-gray-500 border-gray-200"
+                                    }`}
+                                    title={`${signal.evidence} (${signal.confidence} confidence)`}
+                                  >
+                                    {signal.tool} ({signal.confidence})
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {(result.selfReportedHarness ||
+                              result.selfReportedModel) && (
+                              <p className="text-xs text-gray-500">
+                                Self-reported, unverified:{" "}
+                                {[
+                                  result.selfReportedHarness,
+                                  result.selfReportedModel,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" / ")}
+                              </p>
+                            )}
+                          </div>
+                        )}
 
                         {/* Retry a completed review */}
                         <div className="pt-2 border-t border-gray-100">

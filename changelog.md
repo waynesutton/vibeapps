@@ -7,6 +7,209 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Added] - 2026-08-10
+
+**Submission emails and per-type send toggles**
+
+- Every email type now has its own on/off switch in a new Email Send Options card on the admin Email dashboard, grouped by Automated, User, Admin, and Submissions. Toggles are stored as `emailTypeEnabled:{type}` rows in `appSettings` and enforced centrally in the `sendEmail` action, so crons and triggers keep running but their sends no-op when a type is off. The global master switch always wins: when it is off, all per-type toggles render disabled with a notice (2026-08-10).
+- Three new submission email types, all off by default: `submission_confirmation` emails the submitter a receipt with a link to their story right after `stories.submit` (only when they provided an email); `submission_admin_alert` notifies a judging group's organizer list when a submission lands in their group; `results_live` sends the public results URL to every de-duplicated submitter email in a group.
+- Judging groups gained a Submission notifications card (group Settings section) for managing the organizer email list, and an explicit "Email all submitters" button in the Results visibility card that appears once results are public. The button shows the live recipient count, uses a two-step confirm, and is disabled with a hint when the master switch or the results_live toggle is off.
+- Shared email type registry (`convex/emails/emailTypes.ts`) keeps the schema, send action, and settings unions in lockstep; `sendEmail` skips without logging when a type is disabled. New submitter emails include the standard preferences footer and List-Unsubscribe header for account holders. The `/resend-webhook` route already verifies svix signatures via the component handler.
+- **Backend**: `convex/emails/emailTypes.ts` (new), `convex/emails/submissions.ts` (new), `convex/emails/resend.ts`, `convex/emails/queries.ts`, `convex/settings.ts`, `convex/stories.ts`, `convex/judgingGroups.ts`, `convex/schema.ts` (emailLogs union, `judgingGroups.notificationEmails`).
+- **Frontend**: `src/components/admin/EmailManagement.tsx`, `src/components/admin/judging/GroupSettingsSection.tsx`, `src/components/admin/judging/GroupAccessSection.tsx`.
+
+### [Added] - 2026-08-10
+
+**Hackathon skill support for judging groups**
+
+- Judging groups can now power the /hackathon agent skill: a new Hackathon skill section on the admin group page has an enable toggle, shared registration codes (stored uppercase, matched case-insensitively), a markdown rules editor, endpoint URLs for event docs, and a live list of teams that registered through the skill (2026-08-10).
+- New HTTP API at `/api/hackathon/{slug}/...` authenticated by registration code (x-hackathon-code header, Bearer token, or ?code=): `openapi.json` (public discovery), `rules.json` (rules markdown, judging criteria, AI rubric, dates, score scale, submit page path, with ETag/If-None-Match support), `status?url=` (submission lifecycle for a project URL with admin-safe wording), `POST register` (idempotent team registration that returns the rules payload), and `POST check` (deterministic pre-submit check: event window, live URL, hackathon.json manifest fetch and parse, duplicate URL detection; nothing stored, no LLM). Reads are rate limited to 60/min per code and checks to 10/min.
+- Duplicate submission guard: submitting the same project URL twice to one judging group is now rejected in `stories.submit` with a friendly message surfaced on the group submit form. URL comparison normalizes host casing and trailing slashes; hidden or rejected entries free the URL for resubmission.
+- Group submit form supports one-click prefill via query params (`?url=&title=&tagline=&github=`) so the skill can hand developers a prefilled submit link. Convex error messages on the form are now shown clean without the server prefix.
+- Rules staleness tracking: rules edits bump `hackathonRulesUpdatedAt`, and criteria changes are covered by criteria row creation times, so skills refetch only when something changed. AI judge and human judging needed no changes; agent scores stay advisory.
+- **Backend**: `convex/hackathon.ts` (new), `convex/schema.ts` (hackathon fields on `judgingGroups`, new `hackathonRegistrations` table), `convex/http.ts`, `convex/stories.ts`, `convex/judgingGroups.ts`.
+- **Frontend**: `src/components/admin/judging/GroupHackathonSection.tsx` (new), `src/pages/AdminJudgingGroupPage.tsx`, `src/pages/JudgingGroupSubmitPage.tsx`.
+
+### [Added] - 2026-08-10
+
+**Admin activity log**
+
+- New Activity tab in the admin dashboard tracks app activity in one feed: email sends and failures, new submissions (including anonymous), spam actions (mark, unmark, bulk hide, bulk delete, batch scans), judging group create/update/delete, judge scores, moderation actions (approve, reject, hide, show, delete), delegated access grants and revokes, and site settings changes (2026-08-10).
+- Toolbar controls: category filter pills, Active or Archived view, newest or oldest sort, pause and resume logging (paused state shows a banner and drops new entries until resumed), CSV export of the current view (up to 5000 rows), and a confirm-gated clear that deletes the current view in batches.
+- Row actions: select all over loaded entries, bulk archive or restore, bulk delete with confirm, and expandable detail rows showing the action key, target, exact time, and metadata.
+- Works with delegated access: two new permission keys (`activity.view`, `activity.manage`) grantable from the Access tab; viewing needs view, while pause, clear, archive, and delete need manage. Full admins get both automatically.
+- Logging is a single `logActivity` helper wired into existing mutations at choke points; it never throws, so a logging failure can never break a submission or an email send. Background sends log as "System"; judge scores log under the judge's name.
+- **Backend**: `convex/activityLog.ts` (new), `convex/schema.ts`, `convex/adminAccess.ts`, `convex/emails/queries.ts`, `convex/stories.ts`, `convex/spamCheck.ts`, `convex/judgingGroups.ts`, `convex/judgeScores.ts`, `convex/settings.ts`.
+- **Frontend**: `src/components/admin/ActivityLog.tsx` (new), `src/components/admin/AdminDashboard.tsx`, `src/components/admin/AccessManagement.tsx`.
+
+### [Fixed] - 2026-08-10
+
+**Resend component upgrade and email delivery status fix**
+
+- Upgraded the Convex Resend component (`@convex-dev/resend`) from 0.2.5 to 0.2.6, which forwards Resend's message_id from webhook payloads to the onEmailEvent callback (2026-08-10).
+- Fixed email delivery tracking: the custom `/resend-webhook` handler skipped signature verification and matched Resend's message_id against the component email id stored in emailLogs, so statuses never advanced past `sent`. The route now uses the component's `handleResendEventWebhook` (svix signature verified with `RESEND_WEBHOOK_SECRET`) plus a new `onEmailEvent` mutation that updates emailLogs to delivered, bounced, or complained by the matching component email id. Webhook URL unchanged, so no Resend dashboard changes needed.
+- Typed the core send payload (replyTo is now an array per the component's `SendEmailOptions`); admin Email Management flows (test email, broadcast to all, selected users, or tag) confirmed to route through the logged component send path with the global kill switch intact.
+- **Backend**: `convex/sendEmails.ts`, `convex/emails/queries.ts`, `convex/emails/resend.ts`, `convex/http.ts`, `package.json`.
+
+### [Added] - 2026-08-10
+
+**AI spam detection with admin review tab**
+
+- Every new submission is scanned for spam automatically, and admins can batch scan the 100 most recent submissions from a new AI Spam tab in the admin dashboard (2026-08-10).
+- Each scan combines deterministic checks with an AI verdict: live URL check, Firecrawl page scrape, GitHub repo reachability and file count (empty-repo detection), duplicate URL count across submissions, and extra link liveness. The AI (same Anthropic/OpenAI/OpenRouter fallback chain as the AI judge) returns spam, suspicious, or clean with confidence and short reasons; a deterministic heuristic takes over when no AI key is configured.
+- Marking a submission as spam hides it, labels it with the reason, sends the submitter an in-app alert, and emails them the explanation with a reply-to back to the admins (`ADMIN_EMAIL` env var). Unmark reverses everything. Bulk actions: mark as spam with an optional custom reason, hide, and permanent delete (cascades comments, votes, ratings, bookmarks, scan rows, and images).
+- The tab has verdict filters, sorting (newest, oldest, highest confidence), a submission date range filter, select all, live counts, per-row re-scan, and expandable detail rows showing the full AI reasoning and every measured signal. Confirmed spam shows a red badge in the Moderation tab.
+- Setting a date range also scopes the batch scan buttons, so admins can scan or re-scan up to 100 submissions from a specific window instead of only the most recent ones (2026-08-10).
+- The AI system prompt behind the spam verdict is now editable from the tab: an AI prompt button opens an editor showing the active prompt (default or custom badge), saves a custom version to app settings, and offers a confirm-gated reset back to the built-in default. Future scans pick up the change immediately (2026-08-10).
+- Spam notifications now say what happened: the dropdown and notifications page read "Your post has been marked as spam and has been removed" with a check-your-email pointer, and the full page plus the email link to the GitHub issues page for appeals. Spam emails were already behind the global email kill switch in admin settings; only explicit admin test emails bypass it (2026-08-10).
+- Admin Docs tab updated for the new features: the Agent judges page now walks through the full external-agent workflow (three-step setup, both auth header forms, an endpoint table, a POST /scores example payload, the 120 read / 30 write per-minute rate limits, and a 401/403/429 error reference), a new AI spam check page documents scans, signals, the editable prompt, marking flow, the email kill switch, and permissions, and the environment variables page covers spam check usage plus ADMIN_EMAIL (2026-08-10).
+- Spam scans run in their own workpool so batch scans never queue behind the AI judge. Firecrawl now runs through the `@firecrawl/firecrawl-convex` component.
+- **Backend**: `convex/spamCheck.ts` (new), `convex/spamCheckAnalysis.ts` (new), `convex/emails/spam.ts` (new), `convex/schema.ts`, `convex/convex.config.ts`, `convex/stories.ts`, `convex/alerts.ts`, `convex/emails/resend.ts`, `convex/emails/queries.ts`.
+- **Frontend**: `src/components/admin/SpamCheck.tsx` (new), `src/components/admin/AdminDashboard.tsx`, `src/components/admin/ContentModeration.tsx`, `src/pages/NotificationsPage.tsx`.
+
+### [Fixed] - 2026-08-10
+
+**Submission page password bypass and links event kit**
+
+- Fixed a password bypass on judging group submission pages: the page auto-unlocked whenever the group's judge access was public, even with a submission page password set. The password gate now always appears when a submission password exists; pages without one still open directly (2026-08-10).
+- The Links section copy-all and .md download now work as a complete event kit for external organizers: each locked link includes its password inline (judge, submission, results, and AI results pages). Passwords stay out of the on-screen ledger rows; only the admin-gated export includes them.
+- Added a hint in the Shareable links card and markdown export when the custom submission page is off, pointing to the Submit page section to get a shareable participant link.
+- Added a score scale note when the AI judge is on: human judges score 1 to 5 or 1 to 10 per the group setting, while the AI judge always scores 1 to 10.
+- **Backend**: `convex/judgingGroups.ts` (`getGroupWithDetails` now returns `aiResultsPassword`).
+- **Frontend**: `src/pages/JudgingGroupSubmitPage.tsx`, `src/components/admin/judging/GroupLinksSection.tsx`.
+
+### [Added] - 2026-08-09
+
+**Per-group customizable submission forms**
+
+- Judging group submit pages are now fully customizable per group from the Submit page section of the group workspace: show or hide any built-in field or section (tagline, description, website, GitHub, video, screenshot, name, email, tags, team info, additional images, additional links), set each visible field to required or optional, and add custom questions (text, URL, email, or textarea) with label, placeholder, description, and required flag (2026-08-09).
+- The title field is always shown since stories require it. Hiding the tags picker requires a required tag on the group so submissions still route into the group; the server applies that tag as a backstop even if the client omits it. A warning appears when GitHub URL is hidden while the AI judge is enabled since the AI judge reads the repo.
+- Custom question answers are stored on the story as `customFormAnswers` with the question label denormalized, so answers stay readable even if the question is later edited or removed. Judges see the answers in the judging interface next to team info.
+- Existing groups are untouched: no stored visibility config means every field stays visible, and the existing required-field settings keep working exactly as before.
+- Fixed a latent return-validation bug: `baseStoryValidator` was missing `rejectionReason`, `selfReportedHarness`, and `selfReportedModel`, so any story carrying those fields would have failed queries like `listUserStories` and `listApprovedStoriesWithDetails` that spread whole story docs into `storyWithDetailsValidator`.
+- **Backend**: `convex/schema.ts`, `convex/judgingGroups.ts`, `convex/stories.ts`, `convex/judgingGroupSubmissions.ts`, `convex/validators.ts`.
+- **Frontend**: `src/components/admin/judging/GroupSubmitPageSection.tsx`, `src/components/admin/judging/groupSection.tsx`, `src/pages/JudgingGroupSubmitPage.tsx`, `src/pages/JudgingInterfacePage.tsx`.
+
+### [Fixed] - 2026-08-09
+
+**Components check no longer comes back after deletion**
+
+- The Components check preset in the Rubric weights card was rendered as an On/Off toggle pill; after deleting the criterion the row returned in the Off state, and clicking the pill silently re-added it. It is now an explicit "Add to rubric" button labeled "preset, not in rubric", so nothing is added without a deliberate click (2026-08-09).
+- **Frontend**: `src/components/admin/judging/GroupAiSection.tsx`, `src/components/admin/AdminDocs.tsx`.
+
+### [Changed] - 2026-08-09
+
+**AI judge links hide everywhere while the AI judge is disabled**
+
+- The Links ledger lists the AI results page and agent API endpoints only while the AI judge is enabled; disabling it removes them from the ledger and the Copy all / .md export, and the Agent API card explains that no AI judge links exist while the AI judge is off (2026-08-09).
+- The AI judge settings card keeps its "AI judge links" block (AI results page plus agent API OpenAPI document and base URL with copy and open actions), shown only once the AI judge is saved as enabled.
+- **Frontend**: `src/components/admin/judging/GroupLinksSection.tsx`, `src/components/admin/judging/GroupAiSection.tsx`, `src/components/admin/AdminDocs.tsx`.
+
+### [Added] - 2026-08-09
+
+**Search and add submissions from the judging group workspace**
+
+- The Submissions section now opens with an "Add submissions" card: search every site submission by title and add matches to the group one click at a time, the same flow Moderation offers but without needing moderation access (2026-08-09).
+- Results flag apps already in the group, show a pending pill for unapproved apps, and never include hidden, archived, or rejected apps. Added apps go straight into judge queues and the next AI judge run.
+- New `searchStoriesForGroup` query gated by the group's judging.manage permission; adding reuses the existing dedupe-safe `addSubmissions` mutation.
+- **Backend**: `convex/judgingGroupSubmissions.ts`. **Frontend**: `src/components/admin/judging/GroupSubmissionsSection.tsx`, `src/components/admin/AdminDocs.tsx`.
+
+### [Added] - 2026-08-09
+
+**Per-group scoring scale (1-5 or 1-10)**
+
+- Judging groups now have a Scoring scale setting (Settings section of the group workspace): pick 1 to 5 or 1 to 10. Existing groups stay on 1-10 with no migration (2026-08-09).
+- The scale applies everywhere human scores flow: judge interface score buttons and /N labels, score submission validation (judges, admin edits, and external agents via the HTTP API), max possible score math, admin and public results dashboards, and the Judge Tracking edit modal.
+- The AI judge keeps its own fixed 1-10 rubric since it is a separate scoring system.
+- Criteria section cleanup: the embedded Judging Criteria editor no longer shows its own back button and page header; the workspace sidebar handles navigation. Its score preview follows the group scale.
+- Fixed a multi-judge bug where "Judged & Next" never skipped already-completed submissions because it checked a field the progress query does not return.
+- **Backend**: `convex/schema.ts`, `convex/judgingGroups.ts`, `convex/judges.ts`, `convex/judgeScores.ts`, `convex/judgingGroupSubmissions.ts`, `convex/adminJudgeTracking.ts`, `convex/agentJudges.ts`, `convex/http.ts`.
+- **Frontend**: `src/components/admin/judging/GroupSettingsSection.tsx`, `src/pages/JudgingInterfacePage.tsx`, `src/components/admin/JudgingCriteriaEditor.tsx`, `src/pages/AdminJudgingGroupPage.tsx`, `src/components/admin/JudgeTracking.tsx`, `src/components/PublicJudgingResultsDashboard.tsx`, `src/components/admin/JudgingResultsDashboard.tsx`, `src/components/admin/AdminDocs.tsx`.
+
+### [Changed] - 2026-08-09
+
+**Judging group workspace layout polish**
+
+- Collapsible workspace sidebar: a PanelLeft toggle in the group header collapses the sidebar to icon-only mode (labels become tooltips with aria labels) and expands the content area; the preference persists in localStorage across sessions (2026-08-09).
+- Embedded sections dropped their legacy navigation: Judging Results, AI results, and Judge tracking no longer show back arrows or duplicate title headers inside the workspace since the sidebar handles navigation. Judge tracking keeps its header and breadcrumb only on the standalone `/admin/judging/:groupId/tracking` page.
+- Judging Results overview stats are now a compact strip: icons shrunk to 3.5 (from large 8x8 blocks) and moved inline with their labels; empty-state and rankings icons reduced to match.
+- Tighter workspace spacing: narrower sidebar (11rem expanded, 2.5rem collapsed) and reduced gaps between the sidebar and content column.
+- **Frontend**: `src/pages/AdminJudgingGroupPage.tsx`, `src/components/admin/JudgingResultsDashboard.tsx`, `src/components/admin/AIJudgeResults.tsx`, `src/components/admin/JudgeTracking.tsx`.
+
+### [Added] - 2026-08-09
+
+**Judging group AI upgrades, links ledger, and per-group agent API toggle**
+
+- Custom AI criteria per judging group: admins can add up to 10 extra rubric criteria (label, key, description) that the AI judge scores alongside the built-in seven, each with its own weight in the Rubric weights card. Custom criteria are validated for key format and uniqueness, and removing one prunes its saved weight and disabled flag.
+- Per-criterion on/off toggles in the Rubric weights card: every criterion (built-in and custom) can be switched off per group. Off criteria are excluded from the AI prompt, scoring, and rankings on the next run; at least one criterion must stay on, and the weight input dims while a criterion is off (2026-08-09).
+- Components check preset now lives in the Rubric weights card as a toggle row: switching it on immediately adds a repo-verified Convex components criterion (installed vs referenced in code) that then behaves like any other custom criterion (2026-08-09).
+- Editable AI judge system prompt: the AI judge section now shows the effective prompt (default or custom) with edit, paste, save, and a reset-to-default button. Custom prompts support a `{{rubric}}` placeholder that expands to the group's full criterion list; the strict JSON response contract is always appended server side so a custom prompt can never break score parsing.
+- Expanded AI judge context: repo analysis now also reads root-level hackathon log files (`hackathon.md`, `changelog.md`, `task.md`, `files.md`, capped at 5k chars each), detects agent skills under `.agents/skills/`, and fetches an optional `/hackathon.json` manifest from the live app origin, giving private-repo and no-repo teams a self-reported evidence path. The prompt tells the model these are self-reported and must never override verified repo or live-app facts.
+- Per-group agent API toggle: each group can now switch the agent judging HTTP API off. While off, key creation is blocked, all keyed endpoints return 403 with a clear message, and existing keys are kept so re-enabling restores access without re-issuing keys.
+- Inline tag creation in the Required tag picker: the Submit page section now lists all tags including hidden ones (marked "hidden"), and typing a new name shows a "Create tag" row backed by the standard tags.create mutation, so the tag lands in Tag Management with every existing tag feature. New tags default to hidden (kept off story cards, never counted toward the tag limit) via a checkbox and are auto-selected as the group's required tag; creating needs the tags.manage permission (2026-08-09).
+- New Links section in the group workspace: a realtime ledger of every shareable URL (judging interface, results, custom submission page, AI results, agent API endpoints) with lock or globe icons, live "password set / no password set" status, copy and open actions, and notes explaining who can reach each link. Updates instantly when another admin changes a password or visibility toggle.
+- Copy all and markdown export on the links ledger: a "Copy all" button in the Shareable links header copies every link as markdown with its access state (public, password protected, or key required), and a ".md" button downloads the same list as `slug-links.md` for event docs (2026-08-09).
+- In-admin docs expanded: judging groups guide now documents each workspace section with its required permission, the links ledger, per-URL access gates, all AI judge context sources, custom criteria, prompt editing, and the agent API toggle.
+- **Backend**: `convex/schema.ts`, `convex/aiJudge.ts`, `convex/aiJudgeAnalysis.ts`, `convex/agentJudges.ts`, `convex/http.ts`, `convex/judgingGroups.ts`.
+- **Frontend**: `src/components/admin/judging/GroupAiSection.tsx`, `src/components/admin/judging/GroupLinksSection.tsx` (new), `src/pages/AdminJudgingGroupPage.tsx`, `src/components/admin/AdminDocs.tsx`.
+
+### [Fixed] - 2026-08-08
+
+**Custom submission page 404 after enabling, and save buttons in view on long judging cards**
+
+- Enabling the custom submission page now takes effect immediately. Previously the toggle only changed local state while the card showed the live URL, so opening the link before clicking the footer Save returned a 404. The toggle now writes `hasCustomSubmissionPage` through the existing partial-update mutation the moment it is flipped, with rollback and an inline error if the write fails. All other page settings still apply on save.
+- The two long group workspace cards (Custom submission page, AI judge) now show a compact Save button in the card header when expanded, so saving never requires scrolling to the footer. Footer saves are unchanged. Built on a new `headerAction` slot in `SectionCard` and a shared `HeaderSaveButton`.
+- Saving the Submit page section no longer fails when optional fields are blank. `judgingGroups.updateGroup` treats null as "clear this field" but was passing null straight into the patch for the required tag, titles, description, and image, which failed schema validation (`v.optional` rejects null) and aborted the entire save, including layout changes. Null now unsets the field for every nullable arg, matching the existing password and date handling.
+- **Backend**: `convex/judgingGroups.ts`.
+- **Frontend**: `src/components/admin/judging/groupSection.tsx`, `src/components/admin/judging/GroupSubmitPageSection.tsx`, `src/components/admin/judging/GroupAiSection.tsx`.
+
+### [Added] - 2026-08-08
+
+**Custom submission page single column layout**
+
+- Judging group submission pages now support a third layout: Single column. A centered hero (square header image, title, description, and page links as pill buttons) sits above the submission form in a focused, readable column. Selectable from the Submit page section of the group workspace and the legacy edit modal; existing groups keep their current layout.
+- The submission form gained visual structure on every layout: hairline section headings (Project details, Links and media, About you, Tags), a slightly looser field rhythm, a Selected Tags summary card that matches the team info block, and a taller submit button.
+- The header image in single column scales down on narrow screens instead of overflowing at its fixed pixel size.
+- **Backend**: `convex/schema.ts`, `convex/judgingGroups.ts`.
+- **Frontend**: `src/pages/JudgingGroupSubmitPage.tsx`, `src/components/admin/judging/GroupSubmitPageSection.tsx`, `src/components/admin/EditJudgingGroupModal.tsx`.
+
+### [Changed] - 2026-08-08
+
+**Admin judging UI redesign: docs-style group workspace**
+
+- The Judging admin tab is now a compact Linear-style list: one row per judging group with active status dot, public/private lock, submission and judge counts, and creation time. Clicking a row opens a full-page group workspace instead of expanding controls inline. A slim inline stat line (groups, active, submissions, judges) replaces the old stat cards.
+- New group workspace at `/admin/judging/:slug` with a sticky docs-style sidebar (Vercel docs inspired) and `?section=` deep links. Sections: Overview (stats, status toggles, copyable public URLs), Settings (name, description, active, judges per submission, danger zone delete), Access (judge/submission/results passwords with the same blank-keeps-password behavior as before), Criteria, Submissions (auto-include tags and date range, sync, CSV export), Submit page (custom submission page branding, links, required tag, field requirements, header image upload), AI judge (enable, AI results visibility, event window, rubric weights, agent keys), Results, AI results, and Judge tracking.
+- Every section saves independently through the existing `judgingGroups.updateGroup` partial-update mutation, so a save in one panel never touches fields owned by another. Sidebar items are hidden when the caller lacks the mapped delegated permission (`judging.manage`, `judging.results`, `judging.tracking`, `judging.ai`, `judging.delete`); backend guards remain the source of truth.
+- Existing components (`JudgingCriteriaEditor`, `JudgingResultsDashboard`, `AIJudgeResults`, `JudgeTracking`) are embedded unchanged as workspace sections. `EditJudgingGroupModal` is superseded and no longer referenced but stays in the repo; the standalone `/admin/judging/:slug/tracking` route keeps working.
+- Tightened admin dashboard spacing: smaller page padding, tighter header and tab bar, 13px tab labels.
+- **Frontend**: `src/pages/AdminJudgingGroupPage.tsx` (new), `src/components/admin/judging/groupSection.tsx` (new), `src/components/admin/judging/GroupOverviewSection.tsx` (new), `GroupSettingsSection.tsx` (new), `GroupAccessSection.tsx` (new), `GroupSubmissionsSection.tsx` (new), `GroupSubmitPageSection.tsx` (new), `GroupAiSection.tsx` (new), `src/components/admin/Judging.tsx`, `src/components/admin/AdminDashboard.tsx`, `src/App.tsx`.
+
+### [Added] - 2026-08-08
+
+**Tag limits and bulk tag cleanup**
+
+- New configurable tag limits managed from the Tags admin section: max tags per submission (default 6) and max tag name length (default 20 characters). Stored on the settings document and editable by anyone with the `tags.manage` permission via a "Tag limits" card in Tag Management.
+- Server-side enforcement in `stories.submit`, `stories.submitAnonymous`, and `stories.updateOwnStory`: submissions over the tag limit are rejected, and brand-new tag names longer than the length limit are rejected with a clear error. Hidden tags never count toward the limit, so custom forms that auto-attach a hidden tracking tag (resendhackathon, ychackathon, judging group tags) keep working at any limit. Names matching an existing tag skip the length check since no new tag is created.
+- All submission forms (main submit, judging group submit, Resend and YC hackathon forms) now read the limit from settings instead of a hardcoded 10, show the live count against the configured max, disable tag inputs at the limit, and cap the new-tag input with `maxLength` so pasted tag dumps are cut off.
+- Bulk tag cleanup in Tag Management: checkbox per tag row, a select-all-on-page control, and an action bar with Archive, Unarchive, and Delete for all selected tags. Delete uses an inline two-step confirm (site design system, no browser dialogs). Backed by new `bulkSetHidden` (`tags.manage`) and `bulkDeleteTags` (`tags.delete`) mutations that patch/delete in parallel.
+- Existing over-length tags are flagged in Tag Management: any tag whose name exceeds the configured length limit shows a red "(Too long: N chars)" badge, and a "Select all N too-long tags" button selects them all (across pages) so they can be bulk archived, deleted, or renamed. Existing long tags keep working on stories; the limit only blocks new tag creation.
+- **Backend**: `convex/schema.ts`, `convex/settings.ts`, `convex/tags.ts`, `convex/stories.ts`.
+- **Frontend**: `src/components/admin/TagManagement.tsx`, `src/components/StoryForm.tsx`, `src/pages/JudgingGroupSubmitPage.tsx`, `src/components/ResendForm.tsx`, `src/components/YCHackForm.tsx`.
+
+### [Added] - 2026-08-07
+
+**Admin access permissions, judging delegation, and in-admin docs**
+
+- New delegated admin access system: full admins can grant existing users access to specific admin sections (Moderation, Tags, Forms, Judging, Numbers, User Moderation, Emails, Settings) with per-action toggles (view, manage, results, tracking, delete, and so on) without making them full admins in Clerk. Grants live in a new `adminPermissions` Convex table, take effect instantly, and revoke instantly.
+- Judging access is group scoped: a grant lists specific judging groups (or all groups), and every judging backend function verifies the target group is in scope. Organizers can run one hackathon end to end (settings, criteria, submissions, tracking, results, exports, AI runs, agent keys) without seeing any other group or section.
+- New Access tab in /admin (full admins only): user search with avatars, per-section permission cards with action checkboxes and destructive actions highlighted, judging group multi-select or all-groups toggle, summary chips, notes, and a grants list showing who has what, granted by whom and when, with edit and revoke (confirm dialog).
+- Judging group picker in the Access tab has its own search box: filter groups by name or slug, selected groups show as removable chips above the list, active groups sort first, and a selected count keeps the scope visible while filtering.
+- New Docs tab in /admin (full admins and anyone with judging view access): sidebar-nav documentation covering judging groups, criteria and weights, submissions, the judge flow, results and tracking, the AI judge (including its verified GitHub repo reading behavior, limits, and required env vars `GITHUB_TOKEN`, `ANTHROPIC_API_KEY`, fallbacks, optional `FIRECRAWL_API_KEY`), agent judges and their HTTP API, delegated access, and environment variables.
+- The admin dashboard now renders only permitted tabs (delegated users see a "Delegated access" badge), and the Judging list hides create, settings, criteria, results, tracking, AI, export, and delete controls the caller was not granted. Secondary admin routes (Judge Tracking, Form Builder, Form Results) use the same access query.
+- Backend guards migrated from all-or-nothing `requireAdminRole` to granular `requirePermission` / `requireJudgingGroupPermission` across tags, stories, comments, forms, story form fields, submit forms, users, reports, settings, emails, numbers, and every judging file. Full admins (Clerk JWT role) bypass all checks with zero behavior change; the Access management CRUD itself is never delegatable.
+- **Backend**: `convex/schema.ts`, `convex/adminAccess.ts` (new), `convex/users.ts`, `convex/tags.ts`, `convex/stories.ts`, `convex/comments.ts`, `convex/forms.ts`, `convex/storyFormFields.ts`, `convex/submitForms.ts`, `convex/settings.ts`, `convex/reports.ts`, `convex/adminQueries.ts`, `convex/sendEmails.ts`, `convex/emails/broadcast.ts`, `convex/convexBoxConfig.ts`, `convex/judgingGroups.ts`, `convex/judgingCriteria.ts`, `convex/judges.ts`, `convex/judgingGroupSubmissions.ts`, `convex/judgeScores.ts`, `convex/adminJudgeTracking.ts`, `convex/aiJudge.ts`, `convex/agentJudges.ts`.
+- **Frontend**: `src/components/admin/useAdminAccess.tsx` (new), `src/components/admin/AccessManagement.tsx` (new), `src/components/admin/AdminDocs.tsx` (new), `src/components/admin/AdminDashboard.tsx`, `src/components/admin/Judging.tsx`, `src/components/admin/FormBuilder.tsx`, `src/components/admin/FormResults.tsx`, `src/pages/JudgeTrackingPage.tsx`.
+
 ### [Added] - 2026-07-05
 
 **Agent Ready component installed**

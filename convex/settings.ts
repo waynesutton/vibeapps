@@ -6,7 +6,14 @@ import {
 } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { requireAdminRole } from "./users"; // Import requireAdminRole
+import { requirePermission, hasPermission } from "./adminAccess"; // Granular admin permissions
+import { logActivity } from "./activityLog"; // Admin activity log
+import {
+  EMAIL_TYPES,
+  EMAIL_TYPE_DEFAULTS,
+  emailTypeSettingKey,
+  emailTypeValidator,
+} from "./emails/emailTypes";
 
 // Define the type for SortPeriod based on schema/frontend usage
 export type SortPeriodConvex = Doc<"settings">["defaultSortPeriod"]; // Infer from schema
@@ -30,6 +37,9 @@ const DEFAULT_SETTINGS = {
   submissionLimitCount: 10,
   // Hackathon team info settings
   showHackathonTeamInfo: false,
+  // Tag limit settings (managed from Tags admin section)
+  maxTagsPerSubmission: 6,
+  maxTagLength: 20,
 };
 
 // Type for settings data returned by the 'get' query.
@@ -73,6 +83,10 @@ export const get = query({
       showHackathonTeamInfo:
         settingsDoc.showHackathonTeamInfo ??
         DEFAULT_SETTINGS.showHackathonTeamInfo,
+      maxTagsPerSubmission:
+        settingsDoc.maxTagsPerSubmission ??
+        DEFAULT_SETTINGS.maxTagsPerSubmission,
+      maxTagLength: settingsDoc.maxTagLength ?? DEFAULT_SETTINGS.maxTagLength,
     } as SettingsData; // Assert to ensure type compatibility
   },
 });
@@ -81,7 +95,7 @@ export const get = query({
 export const initialize = mutation({
   args: {},
   handler: async (ctx): Promise<Id<"settings"> | null> => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "settings.manage");
     const existing = await ctx.db.query("settings").first();
     if (existing) {
       console.log("Settings already initialized.");
@@ -180,15 +194,25 @@ export const update = mutation({
     submissionLimitCount: v.optional(v.number()),
     // Hackathon team info settings
     showHackathonTeamInfo: v.optional(v.boolean()),
+    // Tag limit settings
+    maxTagsPerSubmission: v.optional(v.number()),
+    maxTagLength: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "settings.manage");
     const settings = await ctx.db.query("settings").first();
     if (!settings) {
       throw new Error("Settings not initialized. Cannot update.");
     }
     await ctx.db.patch(settings._id, args);
+    const changedFields = Object.keys(args);
+    await logActivity(ctx, {
+      category: "settings",
+      action: "settings.updated",
+      message: `Updated site settings (${changedFields.join(", ")})`,
+      metadata: { fields: changedFields },
+    });
   },
 });
 
@@ -200,7 +224,14 @@ export const getBoolean = query({
   returns: v.union(v.null(), v.boolean()),
   handler: async (ctx, args) => {
     // Only allow admins to access app settings
-    await requireAdminRole(ctx);
+    // Readable by anyone with settings or emails access (EmailManagement reads
+    // the emailsEnabled flag through this query).
+    const canRead =
+      (await hasPermission(ctx, "settings.view")) ||
+      (await hasPermission(ctx, "emails.view"));
+    if (!canRead) {
+      throw new Error("Permission required: settings.view or emails.view");
+    }
 
     const row = await ctx.db
       .query("appSettings")
@@ -287,13 +318,74 @@ export const setString = internalMutation({
 });
 
 /**
+ * Effective on/off state for every email type (stored value or default),
+ * so the Email dashboard renders all toggles from one query.
+ */
+export const getEmailTypeSettings = query({
+  args: {},
+  returns: v.record(v.string(), v.boolean()),
+  handler: async (ctx) => {
+    const canRead =
+      (await hasPermission(ctx, "settings.view")) ||
+      (await hasPermission(ctx, "emails.view"));
+    if (!canRead) {
+      throw new Error("Permission required: settings.view or emails.view");
+    }
+
+    const result: Record<string, boolean> = {};
+    for (const emailType of EMAIL_TYPES) {
+      const row = await ctx.db
+        .query("appSettings")
+        .withIndex("by_key", (q) => q.eq("key", emailTypeSettingKey(emailType)))
+        .unique();
+      result[emailType] = row?.valueBoolean ?? EMAIL_TYPE_DEFAULTS[emailType];
+    }
+    return result;
+  },
+});
+
+/**
+ * Turn one email type on or off from the Email dashboard. The global
+ * emailsEnabled master switch still wins when it is off.
+ */
+export const setEmailTypeEnabled = mutation({
+  args: { emailType: emailTypeValidator, enabled: v.boolean() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "emails.send");
+
+    const key = emailTypeSettingKey(args.emailType);
+    const existing = await ctx.db
+      .query("appSettings")
+      .withIndex("by_key", (q) => q.eq("key", key))
+      .unique();
+    if (existing) {
+      await ctx.db.patch(existing._id, { valueBoolean: args.enabled });
+    } else {
+      await ctx.db.insert("appSettings", {
+        key,
+        valueBoolean: args.enabled,
+      });
+    }
+
+    await logActivity(ctx, {
+      category: "settings",
+      action: "settings.emailTypeToggled",
+      message: `${args.emailType.replace(/_/g, " ")} emails ${args.enabled ? "enabled" : "disabled"}`,
+      metadata: { emailType: args.emailType, enabled: args.enabled },
+    });
+    return null;
+  },
+});
+
+/**
  * Admin mutation to toggle global email sending
  */
 export const toggleEmails = mutation({
   args: {},
   returns: v.null(),
   handler: async (ctx) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "emails.send");
 
     const existing = await ctx.db
       .query("appSettings")
@@ -313,6 +405,11 @@ export const toggleEmails = mutation({
     }
 
     console.log(`Admin toggled emails: ${newValue ? "enabled" : "disabled"}`);
+    await logActivity(ctx, {
+      category: "settings",
+      action: "settings.emailsToggled",
+      message: `Global email sending ${newValue ? "enabled" : "disabled"}`,
+    });
     return null;
   },
 });

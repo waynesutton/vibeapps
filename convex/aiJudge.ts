@@ -7,12 +7,19 @@ import {
 } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { internal } from "./_generated/api";
-import { requireAdminRole, isUserAdmin, getAuthenticatedUserId } from "./users";
+import { internal, components } from "./_generated/api";
+import { Workpool } from "@convex-dev/workpool";
+import { isUserAdmin, getAuthenticatedUserId } from "./users";
+import { requireJudgingGroupPermission } from "./adminAccess";
 import { verifyPassword } from "./judgingGroups";
 
-// Fixed "Best Use of Convex" rubric. Not admin-editable; shared with the
-// analysis action so prompts and stored results always use the same keys.
+// Analyses run through a workpool with limited parallelism: faster than the
+// old one-at-a-time scheduler chain while staying inside GitHub rate limits.
+const aiJudgePool = new Workpool(components.workpool, { maxParallelism: 4 });
+
+// Built-in "Best Use of Convex" rubric. Shared with the analysis action so
+// prompts and stored results always use the same keys. Groups can append
+// their own criteria via aiCustomCriteria (see getRubricForGroup).
 export const AI_JUDGE_RUBRIC: Array<{ key: string; label: string; description: string }> = [
   {
     key: "schema",
@@ -52,6 +59,56 @@ export const AI_JUDGE_RUBRIC: Array<{ key: string; label: string; description: s
   },
 ];
 
+export type RubricCriterion = { key: string; label: string; description: string };
+
+// Effective rubric for a group: the built-in six plus any admin-defined
+// custom criteria, minus any criteria the admin switched off. Used by the
+// analysis action, weight validation, and the prompt editor so every
+// consumer sees the same keys. If somehow every key is disabled, the full
+// list is used so an analysis can never run with an empty rubric.
+export function getRubricForGroup(group: {
+  aiCustomCriteria?: Array<RubricCriterion>;
+  aiDisabledCriteria?: Array<string>;
+}): Array<RubricCriterion> {
+  const all = [...AI_JUDGE_RUBRIC, ...(group.aiCustomCriteria ?? [])];
+  const disabled = new Set(group.aiDisabledCriteria ?? []);
+  if (disabled.size === 0) return all;
+  const enabled = all.filter((c) => !disabled.has(c.key));
+  return enabled.length > 0 ? enabled : all;
+}
+
+// Default AI judge system prompt body. {{rubric}} expands to the numbered
+// criteria list at analysis time. The JSON response contract is ALWAYS
+// appended by the analysis action and is never part of the editable body,
+// so custom prompts cannot break response parsing.
+export const DEFAULT_AI_JUDGE_PROMPT_BODY = `You are an expert judge evaluating hackathon submissions for "Best Use of Convex".
+
+Convex is the open source reactive database where queries are TypeScript code running in the database. Key Convex concepts: schema definitions with validators and indexes in convex/schema.ts, query/mutation/action functions in the convex/ directory, real-time subscriptions via useQuery in React, the scheduler and cron jobs, file storage, full-text and vector search, HTTP actions, and Convex components (installed via convex.config.ts).
+
+Score the submission on each rubric criterion from 1 to 10:
+{{rubric}}
+
+Scoring guidelines:
+- 1-3: Little to no meaningful Convex usage for this criterion
+- 4-6: Basic usage, meets expectations
+- 7-8: Strong usage, exceeds expectations
+- 9-10: Exceptional, deep and idiomatic Convex usage
+
+Rules:
+- The VERIFIED CONVEX FACTS section contains counts measured directly from the repository by a deterministic scanner. These facts are authoritative. Never contradict them: never claim a feature exists when the facts say it is absent, never claim a feature is missing when the facts say it is present, and never state different counts. Your job is to judge the QUALITY and idiomatic depth of what the facts show, not to decide whether it exists.
+- Base scores primarily on the GitHub repository code when available. The live site scrape and description are secondary signals.
+- If the repository was not accessible, say so in your reasoning and score conservatively from the remaining evidence.
+- For the "liveness" criterion, use the LIVE URL CHECK facts provided: if the URL is dead, 404, or missing, score it 1-2 and state the observed status in your reasoning; if it is live, score it 5-10 based on how functional the scraped content suggests the app is. This criterion only reflects the live app URL, never social or video links.
+- If the live URL is dead, 404, or missing, also flag that fact explicitly in overallReasoning. Do NOT lower the other five Convex criteria because of it; the ranking should stay mostly about Convex usage.
+- Convex components: only components listed as USED IN CODE (referenced via components.<name> in source) count toward the "advanced" score. Components that are installed in package.json or convex.config.ts but never referenced in code earn NOTHING; do not raise any score for them. A submission that uses one or more components well should generally score 7 or higher on "advanced", and thoughtful multi-component usage can justify 9-10. Name each used component in your "advanced" reasoning.
+- The GIT HISTORY section (when present) is context about the build timeline. It is informational; do not add or remove points for commit counts or timeline shape on their own.
+- The PROJECT LOG FILES and PUBLISHED HACKATHON MANIFEST sections (when present) are self-reported by the team: hackathon logs, changelogs, task lists, and the published manifest. Use them as context for what was built and when, but the VERIFIED CONVEX FACTS always win over self-reported claims. If the manifest claims components or features the facts do not show, note the gap in your reasoning.
+- Be specific in reasoning: name actual files, functions, tables, or features you observed.`;
+
+// Limits for admin-editable AI settings
+const MAX_PROMPT_LENGTH = 20000;
+const MAX_CUSTOM_CRITERIA = 10;
+
 // Shared validator for a criteria score row
 const criteriaScoreValidator = v.object({
   key: v.string(),
@@ -67,6 +124,79 @@ const urlCheckValidator = v.object({
   statusCode: v.optional(v.number()),
   note: v.string(),
 });
+
+// Shared validator for deterministic repo facts (mirrors schema.ts)
+export const repoFactsValidator = v.object({
+  convexFileCount: v.number(),
+  hasSchema: v.boolean(),
+  hasHttpRouter: v.boolean(),
+  hasCrons: v.boolean(),
+  hasConvexConfig: v.boolean(),
+  tableCount: v.number(),
+  indexCount: v.number(),
+  searchIndexCount: v.number(),
+  vectorIndexCount: v.number(),
+  queryCount: v.number(),
+  mutationCount: v.number(),
+  actionCount: v.number(),
+  httpActionCount: v.number(),
+  usesScheduler: v.boolean(),
+  usesStorage: v.boolean(),
+  usesVectorSearch: v.boolean(),
+  usesAuth: v.boolean(),
+  usesPagination: v.boolean(),
+  returnsValidatorCount: v.number(),
+});
+
+// Shared validator for git history facts (mirrors schema.ts)
+export const gitFactsValidator = v.object({
+  firstCommitAt: v.optional(v.number()),
+  lastCommitAt: v.optional(v.number()),
+  commitCount: v.number(),
+  commitCountCapped: v.boolean(),
+  activeDayCount: v.number(),
+  contributorCount: v.number(),
+  builtDuringEvent: v.union(
+    v.literal("in_window"),
+    v.literal("started_before"),
+    v.literal("no_window_set"),
+  ),
+  repoCreatedAt: v.optional(v.number()),
+  isFork: v.boolean(),
+  parentRepo: v.optional(v.string()),
+});
+
+// Shared validator for harness attribution signals (mirrors schema.ts).
+// Metadata only: never used in scoring.
+export const harnessSignalValidator = v.object({
+  tool: v.string(),
+  source: v.union(v.literal("commit_trailer"), v.literal("config_file")),
+  evidence: v.string(),
+  confidence: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
+});
+
+const repoAccessValidator = v.union(
+  v.literal("public"),
+  v.literal("private_or_missing"),
+);
+
+// Weighted score derived from stored criteriaScores plus the group's current
+// aiRubricWeights. Never stored: weight edits and admin score edits both stay
+// consistent because every read recomputes.
+export function computeWeightedScore(
+  criteriaScores:
+    | Array<{ key: string; score: number }>
+    | undefined,
+  weights: Array<{ key: string; weight: number }> | undefined,
+): number | undefined {
+  if (!criteriaScores || criteriaScores.length === 0) return undefined;
+  const weightByKey = new Map((weights ?? []).map((w) => [w.key, w.weight]));
+  const total = criteriaScores.reduce(
+    (sum, cs) => sum + cs.score * (weightByKey.get(cs.key) ?? 1),
+    0,
+  );
+  return Math.round(total * 100) / 100;
+}
 
 // Shared validator for a fully-shaped AI result returned to clients
 const aiResultValidator = v.object({
@@ -86,11 +216,20 @@ const aiResultValidator = v.object({
   criteriaScores: v.optional(v.array(criteriaScoreValidator)),
   totalScore: v.optional(v.number()),
   averageScore: v.optional(v.number()),
+  weightedScore: v.optional(v.number()), // Derived from group weights, never stored
   overallReasoning: v.optional(v.string()),
   convexFeaturesDetected: v.optional(v.array(v.string())),
-  componentsDetected: v.optional(v.array(v.string())),
-  provider: v.optional(v.string()),
-  model: v.optional(v.string()),
+  componentsDetected: v.optional(v.array(v.string())), // Installed
+  componentsUsed: v.optional(v.array(v.string())), // Referenced in code
+  judgeProvider: v.optional(v.string()),
+  judgeModel: v.optional(v.string()),
+  repoFacts: v.optional(repoFactsValidator),
+  gitFacts: v.optional(gitFactsValidator),
+  harnessSignals: v.optional(v.array(harnessSignalValidator)),
+  repoAccess: v.optional(repoAccessValidator),
+  // Self-reported by the submitter, unverified; kept separate from detected signals
+  selfReportedHarness: v.optional(v.string()),
+  selfReportedModel: v.optional(v.string()),
   error: v.optional(v.string()),
   sourcesUsed: v.optional(
     v.object({ github: v.boolean(), liveUrl: v.boolean() }),
@@ -108,8 +247,13 @@ function isStoryValidForJudging(story: Doc<"stories"> | null): story is Doc<"sto
   return true;
 }
 
-// Enrich AI result rows with story metadata, dropping rows whose story is gone/invalid
-async function enrichResults(ctx: QueryCtx, results: Array<Doc<"aiJudgeResults">>) {
+// Enrich AI result rows with story metadata, dropping rows whose story is gone/invalid.
+// weightedScore is derived here from the group's current rubric weights.
+async function enrichResults(
+  ctx: QueryCtx,
+  results: Array<Doc<"aiJudgeResults">>,
+  weights: Array<{ key: string; weight: number }> | undefined,
+) {
   const enriched: Array<{
     _id: Id<"aiJudgeResults">;
     _creationTime: number;
@@ -122,11 +266,19 @@ async function enrichResults(ctx: QueryCtx, results: Array<Doc<"aiJudgeResults">
     criteriaScores?: Array<{ key: string; label: string; score: number; reasoning: string }>;
     totalScore?: number;
     averageScore?: number;
+    weightedScore?: number;
     overallReasoning?: string;
     convexFeaturesDetected?: Array<string>;
     componentsDetected?: Array<string>;
-    provider?: string;
-    model?: string;
+    componentsUsed?: Array<string>;
+    judgeProvider?: string;
+    judgeModel?: string;
+    repoFacts?: Doc<"aiJudgeResults">["repoFacts"];
+    gitFacts?: Doc<"aiJudgeResults">["gitFacts"];
+    harnessSignals?: Doc<"aiJudgeResults">["harnessSignals"];
+    repoAccess?: "public" | "private_or_missing";
+    selfReportedHarness?: string;
+    selfReportedModel?: string;
     error?: string;
     sourcesUsed?: { github: boolean; liveUrl: boolean };
     urlCheck?: {
@@ -153,11 +305,20 @@ async function enrichResults(ctx: QueryCtx, results: Array<Doc<"aiJudgeResults">
       criteriaScores: result.criteriaScores,
       totalScore: result.totalScore,
       averageScore: result.averageScore,
+      weightedScore: computeWeightedScore(result.criteriaScores, weights),
       overallReasoning: result.overallReasoning,
       convexFeaturesDetected: result.convexFeaturesDetected,
       componentsDetected: result.componentsDetected,
-      provider: result.provider,
-      model: result.model,
+      componentsUsed: result.componentsUsed,
+      // Fall back to the deprecated fields for rows the backfill has not reached
+      judgeProvider: result.judgeProvider ?? result.provider,
+      judgeModel: result.judgeModel ?? result.model,
+      repoFacts: result.repoFacts,
+      gitFacts: result.gitFacts,
+      harnessSignals: result.harnessSignals,
+      repoAccess: result.repoAccess,
+      selfReportedHarness: story.selfReportedHarness,
+      selfReportedModel: story.selfReportedModel,
       error: result.error,
       sourcesUsed: result.sourcesUsed,
       urlCheck: result.urlCheck,
@@ -165,8 +326,22 @@ async function enrichResults(ctx: QueryCtx, results: Array<Doc<"aiJudgeResults">
     });
   }
 
-  // Rank completed results first by total score desc, then pending/running/failed
-  enriched.sort((a, b) => (b.totalScore ?? -1) - (a.totalScore ?? -1));
+  // Rank on weightedScore (equals totalScore when all weights are 1) with
+  // deterministic tiebreaks: components used, then depth score, then earliest
+  // submission first
+  const depthScore = (r: (typeof enriched)[number]) =>
+    r.criteriaScores?.find((cs) => cs.key === "depth")?.score ?? 0;
+  enriched.sort((a, b) => {
+    const scoreDiff =
+      (b.weightedScore ?? b.totalScore ?? -1) - (a.weightedScore ?? a.totalScore ?? -1);
+    if (scoreDiff !== 0) return scoreDiff;
+    const componentDiff =
+      (b.componentsUsed?.length ?? 0) - (a.componentsUsed?.length ?? 0);
+    if (componentDiff !== 0) return componentDiff;
+    const depthDiff = depthScore(b) - depthScore(a);
+    if (depthDiff !== 0) return depthDiff;
+    return a._creationTime - b._creationTime;
+  });
   return enriched;
 }
 
@@ -174,14 +349,14 @@ async function enrichResults(ctx: QueryCtx, results: Array<Doc<"aiJudgeResults">
 
 /**
  * Start (or re-run) the AI review for a judging group.
- * Upserts pending result rows for every valid submission, then schedules the
- * first analysis action. Analyses run sequentially via a scheduler chain.
+ * Upserts pending result rows for every valid submission, then enqueues every
+ * analysis into the AI judge workpool (maxParallelism 4).
  */
 export const startReview = mutation({
   args: { groupId: v.id("judgingGroups") },
   returns: v.object({ queued: v.number() }),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.ai");
 
     const group = await ctx.db.get(args.groupId);
     if (!group) {
@@ -207,7 +382,7 @@ export const startReview = mutation({
 
     const existingByStory = new Map(existingResults.map((r) => [r.storyId, r]));
 
-    let queued = 0;
+    const pendingIds: Array<Id<"aiJudgeResults">> = [];
     for (const submission of submissions) {
       const story = await ctx.db.get(submission.storyId);
       if (!isStoryValidForJudging(story)) continue;
@@ -218,34 +393,31 @@ export const startReview = mutation({
           status: "pending" as const,
           error: undefined,
         });
+        pendingIds.push(existing._id);
       } else {
-        await ctx.db.insert("aiJudgeResults", {
+        const newId = await ctx.db.insert("aiJudgeResults", {
           groupId: args.groupId,
           storyId: submission.storyId,
           status: "pending" as const,
         });
+        pendingIds.push(newId);
       }
-      queued++;
     }
 
-    if (queued === 0) {
+    if (pendingIds.length === 0) {
       throw new Error("This judging group has no submissions to review");
     }
 
-    // Kick off the sequential chain with the first pending row
-    const firstPending = await ctx.db
-      .query("aiJudgeResults")
-      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
-      .collect()
-      .then((rows) => rows.find((r) => r.status === "pending"));
-
-    if (firstPending) {
-      await ctx.scheduler.runAfter(0, internal.aiJudgeAnalysis.analyzeSubmission, {
-        resultId: firstPending._id,
-      });
+    // Enqueue every analysis; the workpool runs at most 4 in parallel
+    for (const resultId of pendingIds) {
+      await aiJudgePool.enqueueAction(
+        ctx,
+        internal.aiJudgeAnalysis.analyzeSubmission,
+        { resultId },
+      );
     }
 
-    return { queued };
+    return { queued: pendingIds.length };
   },
 });
 
@@ -256,12 +428,11 @@ export const retrySubmission = mutation({
   args: { resultId: v.id("aiJudgeResults") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
-
     const result = await ctx.db.get(args.resultId);
     if (!result) {
       throw new Error("AI result not found");
     }
+    await requireJudgingGroupPermission(ctx, result.groupId, "judging.ai");
     if (result.status === "running") {
       throw new Error("This submission is currently being reviewed");
     }
@@ -270,10 +441,239 @@ export const retrySubmission = mutation({
       status: "pending" as const,
       error: undefined,
     });
-    await ctx.scheduler.runAfter(0, internal.aiJudgeAnalysis.analyzeSubmission, {
+    await aiJudgePool.enqueueAction(ctx, internal.aiJudgeAnalysis.analyzeSubmission, {
       resultId: args.resultId,
     });
     return null;
+  },
+});
+
+/**
+ * Admin: set per-criterion weights for this group's AI rubric. Weighted
+ * scores are derived at read time, so changing weights re-ranks immediately
+ * without re-running any review.
+ */
+export const updateAiRubricWeights = mutation({
+  args: {
+    groupId: v.id("judgingGroups"),
+    weights: v.optional(
+      v.array(v.object({ key: v.string(), weight: v.number() })),
+    ),
+    // Rubric keys switched off for this group. Omitted = leave unchanged;
+    // empty array = enable everything.
+    disabledKeys: v.optional(v.array(v.string())),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.ai");
+
+    const group = await ctx.db.get(args.groupId);
+    if (!group) {
+      throw new Error("Judging group not found");
+    }
+
+    // Validate against the full rubric (built-in + custom, ignoring the
+    // disabled filter) so weights for currently-disabled keys stay valid
+    const allKeys = new Set([
+      ...AI_JUDGE_RUBRIC.map((c) => c.key),
+      ...(group.aiCustomCriteria ?? []).map((c) => c.key),
+    ]);
+
+    if (args.weights !== undefined) {
+      const seen = new Set<string>();
+      for (const entry of args.weights) {
+        if (!allKeys.has(entry.key)) {
+          throw new Error(`Unknown rubric key "${entry.key}"`);
+        }
+        if (seen.has(entry.key)) {
+          throw new Error(`Duplicate rubric key "${entry.key}"`);
+        }
+        seen.add(entry.key);
+        if (!Number.isFinite(entry.weight) || entry.weight < 0 || entry.weight > 10) {
+          throw new Error("Weights must be numbers between 0 and 10");
+        }
+      }
+    }
+
+    const patch: {
+      aiRubricWeights: typeof args.weights;
+      aiDisabledCriteria?: Array<string> | undefined;
+    } = { aiRubricWeights: args.weights };
+
+    if (args.disabledKeys !== undefined) {
+      const disabled = new Set<string>();
+      for (const key of args.disabledKeys) {
+        if (!allKeys.has(key)) {
+          throw new Error(`Unknown rubric key "${key}"`);
+        }
+        disabled.add(key);
+      }
+      if (disabled.size >= allKeys.size) {
+        throw new Error("At least one rubric criterion must stay enabled");
+      }
+      patch.aiDisabledCriteria = disabled.size > 0 ? [...disabled] : undefined;
+    }
+
+    await ctx.db.patch(args.groupId, patch);
+    return null;
+  },
+});
+
+/**
+ * Admin: set the group's custom AI rubric criteria (appended to the built-in
+ * six). Keys are lowercase slugs, unique, and must not clash with built-in
+ * keys. Stale rubric weights for removed criteria are pruned. Existing
+ * results keep their stored scores; a re-run picks up the new rubric.
+ */
+export const updateAiCustomCriteria = mutation({
+  args: {
+    groupId: v.id("judgingGroups"),
+    criteria: v.optional(
+      v.array(
+        v.object({
+          key: v.string(),
+          label: v.string(),
+          description: v.string(),
+        }),
+      ),
+    ),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.ai");
+
+    const group = await ctx.db.get(args.groupId);
+    if (!group) {
+      throw new Error("Judging group not found");
+    }
+
+    const criteria =
+      args.criteria && args.criteria.length > 0 ? args.criteria : undefined;
+
+    if (criteria) {
+      if (criteria.length > MAX_CUSTOM_CRITERIA) {
+        throw new Error(`At most ${MAX_CUSTOM_CRITERIA} custom criteria are allowed`);
+      }
+      const builtInKeys = new Set(AI_JUDGE_RUBRIC.map((c) => c.key));
+      const seen = new Set<string>();
+      for (const criterion of criteria) {
+        if (!/^[a-z0-9][a-z0-9-]{1,39}$/.test(criterion.key)) {
+          throw new Error(
+            `Criterion key "${criterion.key}" must be a lowercase slug (letters, numbers, dashes, 2-40 chars)`,
+          );
+        }
+        if (builtInKeys.has(criterion.key)) {
+          throw new Error(
+            `Criterion key "${criterion.key}" clashes with a built-in rubric key`,
+          );
+        }
+        if (seen.has(criterion.key)) {
+          throw new Error(`Duplicate criterion key "${criterion.key}"`);
+        }
+        seen.add(criterion.key);
+        if (criterion.label.trim().length < 2 || criterion.label.length > 100) {
+          throw new Error("Criterion labels must be 2-100 characters");
+        }
+        if (
+          criterion.description.trim().length < 10 ||
+          criterion.description.length > 1000
+        ) {
+          throw new Error("Criterion descriptions must be 10-1000 characters");
+        }
+      }
+    }
+
+    // Prune weights and disabled flags whose key is no longer part of the
+    // effective rubric
+    const validKeys = new Set([
+      ...AI_JUDGE_RUBRIC.map((c) => c.key),
+      ...(criteria ?? []).map((c) => c.key),
+    ]);
+    const prunedWeights = (group.aiRubricWeights ?? []).filter((w) =>
+      validKeys.has(w.key),
+    );
+    const prunedDisabled = (group.aiDisabledCriteria ?? []).filter((key) =>
+      validKeys.has(key),
+    );
+
+    await ctx.db.patch(args.groupId, {
+      aiCustomCriteria: criteria,
+      aiRubricWeights: prunedWeights.length > 0 ? prunedWeights : undefined,
+      aiDisabledCriteria: prunedDisabled.length > 0 ? prunedDisabled : undefined,
+    });
+    return null;
+  },
+});
+
+/**
+ * Admin: set or reset the group's AI judge system prompt body. Null or an
+ * empty string resets to the built-in default. The JSON response contract
+ * is always appended at analysis time and is not editable here.
+ */
+export const updateAiSystemPrompt = mutation({
+  args: {
+    groupId: v.id("judgingGroups"),
+    prompt: v.union(v.string(), v.null()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.ai");
+
+    const trimmed = args.prompt?.trim() ?? "";
+    if (trimmed.length > MAX_PROMPT_LENGTH) {
+      throw new Error(
+        `System prompt is too long (max ${MAX_PROMPT_LENGTH} characters)`,
+      );
+    }
+
+    // Saving the unchanged default (or clearing) resets to the built-in prompt
+    const custom =
+      trimmed.length === 0 || trimmed === DEFAULT_AI_JUDGE_PROMPT_BODY.trim()
+        ? undefined
+        : trimmed;
+
+    await ctx.db.patch(args.groupId, { aiJudgeSystemPrompt: custom });
+    return null;
+  },
+});
+
+/**
+ * Admin: prompt editor data. Returns the built-in default body, the group's
+ * custom body (if any), and the effective rubric the {{rubric}} placeholder
+ * expands to.
+ */
+export const getAiPromptConfig = query({
+  args: { groupId: v.id("judgingGroups") },
+  returns: v.union(
+    v.null(),
+    v.object({
+      defaultPrompt: v.string(),
+      customPrompt: v.optional(v.string()),
+      rubric: v.array(
+        v.object({
+          key: v.string(),
+          label: v.string(),
+          description: v.string(),
+          builtIn: v.boolean(),
+        }),
+      ),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.ai");
+
+    const group = await ctx.db.get(args.groupId);
+    if (!group) return null;
+
+    const builtInKeys = new Set(AI_JUDGE_RUBRIC.map((c) => c.key));
+    return {
+      defaultPrompt: DEFAULT_AI_JUDGE_PROMPT_BODY,
+      customPrompt: group.aiJudgeSystemPrompt,
+      rubric: getRubricForGroup(group).map((c) => ({
+        ...c,
+        builtIn: builtInKeys.has(c.key),
+      })),
+    };
   },
 });
 
@@ -288,7 +688,15 @@ export const updateResultScore = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    const existingResult = await ctx.db.get(args.resultId);
+    if (!existingResult) {
+      throw new Error("AI result not found");
+    }
+    await requireJudgingGroupPermission(
+      ctx,
+      existingResult.groupId,
+      "judging.ai",
+    );
     const userId = await getAuthenticatedUserId(ctx);
 
     for (const cs of args.criteriaScores) {
@@ -332,21 +740,25 @@ export const getGroupAiResults = query({
       completed: v.number(),
       failed: v.number(),
     }),
+    weights: v.optional(
+      v.array(v.object({ key: v.string(), weight: v.number() })),
+    ),
   }),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.ai");
 
+    const group = await ctx.db.get(args.groupId);
     const rows = await ctx.db
       .query("aiJudgeResults")
       .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
       .collect();
 
-    const results = await enrichResults(ctx, rows);
+    const results = await enrichResults(ctx, rows, group?.aiRubricWeights);
     const counts = { pending: 0, running: 0, completed: 0, failed: 0 };
     for (const r of results) {
       counts[r.status]++;
     }
-    return { results, counts };
+    return { results, counts, weights: group?.aiRubricWeights };
   },
 });
 
@@ -385,9 +797,17 @@ export const getGroupAiReportData = query({
           criteriaScores: v.optional(v.array(criteriaScoreValidator)),
           totalScore: v.optional(v.number()),
           averageScore: v.optional(v.number()),
+          weightedScore: v.optional(v.number()),
           overallReasoning: v.optional(v.string()),
           convexFeaturesDetected: v.optional(v.array(v.string())),
           componentsDetected: v.optional(v.array(v.string())),
+          componentsUsed: v.optional(v.array(v.string())),
+          repoFacts: v.optional(repoFactsValidator),
+          gitFacts: v.optional(gitFactsValidator),
+          harnessSignals: v.optional(v.array(harnessSignalValidator)),
+          repoAccess: v.optional(repoAccessValidator),
+          selfReportedHarness: v.optional(v.string()),
+          selfReportedModel: v.optional(v.string()),
           urlCheck: v.optional(urlCheckValidator),
           sourcesUsed: v.optional(
             v.object({ github: v.boolean(), liveUrl: v.boolean() }),
@@ -398,7 +818,7 @@ export const getGroupAiReportData = query({
     }),
   ),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.ai");
 
     const group = await ctx.db.get(args.groupId);
     if (!group || !group.aiJudgeEnabled) return null;
@@ -427,9 +847,17 @@ export const getGroupAiReportData = query({
       }>;
       totalScore?: number;
       averageScore?: number;
+      weightedScore?: number;
       overallReasoning?: string;
       convexFeaturesDetected?: Array<string>;
       componentsDetected?: Array<string>;
+      componentsUsed?: Array<string>;
+      repoFacts?: Doc<"aiJudgeResults">["repoFacts"];
+      gitFacts?: Doc<"aiJudgeResults">["gitFacts"];
+      harnessSignals?: Doc<"aiJudgeResults">["harnessSignals"];
+      repoAccess?: "public" | "private_or_missing";
+      selfReportedHarness?: string;
+      selfReportedModel?: string;
       urlCheck?: {
         checkedUrl?: string;
         isLive: boolean;
@@ -457,17 +885,29 @@ export const getGroupAiReportData = query({
         criteriaScores: row.criteriaScores,
         totalScore: row.totalScore,
         averageScore: row.averageScore,
+        weightedScore: computeWeightedScore(row.criteriaScores, group.aiRubricWeights),
         overallReasoning: row.overallReasoning,
         convexFeaturesDetected: row.convexFeaturesDetected,
         componentsDetected: row.componentsDetected,
+        componentsUsed: row.componentsUsed,
+        repoFacts: row.repoFacts,
+        gitFacts: row.gitFacts,
+        harnessSignals: row.harnessSignals,
+        repoAccess: row.repoAccess,
+        selfReportedHarness: story.selfReportedHarness,
+        selfReportedModel: story.selfReportedModel,
         urlCheck: row.urlCheck,
         sourcesUsed: row.sourcesUsed,
         error: row.error,
       });
     }
 
-    // Completed first by score, then the rest
-    submissions.sort((a, b) => (b.totalScore ?? -1) - (a.totalScore ?? -1));
+    // Completed first by weighted score (falls back to total), then the rest
+    submissions.sort(
+      (a, b) =>
+        (b.weightedScore ?? b.totalScore ?? -1) -
+        (a.weightedScore ?? a.totalScore ?? -1),
+    );
 
     return {
       groupName: group.name,
@@ -502,6 +942,22 @@ export const getSubmissionForAnalysis = internalQuery({
     v.object({
       groupId: v.id("judgingGroups"),
       groupName: v.string(),
+      // Event window for builtDuringEvent (avoids a second query in the action)
+      eventStartDate: v.optional(v.number()),
+      eventEndDate: v.optional(v.number()),
+      // Custom prompt body, extra criteria, and disabled keys for this
+      // group's AI judge
+      aiJudgeSystemPrompt: v.optional(v.string()),
+      aiCustomCriteria: v.optional(
+        v.array(
+          v.object({
+            key: v.string(),
+            label: v.string(),
+            description: v.string(),
+          }),
+        ),
+      ),
+      aiDisabledCriteria: v.optional(v.array(v.string())),
       storyId: v.id("stories"),
       title: v.string(),
       description: v.string(),
@@ -529,6 +985,11 @@ export const getSubmissionForAnalysis = internalQuery({
     return {
       groupId: result.groupId,
       groupName: group.name,
+      eventStartDate: group.startDate,
+      eventEndDate: group.endDate,
+      aiJudgeSystemPrompt: group.aiJudgeSystemPrompt,
+      aiCustomCriteria: group.aiCustomCriteria,
+      aiDisabledCriteria: group.aiDisabledCriteria,
       storyId: result.storyId,
       title: story.title,
       description: story.description,
@@ -542,8 +1003,8 @@ export const getSubmissionForAnalysis = internalQuery({
 });
 
 /**
- * Save an analysis outcome (success or failure) and schedule the next pending
- * submission in the group so the chain continues.
+ * Save an analysis outcome (success or failure). Analyses run through the
+ * workpool, so no chain scheduling happens here.
  */
 export const saveResult = internalMutation({
   args: {
@@ -555,8 +1016,13 @@ export const saveResult = internalMutation({
         overallReasoning: v.string(),
         convexFeaturesDetected: v.array(v.string()),
         componentsDetected: v.optional(v.array(v.string())),
-        provider: v.string(),
-        model: v.string(),
+        componentsUsed: v.optional(v.array(v.string())),
+        repoFacts: v.optional(repoFactsValidator),
+        gitFacts: v.optional(gitFactsValidator),
+        harnessSignals: v.optional(v.array(harnessSignalValidator)),
+        repoAccess: v.optional(repoAccessValidator),
+        judgeProvider: v.string(),
+        judgeModel: v.string(),
         sourcesUsed: v.object({ github: v.boolean(), liveUrl: v.boolean() }),
         urlCheck: v.optional(urlCheckValidator),
       }),
@@ -588,8 +1054,16 @@ export const saveResult = internalMutation({
         overallReasoning: args.outcome.overallReasoning,
         convexFeaturesDetected: args.outcome.convexFeaturesDetected,
         componentsDetected: args.outcome.componentsDetected,
-        provider: args.outcome.provider,
-        model: args.outcome.model,
+        componentsUsed: args.outcome.componentsUsed,
+        repoFacts: args.outcome.repoFacts,
+        gitFacts: args.outcome.gitFacts,
+        harnessSignals: args.outcome.harnessSignals,
+        repoAccess: args.outcome.repoAccess,
+        // New field names only; deprecated provider/model are no longer written
+        judgeProvider: args.outcome.judgeProvider,
+        judgeModel: args.outcome.judgeModel,
+        provider: undefined,
+        model: undefined,
         sourcesUsed: args.outcome.sourcesUsed,
         urlCheck: args.outcome.urlCheck,
         error: undefined,
@@ -600,19 +1074,6 @@ export const saveResult = internalMutation({
       await ctx.db.patch(args.resultId, {
         status: "failed" as const,
         error: args.outcome.errorMessage,
-      });
-    }
-
-    // Continue the sequential chain with the next pending row in this group
-    const nextPending = await ctx.db
-      .query("aiJudgeResults")
-      .withIndex("by_groupId", (q) => q.eq("groupId", result.groupId))
-      .collect()
-      .then((rows) => rows.find((r) => r.status === "pending"));
-
-    if (nextPending) {
-      await ctx.scheduler.runAfter(0, internal.aiJudgeAnalysis.analyzeSubmission, {
-        resultId: nextPending._id,
       });
     }
 
@@ -701,11 +1162,16 @@ export const verifyAiResultsPassword = query({
 
 // Shared handler for public/validated AI results: completed results only, ranked
 async function getCompletedResultsForGroup(ctx: QueryCtx, groupId: Id<"judgingGroups">) {
+  const group = await ctx.db.get(groupId);
   const rows = await ctx.db
     .query("aiJudgeResults")
     .withIndex("by_groupId", (q) => q.eq("groupId", groupId))
     .collect();
-  const enriched = await enrichResults(ctx, rows.filter((r) => r.status === "completed"));
+  const enriched = await enrichResults(
+    ctx,
+    rows.filter((r) => r.status === "completed"),
+    group?.aiRubricWeights,
+  );
   return enriched;
 }
 
@@ -726,6 +1192,46 @@ export const getPublicAiResults = query({
       if (!isAdmin) return null;
     }
     return await getCompletedResultsForGroup(ctx, args.groupId);
+  },
+});
+
+/**
+ * Internal: completed AI results for the agent judging HTTP API
+ * (auth handled by the HTTP layer: judge key or results password).
+ */
+export const getCompletedResultsInternal = internalQuery({
+  args: { groupId: v.id("judgingGroups") },
+  returns: v.union(v.null(), v.array(aiResultValidator)),
+  handler: async (ctx, args) => {
+    const group = await ctx.db.get(args.groupId);
+    if (!group || !group.aiJudgeEnabled) return null;
+    return await getCompletedResultsForGroup(ctx, args.groupId);
+  },
+});
+
+/**
+ * Internal: resolve a slug plus optional results password to a groupId for
+ * the HTTP API. Grants access when AI results are public or the password
+ * matches. Returns null when the group is unknown or access is denied.
+ */
+export const resolveResultsAccess = internalQuery({
+  args: { slug: v.string(), password: v.optional(v.string()) },
+  returns: v.union(v.null(), v.id("judgingGroups")),
+  handler: async (ctx, args) => {
+    const group = await ctx.db
+      .query("judgingGroups")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!group || !group.aiJudgeEnabled) return null;
+    if (group.aiResultsIsPublic) return group._id;
+    if (
+      args.password &&
+      group.aiResultsPassword &&
+      verifyPassword(args.password, group.aiResultsPassword)
+    ) {
+      return group._id;
+    }
+    return null;
   },
 });
 

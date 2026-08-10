@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -26,7 +26,7 @@ const DEFAULT_FIELD_REQUIREMENTS = {
 } as const;
 
 type SubmissionFieldRequirements = {
-  [K in keyof typeof DEFAULT_FIELD_REQUIREMENTS]: boolean;
+  -readonly [K in keyof typeof DEFAULT_FIELD_REQUIREMENTS]: boolean;
 };
 
 // Merge stored (partial) requirements over the defaults so unset keys keep defaults.
@@ -46,10 +46,87 @@ function resolveRequirements(
   return result;
 }
 
+// Default visibility: every field and section shown, matching the original
+// form so existing groups without config render unchanged.
+const DEFAULT_FIELD_VISIBILITY = {
+  title: true,
+  tagline: true,
+  longDescription: true,
+  url: true,
+  githubUrl: true,
+  videoUrl: true,
+  screenshot: true,
+  submitterName: true,
+  email: true,
+  tags: true,
+  teamInfo: true,
+  additionalImages: true,
+  additionalLinks: true,
+} as const;
+
+type SubmissionFieldVisibility = {
+  -readonly [K in keyof typeof DEFAULT_FIELD_VISIBILITY]: boolean;
+};
+
+// Merge stored (partial) visibility over the defaults. Title is always shown.
+function resolveVisibility(
+  stored?: Partial<SubmissionFieldVisibility> | null,
+): SubmissionFieldVisibility {
+  const result: SubmissionFieldVisibility = { ...DEFAULT_FIELD_VISIBILITY };
+  if (stored) {
+    (Object.keys(result) as Array<keyof SubmissionFieldVisibility>).forEach(
+      (key) => {
+        if (typeof stored[key] === "boolean") {
+          result[key] = stored[key] as boolean;
+        }
+      },
+    );
+  }
+  result.title = true;
+  return result;
+}
+
+// Admin-defined custom question rendered on the group submission form
+type CustomQuestion = {
+  key: string;
+  label: string;
+  placeholder?: string;
+  description?: string;
+  fieldType: "text" | "url" | "email" | "textarea";
+  required: boolean;
+};
+
+// Fields the hackathon skill can prefill via query params
+// (?url=&title=&tagline=&github=)
+type FormPrefill = {
+  title: string;
+  tagline: string;
+  url: string;
+  github: string;
+};
+
+// Convex mutation errors arrive wrapped ("[CONVEX ...] ... Uncaught Error:
+// message"). Extract the friendly message so users see it clean.
+function cleanSubmitError(raw: string): string {
+  const match = raw.match(/Uncaught Error:\s*([^\n]+)/);
+  if (match) return match[1].trim();
+  return raw.replace(/^\[.*?\]\s*/, "").trim() || "Failed to submit";
+}
+
 export function JudgingGroupSubmitPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { isLoaded, isSignedIn } = useAuth();
+
+  // Optional one-click prefill from the hackathon skill's submit link.
+  // The form works exactly as before when no params are present.
+  const prefill: FormPrefill = {
+    title: searchParams.get("title") || "",
+    tagline: searchParams.get("tagline") || "",
+    url: searchParams.get("url") || "",
+    github: searchParams.get("github") || "",
+  };
   const [password, setPassword] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordError, setPasswordError] = useState("");
@@ -86,12 +163,9 @@ export function JudgingGroupSubmitPage() {
     }
   };
 
-  // Auto-authenticate if public
-  useEffect(() => {
-    if (submissionPage && submissionPage.isPublic) {
-      setIsAuthenticated(true);
-    }
-  }, [submissionPage]);
+  // No auto-unlock here: the password gate below only renders when a
+  // submission password is set, so pages without one open directly. Judge
+  // access visibility (isPublic) must never bypass the submission password.
 
   if (!isLoaded) {
     return (
@@ -166,6 +240,7 @@ export function JudgingGroupSubmitPage() {
   }
 
   // Determine grid layout classes based on admin setting
+  const isSingleColumn = submissionPage.submissionPageLayout === "single";
   const layoutClass =
     submissionPage.submissionPageLayout === "one-third"
       ? "lg:grid-cols-[1fr_2fr]" // 33/67 split
@@ -173,6 +248,170 @@ export function JudgingGroupSubmitPage() {
 
   // Calculate image size (square)
   const imageSize = submissionPage.submissionPageImageSize || 400;
+
+  // Shared form card used by every layout variant
+  const formCard = (
+    <div className="bg-white rounded-xl p-6 sm:p-8 border border-[#D8E1EC]">
+      {showSuccess ? (
+        /* Success Message */
+        <div className="text-center py-12">
+          <div className="mb-4">
+            <svg
+              className="mx-auto h-16 w-16 text-green-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+          <h2 className="text-3xl font-medium text-[#292929] mb-2">
+            Thank You!
+          </h2>
+          <p className="text-[#525252]">
+            Your submission has been received successfully.
+          </p>
+          <p className="text-sm text-[#787672] mt-4">
+            Redirecting you to the homepage...
+          </p>
+        </div>
+      ) : (
+        <>
+          <h2 className="text-2xl font-medium text-[#292929] mb-2">
+            {submissionPage.submissionFormTitle || "Submit Your App"}
+          </h2>
+          {submissionPage.submissionFormSubtitle && (
+            <p className="text-sm text-[#525252] mb-4">
+              {submissionPage.submissionFormSubtitle}
+            </p>
+          )}
+          <div className="mb-6" />
+
+          {/* Notice about authentication */}
+          {!isSignedIn && (
+            <div className="mb-6 p-4 bg-[#F4F2EE] border border-[#D8E1EC] rounded-md">
+              <p className="text-sm text-[#525252]">
+                You need to{" "}
+                <Link
+                  to="/sign-up"
+                  className="underline font-medium text-[#292929] hover:text-[#525252]"
+                >
+                  sign up
+                </Link>{" "}
+                or{" "}
+                <Link
+                  to="/sign-in"
+                  className="underline font-medium text-[#292929] hover:text-[#525252]"
+                >
+                  sign in
+                </Link>{" "}
+                to submit your app to the hackathon.
+              </p>
+            </div>
+          )}
+
+          {isSignedIn ? (
+            <SubmissionFormContent
+              judgingGroupId={submissionPage._id}
+              requiredTagId={submissionPage.submissionFormRequiredTagId}
+              fieldRequirements={resolveRequirements(
+                submissionPage.submissionFieldRequirements,
+              )}
+              fieldVisibility={resolveVisibility(
+                submissionPage.submissionFieldVisibility,
+              )}
+              customQuestions={submissionPage.submissionCustomQuestions || []}
+              prefill={prefill}
+              onSuccess={() => {
+                setShowSuccess(true);
+                // Redirect to homepage after 2.5 seconds
+                setTimeout(() => {
+                  navigate("/");
+                }, 2500);
+              }}
+            />
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-[#525252] mb-4">
+                You need to sign up or sign in to submit your app to the
+                hackathon.
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <Link to="/sign-up">
+                  <Button className="bg-[#292929] hover:bg-[#525252]">
+                    Sign Up
+                  </Button>
+                </Link>
+                <Link to="/sign-in">
+                  <Button className="bg-[#292929] hover:bg-[#525252]">
+                    Sign In
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+
+  // Single column layout: centered hero (image, title, description, links)
+  // stacked above the form card. Built for focused reading and submitting.
+  if (isSingleColumn) {
+    return (
+      <div className="min-h-screen bg-[#F4F2EE]">
+        <div className="mx-auto max-w-2xl px-4 py-10 sm:py-16">
+          <header className="mb-10 sm:mb-12 text-center">
+            {submissionPage.submissionPageImageUrl && (
+              <img
+                src={submissionPage.submissionPageImageUrl}
+                alt={submissionPage.submissionPageTitle || submissionPage.name}
+                style={{
+                  width: "100%",
+                  maxWidth: `${imageSize}px`,
+                  aspectRatio: "1 / 1",
+                  objectFit: "cover",
+                }}
+                className="mx-auto rounded-xl border border-[#D8E1EC] mb-8"
+              />
+            )}
+            <h1 className="text-3xl sm:text-4xl font-medium tracking-tight text-[#292929]">
+              {submissionPage.submissionPageTitle || submissionPage.name}
+            </h1>
+            {submissionPage.submissionPageDescription && (
+              <p className="mt-4 text-[#525252] leading-relaxed whitespace-pre-wrap max-w-xl mx-auto">
+                {submissionPage.submissionPageDescription}
+              </p>
+            )}
+            {submissionPage.submissionPageLinks &&
+              submissionPage.submissionPageLinks.length > 0 && (
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                  {submissionPage.submissionPageLinks.map((link, index) => (
+                    <a
+                      key={index}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-[#D8E1EC] text-sm text-[#292929] hover:border-[#A8A29E] hover:text-[#525252] transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
+                      {link.label}
+                    </a>
+                  ))}
+                </div>
+              )}
+          </header>
+
+          {formCard}
+        </div>
+      </div>
+    );
+  }
 
   // Main submission page - Luma-style layout
   return (
@@ -239,112 +478,21 @@ export function JudgingGroupSubmitPage() {
           </div>
 
           {/* Right Column - Submission Form */}
-          <div>
-            <div className="bg-white rounded-lg p-6 border border-[#D8E1EC]">
-              {showSuccess ? (
-                /* Success Message */
-                <div className="text-center py-12">
-                  <div className="mb-4">
-                    <svg
-                      className="mx-auto h-16 w-16 text-green-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <h2 className="text-3xl font-medium text-[#292929] mb-2">
-                    Thank You!
-                  </h2>
-                  <p className="text-[#525252]">
-                    Your submission has been received successfully.
-                  </p>
-                  <p className="text-sm text-[#787672] mt-4">
-                    Redirecting you to the homepage...
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <h2 className="text-2xl font-medium text-[#292929] mb-2">
-                    {submissionPage.submissionFormTitle || "Submit Your App"}
-                  </h2>
-                  {submissionPage.submissionFormSubtitle && (
-                    <p className="text-sm text-[#525252] mb-4">
-                      {submissionPage.submissionFormSubtitle}
-                    </p>
-                  )}
-                  <div className="mb-6" />
-
-                  {/* Notice about authentication */}
-                  {!isSignedIn && (
-                    <div className="mb-6 p-4 bg-[#F4F2EE] border border-[#D8E1EC] rounded-md">
-                      <p className="text-sm text-[#525252]">
-                        You need to{" "}
-                        <Link
-                          to="/sign-up"
-                          className="underline font-medium text-[#292929] hover:text-[#525252]"
-                        >
-                          sign up
-                        </Link>{" "}
-                        or{" "}
-                        <Link
-                          to="/sign-in"
-                          className="underline font-medium text-[#292929] hover:text-[#525252]"
-                        >
-                          sign in
-                        </Link>{" "}
-                        to submit your app to the hackathon.
-                      </p>
-                    </div>
-                  )}
-
-                  {isSignedIn ? (
-                    <SubmissionFormContent
-                      judgingGroupId={submissionPage._id}
-                      requiredTagId={submissionPage.submissionFormRequiredTagId}
-                      fieldRequirements={resolveRequirements(
-                        submissionPage.submissionFieldRequirements,
-                      )}
-                      onSuccess={() => {
-                        setShowSuccess(true);
-                        // Redirect to homepage after 2.5 seconds
-                        setTimeout(() => {
-                          navigate("/");
-                        }, 2500);
-                      }}
-                    />
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-[#525252] mb-4">
-                        You need to sign up or sign in to submit your app to the
-                        hackathon.
-                      </p>
-                      <div className="flex items-center justify-center gap-3">
-                        <Link to="/sign-up">
-                          <Button className="bg-[#292929] hover:bg-[#525252]">
-                            Sign Up
-                          </Button>
-                        </Link>
-                        <Link to="/sign-in">
-                          <Button className="bg-[#292929] hover:bg-[#525252]">
-                            Sign In
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
+          <div>{formCard}</div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Hairline section heading used to group related form fields
+function SectionHeading({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 pt-2">
+      <span className="text-xs font-medium uppercase tracking-wider text-[#787672] whitespace-nowrap">
+        {label}
+      </span>
+      <div className="h-px flex-1 bg-[#D8E1EC]" aria-hidden="true" />
     </div>
   );
 }
@@ -354,19 +502,32 @@ function SubmissionFormContent({
   judgingGroupId,
   requiredTagId,
   fieldRequirements,
+  fieldVisibility,
+  customQuestions,
+  prefill,
   onSuccess,
 }: {
   judgingGroupId: Id<"judgingGroups">;
   requiredTagId?: Id<"tags"> | null;
   fieldRequirements: SubmissionFieldRequirements;
+  fieldVisibility: SubmissionFieldVisibility;
+  customQuestions: CustomQuestion[];
+  prefill: FormPrefill;
   onSuccess: () => void;
 }) {
   const req = fieldRequirements;
+  // Drift guard: never hide the tag picker unless a required tag guarantees
+  // the submission still lands in this judging group.
+  const vis: SubmissionFieldVisibility = {
+    ...fieldVisibility,
+    tags: fieldVisibility.tags || !requiredTagId,
+  };
   const submit = useMutation(api.stories.submit);
   const generateUploadUrl = useMutation(api.stories.generateUploadUrl);
   const availableTags = useQuery(api.tags.listHeader); // Only show header tags
   const allTags = useQuery(api.tags.listAllForDropdown); // For dropdown search
   const formFields = useQuery(api.storyFormFields.listEnabled);
+  const siteSettings = useQuery(api.settings.get); // Tag limits
 
   const [selectedTagIds, setSelectedTagIds] = React.useState<Id<"tags">[]>([]);
   const [newTagInputValue, setNewTagInputValue] = React.useState("");
@@ -375,11 +536,11 @@ function SubmissionFormContent({
   const [showDropdown, setShowDropdown] = React.useState(false);
 
   const [formData, setFormData] = useState({
-    title: "",
-    tagline: "",
+    title: prefill.title,
+    tagline: prefill.tagline,
     longDescription: "",
     submitterName: "",
-    url: "",
+    url: prefill.url,
     videoUrl: "",
     email: "",
   });
@@ -392,11 +553,53 @@ function SubmissionFormContent({
 
   const [dynamicFormData, setDynamicFormData] = useState<
     Record<string, string>
-  >({});
+  >(() => {
+    const initial: Record<string, string> = {};
+    if (prefill.github) initial.githubUrl = prefill.github;
+    return initial;
+  });
+  // Answers to this group's custom questions, keyed by question key
+  const [customAnswers, setCustomAnswers] = useState<Record<string, string>>(
+    {},
+  );
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [additionalImages, setAdditionalImages] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  // Non-blocking warning when the GitHub repo looks private or missing.
+  // The AI judge can only analyze public repos.
+  const [repoVisibilityWarning, setRepoVisibilityWarning] = useState<
+    string | null
+  >(null);
+
+  // Client-side GitHub visibility check, run on blur of the GitHub URL field.
+  // Unauthenticated GET against the public GitHub API: 404 means the repo is
+  // private or does not exist. Errors are ignored so this never blocks submits.
+  const checkRepoVisibility = async (url: string) => {
+    const match = url.trim().match(/github\.com\/([^/\s]+)\/([^/\s#?]+)/i);
+    if (!match) {
+      setRepoVisibilityWarning(null);
+      return;
+    }
+    const owner = match[1];
+    const repo = match[2].replace(/\.git$/, "");
+    try {
+      const res = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}`,
+        { headers: { Accept: "application/vnd.github+json" } },
+      );
+      if (res.status === 404) {
+        setRepoVisibilityWarning(
+          "This repo looks private or missing. The AI judge can only analyze public repos, so make it public before judging starts.",
+        );
+      } else {
+        setRepoVisibilityWarning(null);
+      }
+    } catch {
+      // Network or rate-limit issues: stay quiet rather than warn incorrectly
+      setRepoVisibilityWarning(null);
+    }
+  };
 
   const MAX_TAGLINE_LENGTH = 140;
 
@@ -447,12 +650,27 @@ function SubmissionFormContent({
     setAdditionalImages((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Tag limits from admin settings (hidden tracking tags never count)
+  const maxTags = siteSettings?.maxTagsPerSubmission ?? 6;
+  const maxTagLength = siteSettings?.maxTagLength ?? 20;
+
+  // Count selected tags toward the limit, excluding hidden tags
+  const countedTags =
+    selectedTagIds.filter((id) => {
+      const tag = allTags?.find((t) => t._id === id);
+      return tag ? tag.isHidden !== true : true;
+    }).length + newTagNames.length;
+
   const handleAddNewTag = () => {
     const tagName = newTagInputValue.trim();
-    const totalTags = selectedTagIds.length + newTagNames.length;
 
-    if (totalTags >= 10) {
-      setError("You can select a maximum of 10 tags.");
+    if (countedTags >= maxTags) {
+      setError(`You can select a maximum of ${maxTags} tags.`);
+      return;
+    }
+
+    if (tagName.length > maxTagLength) {
+      setError(`Tag names are limited to ${maxTagLength} characters.`);
       return;
     }
 
@@ -473,9 +691,10 @@ function SubmissionFormContent({
   };
 
   const handleSelectFromDropdown = (tagId: Id<"tags">) => {
-    const totalTags = selectedTagIds.length + newTagNames.length;
-    if (totalTags >= 10) {
-      setError("You can select a maximum of 10 tags.");
+    // Hidden tags never count toward the limit
+    const selectedTag = allTags?.find((t) => t._id === tagId);
+    if (selectedTag?.isHidden !== true && countedTags >= maxTags) {
+      setError(`You can select a maximum of ${maxTags} tags.`);
       return;
     }
     if (!selectedTagIds.includes(tagId)) {
@@ -491,19 +710,34 @@ function SubmissionFormContent({
     if (requiredTagId && tagId === requiredTagId) {
       return;
     }
-    setSelectedTagIds((prev) =>
-      prev.includes(tagId)
-        ? prev.filter((id) => id !== tagId)
-        : [...prev, tagId],
-    );
+    setSelectedTagIds((prev) => {
+      if (prev.includes(tagId)) {
+        return prev.filter((id) => id !== tagId);
+      }
+      // Hidden tags never count toward the limit
+      const selectedTag = allTags?.find((t) => t._id === tagId);
+      if (selectedTag?.isHidden !== true && countedTags >= maxTags) {
+        setError(`You can select a maximum of ${maxTags} tags.`);
+        return prev;
+      }
+      setError("");
+      return [...prev, tagId];
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    // Enforce tag requirement (custom selector cannot use HTML required)
-    if (req.tags && selectedTagIds.length === 0 && newTagNames.length === 0) {
+    // Enforce tag requirement (custom selector cannot use HTML required).
+    // Skipped when the tag picker is hidden; the required tag is applied
+    // automatically both client- and server-side.
+    if (
+      vis.tags &&
+      req.tags &&
+      selectedTagIds.length === 0 &&
+      newTagNames.length === 0
+    ) {
       setError("Please select or add at least one tag.");
       return;
     }
@@ -566,23 +800,38 @@ function SubmissionFormContent({
         teamMembers: teamData.teamName
           ? teamData.teamMembers.filter((m) => m.name.trim() || m.email.trim())
           : undefined,
+        // Custom question answers (label denormalized for display)
+        customFormAnswers:
+          customQuestions.length > 0
+            ? customQuestions
+                .map((question) => ({
+                  key: question.key,
+                  label: question.label,
+                  value: (customAnswers[question.key] || "").trim(),
+                }))
+                .filter((answer) => answer.value)
+            : undefined,
       });
 
       onSuccess();
     } catch (err) {
       console.error("Submission error:", err);
-      setError(err instanceof Error ? err.message : "Failed to submit");
+      setError(
+        err instanceof Error ? cleanSubmitError(err.message) : "Failed to submit",
+      );
       setIsSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {error && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
           {error}
         </div>
       )}
+
+      <SectionHeading label="Project details" />
 
       {/* App Title */}
       <div>
@@ -603,6 +852,7 @@ function SubmissionFormContent({
       </div>
 
       {/* Tagline */}
+      {vis.tagline && (
       <div>
         <label className="block text-sm font-medium text-[#525252] mb-1">
           App/Project Tagline{req.tagline ? "*" : " (Optional)"}
@@ -625,8 +875,10 @@ function SubmissionFormContent({
           {formData.tagline.length}/{MAX_TAGLINE_LENGTH}
         </div>
       </div>
+      )}
 
       {/* Long Description */}
+      {vis.longDescription && (
       <div>
         <label className="block text-sm font-medium text-[#525252] mb-1">
           Description{req.longDescription ? "*" : ""} (Markdown and fenced `code`
@@ -655,8 +907,17 @@ function SubmissionFormContent({
           </div>
         )}
       </div>
+      )}
+
+      {(vis.url ||
+        vis.githubUrl ||
+        vis.additionalLinks ||
+        vis.videoUrl ||
+        vis.screenshot ||
+        vis.additionalImages) && <SectionHeading label="Links and media" />}
 
       {/* URL */}
+      {vis.url && (
       <div>
         <label className="block text-sm font-medium text-[#525252] mb-1">
           App Website Link{req.url ? "*" : " (Optional)"}
@@ -676,8 +937,10 @@ function SubmissionFormContent({
           disabled={isSubmitting}
         />
       </div>
+      )}
 
       {/* GitHub URL Field */}
+      {vis.githubUrl && (
       <div>
         <label
           htmlFor="githubUrl"
@@ -699,14 +962,24 @@ function SubmissionFormContent({
               githubUrl: e.target.value,
             }))
           }
+          onBlur={(e) => {
+            void checkRepoVisibility(e.target.value);
+          }}
           className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
           required={req.githubUrl}
           disabled={isSubmitting}
         />
+        {repoVisibilityWarning && (
+          <div className="mt-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            {repoVisibilityWarning}
+          </div>
+        )}
       </div>
+      )}
 
       {/* Dynamic Form Fields */}
-      {formFields
+      {vis.additionalLinks &&
+        formFields
         ?.filter((field) => field.key !== "githubUrl")
         .map((field) => (
           <div key={field.key}>
@@ -738,11 +1011,12 @@ function SubmissionFormContent({
             />
           </div>
         ))}
-      {formFields === undefined && (
+      {vis.additionalLinks && formFields === undefined && (
         <div className="text-sm text-gray-500">Loading form fields...</div>
       )}
 
       {/* Video URL */}
+      {vis.videoUrl && (
       <div>
         <label className="block text-sm font-medium text-[#525252] mb-1">
           Video Demo{req.videoUrl ? "*" : " (Recommended)"}
@@ -762,8 +1036,10 @@ function SubmissionFormContent({
           disabled={isSubmitting}
         />
       </div>
+      )}
 
       {/* Screenshot */}
+      {vis.screenshot && (
       <div>
         <label className="block text-sm font-medium text-[#525252] mb-1">
           Screenshot or Image{req.screenshot ? "*" : " (Optional)"}
@@ -777,8 +1053,10 @@ function SubmissionFormContent({
           required={req.screenshot}
         />
       </div>
+      )}
 
       {/* Additional Images */}
+      {vis.additionalImages && (
       <div>
         <label className="block text-sm font-medium text-[#525252] mb-1">
           Additional Images (Optional, max 4)
@@ -811,8 +1089,68 @@ function SubmissionFormContent({
           </div>
         )}
       </div>
+      )}
+
+      {/* Custom questions defined by the group admin */}
+      {customQuestions.length > 0 && (
+        <>
+          <SectionHeading label="Additional questions" />
+          {customQuestions.map((question) => (
+            <div key={question.key}>
+              <label
+                htmlFor={`custom-${question.key}`}
+                className="block text-sm font-medium text-[#525252] mb-1"
+              >
+                {question.label}
+                {question.required ? "*" : " (Optional)"}
+              </label>
+              {question.description && (
+                <div className="text-sm text-[#545454] mb-2">
+                  {question.description}
+                </div>
+              )}
+              {question.fieldType === "textarea" ? (
+                <textarea
+                  id={`custom-${question.key}`}
+                  value={customAnswers[question.key] || ""}
+                  onChange={(e) =>
+                    setCustomAnswers((prev) => ({
+                      ...prev,
+                      [question.key]: e.target.value,
+                    }))
+                  }
+                  placeholder={question.placeholder || ""}
+                  rows={4}
+                  className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                  required={question.required}
+                  disabled={isSubmitting}
+                />
+              ) : (
+                <input
+                  type={question.fieldType}
+                  id={`custom-${question.key}`}
+                  value={customAnswers[question.key] || ""}
+                  onChange={(e) =>
+                    setCustomAnswers((prev) => ({
+                      ...prev,
+                      [question.key]: e.target.value,
+                    }))
+                  }
+                  placeholder={question.placeholder || ""}
+                  className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                  required={question.required}
+                  disabled={isSubmitting}
+                />
+              )}
+            </div>
+          ))}
+        </>
+      )}
+
+      {(vis.submitterName || vis.email) && <SectionHeading label="About you" />}
 
       {/* Submitter Name */}
+      {vis.submitterName && (
       <div>
         <label className="block text-sm font-medium text-[#525252] mb-1">
           Your Name{req.submitterName ? "*" : " (Optional)"}
@@ -829,8 +1167,10 @@ function SubmissionFormContent({
           disabled={isSubmitting}
         />
       </div>
+      )}
 
       {/* Email */}
+      {vis.email && (
       <div>
         <label className="block text-sm font-medium text-[#525252] mb-1">
           Email{req.email ? "*" : " (Optional)"}
@@ -850,8 +1190,10 @@ function SubmissionFormContent({
           disabled={isSubmitting}
         />
       </div>
+      )}
 
-      {/* Hackathon Team Info - Always Shown */}
+      {/* Hackathon Team Info */}
+      {vis.teamInfo && (
       <div className="bg-[#F4F2EE] p-4 rounded-md border border-[#D8E1EC]">
         <h3 className="text-base font-medium text-[#292929] mb-3">
           Hackathon Team Info (Optional)
@@ -991,6 +1333,11 @@ function SubmissionFormContent({
           )}
         </div>
       </div>
+      )}
+
+      {vis.tags && (
+      <>
+      <SectionHeading label="Tags" />
 
       {/* Tags Section */}
       <div>
@@ -1146,14 +1493,13 @@ function SubmissionFormContent({
                 handleAddNewTag();
               }
             }}
+            maxLength={maxTagLength}
             placeholder={
-              selectedTagIds.length + newTagNames.length >= 10
-                ? "Maximum 10 tags reached"
+              countedTags >= maxTags
+                ? `Maximum ${maxTags} tags reached`
                 : "Enter new tag name..."
             }
-            disabled={
-              isSubmitting || selectedTagIds.length + newTagNames.length >= 10
-            }
+            disabled={isSubmitting || countedTags >= maxTags}
             className="flex-1 px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
           />
           <button
@@ -1162,7 +1508,7 @@ function SubmissionFormContent({
             disabled={
               !newTagInputValue.trim() ||
               isSubmitting ||
-              selectedTagIds.length + newTagNames.length >= 10
+              countedTags >= maxTags
             }
             className="px-3 py-1 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
           >
@@ -1178,17 +1524,17 @@ function SubmissionFormContent({
               Please select or add at least one tag.
             </p>
           )}
-        {selectedTagIds.length + newTagNames.length >= 10 && (
+        {countedTags >= maxTags && (
           <p className="text-xs text-amber-600 mt-1">
-            Maximum of 10 tags reached. Remove a tag to add another.
+            Maximum of {maxTags} tags reached. Remove a tag to add another.
           </p>
         )}
       </div>
 
       {/* Selected Tags - Always Visible */}
-      <div className="p-4">
+      <div className="p-4 bg-[#F4F2EE] rounded-md border border-[#D8E1EC]">
         <div className="text-sm font-medium text-[#525252] mb-3">
-          Selected Tags ({selectedTagIds.length + newTagNames.length}/10)
+          Selected Tags ({countedTags}/{maxTags})
         </div>
         {selectedTagIds.length > 0 || newTagNames.length > 0 ? (
           <div className="flex flex-wrap gap-2">
@@ -1251,12 +1597,14 @@ function SubmissionFormContent({
           </p>
         )}
       </div>
+      </>
+      )}
 
       {/* Submit Button */}
       <Button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-[#292929] hover:bg-[#525252]"
+        className="w-full bg-[#292929] hover:bg-[#525252] h-11 text-[15px]"
       >
         {isSubmitting ? "Submitting..." : "Submit App"}
       </Button>

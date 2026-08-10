@@ -1,5 +1,8 @@
 import { internalQuery, internalMutation } from "../_generated/server";
 import { v } from "convex/values";
+import { vOnEmailEventArgs } from "@convex-dev/resend";
+import { logActivity } from "../activityLog";
+import { emailTypeValidator } from "./emailTypes";
 
 /**
  * Check if user already received a specific email type today
@@ -89,17 +92,7 @@ export const getUserWithEmail = internalQuery({
 export const insertEmailLog = internalMutation({
   args: {
     userId: v.optional(v.id("users")),
-    emailType: v.union(
-      v.literal("daily_admin"),
-      v.literal("daily_engagement"),
-      v.literal("welcome"),
-      v.literal("message_notification"),
-      v.literal("weekly_digest"),
-      v.literal("mention_notification"),
-      v.literal("admin_broadcast"),
-      v.literal("admin_report_notification"),
-      v.literal("admin_user_report_notification"),
-    ),
+    emailType: emailTypeValidator,
     recipientEmail: v.string(),
     status: v.union(
       v.literal("sent"),
@@ -121,6 +114,16 @@ export const insertEmailLog = internalMutation({
       status: args.status,
       resendMessageId: args.resendMessageId,
       metadata: args.metadata,
+    });
+    // Activity log: one row per send attempt (System actor, runs from actions)
+    await logActivity(ctx, {
+      category: "email",
+      action: args.status === "failed" ? "email.failed" : "email.sent",
+      message: `${args.emailType.replace(/_/g, " ")} email ${args.status} to ${args.recipientEmail}`,
+      actorName: "System",
+      targetType: "email",
+      targetLabel: args.recipientEmail,
+      metadata: { emailType: args.emailType },
     });
     return null;
   },
@@ -152,6 +155,40 @@ export const updateEmailLogStatus = internalMutation({
       await ctx.db.patch(emailLog._id, {
         status: args.status,
         metadata: { ...emailLog.metadata, webhook: args.metadata },
+      });
+    }
+    return null;
+  },
+});
+
+/**
+ * Resend component onEmailEvent callback. Invoked by the component after it
+ * verifies the webhook signature in http.ts (/resend-webhook). The id arg is
+ * the component email id returned by resend.sendEmail, which is what we store
+ * as resendMessageId in emailLogs, so lookups match reliably.
+ */
+export const handleEmailEvent = internalMutation({
+  args: vOnEmailEventArgs,
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Only these events map to emailLogs statuses; ignore opened/clicked/etc.
+    const statusMap = {
+      "email.delivered": "delivered",
+      "email.bounced": "bounced",
+      "email.complained": "complained",
+    } as const;
+    const status = statusMap[args.event.type as keyof typeof statusMap];
+    if (!status) return null;
+
+    const emailLog = await ctx.db
+      .query("emailLogs")
+      .withIndex("by_resend_id", (q) => q.eq("resendMessageId", args.id))
+      .unique();
+
+    if (emailLog) {
+      await ctx.db.patch(emailLog._id, {
+        status,
+        metadata: { ...emailLog.metadata, webhook: args.event.data },
       });
     }
     return null;

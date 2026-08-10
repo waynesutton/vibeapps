@@ -66,12 +66,29 @@ export function StoryForm() {
   const generateUploadUrl = useMutation(api.stories.generateUploadUrl);
   const submitStory = useMutation(api.stories.submit);
 
+  // Tag limits from admin settings (hidden tracking tags never count)
+  const maxTags = settings?.maxTagsPerSubmission ?? 6;
+  const maxTagLength = settings?.maxTagLength ?? 20;
+
+  // Count selected tags toward the limit, excluding hidden tags
+  const countedTags =
+    selectedTagIds.filter((id) => {
+      const tag = allTags?.find((t) => t._id === id);
+      return tag ? tag.isHidden !== true : true;
+    }).length + newTagNames.length;
+
   const handleAddNewTag = () => {
     const tagName = newTagInputValue.trim();
-    const totalTags = selectedTagIds.length + newTagNames.length;
 
-    if (totalTags >= 10) {
-      setSubmitError("You can select a maximum of 10 tags.");
+    if (countedTags >= maxTags) {
+      setSubmitError(`You can select a maximum of ${maxTags} tags.`);
+      return;
+    }
+
+    if (tagName.length > maxTagLength) {
+      setSubmitError(
+        `Tag names are limited to ${maxTagLength} characters.`,
+      );
       return;
     }
 
@@ -96,10 +113,10 @@ export function StoryForm() {
   };
 
   const handleSelectFromDropdown = (tagId: Id<"tags">) => {
-    const totalTags = selectedTagIds.length + newTagNames.length;
-
-    if (totalTags >= 10) {
-      setSubmitError("You can select a maximum of 10 tags.");
+    // Hidden tags never count toward the limit
+    const selectedTag = allTags?.find((t) => t._id === tagId);
+    if (selectedTag?.isHidden !== true && countedTags >= maxTags) {
+      setSubmitError(`You can select a maximum of ${maxTags} tags.`);
       return;
     }
 
@@ -224,9 +241,10 @@ export function StoryForm() {
       if (prev.includes(tagId)) {
         return prev.filter((id) => id !== tagId);
       } else {
-        const totalTags = prev.length + newTagNames.length;
-        if (totalTags >= 10) {
-          setSubmitError("You can select a maximum of 10 tags.");
+        // Hidden tags never count toward the limit
+        const selectedTag = allTags?.find((t) => t._id === tagId);
+        if (selectedTag?.isHidden !== true && countedTags >= maxTags) {
+          setSubmitError(`You can select a maximum of ${maxTags} tags.`);
           return prev;
         }
         setSubmitError(null);
@@ -990,8 +1008,7 @@ export function StoryForm() {
             {(selectedTagIds.length > 0 || newTagNames.length > 0) && (
               <div className="mb-4">
                 <label className="block text-sm font-medium text-[#525252] mb-2">
-                  Selected Tags ({selectedTagIds.length + newTagNames.length}
-                  /10)
+                  Selected Tags ({countedTags}/{maxTags})
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {/* Show selected existing tags */}
@@ -1069,16 +1086,14 @@ export function StoryForm() {
                 type="text"
                 value={newTagInputValue}
                 onChange={(e) => setNewTagInputValue(e.target.value)}
+                maxLength={maxTagLength}
                 placeholder={
-                  selectedTagIds.length + newTagNames.length >= 10
-                    ? "Maximum 10 tags reached"
+                  countedTags >= maxTags
+                    ? `Maximum ${maxTags} tags reached`
                     : "Enter new tag name..."
                 }
                 className="flex-1 px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
-                disabled={
-                  isSubmitting ||
-                  selectedTagIds.length + newTagNames.length >= 10
-                }
+                disabled={isSubmitting || countedTags >= maxTags}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -1092,7 +1107,7 @@ export function StoryForm() {
                 disabled={
                   !newTagInputValue.trim() ||
                   isSubmitting ||
-                  selectedTagIds.length + newTagNames.length >= 10
+                  countedTags >= maxTags
                 }
                 className="px-3 py-1 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
@@ -1122,9 +1137,9 @@ export function StoryForm() {
                 Please select or add at least one tag.
               </p>
             )}
-            {selectedTagIds.length + newTagNames.length >= 10 && (
+            {countedTags >= maxTags && (
               <p className="text-xs text-amber-600 mt-1">
-                Maximum of 10 tags reached. Remove a tag to add another.
+                Maximum of {maxTags} tags reached. Remove a tag to add another.
               </p>
             )}
           </div>

@@ -416,6 +416,53 @@ export default function AIJudgeResultsPage() {
                             </div>
                           </div>
                         )}
+
+                      {/* Convex components: used vs installed */}
+                      {((result.componentsUsed?.length ?? 0) > 0 ||
+                        (result.componentsDetected?.length ?? 0) > 0) && (
+                        <div>
+                          <p className="text-xs font-medium text-gray-500 mb-2">
+                            Convex components
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {result.componentsUsed?.map((component) => (
+                              <span
+                                key={`used-${component}`}
+                                className="px-2.5 py-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded-full"
+                                title="Referenced in the app's code"
+                              >
+                                {component} (used)
+                              </span>
+                            ))}
+                            {result.componentsDetected
+                              ?.filter(
+                                (component) =>
+                                  !result.componentsUsed?.includes(component),
+                              )
+                              .map((component) => (
+                                <span
+                                  key={`installed-${component}`}
+                                  className="px-2.5 py-1 text-xs bg-gray-50 text-gray-500 border border-gray-200 rounded-full"
+                                  title="Installed but no usage found in code"
+                                >
+                                  {component} (installed)
+                                </span>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Verified repo facts, deterministic */}
+                      {result.repoFacts && (
+                        <p className="text-xs text-gray-500">
+                          Verified from source: {result.repoFacts.tableCount}{" "}
+                          tables, {result.repoFacts.indexCount} indexes,{" "}
+                          {result.repoFacts.queryCount} queries,{" "}
+                          {result.repoFacts.mutationCount} mutations,{" "}
+                          {result.repoFacts.actionCount} actions across{" "}
+                          {result.repoFacts.convexFileCount} Convex files.
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

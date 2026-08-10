@@ -1,7 +1,29 @@
-import { query, mutation, internalMutation } from "./_generated/server";
+import {
+  query,
+  mutation,
+  internalMutation,
+  type QueryCtx,
+  type MutationCtx,
+} from "./_generated/server";
 import { v, type Infer } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { requireAdminRole } from "./users"; // Updated to requireAdminRole
+import { requirePermission } from "./adminAccess"; // Granular admin permissions
+
+// Default tag limits used when the settings doc has no values yet
+export const DEFAULT_MAX_TAGS_PER_SUBMISSION = 6;
+export const DEFAULT_MAX_TAG_LENGTH = 20;
+
+// Shared helper: read tag limits from the settings document with defaults
+export async function getTagLimits(
+  ctx: QueryCtx | MutationCtx,
+): Promise<{ maxTagsPerSubmission: number; maxTagLength: number }> {
+  const settingsDoc = await ctx.db.query("settings").first();
+  return {
+    maxTagsPerSubmission:
+      settingsDoc?.maxTagsPerSubmission ?? DEFAULT_MAX_TAGS_PER_SUBMISSION,
+    maxTagLength: settingsDoc?.maxTagLength ?? DEFAULT_MAX_TAG_LENGTH,
+  };
+}
 
 // Helper function to generate a URL-friendly slug
 function generateSlug(name: string): string {
@@ -90,7 +112,7 @@ export const getBySlug = query({
 export const listAllAdmin = query({
   args: {},
   handler: async (ctx): Promise<Doc<"tags">[]> => {
-    await requireAdminRole(ctx); // Ensure only admins can see hidden tags
+    await requirePermission(ctx, "tags.view"); // Ensure only permitted users can see hidden tags
     const tags = await ctx.db.query("tags").collect();
     // Sort by: 1) Admin tags first, 2) Order (ascending, undefined/null last), 3) Name for consistency
     tags.sort((a, b) => {
@@ -152,7 +174,7 @@ export const create = mutation({
     createdByAdmin: v.optional(v.boolean()), // Track if created by admin
   },
   handler: async (ctx, args): Promise<Id<"tags">> => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "tags.manage");
     const name = args.name.trim();
     if (!name) {
       throw new Error("Tag name cannot be empty.");
@@ -223,7 +245,7 @@ export const update = mutation({
     createdByAdmin: v.optional(v.boolean()), // Allow updating admin/user status
   },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "tags.manage");
     const { tagId, iconStorageId, clearIcon, ...rest } = args;
     const updateData: Partial<Omit<Doc<"tags">, "_id" | "_creationTime">> = {};
     
@@ -314,10 +336,87 @@ export const update = mutation({
 export const deleteTag = mutation({
   args: { tagId: v.id("tags") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "tags.delete");
     // TODO: Consider implications: Remove tagId from stories? Or prevent deletion if used?
     // For now, just delete the tag document.
     await ctx.db.delete(args.tagId);
+  },
+});
+
+// Bulk archive/unarchive selected tags - Requires tags.manage
+export const bulkSetHidden = mutation({
+  args: {
+    tagIds: v.array(v.id("tags")),
+    isHidden: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "tags.manage");
+    // Patch directly in parallel; each write is independent
+    await Promise.all(
+      args.tagIds.map((tagId) => ctx.db.patch(tagId, { isHidden: args.isHidden })),
+    );
+    return null;
+  },
+});
+
+// Bulk delete selected tags - Requires tags.delete
+export const bulkDeleteTags = mutation({
+  args: {
+    tagIds: v.array(v.id("tags")),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "tags.delete");
+    await Promise.all(args.tagIds.map((tagId) => ctx.db.delete(tagId)));
+    return null;
+  },
+});
+
+// Update tag limit settings from the Tags admin section - Requires tags.manage
+export const updateTagLimits = mutation({
+  args: {
+    maxTagsPerSubmission: v.optional(v.number()),
+    maxTagLength: v.optional(v.number()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "tags.manage");
+    if (
+      args.maxTagsPerSubmission !== undefined &&
+      (args.maxTagsPerSubmission < 1 || args.maxTagsPerSubmission > 20)
+    ) {
+      throw new Error("Max tags per submission must be between 1 and 20.");
+    }
+    if (
+      args.maxTagLength !== undefined &&
+      (args.maxTagLength < 3 || args.maxTagLength > 100)
+    ) {
+      throw new Error("Max tag length must be between 3 and 100 characters.");
+    }
+
+    const updates: {
+      maxTagsPerSubmission?: number;
+      maxTagLength?: number;
+    } = {};
+    if (args.maxTagsPerSubmission !== undefined)
+      updates.maxTagsPerSubmission = args.maxTagsPerSubmission;
+    if (args.maxTagLength !== undefined)
+      updates.maxTagLength = args.maxTagLength;
+    if (Object.keys(updates).length === 0) return null;
+
+    const settingsDoc = await ctx.db.query("settings").first();
+    if (settingsDoc) {
+      await ctx.db.patch(settingsDoc._id, updates);
+    } else {
+      // Settings never initialized; create a minimal doc with sane defaults
+      await ctx.db.insert("settings", {
+        itemsPerPage: 20,
+        siteTitle: "Vibe Apps",
+        ...updates,
+      });
+    }
+    return null;
   },
 });
 
@@ -488,7 +587,7 @@ export const getWeeklyTopCategories = query({
 export const generateIconUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "tags.manage");
     return await ctx.storage.generateUploadUrl();
   },
 });

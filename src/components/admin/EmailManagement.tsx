@@ -17,11 +17,114 @@ import PromptDialog from "../ui/PromptDialog";
 import { EmailTestingPanel } from "./EmailTestingPanel";
 import { useDialog } from "../../hooks/useDialog";
 
+// Email type rows for the Email Send Options card, grouped by audience.
+// Keys must match EMAIL_TYPES in convex/emails/emailTypes.ts.
+const EMAIL_TYPE_GROUPS: Array<{
+  group: string;
+  types: Array<{ key: string; label: string; description: string }>;
+}> = [
+  {
+    group: "Automated",
+    types: [
+      {
+        key: "daily_admin",
+        label: "Daily admin email",
+        description: "Platform metrics to admins, daily at 9:00 AM PST",
+      },
+      {
+        key: "daily_engagement",
+        label: "Daily engagement digest",
+        description: "User digest with mentions and activity, evenings PST",
+      },
+      {
+        key: "weekly_digest",
+        label: "Weekly digest",
+        description: "Monday morning Most Vibes weekly roundup",
+      },
+    ],
+  },
+  {
+    group: "User",
+    types: [
+      {
+        key: "welcome",
+        label: "Welcome email",
+        description: "Sent once when a new user account is created",
+      },
+      {
+        key: "mention_notification",
+        label: "Mention notifications",
+        description: "Sent when someone @mentions a user",
+      },
+      {
+        key: "message_notification",
+        label: "Message notifications",
+        description: "Sent for new direct messages",
+      },
+    ],
+  },
+  {
+    group: "Admin",
+    types: [
+      {
+        key: "admin_broadcast",
+        label: "Broadcast emails",
+        description: "Manual admin broadcasts from this dashboard",
+      },
+      {
+        key: "admin_report_notification",
+        label: "Content report alerts",
+        description: "Notifies admins when content is reported",
+      },
+      {
+        key: "admin_user_report_notification",
+        label: "User report alerts",
+        description: "Notifies admins when a user is reported",
+      },
+      {
+        key: "spam_notification",
+        label: "Spam notifications",
+        description: "Tells a submitter their post was marked as spam",
+      },
+    ],
+  },
+  {
+    group: "Submissions",
+    types: [
+      {
+        key: "submission_confirmation",
+        label: "Submission confirmation",
+        description:
+          "Confirms receipt to the submitter right after they submit",
+      },
+      {
+        key: "submission_admin_alert",
+        label: "New submission group alert",
+        description:
+          "Emails a judging group's organizer list when a submission lands",
+      },
+      {
+        key: "results_live",
+        label: "Results live",
+        description:
+          "Admin-triggered blast to submitters when group results go public",
+      },
+    ],
+  },
+];
+
 export function EmailManagement() {
   const [emailToggling, setEmailToggling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const { showMessage, showConfirm, DialogComponents } = useDialog();
+
+  // Per-email-type toggles (Email Send Options card)
+  const emailTypeSettings = useQuery(api.settings.getEmailTypeSettings, {});
+  const setEmailTypeEnabledMutation = useMutation(
+    api.settings.setEmailTypeEnabled,
+  );
+  const [typeToggling, setTypeToggling] = useState<string | null>(null);
 
   // Broadcast email state
   const [broadcastSubject, setBroadcastSubject] = useState("");
@@ -100,7 +203,6 @@ export function EmailManagement() {
   const sendBroadcastToTagMutation = useMutation(
     api.emails.broadcast.sendBroadcastToTag,
   );
-  const fixMissingEmailsMutation = useMutation(api.users.fixMissingEmails);
   const forceRefreshUserMutation = useMutation(
     api.users.forceRefreshCurrentUser,
   );
@@ -166,6 +268,28 @@ export function EmailManagement() {
       );
     } finally {
       setEmailToggling(false);
+    }
+  };
+
+  // Flip one email type on/off (master switch still wins server-side)
+  const handleToggleEmailType = async (emailType: string) => {
+    if (!emailTypeSettings) return;
+    setTypeToggling(emailType);
+    setError(null);
+    try {
+      await setEmailTypeEnabledMutation({
+        emailType: emailType as Parameters<
+          typeof setEmailTypeEnabledMutation
+        >[0]["emailType"],
+        enabled: !emailTypeSettings[emailType],
+      });
+    } catch (err) {
+      console.error("Failed to toggle email type:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to update email setting.",
+      );
+    } finally {
+      setTypeToggling(null);
     }
   };
 
@@ -316,6 +440,86 @@ export function EmailManagement() {
             </span>
           </button>
         </div>
+      </div>
+
+      {/* Email Send Options: per-type toggles, subordinate to the master switch */}
+      <div className="bg-white rounded-lg p-6 border border-gray-200">
+        <div className="flex items-center gap-3 mb-2">
+          <ToggleRight className="w-6 h-6 text-[#525252]" />
+          <h2 className="text-xl font-medium text-[#525252]">
+            Email Send Options
+          </h2>
+        </div>
+        <p className="text-sm text-gray-600 mb-4">
+          Turn individual email types on or off. The global master switch above
+          always wins: when it is off, nothing sends regardless of these
+          settings.
+        </p>
+
+        {emailsEnabled === false && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-md text-sm">
+            The global email system is off, so none of these types will send.
+            Toggle states are preserved and take effect when the master switch
+            is turned back on.
+          </div>
+        )}
+
+        {emailTypeSettings === undefined ? (
+          <p className="text-sm text-gray-500">Loading email settings...</p>
+        ) : (
+          <div className="space-y-6">
+            {EMAIL_TYPE_GROUPS.map(({ group, types }) => (
+              <div key={group}>
+                <h3 className="text-sm font-semibold text-[#292929] mb-2">
+                  {group}
+                </h3>
+                <div className="rounded-md border border-gray-200 divide-y divide-gray-100">
+                  {types.map(({ key, label, description }) => {
+                    const enabled = emailTypeSettings[key] ?? false;
+                    const busy = typeToggling === key;
+                    const masterOff = emailsEnabled === false;
+                    return (
+                      <div
+                        key={key}
+                        className={`flex items-center justify-between gap-3 px-4 py-3 ${
+                          masterOff ? "opacity-60" : ""
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-[#292929]">
+                            {label}
+                          </p>
+                          <p className="text-xs text-gray-500">{description}</p>
+                        </div>
+                        <button
+                          onClick={() => void handleToggleEmailType(key)}
+                          disabled={busy || masterOff}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors flex-shrink-0 ${
+                            enabled
+                              ? "bg-green-100 text-green-700 hover:bg-green-200"
+                              : "bg-red-100 text-red-700 hover:bg-red-200"
+                          } disabled:cursor-not-allowed`}
+                          aria-label={`${enabled ? "Disable" : "Enable"} ${label}`}
+                        >
+                          {busy ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                          ) : enabled ? (
+                            <ToggleRight className="w-4 h-4" />
+                          ) : (
+                            <ToggleLeft className="w-4 h-4" />
+                          )}
+                          <span className="text-sm font-medium">
+                            {enabled ? "On" : "Off"}
+                          </span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Admin Broadcast Emails */}
@@ -1032,21 +1236,43 @@ export function EmailManagement() {
           <div className="p-4 bg-blue-50 rounded-lg">
             <h4 className="font-medium text-blue-900 mb-1">
               Daily Admin Emails
+              {emailTypeSettings?.daily_admin === false && (
+                <span className="ml-2 text-xs font-normal text-red-600">
+                  (off)
+                </span>
+              )}
             </h4>
             <p className="text-sm text-blue-700">
-              Sent daily at 9:00 AM PST with platform metrics
+              Sent daily at 9:00 AM PST with platform metrics when enabled in
+              Email Send Options
             </p>
           </div>
           <div className="p-4 bg-green-50 rounded-lg">
-            <h4 className="font-medium text-green-900 mb-1">User Engagement</h4>
+            <h4 className="font-medium text-green-900 mb-1">
+              User Engagement
+              {emailTypeSettings?.daily_engagement === false && (
+                <span className="ml-2 text-xs font-normal text-red-600">
+                  (off)
+                </span>
+              )}
+            </h4>
             <p className="text-sm text-green-700">
-              Daily digest emails with mentions and activity
+              Daily digest emails with mentions and activity when enabled in
+              Email Send Options
             </p>
           </div>
           <div className="p-4 bg-purple-50 rounded-lg">
-            <h4 className="font-medium text-purple-900 mb-1">Weekly Digest</h4>
+            <h4 className="font-medium text-purple-900 mb-1">
+              Weekly Digest
+              {emailTypeSettings?.weekly_digest === false && (
+                <span className="ml-2 text-xs font-normal text-red-600">
+                  (off)
+                </span>
+              )}
+            </h4>
             <p className="text-sm text-purple-700">
-              Monday morning "Most Vibes" weekly roundup
+              Monday morning "Most Vibes" weekly roundup when enabled in Email
+              Send Options
             </p>
           </div>
         </div>

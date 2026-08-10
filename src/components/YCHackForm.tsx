@@ -44,8 +44,21 @@ export function YCHackForm() {
   const generateUploadUrl = useMutation(api.stories.generateUploadUrl);
   const submitStoryAnonymous = useMutation(api.stories.submitAnonymous);
 
+  // Tag limits from admin settings (hidden tracking tag never counts)
+  const maxTags = settings?.maxTagsPerSubmission ?? 6;
+  const maxTagLength = settings?.maxTagLength ?? 20;
+  const countedTags = selectedTagIds.length + newTagNames.length;
+
   const handleAddNewTag = () => {
     const tagName = newTagInputValue.trim();
+    if (countedTags >= maxTags) {
+      setSubmitError(`You can select a maximum of ${maxTags} tags.`);
+      return;
+    }
+    if (tagName.length > maxTagLength) {
+      setSubmitError(`Tag names are limited to ${maxTagLength} characters.`);
+      return;
+    }
     if (
       tagName &&
       !newTagNames.some((t) => t.toLowerCase() === tagName.toLowerCase()) &&
@@ -132,11 +145,17 @@ export function YCHackForm() {
   };
 
   const toggleTag = (tagId: Id<"tags">) => {
-    setSelectedTagIds((prev) =>
-      prev.includes(tagId)
-        ? prev.filter((id) => id !== tagId)
-        : [...prev, tagId],
-    );
+    setSelectedTagIds((prev) => {
+      if (prev.includes(tagId)) {
+        return prev.filter((id) => id !== tagId);
+      }
+      if (prev.length + newTagNames.length >= maxTags) {
+        setSubmitError(`You can select a maximum of ${maxTags} tags.`);
+        return prev;
+      }
+      setSubmitError(null);
+      return [...prev, tagId];
+    });
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -429,9 +448,14 @@ export function YCHackForm() {
                 type="text"
                 value={newTagInputValue}
                 onChange={(e) => setNewTagInputValue(e.target.value)}
-                placeholder="Enter new tag name..."
+                maxLength={maxTagLength}
+                placeholder={
+                  countedTags >= maxTags
+                    ? `Maximum ${maxTags} tags reached`
+                    : "Enter new tag name..."
+                }
                 className="flex-1 px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
-                disabled={isSubmitting}
+                disabled={isSubmitting || countedTags >= maxTags}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -442,7 +466,11 @@ export function YCHackForm() {
               <button
                 type="button"
                 onClick={handleAddNewTag}
-                disabled={!newTagInputValue.trim() || isSubmitting}
+                disabled={
+                  !newTagInputValue.trim() ||
+                  isSubmitting ||
+                  countedTags >= maxTags
+                }
                 className="px-3 py-1 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 <Plus className="w-4 h-4" /> Add

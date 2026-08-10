@@ -1,12 +1,12 @@
-import { query, mutation, QueryCtx, MutationCtx } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { Doc, Id } from "./_generated/dataModel";
+import { Doc } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
 import {
   getAuthenticatedUserId,
-  requireAdminRole,
   ensureUserNotBanned,
-} from "./users"; // Import the centralized helper and requireAdminRole
+} from "./users"; // Import the centralized helper
+import { requirePermission } from "./adminAccess"; // Granular admin permissions
 import { internal } from "./_generated/api";
 
 // We might not need this specific type if we don't enhance comments further yet
@@ -114,7 +114,7 @@ export const listAllCommentsAdmin = query({
     isDone: boolean;
     continueCursor: string;
   }> => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "moderation.view");
     let queryBuilder;
     if (args.searchTerm && args.searchTerm.trim() !== "") {
       // Use full text search
@@ -398,7 +398,7 @@ export const updateStatus = mutation({
     status: v.union(v.literal("approved"), v.literal("rejected")),
   },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "moderation.moderate");
     const comment = await ctx.db.get(args.commentId);
     if (!comment) {
       throw new Error("Comment not found");
@@ -426,7 +426,7 @@ export const updateStatus = mutation({
 export const hideComment = mutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "moderation.moderate");
     const comment = await ctx.db.get(args.commentId);
     if (!comment) {
       throw new Error("Comment not found");
@@ -439,7 +439,7 @@ export const hideComment = mutation({
 export const showComment = mutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "moderation.moderate");
     const comment = await ctx.db.get(args.commentId);
     if (!comment) {
       throw new Error("Comment not found");
@@ -452,7 +452,7 @@ export const showComment = mutation({
 export const deleteComment = mutation({
   args: { commentId: v.id("comments") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "moderation.delete");
     const comment = await ctx.db.get(args.commentId);
     if (!comment) {
       console.warn(`Comment ${args.commentId} not found for deletion.`);

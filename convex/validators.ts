@@ -53,6 +53,7 @@ export const baseStoryValidator = {
   isArchived: v.optional(v.boolean()),
   customMessage: v.optional(v.string()),
   isApproved: v.optional(v.boolean()),
+  rejectionReason: v.optional(v.string()),
   email: v.optional(v.string()),
   // Hackathon team info
   teamName: v.optional(v.string()),
@@ -62,6 +63,19 @@ export const baseStoryValidator = {
       v.object({
         name: v.string(),
         email: v.string(),
+      }),
+    ),
+  ),
+  // Self-reported AI build attribution (metadata only, never used in scoring)
+  selfReportedHarness: v.optional(v.string()),
+  selfReportedModel: v.optional(v.string()),
+  // Answers to per-group custom submission questions
+  customFormAnswers: v.optional(
+    v.array(
+      v.object({
+        key: v.string(),
+        label: v.string(),
+        value: v.string(),
       }),
     ),
   ),
@@ -208,6 +222,7 @@ export type StoryWithDetailsPublic = {
   isArchived?: boolean;
   customMessage?: string;
   isApproved?: boolean;
+  rejectionReason?: string;
   email?: string;
   // Hackathon team info
   teamName?: string;
@@ -215,6 +230,15 @@ export type StoryWithDetailsPublic = {
   teamMembers?: Array<{
     name: string;
     email: string;
+  }>;
+  // Self-reported AI build attribution (metadata only)
+  selfReportedHarness?: string;
+  selfReportedModel?: string;
+  // Answers to per-group custom submission questions
+  customFormAnswers?: Array<{
+    key: string;
+    label: string;
+    value: string;
   }>;
   // Changelog tracking for user edits
   changeLog?: Array<{

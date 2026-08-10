@@ -1,7 +1,7 @@
 import { query, mutation, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
-import { Doc, Id } from "./_generated/dataModel";
-import { requireAdminRole } from "./users";
+import { Id } from "./_generated/dataModel";
+import { requireJudgingGroupPermission } from "./adminAccess";
 
 /**
  * Helper function to check if a submission should have its status reset to pending
@@ -70,6 +70,7 @@ export const getGroupJudgeTracking = query({
       description: v.optional(v.string()),
       isActive: v.boolean(),
       judgesPerSubmission: v.number(),
+      scoreScale: v.number(),
     }),
     judges: v.array(
       v.object({
@@ -78,6 +79,14 @@ export const getGroupJudgeTracking = query({
         email: v.optional(v.string()),
         sessionId: v.string(),
         lastActiveAt: v.number(),
+        type: v.optional(v.union(v.literal("human"), v.literal("agent"))),
+        agentMetadata: v.optional(
+          v.object({
+            model: v.optional(v.string()),
+            harness: v.optional(v.string()),
+            operator: v.optional(v.string()),
+          }),
+        ),
         userId: v.optional(v.id("users")),
         userProfile: v.union(
           v.null(),
@@ -98,7 +107,7 @@ export const getGroupJudgeTracking = query({
     ),
   }),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.tracking");
 
     // Get the group
     const group = await ctx.db.get(args.groupId);
@@ -172,6 +181,8 @@ export const getGroupJudgeTracking = query({
           email: judge.email,
           sessionId: judge.sessionId,
           lastActiveAt: judge.lastActiveAt,
+          type: judge.type,
+          agentMetadata: judge.agentMetadata,
           userId: judge.userId,
           userProfile,
           scoresCount,
@@ -191,6 +202,7 @@ export const getGroupJudgeTracking = query({
         description: group.description,
         isActive: group.isActive,
         judgesPerSubmission: group.judgesPerSubmission ?? 1,
+        scoreScale: group.scoreScale ?? 10,
       },
       judges: judgeTrackingData,
     };
@@ -222,7 +234,15 @@ export const getJudgeDetailedScores = query({
     }),
   ),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    const judgeForScores = await ctx.db.get(args.judgeId);
+    if (!judgeForScores) {
+      return [];
+    }
+    await requireJudgingGroupPermission(
+      ctx,
+      judgeForScores.groupId,
+      "judging.tracking",
+    );
 
     // Get all scores by this judge
     const scores = await ctx.db
@@ -284,11 +304,25 @@ export const updateJudgeScore = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    const scoreForUpdate = await ctx.db.get(args.scoreId);
+    if (!scoreForUpdate) {
+      throw new Error("Score not found");
+    }
+    await requireJudgingGroupPermission(
+      ctx,
+      scoreForUpdate.groupId,
+      "judging.tracking",
+    );
 
-    // Validate score range
-    if (args.score < 1 || args.score > 10 || !Number.isInteger(args.score)) {
-      throw new Error("Score must be an integer between 1 and 10");
+    // Validate score range against the group's configured scale (5 or 10)
+    const scoreGroup = await ctx.db.get(scoreForUpdate.groupId);
+    const scoreScale = scoreGroup?.scoreScale ?? 10;
+    if (
+      args.score < 1 ||
+      args.score > scoreScale ||
+      !Number.isInteger(args.score)
+    ) {
+      throw new Error(`Score must be an integer between 1 and ${scoreScale}`);
     }
 
     const existingScore = await ctx.db.get(args.scoreId);
@@ -315,12 +349,15 @@ export const toggleScoreVisibility = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
-
     const existingScore = await ctx.db.get(args.scoreId);
     if (!existingScore) {
       throw new Error("Score not found");
     }
+    await requireJudgingGroupPermission(
+      ctx,
+      existingScore.groupId,
+      "judging.tracking",
+    );
 
     await ctx.db.patch(args.scoreId, {
       isHidden: args.isHidden,
@@ -346,12 +383,15 @@ export const deleteJudgeScore = mutation({
   args: { scoreId: v.id("judgeScores") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
-
     const existingScore = await ctx.db.get(args.scoreId);
     if (!existingScore) {
       throw new Error("Score not found");
     }
+    await requireJudgingGroupPermission(
+      ctx,
+      existingScore.groupId,
+      "judging.tracking",
+    );
 
     // Store score info before deletion for status check
     const groupId = existingScore.groupId;
@@ -373,12 +413,11 @@ export const deleteJudge = mutation({
   args: { judgeId: v.id("judges") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
-
     const judge = await ctx.db.get(args.judgeId);
     if (!judge) {
       throw new Error("Judge not found");
     }
+    await requireJudgingGroupPermission(ctx, judge.groupId, "judging.tracking");
 
     // Delete all scores by this judge
     const judgeScores = await ctx.db
@@ -443,12 +482,11 @@ export const linkJudgeToUser = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
-
     const judge = await ctx.db.get(args.judgeId);
     if (!judge) {
       throw new Error("Judge not found");
     }
+    await requireJudgingGroupPermission(ctx, judge.groupId, "judging.tracking");
 
     const user = await ctx.db.get(args.userId);
     if (!user) {
@@ -470,12 +508,11 @@ export const unlinkJudgeFromUser = mutation({
   args: { judgeId: v.id("judges") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
-
     const judge = await ctx.db.get(args.judgeId);
     if (!judge) {
       throw new Error("Judge not found");
     }
+    await requireJudgingGroupPermission(ctx, judge.groupId, "judging.tracking");
 
     await ctx.db.patch(args.judgeId, {
       userId: undefined,
@@ -510,7 +547,7 @@ export const getJudgeTrackingExportData = query({
     }),
   ),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.tracking");
 
     // Get all judges for this group
     const judges = await ctx.db
@@ -638,7 +675,7 @@ export const getSubmissionNoteCounts = query({
   args: { groupId: v.id("judgingGroups") },
   returns: v.record(v.id("stories"), v.number()),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.tracking");
 
     // Get ALL notes for this group (no time filters - includes all historical notes)
     const notes = await ctx.db

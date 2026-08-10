@@ -18,6 +18,7 @@ import {
   ratingWithStoryDetailsValidator,
 } from "./validators"; // Updated import path
 import { paginationOptsValidator } from "convex/server"; // Added import
+import { requirePermission } from "./adminAccess"; // Granular admin permissions
 
 /**
  * Ensures a user record exists in the Convex database for the authenticated user.
@@ -1214,7 +1215,7 @@ export const listAllUsersAdmin = query({
     continueCursor: v.string(),
   }),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "users.view");
 
     let query = ctx.db.query("users").order("desc"); // Default order
 
@@ -1319,7 +1320,7 @@ export const listAllUsersAdmin = query({
 export const banUserByAdmin = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "users.moderate");
     const userToBan = await ctx.db.get(args.userId);
     if (!userToBan) {
       throw new Error("User not found.");
@@ -1337,7 +1338,7 @@ export const banUserByAdmin = mutation({
 export const unbanUserByAdmin = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "users.moderate");
     const userToUnban = await ctx.db.get(args.userId);
     if (!userToUnban) {
       throw new Error("User not found.");
@@ -1355,7 +1356,7 @@ export const unbanUserByAdmin = mutation({
 export const pauseUserByAdmin = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "users.moderate");
     const userToPause = await ctx.db.get(args.userId);
     if (!userToPause) {
       throw new Error("User not found.");
@@ -1381,7 +1382,7 @@ export const pauseUserByAdmin = mutation({
 export const unpauseUserByAdmin = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "users.moderate");
     const userToUnpause = await ctx.db.get(args.userId);
     if (!userToUnpause) {
       throw new Error("User not found.");
@@ -1402,7 +1403,7 @@ export const unpauseUserByAdmin = mutation({
 export const deleteUserByAdmin = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "users.delete");
     const userToDelete = await ctx.db.get(args.userId);
     if (!userToDelete) {
       throw new Error("User not found.");
@@ -1446,7 +1447,7 @@ export const verifyUserByAdmin = mutation({
     newVerifiedStatus: v.boolean(),
   }),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "users.moderate");
     const userToVerify = await ctx.db.get(args.userId);
     if (!userToVerify) {
       throw new Error("User not found.");
@@ -1475,7 +1476,7 @@ export const unverifyUserByAdmin = mutation({
     newVerifiedStatus: v.boolean(),
   }),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "users.moderate");
     const userToUnverify = await ctx.db.get(args.userId);
     if (!userToUnverify) {
       throw new Error("User not found.");

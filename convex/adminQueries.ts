@@ -1,12 +1,12 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAdminRole } from "./users";
+import { requirePermission } from "./adminAccess";
 
 export const getTotalSubmissions = query({
   args: {},
   returns: v.number(),
   handler: async (ctx) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "numbers.view");
     const documents = await ctx.db.query("stories").collect();
     return documents.length;
   },
@@ -16,7 +16,7 @@ export const getTotalUsers = query({
   args: {},
   returns: v.number(),
   handler: async (ctx) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "numbers.view");
     const documents = await ctx.db.query("users").collect();
     return documents.length;
   },
@@ -26,7 +26,7 @@ export const getTotalVotes = query({
   args: {},
   returns: v.number(),
   handler: async (ctx) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "numbers.view");
     // Assuming each document in 'votes' table represents a single vote
     const documents = await ctx.db.query("votes").collect();
     return documents.length;
@@ -37,7 +37,7 @@ export const getTotalComments = query({
   args: {},
   returns: v.number(),
   handler: async (ctx) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "numbers.view");
     const documents = await ctx.db.query("comments").collect();
     return documents.length;
   },
@@ -47,7 +47,7 @@ export const getTotalReports = query({
   args: {},
   returns: v.number(),
   handler: async (ctx) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "numbers.view");
     const documents = await ctx.db.query("reports").collect();
     return documents.length;
   },
@@ -57,7 +57,7 @@ export const getTotalSolvedReports = query({
   args: {},
   returns: v.number(),
   handler: async (ctx) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "numbers.view");
     // Assumes 'reports' table has a 'status' field and an index 'by_status'.
     // Changed to check for multiple resolved statuses based on schema
     const resolvedStatuses = ["resolved_hidden", "resolved_deleted"];
@@ -77,7 +77,7 @@ export const getTotalBookmarks = query({
   args: {},
   returns: v.number(),
   handler: async (ctx) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "numbers.view");
     const documents = await ctx.db.query("bookmarks").collect();
     return documents.length;
   },
@@ -87,7 +87,7 @@ export const getTotalRatings = query({
   args: {},
   returns: v.number(),
   handler: async (ctx) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "numbers.view");
     const documents = await ctx.db.query("storyRatings").collect();
     return documents.length;
   },
@@ -104,7 +104,7 @@ export const getUserGrowthData = query({
     })
   ),
   handler: async (ctx) => {
-    await requireAdminRole(ctx);
+    await requirePermission(ctx, "numbers.view");
     
     // Get all users sorted by creation time
     const users = await ctx.db

@@ -408,7 +408,7 @@ export default function JudgingInterfacePage() {
         (s, i) =>
           i > currentSubmissionIndex &&
           !judgeProgress?.submissionProgress.find(
-            (p) => p.storyId === s._id && p.thisJudgeCompleted,
+            (p) => p.storyId === s._id && p.isComplete,
           ),
       );
       if (nextUnjudgedIndex !== -1) {
@@ -647,6 +647,10 @@ export default function JudgingInterfacePage() {
     setShowSearchResults(value.length > 0);
   };
 
+  // Group score scale (5 or 10) drives the rating buttons and /N labels
+  const scoreScale = judgeSession?.group.scoreScale ?? 10;
+  const scaleValues = Array.from({ length: scoreScale }, (_, i) => i + 1);
+
   const renderStarRating = (
     criteriaId: Id<"judgingCriteria">,
     currentScore?: number,
@@ -660,7 +664,7 @@ export default function JudgingInterfacePage() {
     return (
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-1">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => (
+          {scaleValues.map((score) => (
             <button
               key={score}
               onClick={() =>
@@ -685,7 +689,7 @@ export default function JudgingInterfacePage() {
           ))}
         </div>
         <span className="ml-2 text-sm text-gray-600">
-          {displayScore ? `${displayScore}/10` : "Not scored"}
+          {displayScore ? `${displayScore}/${scoreScale}` : "Not scored"}
         </span>
       </div>
     );
@@ -1650,6 +1654,34 @@ export default function JudgingInterfacePage() {
                 </div>
               )}
 
+              {/* Custom Question Answers (per-group submit form questions) */}
+              {(currentSubmission as any).customFormAnswers &&
+                (currentSubmission as any).customFormAnswers.length > 0 && (
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 className="font-medium text-gray-900 mb-4">
+                      Additional Answers
+                    </h3>
+                    <div className="space-y-3">
+                      {(currentSubmission as any).customFormAnswers.map(
+                        (answer: {
+                          key: string;
+                          label: string;
+                          value: string;
+                        }) => (
+                          <div key={answer.key}>
+                            <span className="text-sm font-medium text-gray-700 block">
+                              {answer.label}
+                            </span>
+                            <p className="text-sm text-gray-900 whitespace-pre-wrap break-words">
+                              {answer.value}
+                            </p>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                )}
+
               {/* Judge Notes Section */}
               <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-3">
@@ -2041,7 +2073,7 @@ export default function JudgingInterfacePage() {
                           Overall Score
                         </h4>
                         <span className="text-lg font-bold text-gray-900">
-                          {judgeBreakdown.overallAverage.toFixed(1)}/10
+                          {judgeBreakdown.overallAverage.toFixed(1)}/{scoreScale}
                         </span>
                       </div>
                       <p className="text-xs text-gray-500">
@@ -2061,7 +2093,7 @@ export default function JudgingInterfacePage() {
                                 {judge.judgeName}
                               </span>
                               <span className="text-sm font-semibold text-gray-900">
-                                Avg: {judge.judgeAverage.toFixed(1)}/10
+                                Avg: {judge.judgeAverage.toFixed(1)}/{scoreScale}
                               </span>
                             </div>
                             <div className="flex flex-wrap gap-1">
@@ -2071,7 +2103,7 @@ export default function JudgingInterfacePage() {
                                   className="text-xs bg-white px-1.5 py-0.5 rounded border border-gray-200"
                                   title={s.question}
                                 >
-                                  {s.score}/10
+                                  {s.score}/{scoreScale}
                                 </span>
                               ))}
                             </div>

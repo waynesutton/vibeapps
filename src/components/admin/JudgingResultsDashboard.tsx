@@ -3,7 +3,6 @@ import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import {
-  ArrowLeft,
   Download,
   Trophy,
   Users,
@@ -16,16 +15,14 @@ import {
 import { Button } from "../ui/button";
 import { useDialog } from "../../hooks/useDialog";
 
+// Rendered inside the group workspace; the workspace header and sidebar
+// provide navigation, so this component has no back button or title.
 interface JudgingResultsDashboardProps {
   groupId: Id<"judgingGroups">;
-  groupName: string;
-  onBack: () => void;
 }
 
 export function JudgingResultsDashboard({
   groupId,
-  groupName,
-  onBack,
 }: JudgingResultsDashboardProps) {
   const [exportLoading, setExportLoading] = useState(false);
   const [selectedJudgeIndex, setSelectedJudgeIndex] = useState(0);
@@ -106,28 +103,9 @@ export function JudgingResultsDashboard({
 
   if (!groupScores || !judgeDetails) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onBack}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Groups
-          </Button>
-          <div>
-            <h2 className="text-xl font-medium text-gray-900">
-              Judging Results
-            </h2>
-            <p className="text-sm text-gray-600">{groupName}</p>
-          </div>
-        </div>
-        <div className="text-center py-8">
-          <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading results...</p>
-        </div>
+      <div className="text-center py-8">
+        <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading results...</p>
       </div>
     );
   }
@@ -144,26 +122,9 @@ export function JudgingResultsDashboard({
   return (
     <>
       <DialogComponents />
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onBack}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Groups
-            </Button>
-            <div>
-              <h2 className="text-xl font-medium text-gray-900">
-                Judging Results
-              </h2>
-              <p className="text-sm text-gray-600">{groupName}</p>
-            </div>
-          </div>
+      <div className="space-y-5">
+        {/* Actions row: export lives here, navigation is handled by the workspace */}
+        <div className="flex items-center justify-end">
           <Button
             onClick={handleExport}
             disabled={exportLoading || submissionsJudged === 0}
@@ -174,60 +135,46 @@ export function JudgingResultsDashboard({
           </Button>
         </div>
 
-        {/* Overview Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Submissions Judged</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {submissionsJudged}
-                </p>
+        {/* Overview stats: small inline icons keep the numbers as the focus */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {(
+            [
+              {
+                label: "Submissions judged",
+                value: String(submissionsJudged),
+                icon: BarChart3,
+              },
+              {
+                label: "Average score",
+                value: averageScore ? averageScore.toFixed(1) : "0",
+                icon: Star,
+              },
+              { label: "Judges", value: String(judgeCount), icon: Users },
+              {
+                label: "Completion",
+                value: `${Math.round(completionPercentage)}%`,
+                icon: TrendingUp,
+              },
+            ] as const
+          ).map((stat) => (
+            <div
+              key={stat.label}
+              className="bg-white rounded-lg border border-gray-200 p-4"
+            >
+              <div className="flex items-center gap-1.5 text-gray-500">
+                <stat.icon className="w-3.5 h-3.5" />
+                <p className="text-xs">{stat.label}</p>
               </div>
-              <BarChart3 className="w-8 h-8 text-blue-500" />
+              <p className="text-2xl font-semibold text-gray-900 mt-1">
+                {stat.value}
+              </p>
             </div>
-          </div>
-
-          <div className="bg-white rounded-lg border bg-[#F4F2EE] p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Average Score</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {averageScore ? averageScore.toFixed(1) : "0"}
-                </p>
-              </div>
-              <Star className="w-8 h-8 text-yellow-500" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Judges</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {judgeCount}
-                </p>
-              </div>
-              <Users className="w-8 h-8 text-green-500" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Completion</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {Math.round(completionPercentage)}%
-                </p>
-              </div>
-              <TrendingUp className="w-8 h-8 text-purple-500" />
-            </div>
-          </div>
+          ))}
         </div>
 
         {submissionsJudged === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-            <Award className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <Award className="w-10 h-10 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               No Scores Yet
             </h3>
@@ -244,7 +191,7 @@ export function JudgingResultsDashboard({
             <div className="bg-white rounded-lg border border-gray-200">
               <div className="p-6 border-b border-gray-200">
                 <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-yellow-500" />
+                  <Trophy className="w-4 h-4 text-yellow-500" />
                   Submission Rankings
                 </h3>
               </div>
@@ -419,6 +366,11 @@ export function JudgingResultsDashboard({
                           }`}
                         >
                           {judge.judgeName}
+                          {judge.judgeType === "agent" && (
+                            <span className="ml-1 text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">
+                              Agent
+                            </span>
+                          )}
                           <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
                             {judge.totalScores}
                           </span>
@@ -438,8 +390,13 @@ export function JudgingResultsDashboard({
                         >
                           <div className="flex items-center justify-between mb-4">
                             <div>
-                              <h4 className="font-medium text-gray-900">
+                              <h4 className="font-medium text-gray-900 flex items-center gap-2">
                                 {judge.judgeName}
+                                {judge.judgeType === "agent" && (
+                                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-normal">
+                                    Agent
+                                  </span>
+                                )}
                               </h4>
                               {judge.judgeEmail && (
                                 <p className="text-sm text-gray-600">
@@ -533,7 +490,8 @@ export function JudgingResultsDashboard({
                                             <div className="flex items-center gap-1">
                                               <Star className="w-4 h-4 text-yellow-400 fill-current" />
                                               <span className="font-medium text-sm">
-                                                {score.score}/10
+                                                {score.score}/
+                                                {groupScores?.scoreScale ?? 10}
                                               </span>
                                             </div>
                                           </div>

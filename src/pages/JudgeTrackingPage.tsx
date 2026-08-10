@@ -1,28 +1,27 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useConvexAuth } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { NotFoundPage } from "./NotFoundPage";
 import { JudgeTracking } from "../components/admin/JudgeTracking";
+import { useAdminAccessQuery } from "../components/admin/useAdminAccess";
 
 export default function JudgeTrackingPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
+  const { isLoading, isAuthenticated, access } = useAdminAccessQuery();
 
-  // Check if user is admin
-  const isUserAdmin = useQuery(
-    api.users.checkIsUserAdmin,
-    isAuthenticated ? {} : "skip",
-  );
+  const hasTracking =
+    access !== null &&
+    (access.isAdmin || access.permissions.includes("judging.tracking"));
 
-  // Get the judging group by slug
+  // Get the judging group by slug (backend also enforces group scope)
   const group = useQuery(
     api.judgingGroups.getGroupBySlug,
-    slug && authIsLoading === false && isAuthenticated ? { slug } : "skip",
+    slug && !isLoading && isAuthenticated && hasTracking ? { slug } : "skip",
   );
 
   // Handle loading states
-  if (authIsLoading || (isAuthenticated && isUserAdmin === undefined)) {
+  if (isLoading) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="text-center">Loading...</div>
@@ -30,8 +29,8 @@ export default function JudgeTrackingPage() {
     );
   }
 
-  // Show 404 for non-admin users
-  if (!isAuthenticated || isUserAdmin === false) {
+  // Show 404 for users without judging tracking access
+  if (!isAuthenticated || !hasTracking) {
     return <NotFoundPage />;
   }
 

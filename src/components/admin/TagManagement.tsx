@@ -77,6 +77,10 @@ export function TagManagement() {
   const updateTag = useMutation(api.tags.update);
   const deleteTagMutation = useMutation(api.tags.deleteTag);
   const generateUploadUrl = useMutation(api.tags.generateIconUploadUrl); // Use the new mutation
+  const bulkSetHidden = useMutation(api.tags.bulkSetHidden); // Bulk archive/unarchive
+  const bulkDeleteTags = useMutation(api.tags.bulkDeleteTags); // Bulk delete
+  const updateTagLimits = useMutation(api.tags.updateTagLimits); // Tag limit settings
+  const settings = useQuery(api.settings.get); // Read current tag limits
 
   const [editableTags, setEditableTags] = useState<EditableTag[]>([]);
   const [newTagName, setNewTagName] = useState("");
@@ -93,6 +97,16 @@ export function TagManagement() {
   const [showScrollButtons, setShowScrollButtons] = useState(false);
   const [pageSize, setPageSize] = useState<number>(20); // Tags shown per page
   const [currentPage, setCurrentPage] = useState<number>(1); // Active page (1-indexed)
+
+  // Bulk selection state (persisted tag IDs only)
+  const [selectedTagIds, setSelectedTagIds] = useState<Set<string>>(new Set());
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+
+  // Tag limit settings drafts (null = show current saved value)
+  const [maxTagsDraft, setMaxTagsDraft] = useState<string | null>(null);
+  const [maxLenDraft, setMaxLenDraft] = useState<string | null>(null);
+  const [limitsSaving, setLimitsSaving] = useState(false);
+  const [limitsMessage, setLimitsMessage] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null); // Ref for file input
   const orderSaveTimersRef = useRef<Record<string, number>>({}); // Debounce timers per tag
@@ -471,6 +485,117 @@ export function TagManagement() {
     handleFieldChange(tagId, "emoji", undefined);
   };
 
+  // --- Bulk Selection Handlers ---
+
+  const toggleTagSelection = (tagId: Id<"tags">) => {
+    setConfirmBulkDelete(false);
+    setSelectedTagIds((prev) => {
+      const next = new Set(prev);
+      const key = String(tagId);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedTagIds(new Set());
+    setConfirmBulkDelete(false);
+  };
+
+  // Bulk archive (isHidden true) or unarchive (isHidden false) selected tags
+  const handleBulkSetHidden = async (isHidden: boolean) => {
+    if (selectedTagIds.size === 0) return;
+    setIsProcessing(true);
+    setError(null);
+    try {
+      await bulkSetHidden({
+        tagIds: [...selectedTagIds] as Id<"tags">[],
+        isHidden,
+      });
+      clearSelection();
+    } catch (err) {
+      setError(
+        (err as any)?.data?.message ||
+          (err as Error).message ||
+          "Bulk archive failed.",
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Bulk delete selected tags (requires inline confirm click first)
+  const handleBulkDelete = async () => {
+    if (selectedTagIds.size === 0) return;
+    if (!confirmBulkDelete) {
+      setConfirmBulkDelete(true);
+      return;
+    }
+    setIsProcessing(true);
+    setError(null);
+    try {
+      await bulkDeleteTags({ tagIds: [...selectedTagIds] as Id<"tags">[] });
+      // Remove deleted tags from local state right away
+      setEditableTags((prev) =>
+        prev.filter((t) => !selectedTagIds.has(String(t._id))),
+      );
+      clearSelection();
+    } catch (err) {
+      setError(
+        (err as any)?.data?.message ||
+          (err as Error).message ||
+          "Bulk delete failed.",
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // --- Tag Limit Settings ---
+
+  const savedMaxTags = settings?.maxTagsPerSubmission ?? 6;
+  const savedMaxLen = settings?.maxTagLength ?? 20;
+  const maxTagsValue = maxTagsDraft ?? String(savedMaxTags);
+  const maxLenValue = maxLenDraft ?? String(savedMaxLen);
+  const limitsChanged =
+    maxTagsValue !== String(savedMaxTags) || maxLenValue !== String(savedMaxLen);
+
+  const handleSaveLimits = async () => {
+    const maxTags = parseInt(maxTagsValue, 10);
+    const maxLen = parseInt(maxLenValue, 10);
+    if (isNaN(maxTags) || maxTags < 1 || maxTags > 20) {
+      setLimitsMessage("Max tags per submission must be between 1 and 20.");
+      return;
+    }
+    if (isNaN(maxLen) || maxLen < 3 || maxLen > 100) {
+      setLimitsMessage("Max tag length must be between 3 and 100 characters.");
+      return;
+    }
+    setLimitsSaving(true);
+    setLimitsMessage(null);
+    try {
+      await updateTagLimits({
+        maxTagsPerSubmission: maxTags,
+        maxTagLength: maxLen,
+      });
+      setMaxTagsDraft(null);
+      setMaxLenDraft(null);
+      setLimitsMessage("Tag limits saved.");
+    } catch (err) {
+      setLimitsMessage(
+        (err as any)?.data?.message ||
+          (err as Error).message ||
+          "Failed to save tag limits.",
+      );
+    } finally {
+      setLimitsSaving(false);
+    }
+  };
+
   // --- Save Logic ---
 
   const handleSave = async () => {
@@ -633,6 +758,21 @@ export function TagManagement() {
 
   const hasPendingChanges = editableTags.some((tag) => tag.isModified);
 
+  // Existing tags whose names exceed the configured length limit.
+  // The limit only blocks new tags, so old long tags are flagged for cleanup.
+  const tooLongTags = editableTags.filter(
+    (tag) => !tag.isNew && !tag.isDeleted && tag.name.length > savedMaxLen,
+  );
+
+  const selectAllTooLongTags = () => {
+    setConfirmBulkDelete(false);
+    setSelectedTagIds((prev) => {
+      const next = new Set(prev);
+      tooLongTags.forEach((tag) => next.add(String(tag._id)));
+      return next;
+    });
+  };
+
   // Search runs across ALL tags, then results are paginated for display
   const filteredTags = editableTags.filter((tag) =>
     tag.name.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -754,6 +894,76 @@ export function TagManagement() {
           </div>
         )}
 
+        {/* Tag Limit Settings */}
+        <div className="mb-6 p-4 border border-[#D8E1EC] rounded-md bg-[#FBFAF9]">
+          <h3 className="text-sm font-medium text-[#525252] mb-3">
+            Tag limits
+          </h3>
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex flex-col">
+              <label
+                htmlFor="max-tags-per-submission"
+                className="text-xs text-gray-500 mb-1"
+              >
+                Max tags per submission
+              </label>
+              <input
+                type="number"
+                id="max-tags-per-submission"
+                min={1}
+                max={20}
+                value={maxTagsValue}
+                onChange={(e) => {
+                  setMaxTagsDraft(e.target.value);
+                  setLimitsMessage(null);
+                }}
+                className="w-28 px-2 py-1.5 text-sm border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] focus:border-[#292929]"
+                disabled={limitsSaving}
+              />
+            </div>
+            <div className="flex flex-col">
+              <label
+                htmlFor="max-tag-length"
+                className="text-xs text-gray-500 mb-1"
+              >
+                Max tag name length
+              </label>
+              <input
+                type="number"
+                id="max-tag-length"
+                min={3}
+                max={100}
+                value={maxLenValue}
+                onChange={(e) => {
+                  setMaxLenDraft(e.target.value);
+                  setLimitsMessage(null);
+                }}
+                className="w-28 px-2 py-1.5 text-sm border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] focus:border-[#292929]"
+                disabled={limitsSaving}
+              />
+            </div>
+            <button
+              onClick={handleSaveLimits}
+              disabled={limitsSaving || !limitsChanged}
+              className="px-4 py-1.5 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {limitsSaving ? "Saving..." : "Save Limits"}
+            </button>
+            {limitsMessage && (
+              <span
+                className={`text-xs ${limitsMessage === "Tag limits saved." ? "text-green-600" : "text-red-600"}`}
+              >
+                {limitsMessage}
+              </span>
+            )}
+          </div>
+          <p className="mt-2 text-xs text-gray-500">
+            Hidden tags added by custom forms never count toward the
+            submission limit. The name length limit only applies to new tags
+            typed by users.
+          </p>
+        </div>
+
         {/* Search Tags */}
         <div className="mb-4">
           <input
@@ -826,6 +1036,106 @@ export function TagManagement() {
           </button>
         </form>
 
+        {/* Bulk Selection Controls */}
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <label className="flex items-center gap-2 text-sm text-[#525252] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={
+                paginatedTags.filter((t) => !t.isNew).length > 0 &&
+                paginatedTags
+                  .filter((t) => !t.isNew)
+                  .every((t) => selectedTagIds.has(String(t._id)))
+              }
+              onChange={(e) => {
+                setConfirmBulkDelete(false);
+                setSelectedTagIds((prev) => {
+                  const next = new Set(prev);
+                  const pageIds = paginatedTags
+                    .filter((t) => !t.isNew)
+                    .map((t) => String(t._id));
+                  if (e.target.checked) {
+                    pageIds.forEach((id) => next.add(id));
+                  } else {
+                    pageIds.forEach((id) => next.delete(id));
+                  }
+                  return next;
+                });
+              }}
+              disabled={isProcessing}
+              className="rounded border-gray-300"
+            />
+            Select all on page
+          </label>
+          {tooLongTags.length > 0 && (
+            <button
+              onClick={selectAllTooLongTags}
+              disabled={isProcessing}
+              className="px-3 py-1 text-sm text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50"
+              title={`Select every tag longer than ${savedMaxLen} characters for bulk archive or delete`}
+            >
+              Select all {tooLongTags.length} too-long tags (&gt;
+              {savedMaxLen} chars)
+            </button>
+          )}
+          {selectedTagIds.size > 0 && (
+            <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 bg-[#F4F0ED] rounded-md">
+              <span className="text-sm text-[#525252] font-medium">
+                {selectedTagIds.size} selected
+              </span>
+              <button
+                onClick={() => handleBulkSetHidden(true)}
+                disabled={isProcessing}
+                className="px-3 py-1 text-sm text-[#525252] bg-white border border-[#D5D3D0] rounded-md hover:bg-[#FBFAF9] transition-colors disabled:opacity-50 flex items-center gap-1"
+                title="Archive selected tags (hide from public view)"
+              >
+                <Archive className="w-3.5 h-3.5" />
+                Archive
+              </button>
+              <button
+                onClick={() => handleBulkSetHidden(false)}
+                disabled={isProcessing}
+                className="px-3 py-1 text-sm text-[#525252] bg-white border border-[#D5D3D0] rounded-md hover:bg-[#FBFAF9] transition-colors disabled:opacity-50 flex items-center gap-1"
+                title="Unarchive selected tags"
+              >
+                <ArchiveRestore className="w-3.5 h-3.5" />
+                Unarchive
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={isProcessing}
+                className={`px-3 py-1 text-sm rounded-md transition-colors disabled:opacity-50 flex items-center gap-1 border ${
+                  confirmBulkDelete
+                    ? "bg-red-600 text-white border-red-600 hover:bg-red-700"
+                    : "bg-white text-red-600 border-red-300 hover:bg-red-50"
+                }`}
+                title="Delete selected tags permanently"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                {confirmBulkDelete
+                  ? `Confirm delete ${selectedTagIds.size} tags`
+                  : "Delete"}
+              </button>
+              {confirmBulkDelete && (
+                <button
+                  onClick={() => setConfirmBulkDelete(false)}
+                  disabled={isProcessing}
+                  className="px-3 py-1 text-sm text-[#525252] bg-white border border-[#D5D3D0] rounded-md hover:bg-[#FBFAF9] transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                onClick={clearSelection}
+                disabled={isProcessing}
+                className="text-xs text-gray-500 hover:text-black transition-colors disabled:opacity-50"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Loading State */}
         {allTagsAdmin === undefined && <div>Loading tags...</div>}
 
@@ -844,6 +1154,18 @@ export function TagManagement() {
                 <div
                   className={`flex items-center justify-between p-3 ${tag.isDeleted ? "opacity-60" : ""}`}
                 >
+                  {/* Bulk Select Checkbox (persisted tags only) */}
+                  {!tag.isNew && !tag.isDeleted && (
+                    <input
+                      type="checkbox"
+                      checked={selectedTagIds.has(String(tag._id))}
+                      onChange={() => toggleTagSelection(tag._id)}
+                      disabled={isProcessing}
+                      className="mr-3 rounded border-gray-300 flex-shrink-0"
+                      title="Select tag for bulk actions"
+                    />
+                  )}
+
                   {/* Order Input */}
                   {!tag.isDeleted && (
                     <div className="flex flex-col items-center mr-3">
@@ -936,6 +1258,14 @@ export function TagManagement() {
                     {tag.isHidden && (
                       <span className="text-xs text-gray-500 flex-shrink-0">
                         (Hidden)
+                      </span>
+                    )}
+                    {!tag.isNew && tag.name.length > savedMaxLen && (
+                      <span
+                        className="text-xs text-red-600 flex-shrink-0 font-medium"
+                        title={`This tag is ${tag.name.length} characters, over the ${savedMaxLen} character limit. Rename, archive, or delete it.`}
+                      >
+                        (Too long: {tag.name.length} chars)
                       </span>
                     )}
                     {tag.createdByAdmin === false && (

@@ -1,7 +1,12 @@
 import { query, mutation, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
-import { requireAdminRole, getAuthenticatedUserId } from "./users";
+import { getAuthenticatedUserId } from "./users";
+import {
+  requireJudgingGroupPermission,
+  getAllowedJudgingGroupIds,
+  hasPermission,
+} from "./adminAccess";
 import { internal } from "./_generated/api";
 
 // Helper function to check if a story should be included in judging
@@ -163,7 +168,7 @@ export const addSubmissions = mutation({
     errors: v.array(v.string()),
   }),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.manage");
 
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
@@ -227,6 +232,69 @@ export const addSubmissions = mutation({
 });
 
 /**
+ * Search all site submissions by title so admins can hand-pick stories to add
+ * to a judging group from the workspace Submissions section. Gated by the same
+ * judging.manage permission as addSubmissions (no moderation access needed).
+ * Excludes stories that are invalid for judging and flags ones already in the group.
+ */
+export const searchStoriesForGroup = query({
+  args: {
+    groupId: v.id("judgingGroups"),
+    searchTerm: v.string(),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("stories"),
+      _creationTime: v.number(),
+      title: v.string(),
+      slug: v.string(),
+      status: v.union(
+        v.literal("pending"),
+        v.literal("approved"),
+        v.literal("rejected"),
+      ),
+      inGroup: v.boolean(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.manage");
+
+    const term = args.searchTerm.trim();
+    if (term.length < 2) {
+      return [];
+    }
+
+    const matches = await ctx.db
+      .query("stories")
+      .withSearchIndex("search_all", (q) => q.search("title", term))
+      .take(15);
+
+    const results = await Promise.all(
+      matches
+        .filter((story) => isStoryValidForJudging(story))
+        .map(async (story) => {
+          const existing = await ctx.db
+            .query("judgingGroupSubmissions")
+            .withIndex("by_groupId_storyId", (q) =>
+              q.eq("groupId", args.groupId).eq("storyId", story._id),
+            )
+            .unique();
+          return {
+            _id: story._id,
+            _creationTime: story._creationTime,
+            title: story.title,
+            slug: story.slug,
+            status: story.status,
+            inGroup: existing !== null,
+          };
+        }),
+    );
+
+    return results;
+  },
+});
+
+/**
  * Backfill submissions by required tag.
  * Scans all stories and includes every valid story that carries the group's
  * configured required tag, even if it was not submitted through the custom
@@ -242,7 +310,7 @@ export const syncRequiredTagSubmissions = mutation({
     requiredTagSet: v.boolean(),
   }),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.manage");
     const addedBy = await getAuthenticatedUserId(ctx);
 
     const group = await ctx.db.get(args.groupId);
@@ -296,7 +364,7 @@ export const syncAutoIncludeSubmissions = mutation({
     tagsConfigured: v.boolean(),
   }),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.manage");
     const addedBy = await getAuthenticatedUserId(ctx);
 
     const group = await ctx.db.get(args.groupId);
@@ -344,7 +412,7 @@ export const removeSubmission = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.manage");
 
     // Find and delete the group submission
     const submission = await ctx.db
@@ -456,7 +524,7 @@ export const listByGroup = query({
     }),
   ),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.view");
 
     const limit = args.limit || 50;
 
@@ -479,6 +547,10 @@ export const listByGroup = query({
       .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
       .collect();
     const judgeCount = judges.length;
+
+    // Group score scale (5 or 10) for max-possible math
+    const scaleGroup = await ctx.db.get(args.groupId);
+    const scoreScale = scaleGroup?.scoreScale ?? 10;
 
     const enrichedSubmissions = (
       await Promise.all(
@@ -503,7 +575,7 @@ export const listByGroup = query({
         const averageScore =
           scores.length > 0 ? totalScores / scores.length : undefined;
         const uniqueJudges = new Set(scores.map((s) => s.judgeId)).size;
-        const maxPossibleScore = criteriaCount * 10 * judgeCount; // 10 is max score per criteria
+        const maxPossibleScore = criteriaCount * scoreScale * judgeCount; // scale is max score per criterion
 
         // Check if this submission is marked as completed
         const submissionStatus = await ctx.db
@@ -572,7 +644,7 @@ export const getAvailableSubmissions = query({
     }),
   ),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.manage");
 
     const limit = args.limit || 20;
 
@@ -634,13 +706,31 @@ export const getStoryJudgingGroups = query({
     }),
   ),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    // Visible to moderation users (story context) and judging users
+    // (scoped to their allowed groups below).
+    const canModerate = await hasPermission(ctx, "moderation.view");
+    const allowedGroupIds = await getAllowedJudgingGroupIds(ctx);
+    if (
+      !canModerate &&
+      allowedGroupIds !== "all" &&
+      allowedGroupIds.length === 0
+    ) {
+      throw new Error("Permission required: moderation.view or judging.view");
+    }
 
     // Get all group submissions for this story
-    const submissions = await ctx.db
+    const allSubmissions = await ctx.db
       .query("judgingGroupSubmissions")
       .withIndex("by_storyId", (q) => q.eq("storyId", args.storyId))
       .collect();
+
+    // Judging-scoped users (without moderation access) only see their groups
+    const submissions =
+      canModerate || allowedGroupIds === "all"
+        ? allSubmissions
+        : allSubmissions.filter((submission) =>
+            allowedGroupIds.includes(submission.groupId),
+          );
 
     // Get group details for each submission
     const groups = await Promise.all(
@@ -696,7 +786,7 @@ export const exportGroupSubmissions = query({
     }),
   ),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.results");
 
     const submissions = await ctx.db
       .query("judgingGroupSubmissions")
@@ -810,6 +900,16 @@ export const getGroupSubmissions = query({
           v.object({
             name: v.string(),
             email: v.string(),
+          }),
+        ),
+      ),
+      // Per-group custom question answers shown to judges
+      customFormAnswers: v.optional(
+        v.array(
+          v.object({
+            key: v.string(),
+            label: v.string(),
+            value: v.string(),
           }),
         ),
       ),
@@ -935,6 +1035,8 @@ export const getGroupSubmissions = query({
             teamName: story.teamName,
             teamMemberCount: story.teamMemberCount,
             teamMembers: story.teamMembers,
+            // Per-group custom question answers
+            customFormAnswers: story.customFormAnswers,
             // Changelog tracking
             changeLog: story.changeLog,
           };

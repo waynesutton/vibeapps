@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Download, ArrowLeft, ArrowUp, ArrowDown } from "lucide-react";
-import { useQuery, useConvexAuth } from "convex/react";
+import { useQuery } from "convex/react";
 import { NotFoundPage } from "../../pages/NotFoundPage";
 import { api } from "../../../convex/_generated/api";
+import { useAdminAccessQuery } from "./useAdminAccess";
 import { Id } from "../../../convex/_generated/dataModel";
 import type { CustomForm, FormSubmission, FormField } from "../../types";
 
@@ -53,15 +54,16 @@ const generateCSV = (
 
 export function FormResults() {
   const { formId } = useParams<{ formId?: Id<"forms"> }>();
-  const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
+  const { isLoading: authIsLoading, isAuthenticated, access } =
+    useAdminAccessQuery();
 
-  // Check if user is admin
-  const isUserAdmin = useQuery(
-    api.users.checkIsUserAdmin,
-    isAuthenticated ? {} : "skip",
-  );
+  // Needs forms.results (full admins always pass)
+  const canViewResults =
+    access !== null &&
+    (access.isAdmin || access.permissions.includes("forms.results"));
 
-  const skipQuery = !formId || (formId && (authIsLoading || !isAuthenticated));
+  const skipQuery =
+    !formId || authIsLoading || !isAuthenticated || !canViewResults;
 
   const formData = useQuery(
     api.forms.getFormWithFields,
@@ -122,12 +124,12 @@ export function FormResults() {
   }, [submissions, sortField, sortDirection]);
 
   // Handle auth loading state first
-  if (authIsLoading || (isAuthenticated && isUserAdmin === undefined)) {
+  if (authIsLoading) {
     return <div>Loading authentication...</div>;
   }
 
-  // Show 404 for non-authenticated users or users without admin role
-  if (!isAuthenticated || isUserAdmin === false) {
+  // Show 404 for non-authenticated users or users without results access
+  if (!isAuthenticated || !canViewResults) {
     return <NotFoundPage />;
   }
 
@@ -165,7 +167,7 @@ export function FormResults() {
             <ArrowLeft className="w-4 h-4" /> Back to Forms List
           </Link>
           <h2 className="text-xl font-medium text-[#525252]">
-            Results for: {formData.title}
+            Results for: {formData?.title}
           </h2>
         </div>
         <button

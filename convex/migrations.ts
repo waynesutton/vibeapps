@@ -210,6 +210,57 @@ export const migrateYCHackForm = internalMutation({
 });
 
 /**
+ * Backfill aiJudgeResults: copy the deprecated provider/model fields (which
+ * held the judging model, not the participant's model) into judgeProvider /
+ * judgeModel, then unset the old fields so they can be removed from the
+ * schema later. Processes in batches with a self-scheduling continuation to
+ * avoid write conflicts and mutation limits.
+ */
+export const backfillJudgeModelFields = internalMutation({
+  args: { cursor: v.optional(v.string()) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const BATCH_SIZE = 200;
+    const page = await ctx.db
+      .query("aiJudgeResults")
+      .paginate({ cursor: args.cursor ?? null, numItems: BATCH_SIZE });
+
+    for (const row of page.page) {
+      // Idempotent: skip rows that no longer carry the deprecated fields
+      if (row.provider === undefined && row.model === undefined) continue;
+      await ctx.db.patch(row._id, {
+        judgeProvider: row.judgeProvider ?? row.provider,
+        judgeModel: row.judgeModel ?? row.model,
+        provider: undefined,
+        model: undefined,
+      });
+    }
+
+    if (!page.isDone) {
+      await ctx.scheduler.runAfter(0, internal.migrations.backfillJudgeModelFields, {
+        cursor: page.continueCursor,
+      });
+    } else {
+      console.log("backfillJudgeModelFields: complete");
+    }
+    return null;
+  },
+});
+
+/**
+ * Admin-callable trigger for the judge model field backfill.
+ */
+export const triggerJudgeModelBackfill = mutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    await requireAdminRole(ctx);
+    await ctx.scheduler.runAfter(0, internal.migrations.backfillJudgeModelFields, {});
+    return null;
+  },
+});
+
+/**
  * Public mutation wrapper to trigger the YCHackForm migration
  * This can be called from admin interface
  */

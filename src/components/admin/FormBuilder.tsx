@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Plus, Save, Trash2, Eye, ArrowLeft } from "lucide-react";
-import { useQuery, useMutation, useConvexAuth } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { NotFoundPage } from "../../pages/NotFoundPage";
 import { api } from "../../../convex/_generated/api";
+import { useAdminAccessQuery } from "./useAdminAccess";
 import { Id } from "../../../convex/_generated/dataModel";
 import type { CustomForm, FormField } from "../../types";
 
@@ -34,13 +35,13 @@ export function FormBuilder() {
   const navigate = useNavigate();
   const { formId } = useParams<{ formId?: Id<"forms"> }>(); // Get formId from URL if editing
 
-  const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth(); // Get auth state
+  const { isLoading: authIsLoading, isAuthenticated, access } =
+    useAdminAccessQuery();
 
-  // Check if user is admin
-  const isUserAdmin = useQuery(
-    api.users.checkIsUserAdmin,
-    isAuthenticated ? {} : "skip",
-  );
+  // Needs forms.manage (full admins always pass)
+  const canManageForms =
+    access !== null &&
+    (access.isAdmin || access.permissions.includes("forms.manage"));
 
   // Fetch existing form data if formId is present
   const existingFormData = useQuery(
@@ -180,12 +181,12 @@ export function FormBuilder() {
   };
 
   // Handle auth loading state first
-  if (authIsLoading || (isAuthenticated && isUserAdmin === undefined)) {
+  if (authIsLoading) {
     return <div>Loading authentication...</div>;
   }
 
-  // Show 404 for non-authenticated users or users without admin role
-  if (!isAuthenticated || isUserAdmin === false) {
+  // Show 404 for non-authenticated users or users without forms access
+  if (!isAuthenticated || !canManageForms) {
     return <NotFoundPage />;
   }
 

@@ -1,7 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { Doc, Id } from "./_generated/dataModel";
-import { requireAdminRole } from "./users";
+import { requireJudgingGroupPermission } from "./adminAccess";
 
 // --- Admin Functions ---
 
@@ -22,7 +21,7 @@ export const listByGroup = query({
     }),
   ),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.view");
 
     return await ctx.db
       .query("judgingCriteria")
@@ -51,7 +50,7 @@ export const saveCriteria = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.manage");
 
     // Verify the group exists
     const group = await ctx.db.get(args.groupId);
@@ -127,7 +126,15 @@ export const deleteCriteria = mutation({
   args: { criteriaId: v.id("judgingCriteria") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    const criterionDoc = await ctx.db.get(args.criteriaId);
+    if (!criterionDoc) {
+      return null;
+    }
+    await requireJudgingGroupPermission(
+      ctx,
+      criterionDoc.groupId,
+      "judging.manage",
+    );
 
     // Check if there are any scores for this criterion
     const scores = await ctx.db
@@ -162,7 +169,7 @@ export const reorderCriteria = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await requireAdminRole(ctx);
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.manage");
 
     // Update the order for each criterion
     for (const item of args.criteriaOrder) {
