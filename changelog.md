@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Changed] - 2026-08-10
+
+**AI Spam Check date range picker**
+
+- Replaced the two native date inputs on the AI Spam tab (which rendered unstyled OS calendar buttons) with a single site-styled date range picker: one trigger button showing the selected range, a popover with a two-month range calendar, and preset windows for last 7 days, last 30 days, this month, last month, and last 3 months, plus inline clear (2026-08-10).
+- Reorganized the AI Spam tab into two clear steps: a "Run a scan" card at the top with its own date range picker and Scan / Re-scan buttons (labels switch to "Scan this range" when a range is picked, empty range scans the 100 most recent), and a separate "Scan results" section whose verdict, sort, and date filters only change the view and never start a scan. Inline copy explains each step and the empty state now suggests clearing filters or running a scan (2026-08-10).
+- New reusable UI primitives: `popover.tsx` (Radix popover styled like the existing select), `calendar.tsx` (react-day-picker with the site palette), and `date-range-picker.tsx`. New dependencies: `react-day-picker`, `@radix-ui/react-popover`.
+- **Frontend**: `src/components/ui/popover.tsx` (new), `src/components/ui/calendar.tsx` (new), `src/components/ui/date-range-picker.tsx` (new), `src/components/admin/SpamCheck.tsx`, `package.json`.
+
 ### [Added] - 2026-08-10
 
 **Submission emails and per-type send toggles**

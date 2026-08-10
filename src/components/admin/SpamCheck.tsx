@@ -31,6 +31,10 @@ import {
 import { toast } from "sonner";
 import { useDialog } from "@/hooks/useDialog";
 import { useAdminAccess } from "./useAdminAccess";
+import {
+  DateRangePicker,
+  type DateRange,
+} from "@/components/ui/date-range-picker";
 
 type VerdictFilter = "all" | "spam" | "suspicious" | "clean" | "failed" | "marked";
 type SortBy = "newest" | "oldest" | "confidence";
@@ -90,8 +94,11 @@ export function SpamCheck() {
 
   const [verdictFilter, setVerdictFilter] = useState<VerdictFilter>("all");
   const [sortBy, setSortBy] = useState<SortBy>("newest");
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
+  // Two independent ranges: one picks what to scan, one filters the results view
+  const [scanRange, setScanRange] = useState<DateRange | undefined>(undefined);
+  const [filterRange, setFilterRange] = useState<DateRange | undefined>(
+    undefined,
+  );
   const [selectedIds, setSelectedIds] = useState<Set<Id<"stories">>>(new Set());
   const [expandedId, setExpandedId] = useState<Id<"spamCheckResults"> | null>(
     null,
@@ -102,20 +109,23 @@ export function SpamCheck() {
   const [promptDraft, setPromptDraft] = useState<string | null>(null);
   const [isSavingPrompt, setIsSavingPrompt] = useState(false);
 
-  // Convert date input strings to ms timestamps (end date is end of day)
-  const startMs = startDate ? new Date(startDate).getTime() : undefined;
-  let endMs: number | undefined;
-  if (endDate) {
-    const endDateTime = new Date(endDate);
-    endDateTime.setHours(23, 59, 59, 999);
-    endMs = endDateTime.getTime();
-  }
+  // Convert a picked range to ms timestamps (start of first day to end of last day)
+  const rangeToMs = (
+    range: DateRange | undefined,
+  ): { startMs?: number; endMs?: number } => {
+    if (!range?.from) return {};
+    const startMs = new Date(range.from).setHours(0, 0, 0, 0);
+    const endMs = new Date(range.to ?? range.from).setHours(23, 59, 59, 999);
+    return { startMs, endMs };
+  };
+
+  const { startMs: filterStartMs, endMs: filterEndMs } = rangeToMs(filterRange);
 
   const data = useQuery(api.spamCheck.listSpamResults, {
     verdictFilter,
     sortBy,
-    startDate: startMs,
-    endDate: endMs,
+    startDate: filterStartMs,
+    endDate: filterEndMs,
   });
 
   const promptData = useQuery(api.spamCheck.getSpamPrompt, {});
@@ -155,6 +165,7 @@ export function SpamCheck() {
   const clearSelection = () => setSelectedIds(new Set());
 
   const handleBatchScan = (rescan: boolean) => {
+    const { startMs, endMs } = rangeToMs(scanRange);
     const hasRange = startMs !== undefined || endMs !== undefined;
     const scope = hasRange
       ? "up to 100 submissions in the selected date range"
@@ -364,23 +375,41 @@ export function SpamCheck() {
           </p>
         </div>
         {canModerate && (
-          <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleTogglePromptEditor}
+            disabled={promptData === undefined}
+          >
+            <PenLine className="w-4 h-4 mr-1" />
+            AI prompt
+            {promptData?.isCustom && (
+              <span className="ml-1.5 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-1.5 py-px">
+                custom
+              </span>
+            )}
+          </Button>
+        )}
+      </div>
+
+      {/* Step 1: run a scan (pick an optional date range, then scan) */}
+      {canModerate && (
+        <div className="border border-gray-200 rounded-lg bg-white p-4 space-y-3">
+          <div>
+            <h3 className="text-sm font-medium text-[#292929]">Run a scan</h3>
+            <p className="text-xs text-[#545454] mt-0.5">
+              New submissions are scanned on their own. Use this to scan older
+              submissions: pick a date range (or a month preset), or leave it
+              empty to scan the 100 most recent.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <DateRangePicker
+              value={scanRange}
+              onChange={setScanRange}
+              placeholder="All recent submissions"
+            />
             <Button
-              variant="outline"
-              size="sm"
-              onClick={handleTogglePromptEditor}
-              disabled={promptData === undefined}
-            >
-              <PenLine className="w-4 h-4 mr-1" />
-              AI prompt
-              {promptData?.isCustom && (
-                <span className="ml-1.5 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-1.5 py-px">
-                  custom
-                </span>
-              )}
-            </Button>
-            <Button
-              variant="outline"
               size="sm"
               onClick={() => handleBatchScan(false)}
               disabled={isScanning}
@@ -388,19 +417,24 @@ export function SpamCheck() {
               <RefreshCw
                 className={`w-4 h-4 mr-1 ${isScanning ? "animate-spin" : ""}`}
               />
-              Scan recent
+              {scanRange?.from ? "Scan this range" : "Scan recent"}
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => handleBatchScan(true)}
               disabled={isScanning}
+              title="Also re-checks submissions that already have a verdict"
             >
-              Re-scan all recent
+              {scanRange?.from ? "Re-scan this range" : "Re-scan recent"}
             </Button>
           </div>
-        )}
-      </div>
+          <p className="text-xs text-[#787672]">
+            Scan checks submissions that have no verdict yet. Re-scan also
+            re-checks ones already scanned. Up to 100 per run.
+          </p>
+        </div>
+      )}
 
       {/* AI system prompt editor */}
       {promptDraft !== null && promptData && (
@@ -454,6 +488,15 @@ export function SpamCheck() {
           </div>
         </div>
       )}
+
+      {/* Step 2: scan results with view-only filters */}
+      <div className="pt-1">
+        <h3 className="text-sm font-medium text-[#292929]">Scan results</h3>
+        <p className="text-xs text-[#545454] mt-0.5">
+          Every submission that has been scanned shows up here. The filters
+          below only change what you see; they do not start a scan.
+        </p>
+      </div>
 
       {counts && (
         <div className="flex flex-wrap gap-2 text-xs">
@@ -516,36 +559,12 @@ export function SpamCheck() {
             <SelectItem value="confidence">Highest confidence</SelectItem>
           </SelectContent>
         </Select>
-        {/* Date range filter (by submission date), also scopes batch scans */}
-        <div className="flex items-center gap-2">
-          <Input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="h-9 w-[150px] text-sm"
-            aria-label="Start date"
-          />
-          <span className="text-sm text-[#545454]">to</span>
-          <Input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="h-9 w-[150px] text-sm"
-            aria-label="End date"
-          />
-          {(startDate || endDate) && (
-            <button
-              type="button"
-              onClick={() => {
-                setStartDate("");
-                setEndDate("");
-              }}
-              className="text-xs text-[#545454] hover:text-[#292929] underline"
-            >
-              Clear dates
-            </button>
-          )}
-        </div>
+        {/* View-only filter by submission date; does not affect scans */}
+        <DateRangePicker
+          value={filterRange}
+          onChange={setFilterRange}
+          placeholder="Filter by submission date"
+        />
         {results.length > 0 && (
           <label className="flex items-center gap-2 text-sm text-[#545454] ml-1 cursor-pointer">
             <input
@@ -609,8 +628,9 @@ export function SpamCheck() {
         </div>
       ) : results.length === 0 ? (
         <div className="text-sm text-[#545454] py-8 text-center border border-dashed border-gray-200 rounded-lg">
-          No scan results yet. New submissions are scanned automatically, or
-          run "Scan recent" to check existing ones.
+          {filterRange?.from || verdictFilter !== "all"
+            ? "No scan results match these filters. Clear the filters, or run a scan above to check submissions from this period."
+            : 'No scan results yet. New submissions are scanned automatically, or use "Run a scan" above to check existing ones.'}
         </div>
       ) : (
         <div className="space-y-2">
