@@ -1,0 +1,674 @@
+import { useState } from "react";
+import { useMutation, useQuery } from "convex/react";
+import { Eye, Mail, Send } from "lucide-react";
+import { api } from "../../../../convex/_generated/api";
+import { Id } from "../../../../convex/_generated/dataModel";
+import {
+  TEMPLATE_VARIABLES,
+  applyTemplateVars,
+  renderMarkdownLite,
+  templateEmailShell,
+} from "../../../../convex/emails/render";
+import AlertDialog from "../../ui/AlertDialog";
+import { GroupDetails, SectionCard } from "./groupSection";
+
+// Emails section of the judging group workspace: pick a template, edit the
+// message, choose recipients and a reply-to, preview, test, and send.
+// Server-side gate: judging.emails permission scoped to this group.
+export function GroupEmailsSection({ group }: { group: GroupDetails }) {
+  // Stable "now" for the daily-cap window so the query args don't change on
+  // every render (queries must stay deterministic, no Date.now() server side)
+  const [loadedAt] = useState(() => Date.now());
+  const status = useQuery(api.emails.judgingGroupEmails.getGroupEmailStatus, {
+    groupId: group._id,
+    now: loadedAt,
+  });
+  const recipients = useQuery(
+    api.emails.judgingGroupEmails.listGroupRecipients,
+    { groupId: group._id },
+  );
+  const recentSends = useQuery(api.emails.judgingGroupEmails.listGroupSends, {
+    groupId: group._id,
+  });
+  const scheduledSends = useQuery(
+    api.emails.judgingGroupEmails.listScheduledEmails,
+    { groupId: group._id },
+  );
+  const templates = useQuery(api.emailTemplates.listTemplates, {});
+
+  const sendGroupEmail = useMutation(
+    api.emails.judgingGroupEmails.sendGroupEmail,
+  );
+  const sendGroupTestEmail = useMutation(
+    api.emails.judgingGroupEmails.sendGroupTestEmail,
+  );
+  const cancelScheduledEmail = useMutation(
+    api.emails.judgingGroupEmails.cancelScheduledEmail,
+  );
+
+  // Compose state. Recipients default to everyone; excluded holds opt-outs
+  // so no effect is needed to sync with the loaded judge list.
+  const [templateId, setTemplateId] = useState<string>("");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [signature, setSignature] = useState("");
+  const [replyTo, setReplyTo] = useState("");
+  const [excluded, setExcluded] = useState<Set<string>>(new Set());
+  const [scheduleAt, setScheduleAt] = useState("");
+  const [previewJudgeId, setPreviewJudgeId] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [cancelTarget, setCancelTarget] =
+    useState<Id<"groupScheduledEmails"> | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [feedback, setFeedback] = useState<{
+    kind: "success" | "error";
+    text: string;
+  } | null>(null);
+
+  const selectedRecipients = (recipients ?? []).filter(
+    (r) => !excluded.has(r.judgeId),
+  );
+
+  const blocked =
+    status !== undefined && (!status.emailsEnabled || !status.typeEnabled);
+  const canCompose = subject.trim() !== "" && body.trim() !== "";
+
+  // Rolling 24h cap from the server: recipients still available today
+  const remaining =
+    status !== undefined
+      ? Math.max(0, status.dailyCap - status.usedLast24h)
+      : undefined;
+  const overCap =
+    remaining !== undefined && selectedRecipients.length > remaining;
+
+  // datetime-local wants "YYYY-MM-DDTHH:mm" in local time
+  const toLocalInputValue = (ms: number) => {
+    const d = new Date(ms);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const applyTemplate = (id: string) => {
+    setTemplateId(id);
+    const template = templates?.find((t) => t._id === id);
+    if (template) {
+      setSubject(template.subject);
+      setBody(template.body);
+      setSignature(template.signature ?? "");
+    }
+  };
+
+  const toggleRecipient = (judgeId: string) => {
+    setExcluded((prev) => {
+      const next = new Set(prev);
+      if (next.has(judgeId)) {
+        next.delete(judgeId);
+      } else {
+        next.add(judgeId);
+      }
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (!recipients) return;
+    setExcluded((prev) =>
+      prev.size === 0 ? new Set(recipients.map((r) => r.judgeId)) : new Set(),
+    );
+  };
+
+  const handleSendTest = async () => {
+    setIsSending(true);
+    setFeedback(null);
+    try {
+      const result = await sendGroupTestEmail({
+        groupId: group._id,
+        subject,
+        body,
+        signature: signature.trim() || undefined,
+        replyTo: replyTo.trim() || undefined,
+        templateId: (templateId || undefined) as
+          | Id<"emailTemplates">
+          | undefined,
+      });
+      setFeedback({
+        kind: "success",
+        text: `Test email queued to ${result.sentTo}.`,
+      });
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        text:
+          error instanceof Error ? error.message : "Failed to send test email",
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleSend = async () => {
+    setIsSending(true);
+    setFeedback(null);
+    try {
+      const scheduledAtMs = scheduleAt
+        ? new Date(scheduleAt).getTime()
+        : undefined;
+      const result = await sendGroupEmail({
+        groupId: group._id,
+        subject,
+        body,
+        signature: signature.trim() || undefined,
+        replyTo: replyTo.trim() || undefined,
+        judgeIds: selectedRecipients.map((r) => r.judgeId),
+        templateId: (templateId || undefined) as
+          | Id<"emailTemplates">
+          | undefined,
+        scheduledAtMs,
+      });
+      const judgeCount = `${result.totalRecipients} judge${result.totalRecipients === 1 ? "" : "s"}`;
+      if (result.scheduledFor !== undefined) {
+        setScheduleAt("");
+        setFeedback({
+          kind: "success",
+          text: `Email scheduled for ${new Date(result.scheduledFor).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} to ${judgeCount}. You can cancel it below before it sends.`,
+        });
+      } else {
+        setFeedback({
+          kind: "success",
+          text: `Email queued to ${judgeCount}.`,
+        });
+      }
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        text: error instanceof Error ? error.message : "Failed to send email",
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleCancelScheduled = async () => {
+    if (!cancelTarget) return;
+    try {
+      await cancelScheduledEmail({
+        groupId: group._id,
+        scheduledEmailId: cancelTarget,
+      });
+      setFeedback({ kind: "success", text: "Scheduled email cancelled." });
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Failed to cancel scheduled email",
+      });
+    } finally {
+      setCancelTarget(null);
+    }
+  };
+
+  // Preview substitutes a real selected judge (pickable, defaults to the
+  // first) so the organizer sees exactly what that judge receives.
+  const previewRecipient =
+    selectedRecipients.find((r) => r.judgeId === previewJudgeId) ??
+    selectedRecipients[0];
+  const previewVars = {
+    firstname: previewRecipient
+      ? previewRecipient.name.trim().split(/\s+/)[0] || "there"
+      : "Ada",
+    name: previewRecipient?.name ?? "Ada Lovelace",
+    email: previewRecipient?.email ?? "ada@example.com",
+    groupname: group.name,
+  };
+  const previewHtml = templateEmailShell(
+    renderMarkdownLite(applyTemplateVars(body, previewVars)),
+    signature.trim()
+      ? renderMarkdownLite(applyTemplateVars(signature, previewVars))
+      : undefined,
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* Toggle status banner */}
+      {blocked && (
+        <div className="p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-md text-[13px]">
+          {status && !status.emailsEnabled
+            ? "The global email system is turned off, so nothing can send."
+            : "Judging group emails are turned off."}{" "}
+          An admin can enable them in Admin, Email Management, Email Send
+          Options.
+        </div>
+      )}
+
+      <SectionCard
+        title="Email judges"
+        description="Send an email to this group's judges. Start from a template or write from scratch. Bodies support basic markdown and per-recipient variables."
+      >
+        {/* Template picker */}
+        <div>
+          <label
+            htmlFor="group-email-template"
+            className="block text-[13px] font-medium text-gray-700 mb-1"
+          >
+            Template
+          </label>
+          <select
+            id="group-email-template"
+            value={templateId}
+            onChange={(e) => applyTemplate(e.target.value)}
+            disabled={isSending}
+            className="w-full max-w-md px-3 py-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
+          >
+            <option value="">Write from scratch</option>
+            {(templates ?? []).map((template) => (
+              <option key={template._id} value={template._id}>
+                {template.name}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Picking a template fills the fields below; edits here only affect
+            this send. Templates are managed in Admin, Email Management,
+            Templates.
+          </p>
+        </div>
+
+        {/* Subject */}
+        <div>
+          <label
+            htmlFor="group-email-subject"
+            className="block text-[13px] font-medium text-gray-700 mb-1"
+          >
+            Subject
+          </label>
+          <input
+            id="group-email-subject"
+            type="text"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder="e.g. {{groupname}} judging starts today"
+            disabled={isSending}
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
+          />
+        </div>
+
+        {/* Body */}
+        <div>
+          <label
+            htmlFor="group-email-body"
+            className="block text-[13px] font-medium text-gray-700 mb-1"
+          >
+            Body (markdown)
+          </label>
+          <textarea
+            id="group-email-body"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={8}
+            placeholder={`Hi {{firstname}},\n\nJudging for **{{groupname}}** is open.\n\n- Review your assigned submissions\n- Score each criteria`}
+            disabled={isSending}
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent font-mono"
+          />
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <span className="text-xs text-gray-500 mr-1">Variables:</span>
+            {TEMPLATE_VARIABLES.map((variable) => (
+              <code
+                key={variable.key}
+                title={variable.description}
+                className="text-xs text-gray-700 bg-gray-100 border border-gray-200 rounded px-1.5 py-0.5 font-mono"
+              >
+                {`{{${variable.key}}}`}
+              </code>
+            ))}
+          </div>
+        </div>
+
+        {/* Signature */}
+        <div>
+          <label
+            htmlFor="group-email-signature"
+            className="block text-[13px] font-medium text-gray-700 mb-1"
+          >
+            Signature (optional)
+          </label>
+          <textarea
+            id="group-email-signature"
+            value={signature}
+            onChange={(e) => setSignature(e.target.value)}
+            rows={3}
+            placeholder={`**The organizing team**\n[vibeapps.dev](https://vibeapps.dev)`}
+            disabled={isSending}
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent font-mono"
+          />
+        </div>
+
+        {/* Reply-to */}
+        <div>
+          <label
+            htmlFor="group-email-replyto"
+            className="block text-[13px] font-medium text-gray-700 mb-1"
+          >
+            Reply-to address (optional)
+          </label>
+          <input
+            id="group-email-replyto"
+            type="email"
+            value={replyTo}
+            onChange={(e) => setReplyTo(e.target.value)}
+            list="group-email-replyto-options"
+            placeholder="organizer@example.com"
+            disabled={isSending}
+            className="w-full max-w-md px-3 py-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
+          />
+          <datalist id="group-email-replyto-options">
+            {(group.notificationEmails ?? []).map((email) => (
+              <option key={email} value={email} />
+            ))}
+          </datalist>
+          <p className="text-xs text-gray-500 mt-1">
+            Judge replies go to this address. Blank means replies go to the
+            default from address. Group notification emails are suggested.
+          </p>
+        </div>
+
+        {/* Recipients */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="block text-[13px] font-medium text-gray-700">
+              Recipients ({selectedRecipients.length} of{" "}
+              {recipients?.length ?? 0} judges with an email)
+            </span>
+            {recipients !== undefined && recipients.length > 0 && (
+              <button
+                type="button"
+                onClick={toggleAll}
+                className="text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                {excluded.size === 0 ? "Deselect all" : "Select all"}
+              </button>
+            )}
+          </div>
+          {recipients === undefined ? (
+            <p className="text-xs text-gray-500">Loading judges...</p>
+          ) : recipients.length === 0 ? (
+            <p className="text-xs text-gray-500">
+              No judges in this group registered with an email address, so there
+              is nobody to send to yet.
+            </p>
+          ) : (
+            <div className="max-h-48 overflow-y-auto rounded-md border border-gray-200 divide-y divide-gray-100">
+              {recipients.map((recipient) => (
+                <label
+                  key={recipient.judgeId}
+                  className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50"
+                >
+                  <input
+                    type="checkbox"
+                    checked={!excluded.has(recipient.judgeId)}
+                    onChange={() => toggleRecipient(recipient.judgeId)}
+                    disabled={isSending}
+                    className="h-4 w-4 rounded border-gray-300 text-black focus:ring-gray-400"
+                  />
+                  <span className="text-[13px] text-[#292929]">
+                    {recipient.name}
+                  </span>
+                  <span className="text-xs text-gray-500 truncate">
+                    {recipient.email}
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+          {status !== undefined && (
+            <p
+              className={`text-xs mt-1 ${overCap ? "text-red-600" : "text-gray-500"}`}
+            >
+              Daily limit: {status.usedLast24h} of {status.dailyCap} recipient
+              emails used in the last 24 hours
+              {overCap
+                ? `. Only ${remaining} remaining, so deselect some recipients or wait.`
+                : "."}
+            </p>
+          )}
+        </div>
+
+        {/* Schedule */}
+        <div>
+          <label
+            htmlFor="group-email-schedule"
+            className="block text-[13px] font-medium text-gray-700 mb-1"
+          >
+            Send time (optional)
+          </label>
+          <input
+            id="group-email-schedule"
+            type="datetime-local"
+            value={scheduleAt}
+            onChange={(e) => setScheduleAt(e.target.value)}
+            min={toLocalInputValue(Date.now() + 5 * 60 * 1000)}
+            disabled={isSending}
+            className="w-full max-w-md px-3 py-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Blank sends immediately. Scheduled sends appear below and can be
+            cancelled any time before they fire.
+          </p>
+        </div>
+
+        {/* Feedback */}
+        {feedback && (
+          <div
+            className={`p-3 rounded-md text-[13px] ${
+              feedback.kind === "success"
+                ? "bg-green-50 border border-green-200 text-green-800"
+                : "bg-red-50 border border-red-200 text-red-700"
+            }`}
+          >
+            {feedback.text}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setConfirmOpen(true)}
+            disabled={
+              isSending ||
+              blocked ||
+              !canCompose ||
+              overCap ||
+              selectedRecipients.length === 0
+            }
+            className="flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-md bg-[#292929] text-white hover:bg-[#525252] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Send className="w-4 h-4" />
+            {isSending
+              ? "Sending..."
+              : `${scheduleAt ? "Schedule for" : "Send to"} ${selectedRecipients.length} judge${selectedRecipients.length === 1 ? "" : "s"}`}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSendTest()}
+            disabled={isSending || blocked || !canCompose}
+            className="flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-md text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Mail className="w-4 h-4" />
+            Send test to me
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowPreview((prev) => !prev)}
+            disabled={!canCompose}
+            className="flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-md text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50"
+          >
+            <Eye className="w-4 h-4" />
+            {showPreview ? "Hide preview" : "Preview"}
+          </button>
+        </div>
+
+        {showPreview && canCompose && (
+          <div className="border border-gray-200 rounded-md overflow-hidden">
+            <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs text-gray-600 flex items-center gap-2 flex-wrap">
+              <span>Preview as</span>
+              {selectedRecipients.length > 1 ? (
+                <select
+                  value={previewRecipient?.judgeId ?? ""}
+                  onChange={(e) => setPreviewJudgeId(e.target.value)}
+                  aria-label="Preview as judge"
+                  className="px-2 py-1 text-xs border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gray-400"
+                >
+                  {selectedRecipients.map((recipient) => (
+                    <option key={recipient.judgeId} value={recipient.judgeId}>
+                      {recipient.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="font-medium">{previewVars.name}</span>
+              )}
+              <span>: subject "{applyTemplateVars(subject, previewVars)}"</span>
+            </div>
+            <iframe
+              title="Email preview"
+              srcDoc={previewHtml}
+              className="w-full h-96 bg-white"
+              sandbox=""
+            />
+          </div>
+        )}
+      </SectionCard>
+
+      {/* Scheduled sends waiting to fire */}
+      {scheduledSends !== undefined && scheduledSends.length > 0 && (
+        <SectionCard
+          title="Scheduled sends"
+          description="Queued emails that have not fired yet. Cancel any of them before the send time."
+        >
+          <div className="rounded-md border border-gray-200 divide-y divide-gray-100">
+            {scheduledSends.map((row) => (
+              <div
+                key={row._id}
+                className="flex items-center justify-between gap-3 px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="text-[13px] text-[#292929] truncate">
+                    {row.subject}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(row.scheduledFor).toLocaleString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}{" "}
+                    · {row.recipientCount} recipient
+                    {row.recipientCount === 1 ? "" : "s"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCancelTarget(row._id)}
+                  className="px-3 py-1.5 text-xs font-medium rounded-md text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
+                >
+                  Cancel
+                </button>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* Recent sends with per-send delivery stats */}
+      <SectionCard
+        title="Recent sends"
+        description="Delivery stats per send. Opens and bounces come from the Resend webhook, so counts fill in as events arrive."
+      >
+        {recentSends === undefined ? (
+          <p className="text-xs text-gray-500">Loading...</p>
+        ) : recentSends.length === 0 ? (
+          <p className="text-xs text-gray-500">No emails sent yet.</p>
+        ) : (
+          <div className="rounded-md border border-gray-200 divide-y divide-gray-100">
+            {recentSends.map((send) => {
+              const problems = send.bounced + send.failed + send.complained;
+              return (
+                <div
+                  key={send.sendId}
+                  className="flex items-center justify-between gap-3 px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="text-[13px] text-[#292929] truncate">
+                      {send.subject ?? "(no subject recorded)"}
+                      {send.isTest && (
+                        <span className="ml-2 text-[10px] uppercase tracking-wide text-gray-400">
+                          test
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      to {send.total} recipient{send.total === 1 ? "" : "s"} ·{" "}
+                      {new Date(send.sentAt).toLocaleString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700">
+                      {send.delivered}/{send.total} delivered
+                    </span>
+                    {send.opened > 0 && (
+                      <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                        {send.opened} opened
+                      </span>
+                    )}
+                    {problems > 0 && (
+                      <span className="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-700">
+                        {problems} bounced/failed
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </SectionCard>
+
+      <AlertDialog
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          void handleSend();
+        }}
+        title={scheduleAt ? "Schedule email to judges" : "Send email to judges"}
+        description={
+          scheduleAt
+            ? `This schedules "${subject.trim()}" to ${selectedRecipients.length} judge${selectedRecipients.length === 1 ? "" : "s"} in ${group.name} for ${new Date(scheduleAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}. You can cancel it from Scheduled sends before it fires.`
+            : `This sends "${subject.trim()}" to ${selectedRecipients.length} judge${selectedRecipients.length === 1 ? "" : "s"} in ${group.name}. Send a test to yourself first if you have not checked the rendering.`
+        }
+        confirmButtonText={
+          scheduleAt
+            ? `Schedule for ${selectedRecipients.length}`
+            : `Send to ${selectedRecipients.length}`
+        }
+      />
+
+      <AlertDialog
+        isOpen={cancelTarget !== null}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={() => void handleCancelScheduled()}
+        title="Cancel scheduled email"
+        description="This stops the scheduled send before it fires. Nothing is emailed and the queued send is removed."
+        confirmButtonText="Cancel send"
+      />
+    </div>
+  );
+}

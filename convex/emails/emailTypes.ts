@@ -19,6 +19,7 @@ export const EMAIL_TYPES = [
   "submission_confirmation",
   "submission_admin_alert",
   "results_live",
+  "judging_group",
 ] as const;
 
 export type EmailType = (typeof EMAIL_TYPES)[number];
@@ -39,6 +40,7 @@ export const emailTypeValidator = v.union(
   v.literal("submission_confirmation"),
   v.literal("submission_admin_alert"),
   v.literal("results_live"),
+  v.literal("judging_group"),
 );
 
 // Effective value when no appSettings row exists for a type. Existing types
@@ -57,6 +59,9 @@ export const EMAIL_TYPE_DEFAULTS: Record<EmailType, boolean> = {
   submission_confirmation: false,
   submission_admin_alert: false,
   results_live: false,
+  // Organizer emails to judges from a judging group; off until an admin
+  // explicitly enables the feature in Email Send Options.
+  judging_group: false,
 };
 
 // appSettings key for one email type's toggle (valueBoolean row)

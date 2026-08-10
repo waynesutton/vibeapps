@@ -30,6 +30,7 @@ export const PERMISSION_KEYS = [
   "judging.results",
   "judging.tracking",
   "judging.ai",
+  "judging.emails",
   "judging.delete",
   // Numbers (read-only metrics)
   "numbers.view",

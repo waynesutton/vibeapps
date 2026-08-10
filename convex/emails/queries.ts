@@ -171,7 +171,22 @@ export const handleEmailEvent = internalMutation({
   args: vOnEmailEventArgs,
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Only these events map to emailLogs statuses; ignore opened/clicked/etc.
+    // Opens don't change status (delivered stays delivered); record the first
+    // open timestamp in metadata so per-send stats can count opens.
+    if ((args.event.type as string) === "email.opened") {
+      const openedLog = await ctx.db
+        .query("emailLogs")
+        .withIndex("by_resend_id", (q) => q.eq("resendMessageId", args.id))
+        .unique();
+      if (openedLog && openedLog.metadata?.openedAt === undefined) {
+        await ctx.db.patch(openedLog._id, {
+          metadata: { ...openedLog.metadata, openedAt: Date.now() },
+        });
+      }
+      return null;
+    }
+
+    // Only these events map to emailLogs statuses; ignore clicked/etc.
     const statusMap = {
       "email.delivered": "delivered",
       "email.bounced": "bounced",

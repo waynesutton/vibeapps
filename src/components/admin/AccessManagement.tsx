@@ -60,7 +60,11 @@ const SECTIONS: Array<SectionDef> = [
       { key: "forms.view", label: "View forms and fields" },
       { key: "forms.manage", label: "Create and edit forms and fields" },
       { key: "forms.results", label: "View form submissions and exports" },
-      { key: "forms.delete", label: "Delete forms and fields", destructive: true },
+      {
+        key: "forms.delete",
+        label: "Delete forms and fields",
+        destructive: true,
+      },
     ],
   },
   {
@@ -79,7 +83,15 @@ const SECTIONS: Array<SectionDef> = [
         label: "Judge tracking: edit, hide, delete scores and notes",
       },
       { key: "judging.ai", label: "AI judge runs, AI score edits, agent keys" },
-      { key: "judging.delete", label: "Delete judging groups", destructive: true },
+      {
+        key: "judging.emails",
+        label: "Send template emails to a group's judges",
+      },
+      {
+        key: "judging.delete",
+        label: "Delete judging groups",
+        destructive: true,
+      },
     ],
   },
   {
@@ -139,8 +151,7 @@ const KEY_LABELS: Record<string, string> = Object.fromEntries(
 // Short chip label, e.g. "moderation.moderate" -> "Moderation · moderate"
 function chipLabel(key: string): string {
   const [section, action] = key.split(".");
-  const sectionTitle =
-    SECTIONS.find((s) => s.id === section)?.title ?? section;
+  const sectionTitle = SECTIONS.find((s) => s.id === section)?.title ?? section;
   return `${sectionTitle} · ${action}`;
 }
 
@@ -581,9 +592,7 @@ export function AccessManagement() {
                                         {group.name}
                                         <button
                                           type="button"
-                                          onClick={() =>
-                                            toggleGroup(group._id)
-                                          }
+                                          onClick={() => toggleGroup(group._id)}
                                           className="p-0.5 text-gray-400 hover:text-gray-700 transition-colors"
                                           aria-label={`Remove ${group.name}`}
                                         >
@@ -600,9 +609,7 @@ export function AccessManagement() {
                               <input
                                 type="text"
                                 value={groupSearch}
-                                onChange={(e) =>
-                                  setGroupSearch(e.target.value)
-                                }
+                                onChange={(e) => setGroupSearch(e.target.value)}
                                 placeholder="Search judging groups..."
                                 className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
                               />
@@ -844,9 +851,7 @@ export function AccessManagement() {
                           <span className="font-medium">Judging groups:</span>{" "}
                           {grant.allJudgingGroups
                             ? "All groups (current and future)"
-                            : grant.judgingGroups
-                                .map((g) => g.name)
-                                .join(", ")}
+                            : grant.judgingGroups.map((g) => g.name).join(", ")}
                         </div>
                       )}
                       {grant.notes && (

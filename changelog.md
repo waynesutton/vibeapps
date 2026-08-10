@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [Changed] - 2026-08-10
 
+**AI Spam counts strip doubles as quick filters**
+
+- The count pills above the AI Spam scan results (scanned, spam, suspicious, clean, marked, failed) are now clickable: click one to filter the list to that verdict, click it again to go back to all results. The pills stay in sync with the existing filter dropdown, the active pill is highlighted with a ring, and the "in progress" pill stays informational (2026-08-10).
+- **Frontend**: `src/components/admin/SpamCheck.tsx`.
+
+### [Added] - 2026-08-10
+
+**Judging group emails: scheduling, daily cap, delivery stats, real-judge preview**
+
+- Scheduled sends: pick an optional send time when composing (at least one minute out, at most 30 days). Scheduled sends are queued with the Convex scheduler, listed in a new Scheduled sends card in the group Emails section, and can be cancelled any time before they fire. New `groupScheduledEmails` table tracks pending, sent, and cancelled sends (2026-08-10).
+- Daily cap: each group can email at most 200 recipients per rolling 24 hours (test sends excluded, pending scheduled sends counted), enforced server side with a friendly error and shown as a usage line in the compose UI so a delegated organizer cannot blast judges repeatedly.
+- Per-send delivery stats: every send now stamps a shared sendId on its emailLogs rows, and Recent sends shows one row per send with delivered, opened, and bounced or failed counts. The Resend webhook now records first-open timestamps into log metadata (status values are unchanged).
+- Preview as a real judge: the compose preview substitutes a selected judge's actual name and email, with a picker when more than one recipient is selected.
+- **Backend**: `convex/emails/judgingGroupEmails.ts`, `convex/emails/queries.ts` (webhook opens), `convex/schema.ts` (new `groupScheduledEmails` table).
+- **Frontend**: `src/components/admin/judging/GroupEmailsSection.tsx`.
+
+### [Added] - 2026-08-10
+
+**Judging group emails with reusable templates**
+
+- Judging groups can now email their judges from a new Emails section in the group workspace: pick a saved template or write from scratch, edit the subject and markdown body, add an optional signature, choose a reply-to address (group notification emails are suggested), select recipients from the group's judges who registered with an email (deduplicated, select all by default), preview the exact rendered email as the first recipient, send a test to yourself, then send with a confirm step. A recent sends list shows delivery status per recipient from emailLogs (2026-08-10).
+- New Templates sub tab in admin Email Management (the existing page moved under a Send & Settings sub tab, unchanged). Templates have a name, subject, markdown-lite body, and optional signature, with a live preview. Bodies and subjects support per-recipient variables: `{{firstname}}`, `{{name}}`, `{{email}}`, `{{groupname}}`; markdown supports bold, italic, links, and lists. Rendering escapes HTML first so judge-supplied names cannot inject markup, and the admin preview uses the exact same renderer as the backend send.
+- New `judging_group` email type with its own toggle in Email Send Options under a Judging group, off by default. The global master switch still wins, and both gates are enforced server side in the core send action; the group compose UI shows a banner and disables send when either is off.
+- New delegated permission `judging.emails` ("Send template emails to a group's judges") grantable from the Access tab and scoped to specific judging groups like the other judging keys, so hackathon organizers can email their judges without full admin.
+- **Backend**: `convex/emails/render.ts` (new), `convex/emails/judgingGroupEmails.ts` (new), `convex/emailTemplates.ts` (new), `convex/emails/emailTypes.ts`, `convex/schema.ts` (emailLogs union, new `emailTemplates` table), `convex/adminAccess.ts`.
+- **Frontend**: `src/components/admin/EmailTemplatesManager.tsx` (new), `src/components/admin/judging/GroupEmailsSection.tsx` (new), `src/components/admin/EmailManagement.tsx`, `src/pages/AdminJudgingGroupPage.tsx`, `src/components/admin/AccessManagement.tsx`.
+
+### [Changed] - 2026-08-10
+
+**AI Spam Check date ranges are remembered**
+
+- The two date ranges on the AI Spam tab (the "Run a scan" range and the "Scan results" filter range) now persist in the browser via localStorage, so switching admin tabs or reloading the page keeps the ranges you picked. Clearing a range also clears the saved value (2026-08-10).
+- **Frontend**: `src/components/admin/SpamCheck.tsx`.
+
+### [Changed] - 2026-08-10
+
 **AI Spam Check date range picker**
 
 - Replaced the two native date inputs on the AI Spam tab (which rendered unstyled OS calendar buttons) with a single site-styled date range picker: one trigger button showing the selected range, a popover with a two-month range calendar, and preset windows for last 7 days, last 30 days, this month, last month, and last 3 months, plus inline clear (2026-08-10).

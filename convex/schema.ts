@@ -448,7 +448,9 @@ export default defineSchema({
     // materialized into judgingGroupSubmissions so judging/results work unchanged.
     autoIncludeTagIds: v.optional(v.array(v.id("tags"))), // Tags to match
     // How selected tags are matched: "any" (OR, at least one) or "all" (AND, every selected tag required). Defaults to "any".
-    autoIncludeMatchMode: v.optional(v.union(v.literal("any"), v.literal("all"))),
+    autoIncludeMatchMode: v.optional(
+      v.union(v.literal("any"), v.literal("all")),
+    ),
     autoIncludeStartDate: v.optional(v.number()), // Inclusive lower bound on story creation time (ms)
     autoIncludeEndDate: v.optional(v.number()), // Inclusive upper bound on story creation time (ms)
     // Admin-selectable required fields for the custom submission form. Unset keys fall back to defaults.
@@ -645,7 +647,10 @@ export default defineSchema({
       v.array(
         v.object({
           tool: v.string(),
-          source: v.union(v.literal("commit_trailer"), v.literal("config_file")),
+          source: v.union(
+            v.literal("commit_trailer"),
+            v.literal("config_file"),
+          ),
           evidence: v.string(),
           confidence: v.union(
             v.literal("high"),
@@ -901,6 +906,7 @@ export default defineSchema({
       v.literal("submission_confirmation"),
       v.literal("submission_admin_alert"),
       v.literal("results_live"),
+      v.literal("judging_group"),
     ),
     recipientEmail: v.string(),
     sentAt: v.number(),
@@ -917,6 +923,40 @@ export default defineSchema({
     .index("by_user_type_date", ["userId", "emailType", "sentAt"])
     .index("by_type_date", ["emailType", "sentAt"])
     .index("by_resend_id", ["resendMessageId"]),
+
+  // Reusable email templates managed in the admin Email dashboard. Bodies
+  // and signatures are markdown-lite with {{variable}} placeholders that get
+  // substituted per recipient at send time.
+  emailTemplates: defineTable({
+    name: v.string(),
+    subject: v.string(),
+    body: v.string(), // markdown-lite content
+    signature: v.optional(v.string()), // optional markdown-lite signature
+    createdBy: v.id("users"),
+    updatedAt: v.number(),
+  }).index("by_name", ["name"]),
+
+  // Scheduled judging group emails waiting for their send time. Recipients
+  // are resolved when the send is scheduled; delivery runs via
+  // ctx.scheduler.runAt and marks the row sent (or an organizer cancels it,
+  // which also cancels the scheduled function).
+  groupScheduledEmails: defineTable({
+    groupId: v.id("judgingGroups"),
+    subject: v.string(),
+    body: v.string(),
+    signature: v.optional(v.string()),
+    replyTo: v.optional(v.string()),
+    templateId: v.optional(v.id("emailTemplates")),
+    sentBy: v.id("users"),
+    recipients: v.array(v.object({ name: v.string(), email: v.string() })),
+    scheduledFor: v.number(),
+    scheduledFunctionId: v.optional(v.id("_scheduled_functions")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("sent"),
+      v.literal("cancelled"),
+    ),
+  }).index("by_groupId", ["groupId"]),
 
   // Track daily engagement for users (for email content)
   dailyEngagementSummary: defineTable({

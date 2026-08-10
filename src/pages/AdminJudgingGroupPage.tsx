@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   Link2,
   Lock,
+  Mail,
   PanelLeft,
   PanelLeftClose,
   Settings,
@@ -37,6 +38,7 @@ import { GroupSubmissionsSection } from "../components/admin/judging/GroupSubmis
 import { GroupSubmitPageSection } from "../components/admin/judging/GroupSubmitPageSection";
 import { GroupAiSection } from "../components/admin/judging/GroupAiSection";
 import { GroupHackathonSection } from "../components/admin/judging/GroupHackathonSection";
+import { GroupEmailsSection } from "../components/admin/judging/GroupEmailsSection";
 import { GroupLinksSection } from "../components/admin/judging/GroupLinksSection";
 
 // Sidebar sections. Each maps to a ?section= value and a permission key
@@ -44,7 +46,12 @@ import { GroupLinksSection } from "../components/admin/judging/GroupLinksSection
 const SECTIONS = [
   { key: "overview", label: "Overview", icon: LayoutDashboard, perm: null },
   { key: "links", label: "Links", icon: Link2, perm: null },
-  { key: "settings", label: "Settings", icon: Settings, perm: "judging.manage" },
+  {
+    key: "settings",
+    label: "Settings",
+    icon: Settings,
+    perm: "judging.manage",
+  },
   { key: "access", label: "Access", icon: Lock, perm: "judging.manage" },
   { key: "criteria", label: "Criteria", icon: Gavel, perm: "judging.manage" },
   {
@@ -66,7 +73,13 @@ const SECTIONS = [
     icon: Terminal,
     perm: "judging.manage",
   },
-  { key: "results", label: "Results", icon: BarChart3, perm: "judging.results" },
+  { key: "emails", label: "Emails", icon: Mail, perm: "judging.emails" },
+  {
+    key: "results",
+    label: "Results",
+    icon: BarChart3,
+    perm: "judging.results",
+  },
   { key: "ai-results", label: "AI results", icon: Bot, perm: "judging.ai" },
   {
     key: "tracking",
@@ -193,7 +206,9 @@ function GroupWorkspace({ group }: { group: GroupDetails }) {
             onClick={toggleSidebar}
             className="hidden md:inline-flex p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
             title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={
+              sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
+            }
             aria-expanded={!sidebarCollapsed}
           >
             {sidebarCollapsed ? (
@@ -289,6 +304,9 @@ function GroupWorkspace({ group }: { group: GroupDetails }) {
           )}
           {activeSection === "hackathon" && canManage && (
             <GroupHackathonSection group={group} />
+          )}
+          {activeSection === "emails" && can("judging.emails") && (
+            <GroupEmailsSection group={group} />
           )}
           {activeSection === "results" && can("judging.results") && (
             <JudgingResultsDashboard groupId={group._id} />

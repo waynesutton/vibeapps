@@ -39,6 +39,38 @@ import {
 type VerdictFilter = "all" | "spam" | "suspicious" | "clean" | "failed" | "marked";
 type SortBy = "newest" | "oldest" | "confidence";
 
+// localStorage keys so picked date ranges survive tab switches and reloads
+const SCAN_RANGE_KEY = "adminSpamScanRange";
+const FILTER_RANGE_KEY = "adminSpamFilterRange";
+
+// Read a saved range ({from, to} ms timestamps) back into a DateRange
+function loadSavedRange(key: string): DateRange | undefined {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw) as { from?: number; to?: number };
+    if (typeof parsed.from !== "number") return undefined;
+    return {
+      from: new Date(parsed.from),
+      to: typeof parsed.to === "number" ? new Date(parsed.to) : undefined,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+// Persist a range, or clear the saved value when the range is unset
+function persistRange(key: string, range: DateRange | undefined) {
+  if (!range?.from) {
+    localStorage.removeItem(key);
+    return;
+  }
+  localStorage.setItem(
+    key,
+    JSON.stringify({ from: range.from.getTime(), to: range.to?.getTime() }),
+  );
+}
+
 // Badge for the AI verdict on a scan row
 function VerdictBadge({
   status,
@@ -88,17 +120,71 @@ function VerdictBadge({
   );
 }
 
+// Clickable count pill: click applies its verdict filter, click again clears
+// back to "all". colorClass carries the verdict's bg/border/text styling.
+function CountPill({
+  label,
+  count,
+  filter,
+  activeFilter,
+  onSelect,
+  colorClass,
+}: {
+  label: string;
+  count: number;
+  filter: VerdictFilter;
+  activeFilter: VerdictFilter;
+  onSelect: (filter: VerdictFilter) => void;
+  colorClass: string;
+}) {
+  const isActive = activeFilter === filter;
+  // "scanned" maps to the "all" filter: it resets instead of toggling
+  const isAllPill = filter === "all";
+  return (
+    <button
+      type="button"
+      aria-pressed={isActive}
+      title={
+        isAllPill
+          ? "Show all results"
+          : isActive
+            ? "Clear this filter"
+            : `Show only ${label} results`
+      }
+      onClick={() => onSelect(isActive && !isAllPill ? "all" : filter)}
+      className={`px-2 py-1 border rounded-full transition-shadow cursor-pointer hover:shadow-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-[#292929] ${colorClass} ${
+        isActive ? "ring-1 ring-current shadow-sm font-medium" : ""
+      }`}
+    >
+      {count} {label}
+    </button>
+  );
+}
+
 export function SpamCheck() {
   const { can } = useAdminAccess();
   const { showConfirm, DialogComponents } = useDialog();
 
   const [verdictFilter, setVerdictFilter] = useState<VerdictFilter>("all");
   const [sortBy, setSortBy] = useState<SortBy>("newest");
-  // Two independent ranges: one picks what to scan, one filters the results view
-  const [scanRange, setScanRange] = useState<DateRange | undefined>(undefined);
-  const [filterRange, setFilterRange] = useState<DateRange | undefined>(
-    undefined,
+  // Two independent ranges: one picks what to scan, one filters the results
+  // view. Both are saved to localStorage so they persist across visits.
+  const [scanRange, setScanRangeState] = useState<DateRange | undefined>(() =>
+    loadSavedRange(SCAN_RANGE_KEY),
   );
+  const [filterRange, setFilterRangeState] = useState<DateRange | undefined>(
+    () => loadSavedRange(FILTER_RANGE_KEY),
+  );
+
+  const setScanRange = (range: DateRange | undefined) => {
+    persistRange(SCAN_RANGE_KEY, range);
+    setScanRangeState(range);
+  };
+
+  const setFilterRange = (range: DateRange | undefined) => {
+    persistRange(FILTER_RANGE_KEY, range);
+    setFilterRangeState(range);
+  };
   const [selectedIds, setSelectedIds] = useState<Set<Id<"stories">>>(new Set());
   const [expandedId, setExpandedId] = useState<Id<"spamCheckResults"> | null>(
     null,
@@ -498,32 +584,63 @@ export function SpamCheck() {
         </p>
       </div>
 
+      {/* Count pills double as quick filters: click to filter, click again to clear */}
       {counts && (
         <div className="flex flex-wrap gap-2 text-xs">
-          <span className="px-2 py-1 bg-gray-100 border border-gray-200 rounded-full text-gray-600">
-            {counts.total} scanned
-          </span>
-          <span className="px-2 py-1 bg-red-50 border border-red-200 rounded-full text-red-700">
-            {counts.spam} spam
-          </span>
-          <span className="px-2 py-1 bg-amber-50 border border-amber-200 rounded-full text-amber-700">
-            {counts.suspicious} suspicious
-          </span>
-          <span className="px-2 py-1 bg-green-50 border border-green-200 rounded-full text-green-700">
-            {counts.clean} clean
-          </span>
-          <span className="px-2 py-1 bg-gray-100 border border-gray-200 rounded-full text-gray-600">
-            {counts.marked} marked
-          </span>
+          <CountPill
+            label="scanned"
+            count={counts.total}
+            filter="all"
+            activeFilter={verdictFilter}
+            onSelect={setVerdictFilter}
+            colorClass="bg-gray-100 border-gray-200 text-gray-600"
+          />
+          <CountPill
+            label="spam"
+            count={counts.spam}
+            filter="spam"
+            activeFilter={verdictFilter}
+            onSelect={setVerdictFilter}
+            colorClass="bg-red-50 border-red-200 text-red-700"
+          />
+          <CountPill
+            label="suspicious"
+            count={counts.suspicious}
+            filter="suspicious"
+            activeFilter={verdictFilter}
+            onSelect={setVerdictFilter}
+            colorClass="bg-amber-50 border-amber-200 text-amber-700"
+          />
+          <CountPill
+            label="clean"
+            count={counts.clean}
+            filter="clean"
+            activeFilter={verdictFilter}
+            onSelect={setVerdictFilter}
+            colorClass="bg-green-50 border-green-200 text-green-700"
+          />
+          <CountPill
+            label="marked"
+            count={counts.marked}
+            filter="marked"
+            activeFilter={verdictFilter}
+            onSelect={setVerdictFilter}
+            colorClass="bg-gray-100 border-gray-200 text-gray-600"
+          />
           {counts.pending + counts.running > 0 && (
             <span className="px-2 py-1 bg-blue-50 border border-blue-200 rounded-full text-blue-700">
               {counts.pending + counts.running} in progress
             </span>
           )}
           {counts.failed > 0 && (
-            <span className="px-2 py-1 bg-red-50 border border-red-200 rounded-full text-red-700">
-              {counts.failed} failed
-            </span>
+            <CountPill
+              label="failed"
+              count={counts.failed}
+              filter="failed"
+              activeFilter={verdictFilter}
+              onSelect={setVerdictFilter}
+              colorClass="bg-red-50 border-red-200 text-red-700"
+            />
           )}
         </div>
       )}
