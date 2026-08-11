@@ -254,10 +254,13 @@ export const getUsersWithDMsToday = internalQuery({
  * Process daily engagement for users
  */
 export const processUserEngagement = internalAction({
-  args: { date: v.string() },
+  args: { date: v.optional(v.string()) },
   returns: v.null(),
   handler: async (ctx, args) => {
-    console.log(`Processing user engagement for date: ${args.date}`);
+    // Default to the current UTC date at run time so the cron always
+    // processes the right day (matches sendDailyUserEmails' date logic)
+    const date = args.date ?? new Date().toISOString().split("T")[0];
+    console.log(`Processing user engagement for date: ${date}`);
 
     // Use internal query to get story authors
     const storyAuthors = await ctx.runQuery(
@@ -268,11 +271,11 @@ export const processUserEngagement = internalAction({
 
     // Process engagement for each user via internal mutation
     await ctx.runMutation(internal.emails.daily.processEngagementForAllUsers, {
-      date: args.date,
+      date,
       storyAuthors,
     });
 
-    console.log(`Engagement processing complete for ${args.date}`);
+    console.log(`Engagement processing complete for ${date}`);
     return null;
   },
 });

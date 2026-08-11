@@ -21,14 +21,14 @@ crons.cron(
   {},
 );
 
-// Process daily engagement at 5:30 PM PST (before user emails)
+// Process daily engagement at 5:30 PM PST (before user emails).
+// Date is computed inside the action at run time; cron args are evaluated
+// once at deploy time, so passing a date here would freeze it forever.
 crons.cron(
   "process daily engagement",
   "30 1 * * *", // 5:30 PM PST = 1:30 UTC next day
   internal.emails.daily.processUserEngagement,
-  {
-    date: new Date().toISOString().split("T")[0],
-  },
+  {},
 );
 
 // Send user engagement emails at 6:00 PM PST

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Fixed] - 2026-08-10
+
+**Resend email system audit fixes**
+
+- Full audit of the email system (global kill switch, 14 per type toggles, digests, broadcasts, judging group emails, unsubscribe, webhook status sync) before enabling email in admin. Four real bugs found and fixed (2026-08-10).
+- Daily engagement cron no longer processes a frozen date: cron args are evaluated once at deploy time, so the engagement processor was pinned to the deploy date forever and the 6 PM send step found no summaries. The date is now computed at run time inside the action.
+- Unsubscribe links now render in email footers. Six templates had a no op expression that printed a single space instead of the `https://vibeapps.dev/api/unsubscribe?token=...` link, so recipients never saw an unsubscribe link in the body.
+- `vibeapps.dev/api/unsubscribe` now reaches Convex: added the missing Netlify `_redirects` proxy rule (it previously fell through to the SPA catch all and served the app instead of unsubscribing).
+- One click unsubscribe completed: the List-Unsubscribe-Post header advertised RFC 8058 one click, but only a GET route existed. Added the POST `/api/unsubscribe` route mail providers actually call.
+- **Backend**: `convex/crons.ts`, `convex/emails/daily.ts`, `convex/emails/templates.ts`, `convex/emails/unsubscribe.ts`, `convex/http.ts`.
+- **Config**: `public/_redirects`. Audit notes and the prod enablement checklist (Resend env vars, webhook endpoint) live in `prds/resend-email-audit.md`.
+
 ### [Added] - 2026-08-10
 
 **Group link variables in email templates**

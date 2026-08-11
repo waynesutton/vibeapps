@@ -468,6 +468,31 @@ http.route({
   }),
 });
 
+// RFC 8058 one-click unsubscribe. Mail providers POST to the URL advertised
+// in the List-Unsubscribe header (with body "List-Unsubscribe=One-Click").
+// No HTML response needed, just a 2xx on success.
+http.route({
+  path: "/api/unsubscribe",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    const url = new URL(req.url);
+    const token = url.searchParams.get("token");
+
+    if (!token) {
+      return new Response("Missing token", { status: 400 });
+    }
+
+    const result = await ctx.runMutation(
+      internal.emails.unsubscribe.handleUnsubscribeToken,
+      { token },
+    );
+
+    return new Response(result.success ? "Unsubscribed" : "Invalid token", {
+      status: result.success ? 200 : 400,
+    });
+  }),
+});
+
 // --- Agent judging API ---
 //
 // Authenticated HTTP API that lets external AI agents judge hackathon
@@ -537,10 +562,7 @@ async function authenticateAgent(
     request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ||
     null;
   if (!rawKey) {
-    return jsonResponse(
-      { error: "Missing x-judge-key header" },
-      401,
-    );
+    return jsonResponse({ error: "Missing x-judge-key header" }, 401);
   }
   const keyHash = await sha256Hex(rawKey);
   const context = await ctx.runQuery(internal.agentJudges.getAgentContext, {
@@ -549,7 +571,10 @@ async function authenticateAgent(
   if (!context) {
     // Covers unknown keys, revoked keys, and groups whose agent API is disabled
     return jsonResponse(
-      { error: "Invalid or revoked judge key, or the agent API is disabled for this group" },
+      {
+        error:
+          "Invalid or revoked judge key, or the agent API is disabled for this group",
+      },
       403,
     );
   }
@@ -872,7 +897,11 @@ http.route({
     }
     const parsed = body as {
       storyId: string;
-      scores: Array<{ criteriaId?: unknown; score?: unknown; comments?: unknown }>;
+      scores: Array<{
+        criteriaId?: unknown;
+        score?: unknown;
+        comments?: unknown;
+      }>;
       complete?: unknown;
     };
     for (const entry of parsed.scores) {

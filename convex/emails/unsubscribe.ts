@@ -63,7 +63,8 @@ export const handleUnsubscribeToken = internalMutation({
           dailyEngagementEmails:
             tokenRecord.purpose === "daily_engagement" ? false : true,
           messageNotifications: true,
-          marketingEmails: tokenRecord.purpose === "marketing" ? false : false,
+          marketingEmails: false, // Marketing defaults to opt-in
+
           weeklyDigestEmails:
             tokenRecord.purpose === "weekly_digest" ? false : true,
           mentionNotifications: true,

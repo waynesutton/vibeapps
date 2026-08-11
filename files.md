@@ -35,6 +35,7 @@
 
 All PRD files are now organized in the `prds/` folder for better project structure:
 
+- `prds/resend-email-audit.md`: Full Resend email system audit PRD (toggle enforcement map, bugs found and fixed, prod enablement checklist)
 - `prds/mentions.md`: @Mentions system PRD and implementation documentation
 - `prds/addresend.md`: Resend email integration PRD and requirements (daily admin/user digests, weekly digest, @mentions emails, unsubscribe, admin broadcast, alerts cross-ref)
 - `prds/adminalerrtemails.md`: Admin alert email system PRD for immediate report notifications and moderation alerts
@@ -320,7 +321,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 ### Configuration Files
 
-- `_redirects`: `Netlify` routing configuration for SPA
+- `_redirects`: `Netlify` routing configuration for SPA, plus proxies for `/robots.txt`, `/llms.txt`, `/meta/s/*`, and `/api/unsubscribe` (email unsubscribe links) to the Convex site domain
 - `robots.txt`: Search engine crawling instructions
 - `sitemap.xml`: Site structure for search engines
 
