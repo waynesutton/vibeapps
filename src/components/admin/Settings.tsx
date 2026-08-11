@@ -4,6 +4,7 @@ import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { SiteSettings } from "../../types";
 import { ConvexBoxSettingsForm } from "./ConvexBoxSettingsForm";
+import { SimpleSelect } from "../ui/SimpleSelect";
 
 // Define SortPeriod locally for type casting, mirroring Layout.tsx
 type SortPeriod =
@@ -34,6 +35,7 @@ const DEFAULT_SETTINGS_FRONTEND = {
   adminDashboardDefaultViewMode: "list" as ViewMode | "none",
   showSubmissionLimit: true,
   submissionLimitCount: 10,
+  hideSubmitPageSidebar: false,
 };
 
 export function Settings() {
@@ -86,6 +88,13 @@ export function Settings() {
     setError(null);
   };
 
+  // Handler for themed SimpleSelect dropdowns (value comes in directly)
+  const handleSelectValueChange = (name: string, value: string) => {
+    setLocalSettings((prev: any) => ({ ...prev, [name]: value }));
+    setShowSuccess(false);
+    setError(null);
+  };
+
   const handleSave = async () => {
     if (!currentSettings) {
       setError("Cannot save, current settings not loaded.");
@@ -127,6 +136,9 @@ export function Settings() {
         updates.showSubmissionLimit = localSettings.showSubmissionLimit;
       if (localSettings.submissionLimitCount !== undefined)
         updates.submissionLimitCount = localSettings.submissionLimitCount;
+      // Submit page layout setting
+      if (localSettings.hideSubmitPageSidebar !== undefined)
+        updates.hideSubmitPageSidebar = localSettings.hideSubmitPageSidebar;
 
       await updateSettings(updates);
       setShowSuccess(true);
@@ -203,9 +215,9 @@ export function Settings() {
 
   return (
     <div className="space-y-8">
-      <div className="bg-white rounded-lg p-6 border border-gray-200">
+      <div className="bg-surface rounded-lg p-6 border border-hairline">
         <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
-          <h2 className="text-xl font-medium text-[#525252]">Site Settings</h2>
+          <h2 className="text-xl font-medium text-copy">Site Settings</h2>
           {(hasChanges || showSuccess) && (
             <div className="flex items-center gap-4">
               {showSuccess && (
@@ -214,7 +226,7 @@ export function Settings() {
               <button
                 onClick={handleSave}
                 disabled={isSaving || !hasChanges}
-                className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 disabled:opacity-50 text-sm"
+                className="px-4 py-2 bg-surface-alt text-copy rounded-md hover:bg-surface-hover transition-colors flex items-center gap-2 disabled:opacity-50 text-sm"
               >
                 <Save className="w-4 h-4" />
                 {isSaving ? "Saving..." : "Save Changes"}
@@ -234,7 +246,7 @@ export function Settings() {
           <div>
             <label
               htmlFor="siteTitle"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               Site Title
             </label>
@@ -244,7 +256,7 @@ export function Settings() {
               type="text"
               value={localSettings.siteTitle ?? ""}
               onChange={handleChange}
-              className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
+              className="w-full px-3 py-2 bg-surface border border-hairline rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink"
               disabled={isSaving}
             />
           </div>
@@ -253,7 +265,7 @@ export function Settings() {
           <div>
             <label
               htmlFor="itemsPerPage"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               Submissions Per Page (Load More quantity)
             </label>
@@ -268,7 +280,7 @@ export function Settings() {
                 DEFAULT_SETTINGS_FRONTEND.itemsPerPage
               }
               onChange={handleChange}
-              className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
+              className="w-full px-3 py-2 bg-surface border border-hairline rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink"
               disabled={isSaving}
             />
           </div>
@@ -277,40 +289,42 @@ export function Settings() {
           <div>
             <label
               htmlFor="defaultSortPeriod"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               Default Homepage Sort
             </label>
-            <select
+            <SimpleSelect
               id="defaultSortPeriod"
-              name="defaultSortPeriod"
               value={localSettings.defaultSortPeriod || "all"} // Default to 'all' if not set
-              onChange={handleChange}
-              className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
+              onChange={(value) =>
+                handleSelectValueChange("defaultSortPeriod", value)
+              }
               disabled={isSaving}
-            >
-              <option value="today">Today</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="year">This Year</option>
-              <option value="all">Most Recent</option>
-              <option value="votes_today">Most Vibes (Today)</option>
-              <option value="votes_week">Most Vibes (Week)</option>
-              <option value="votes_month">Most Vibes (Month)</option>
-              <option value="votes_year">Most Vibes (Year)</option>
-              <option value="votes_all">Most Vibes (All Time)</option>
-            </select>
+              className="w-full h-auto py-2"
+              options={[
+                { value: "today", label: "Today" },
+                { value: "week", label: "This Week" },
+                { value: "month", label: "This Month" },
+                { value: "year", label: "This Year" },
+                { value: "all", label: "Most Recent" },
+                { value: "votes_today", label: "Most Vibes (Today)" },
+                { value: "votes_week", label: "Most Vibes (Week)" },
+                { value: "votes_month", label: "Most Vibes (Month)" },
+                { value: "votes_year", label: "Most Vibes (Year)" },
+                { value: "votes_all", label: "Most Vibes (All Time)" },
+              ]}
+            />
           </div>
 
           {/* --- New View Mode Settings --- */}
-          <div className="pt-6 mt-6 border-t border-gray-200">
-            <h3 className="text-lg font-medium text-[#525252] mb-4">
+          <div className="pt-6 mt-6 border-t border-hairline">
+            <h3 className="text-lg font-medium text-copy mb-4">
               View Mode Configuration
             </h3>
 
             {/* View Mode Visibility */}
             <div className="space-y-3 mb-6">
-              <p className="text-sm font-medium text-[#525252]">
+              <p className="text-sm font-medium text-copy">
                 Show View Mode Icons:
               </p>
               {["showListView", "showGridView", "showVibeView"].map((key) => {
@@ -325,10 +339,10 @@ export function Settings() {
                       type="checkbox"
                       checked={localSettings[typedKey] ?? true} // Default to true if undefined
                       onChange={handleChange}
-                      className="rounded border-[#D5D3D0] text-[#292929] focus:ring-[#292929]"
+                      className="rounded border-hairline-strong text-ink focus:ring-ink"
                       disabled={isSaving}
                     />
-                    <span className="text-sm text-[#525252]">
+                    <span className="text-sm text-copy">
                       {typedKey.replace("show", "").replace("View", " View")}
                     </span>
                   </label>
@@ -340,32 +354,35 @@ export function Settings() {
             <div>
               <label
                 htmlFor="siteDefaultViewMode"
-                className="block text-sm font-medium text-[#525252] mb-1"
+                className="block text-sm font-medium text-copy mb-1"
               >
                 Site Default View Mode (Homepage, etc.)
               </label>
-              <select
+              <SimpleSelect
                 id="siteDefaultViewMode"
-                name="siteDefaultViewMode"
                 value={localSettings.siteDefaultViewMode || "none"}
-                onChange={handleChange}
-                className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
+                onChange={(value) =>
+                  handleSelectValueChange("siteDefaultViewMode", value)
+                }
                 disabled={isSaving}
-              >
-                <option value="none">
-                  None (User selection or first available)
-                </option>
-                {localSettings.showListView && (
-                  <option value="list">List View</option>
-                )}
-                {localSettings.showGridView && (
-                  <option value="grid">Grid View</option>
-                )}
-                {localSettings.showVibeView && (
-                  <option value="vibe">Vibe View</option>
-                )}
-              </select>
-              <p className="text-xs text-gray-500 mt-1">
+                className="w-full h-auto py-2"
+                options={[
+                  {
+                    value: "none",
+                    label: "None (User selection or first available)",
+                  },
+                  ...(localSettings.showListView
+                    ? [{ value: "list", label: "List View" }]
+                    : []),
+                  ...(localSettings.showGridView
+                    ? [{ value: "grid", label: "Grid View" }]
+                    : []),
+                  ...(localSettings.showVibeView
+                    ? [{ value: "vibe", label: "Vibe View" }]
+                    : []),
+                ]}
+              />
+              <p className="text-xs text-soft mt-1">
                 If a view mode is hidden, it cannot be set as default. 'None'
                 means no view mode is pre-selected.
               </p>
@@ -375,58 +392,67 @@ export function Settings() {
             <div className="mt-4">
               <label
                 htmlFor="profilePageDefaultViewMode"
-                className="block text-sm font-medium text-[#525252] mb-1"
+                className="block text-sm font-medium text-copy mb-1"
               >
                 Profile Page Default View Mode
               </label>
-              <select
+              {/* Profile page can always choose, not tied to show...View settings for header icons */}
+              <SimpleSelect
                 id="profilePageDefaultViewMode"
-                name="profilePageDefaultViewMode"
                 value={localSettings.profilePageDefaultViewMode || "list"}
-                onChange={handleChange}
-                className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
+                onChange={(value) =>
+                  handleSelectValueChange("profilePageDefaultViewMode", value)
+                }
                 disabled={isSaving}
-              >
-                {/* Profile page can always choose, not tied to show...View settings for header icons */}
-                <option value="none">
-                  None (User selection or first available)
-                </option>
-                <option value="list">List View</option>
-                <option value="grid">Grid View</option>
-                <option value="vibe">Vibe View</option>
-              </select>
+                className="w-full h-auto py-2"
+                options={[
+                  {
+                    value: "none",
+                    label: "None (User selection or first available)",
+                  },
+                  { value: "list", label: "List View" },
+                  { value: "grid", label: "Grid View" },
+                  { value: "vibe", label: "Vibe View" },
+                ]}
+              />
             </div>
 
             {/* Admin Dashboard Default View Mode */}
             <div className="mt-4">
               <label
                 htmlFor="adminDashboardDefaultViewMode"
-                className="block text-sm font-medium text-[#525252] mb-1"
+                className="block text-sm font-medium text-copy mb-1"
               >
                 Admin Dashboard Default View Mode
               </label>
-              <select
+              {/* Admin page can always choose */}
+              <SimpleSelect
                 id="adminDashboardDefaultViewMode"
-                name="adminDashboardDefaultViewMode"
                 value={localSettings.adminDashboardDefaultViewMode || "list"}
-                onChange={handleChange}
-                className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
+                onChange={(value) =>
+                  handleSelectValueChange(
+                    "adminDashboardDefaultViewMode",
+                    value,
+                  )
+                }
                 disabled={isSaving}
-              >
-                {/* Admin page can always choose */}
-                <option value="none">
-                  None (User selection or first available)
-                </option>
-                <option value="list">List View</option>
-                <option value="grid">Grid View</option>
-                <option value="vibe">Vibe View</option>
-              </select>
+                className="w-full h-auto py-2"
+                options={[
+                  {
+                    value: "none",
+                    label: "None (User selection or first available)",
+                  },
+                  { value: "list", label: "List View" },
+                  { value: "grid", label: "Grid View" },
+                  { value: "vibe", label: "Vibe View" },
+                ]}
+              />
             </div>
           </div>
 
           {/* --- Submission Limit Settings --- */}
-          <div className="pt-6 mt-6 border-t border-gray-200">
-            <h3 className="text-lg font-medium text-[#525252] mb-4">
+          <div className="pt-6 mt-6 border-t border-hairline">
+            <h3 className="text-lg font-medium text-copy mb-4">
               Submission Limit Settings
             </h3>
 
@@ -438,14 +464,14 @@ export function Settings() {
                   type="checkbox"
                   checked={localSettings.showSubmissionLimit ?? true}
                   onChange={handleChange}
-                  className="rounded border-[#D5D3D0] text-[#292929] focus:ring-[#292929]"
+                  className="rounded border-hairline-strong text-ink focus:ring-ink"
                   disabled={isSaving}
                 />
-                <span className="text-sm font-medium text-[#525252]">
+                <span className="text-sm font-medium text-copy">
                   Show submission limit message on forms
                 </span>
               </label>
-              <p className="text-xs text-gray-500 mt-1 ml-6">
+              <p className="text-xs text-soft mt-1 ml-6">
                 When enabled, displays the daily submission limit message on
                 story submission forms
               </p>
@@ -456,7 +482,7 @@ export function Settings() {
               <div>
                 <label
                   htmlFor="submissionLimitCount"
-                  className="block text-sm font-medium text-[#525252] mb-1"
+                  className="block text-sm font-medium text-copy mb-1"
                 >
                   Daily Submission Limit
                 </label>
@@ -468,14 +494,42 @@ export function Settings() {
                   max="100"
                   value={localSettings.submissionLimitCount ?? 10}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] max-w-[200px]"
+                  className="w-full px-3 py-2 bg-surface border border-hairline rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink max-w-[200px]"
                   disabled={isSaving}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-soft mt-1">
                   Maximum number of projects users can submit per day
                 </p>
               </div>
             )}
+          </div>
+
+          {/* --- Submit Page Layout Settings --- */}
+          <div className="pt-6 mt-6 border-t border-hairline">
+            <h3 className="text-lg font-medium text-copy mb-4">
+              Submit Page Layout
+            </h3>
+
+            <div>
+              <label className="flex items-center gap-2">
+                <input
+                  name="hideSubmitPageSidebar"
+                  type="checkbox"
+                  checked={localSettings.hideSubmitPageSidebar ?? false}
+                  onChange={handleChange}
+                  className="rounded border-hairline-strong text-ink focus:ring-ink"
+                  disabled={isSaving}
+                />
+                <span className="text-sm font-medium text-copy">
+                  Hide right sidebar on the default submit page
+                </span>
+              </label>
+              <p className="text-xs text-soft mt-1 ml-6">
+                When enabled, the /submit page hides the right sidebar
+                (leaderboard, recent vibers, top categories) and the form
+                becomes wider for all users
+              </p>
+            </div>
           </div>
         </div>
       </div>

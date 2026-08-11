@@ -109,7 +109,7 @@ export function ProfileHoverCard({
       {showCard && userData && (
         <div
           ref={cardRef}
-          className={`absolute z-50 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-lg border border-[#D8E1EC] p-4 mt-2 animate-fade-in ${
+          className={`absolute z-50 w-80 max-w-[calc(100vw-2rem)] bg-surface rounded-lg border border-hairline p-4 mt-2 animate-fade-in ${
             cardPosition === "left" ? "left-0" : "right-0"
           }`}
           onMouseEnter={() => setShowCard(true)}
@@ -122,11 +122,11 @@ export function ProfileHoverCard({
                 <img
                   src={userData.imageUrl}
                   alt={userData.name}
-                  className="w-12 h-12 rounded-full object-cover border border-[#D8E1EC]"
+                  className="w-12 h-12 rounded-full object-cover border border-hairline"
                 />
               ) : (
-                <div className="w-12 h-12 rounded-full bg-[#292929] flex items-center justify-center border border-[#D8E1EC]">
-                  <span className="text-white text-lg font-medium">
+                <div className="w-12 h-12 rounded-full bg-cta flex items-center justify-center border border-hairline">
+                  <span className="text-on-cta text-lg font-medium">
                     {userData.name.charAt(0).toUpperCase()}
                   </span>
                 </div>
@@ -135,7 +135,7 @@ export function ProfileHoverCard({
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <h3 className="font-medium text-[#292929] truncate">
+                <h3 className="font-medium text-ink truncate">
                   {userData.name}
                 </h3>
                 {userData.isVerified && (
@@ -145,9 +145,9 @@ export function ProfileHoverCard({
                 )}
               </div>
               {userData.username && (
-                <p className="text-sm text-[#545454]">@{userData.username}</p>
+                <p className="text-sm text-soft">@{userData.username}</p>
               )}
-              <div className="flex items-center gap-1 text-xs text-[#787672] mt-1">
+              <div className="flex items-center gap-1 text-xs text-faint mt-1">
                 <Calendar className="w-3 h-3" />
                 <span>
                   Joined{" "}
@@ -162,7 +162,7 @@ export function ProfileHoverCard({
           {/* Bio */}
           {userData.bio && (
             <div className="mb-3">
-              <p className="text-sm text-[#525252] leading-relaxed">
+              <p className="text-sm text-copy leading-relaxed">
                 {userData.bio}
               </p>
             </div>
@@ -179,7 +179,7 @@ export function ProfileHoverCard({
                   href={userData.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-1 bg-[#F4F2EE] hover:bg-[#E5E7EB] rounded text-xs text-[#525252] transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 bg-canvas hover:bg-surface-hover rounded text-xs text-copy transition-colors"
                   title="Website"
                 >
                   <Globe className="w-3 h-3" />
@@ -191,7 +191,7 @@ export function ProfileHoverCard({
                   href={userData.twitter}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-1 bg-[#F4F2EE] hover:bg-[#E5E7EB] rounded text-xs text-[#525252] transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 bg-canvas hover:bg-surface-hover rounded text-xs text-copy transition-colors"
                   title="Twitter"
                 >
                   <Twitter className="w-3 h-3" />
@@ -203,7 +203,7 @@ export function ProfileHoverCard({
                   href={userData.linkedin}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-1 bg-[#F4F2EE] hover:bg-[#E5E7EB] rounded text-xs text-[#525252] transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 bg-canvas hover:bg-surface-hover rounded text-xs text-copy transition-colors"
                   title="LinkedIn"
                 >
                   <Linkedin className="w-3 h-3" />
@@ -215,7 +215,7 @@ export function ProfileHoverCard({
                   href={userData.bluesky}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-1 bg-[#F4F2EE] hover:bg-[#E5E7EB] rounded text-xs text-[#525252] transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 bg-canvas hover:bg-surface-hover rounded text-xs text-copy transition-colors"
                   title="Bluesky"
                 >
                   <ExternalLink className="w-3 h-3" />
@@ -226,10 +226,10 @@ export function ProfileHoverCard({
           )}
 
           {/* View Profile Link */}
-          <div className="pt-2 border-t border-[#F4F0ED]">
+          <div className="pt-2 border-t border-hairline">
             <Link
               to={`/${userData.username}`}
-              className="block w-full text-center py-2 px-3 bg-[#292929] text-white rounded-md text-sm font-medium hover:bg-[#525252] transition-colors"
+              className="block w-full text-center py-2 px-3 bg-cta text-on-cta rounded-md text-sm font-medium hover:bg-cta-hover transition-colors"
             >
               View Profile
             </Link>

@@ -84,7 +84,7 @@ export function UserReportManagement() {
         );
       case "dismissed":
         return (
-          <span className={`${baseClasses} bg-gray-100 text-gray-800`}>
+          <span className={`${baseClasses} bg-surface-alt text-ink`}>
             Dismissed
           </span>
         );
@@ -100,9 +100,9 @@ export function UserReportManagement() {
     <>
       <DialogComponents />
       <div className="space-y-6">
-        <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200">
+        <div className="bg-surface rounded-lg p-4 sm:p-6 border border-hairline">
           <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-medium text-[#525252]">
+          <h2 className="text-xl font-medium text-copy">
             User Report Management
           </h2>
           {getPendingCount() > 0 && (
@@ -134,7 +134,7 @@ export function UserReportManagement() {
         </div>
 
         {filteredReports.length === 0 && (
-          <div className="text-center py-10 text-[#545454]">
+          <div className="text-center py-10 text-soft">
             {allUserReports === undefined
               ? "Loading user reports..."
               : "No user reports found."}
@@ -146,12 +146,12 @@ export function UserReportManagement() {
             {filteredReports.map((report) => (
               <div
                 key={report._id}
-                className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                className="border border-hairline rounded-lg p-4 bg-surface-alt"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-grow">
                     <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-medium text-[#292929]">
+                      <h3 className="font-medium text-ink">
                         {report.reportedUser?.name || "Deleted User"}
                       </h3>
                       {getStatusBadge(report.status)}
@@ -167,7 +167,7 @@ export function UserReportManagement() {
                       )}
                     </div>
                     {report.reportedUser && (
-                      <div className="text-sm text-[#545454] space-y-1">
+                      <div className="text-sm text-soft space-y-1">
                         <p>
                           Username:{" "}
                           <Link
@@ -181,19 +181,19 @@ export function UserReportManagement() {
                       </div>
                     )}
                   </div>
-                  <span className="text-xs text-[#545454]">
+                  <span className="text-xs text-soft">
                     {formatDistanceToNow(report._creationTime)} ago
                   </span>
                 </div>
 
-                <div className="mb-3 p-3 bg-white rounded-md border border-gray-200">
-                  <p className="text-sm text-[#525252] font-medium mb-1">
+                <div className="mb-3 p-3 bg-surface rounded-md border border-hairline">
+                  <p className="text-sm text-copy font-medium mb-1">
                     Reason for Report:
                   </p>
-                  <p className="text-sm text-[#545454]">{report.reason}</p>
+                  <p className="text-sm text-soft">{report.reason}</p>
                 </div>
 
-                <div className="mb-3 text-sm text-[#545454]">
+                <div className="mb-3 text-sm text-soft">
                   <p>
                     Reported by:{" "}
                     {report.reporter ? (
@@ -209,7 +209,7 @@ export function UserReportManagement() {
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-200">
+                <div className="flex flex-wrap gap-2 pt-3 border-t border-hairline">
                   {report.status === "pending" && (
                     <>
                       <Button

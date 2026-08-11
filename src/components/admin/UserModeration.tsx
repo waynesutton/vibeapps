@@ -182,17 +182,17 @@ export function UserModeration() {
 
   // Basic styling for HTML table
   const thClass =
-    "text-left p-3 px-4 text-gray-600 font-medium border-b border-gray-200 bg-gray-50";
-  const tdClass = "p-3 px-4 border-b border-gray-100 text-gray-700";
+    "text-left p-3 px-4 text-copy font-medium border-b border-hairline bg-surface-alt";
+  const tdClass = "p-3 px-4 border-b border-hairline text-copy";
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200">
-        <h2 className="text-xl font-medium text-[#525252] mb-6">User Moderation</h2>
+      <div className="bg-surface rounded-lg p-4 sm:p-6 border border-hairline">
+        <h2 className="text-xl font-medium text-copy mb-6">User Moderation</h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-faint" />
             <Input
               type="search"
               placeholder="Search by name, email, username..."
@@ -218,7 +218,7 @@ export function UserModeration() {
         </div>
 
         {filteredResults.length === 0 && !isLoading && (
-          <div className="text-center py-10 text-[#545454]">
+          <div className="text-center py-10 text-soft">
             No users found matching your criteria.
           </div>
         )}
@@ -255,7 +255,7 @@ export function UserModeration() {
                   }
 
                   return (
-                    <tr key={user._id} className="hover:bg-gray-50">
+                    <tr key={user._id} className="hover:bg-surface-hover">
                       <td className={tdClass}>
                         <div className="flex items-center gap-2">
                           {user.imageUrl && (
@@ -266,7 +266,7 @@ export function UserModeration() {
                             />
                           )}
                           <span
-                            className={`${user.username ? "cursor-pointer hover:text-blue-600 hover:underline transition-colors" : "cursor-default text-gray-500"}`}
+                            className={`${user.username ? "cursor-pointer hover:text-blue-600 hover:underline transition-colors" : "cursor-default text-soft"}`}
                             onClick={() => handleUserClick(user.username)}
                             title={
                               user.username
@@ -291,7 +291,7 @@ export function UserModeration() {
                       <td className={`${tdClass} text-right space-x-1 space-y-1 sm:space-y-0`}>
                         {user.isVerified ? (
                           <button
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                             onClick={() => openConfirmModal(user._id, user.name, "unverify")}>
                             <ShieldOff className="w-3.5 h-3.5" />
                             <span>Unverify</span>
@@ -322,7 +322,7 @@ export function UserModeration() {
                         )}
                         {user.isBanned ? (
                           <button
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                             onClick={() => openConfirmModal(user._id, user.name, "unban")}>
                             <CheckCircle className="w-3.5 h-3.5" />
                             <span>Unban</span>
@@ -353,7 +353,7 @@ export function UserModeration() {
         {status === "CanLoadMore" && (
           <div className="text-center mt-6">
             <button
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => loadMore(15)}
               disabled={isLoading}
             >
@@ -365,17 +365,17 @@ export function UserModeration() {
 
       {confirmingAction && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 rounded-lg border border-gray-200 max-w-md w-full">
+          <div className="bg-surface p-6 rounded-lg border border-hairline max-w-md w-full">
             <div className="flex items-center mb-4">
               <AlertTriangle
                 className={`w-6 h-6 mr-3 ${confirmingAction.action === "delete" ? "text-red-500" : confirmingAction.action === "ban" ? "text-orange-500" : confirmingAction.action === "verify" ? "text-blue-500" : "text-yellow-500"}`}
               />
-              <h3 className="text-lg font-semibold text-gray-800">
+              <h3 className="text-lg font-semibold text-ink">
                 Confirm{" "}
                 {confirmingAction.action.charAt(0).toUpperCase() + confirmingAction.action.slice(1)}
               </h3>
             </div>
-            <p className="text-sm text-gray-600 mb-6">
+            <p className="text-sm text-copy mb-6">
               Are you sure you want to {confirmingAction.action} the user "
               <strong>{confirmingAction.userName}</strong>"?
               {confirmingAction.action === "delete" && " This action cannot be undone."}
@@ -390,26 +390,26 @@ export function UserModeration() {
             </p>
             <div className="flex justify-end gap-3">
               <button
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                 onClick={() => setConfirmingAction(null)}
               >
                 <span>Cancel</span>
               </button>
               <button
-                className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm text-white rounded-lg border transition-all font-medium ${
+                className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg border transition-all font-medium ${
                   confirmingAction.action === "delete"
-                    ? "bg-red-600 hover:bg-red-700 border-red-600"
+                    ? "text-white bg-red-600 hover:bg-red-700 border-red-600"
                     : confirmingAction.action === "ban"
-                      ? "bg-orange-500 hover:bg-orange-600 border-orange-500"
+                      ? "text-white bg-orange-500 hover:bg-orange-600 border-orange-500"
                       : confirmingAction.action === "pause"
-                        ? "bg-yellow-500 hover:bg-yellow-600 border-yellow-500"
+                        ? "text-white bg-yellow-500 hover:bg-yellow-600 border-yellow-500"
                         : confirmingAction.action === "unpause"
-                          ? "bg-green-500 hover:bg-green-600 border-green-500"
+                          ? "text-white bg-green-500 hover:bg-green-600 border-green-500"
                           : confirmingAction.action === "verify"
-                            ? "bg-blue-500 hover:bg-blue-600 border-blue-500"
+                            ? "text-white bg-blue-500 hover:bg-blue-600 border-blue-500"
                             : confirmingAction.action === "unverify"
-                              ? "bg-gray-500 hover:bg-gray-600 border-gray-500"
-                              : "bg-gray-900 hover:bg-gray-800 border-gray-900"
+                              ? "text-on-cta bg-cta hover:bg-cta-hover border-hairline-strong"
+                              : "text-on-cta bg-cta hover:bg-cta-hover border-ink"
                 }`}
                 onClick={handleAction}
               >

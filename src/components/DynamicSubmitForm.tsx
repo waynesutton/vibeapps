@@ -45,8 +45,8 @@ export function DynamicSubmitForm() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900">Invalid Form URL</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-2xl font-bold text-ink">Invalid Form URL</h1>
+          <p className="text-copy mt-2">
             The form URL appears to be invalid.
           </p>
         </div>
@@ -58,8 +58,8 @@ export function DynamicSubmitForm() {
     return (
       <div className="min-h-screen  flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading form...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ink mx-auto mb-4"></div>
+          <p className="text-copy">Loading form...</p>
         </div>
       </div>
     );
@@ -69,9 +69,9 @@ export function DynamicSubmitForm() {
     return (
       <div className="min-h-screen  flex items-center justify-center">
         <div className="text-center">
-          <AlertCircle className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900">Form Not Found</h1>
-          <p className="text-gray-600 mt-2">
+          <AlertCircle className="w-12 h-12 text-soft mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-ink">Form Not Found</h1>
+          <p className="text-copy mt-2">
             The form you're looking for doesn't exist or is no longer available.
           </p>
         </div>
@@ -84,7 +84,7 @@ export function DynamicSubmitForm() {
       <div className="min-h-screen  flex items-center justify-center">
         <div className="max-w-2xl mx-auto text-center p-8">
           <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-6" />
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+          <h1 className="text-3xl font-bold text-ink mb-4">
             {form.title}
           </h1>
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
@@ -103,7 +103,7 @@ export function DynamicSubmitForm() {
       <div className="min-h-screen  flex items-center justify-center">
         <div className="max-w-2xl mx-auto text-center p-8">
           <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-6" />
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Thank You!</h1>
+          <h1 className="text-3xl font-bold text-ink mb-4">Thank You!</h1>
           <div className="bg-green-50 border border-green-200 rounded-lg p-6">
             <p className="text-green-800 whitespace-pre-line">
               {form.successMessage || "Thanks for sharing!"}
@@ -190,14 +190,14 @@ export function DynamicSubmitForm() {
       <div key={field._id} className="space-y-2">
         <Label
           htmlFor={field.key}
-          className="text-sm font-medium text-gray-700"
+          className="text-sm font-medium text-copy"
         >
           {field.label}
           {field.isRequired && <span className="text-red-500 ml-1">*</span>}
         </Label>
 
         {field.description && (
-          <p className="text-sm text-gray-600">{field.description}</p>
+          <p className="text-sm text-copy">{field.description}</p>
         )}
 
         {/* Special handling for longDescription - render as textarea */}
@@ -208,7 +208,7 @@ export function DynamicSubmitForm() {
             onChange={(e) => handleInputChange(field.key, e.target.value)}
             placeholder={field.placeholder?.replace(/\\n/g, "\n") || ""}
             rows={4}
-            className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            className={`w-full px-3 py-2 border border-hairline-strong rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
               error ? "border-red-500" : ""
             }`}
           />
@@ -239,18 +239,18 @@ export function DynamicSubmitForm() {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Form Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+          <h1 className="text-3xl font-bold text-ink mb-4">
             {form.title}
           </h1>
           {form.headerText && (
-            <div className="text-gray-600 whitespace-pre-line mb-6">
+            <div className="text-copy whitespace-pre-line mb-6">
               {form.headerText}
             </div>
           )}
         </div>
 
         {/* Form */}
-        <div className="bg-white shadow-lg rounded-lg p-8">
+        <div className="bg-surface rounded-lg border border-hairline p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {errors.submit && (
               <div className="bg-red-50 border border-red-200 rounded-md p-4">
@@ -264,7 +264,7 @@ export function DynamicSubmitForm() {
             <div className="space-y-2">
               <Label
                 htmlFor="screenshot"
-                className="text-sm font-medium text-gray-700"
+                className="text-sm font-medium text-copy"
               >
                 Upload Screenshot (Optional)
               </Label>
@@ -294,10 +294,10 @@ export function DynamicSubmitForm() {
                     setFormData((prev) => ({ ...prev, screenshot: "" }));
                   }
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+                className="w-full px-3 py-2 border border-hairline-strong rounded-md text-copy focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-surface-alt file:text-copy hover:file:bg-surface-hover"
               />
               {formData.screenshot && (
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-copy">
                   Selected: {formData.screenshot}
                 </div>
               )}
@@ -310,7 +310,7 @@ export function DynamicSubmitForm() {
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-gray-900 hover:bg-gray-800 text-white py-3 text-lg font-medium"
+                className="w-full bg-cta hover:bg-cta-hover text-on-cta py-3 text-lg font-medium"
               >
                 {isSubmitting
                   ? "Submitting..."

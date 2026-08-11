@@ -145,7 +145,7 @@ export function ReportManagement() {
   if (authIsLoading) {
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200 text-center">
+        <div className="bg-surface rounded-lg p-4 sm:p-6 border border-hairline text-center">
           Loading authentication...
         </div>
       </div>
@@ -154,8 +154,8 @@ export function ReportManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200">
-        <h2 className="text-xl font-medium text-[#525252] mb-6">Report Management</h2>
+      <div className="bg-surface rounded-lg p-4 sm:p-6 border border-hairline">
+        <h2 className="text-xl font-medium text-copy mb-6">Report Management</h2>
 
         <div className="flex items-center gap-4 mb-6">
           <Select
@@ -175,12 +175,12 @@ export function ReportManagement() {
         </div>
 
         {isLoading && (
-          <div className="text-center py-6 text-lg font-medium text-[#545454]">
+          <div className="text-center py-6 text-lg font-medium text-soft">
             Loading reports...
           </div>
         )}
         {!isLoading && sortedReports.length === 0 && (
-          <div className="text-center py-10 text-[#545454]">
+          <div className="text-center py-10 text-soft">
             No reports found matching the criteria.
           </div>
         )}
@@ -188,7 +188,7 @@ export function ReportManagement() {
         {!isLoading && sortedReports.length > 0 && (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b border-gray-200 bg-gray-50">
+              <thead className="border-b border-hairline bg-surface-alt">
                 <tr>
                   {[
                     { label: "Reported At", key: "_creationTime" },
@@ -200,7 +200,7 @@ export function ReportManagement() {
                   ].map((col) => (
                     <th
                       key={col.key || col.label}
-                      className="text-left p-3 px-4 text-gray-600 font-medium whitespace-nowrap hover:bg-gray-100"
+                      className="text-left p-3 px-4 text-copy font-medium whitespace-nowrap hover:bg-surface-hover"
                       onClick={() => col.key && handleSort(col.key)}>
                       <div className="flex items-center gap-1 cursor-pointer">
                         {col.label}
@@ -226,8 +226,8 @@ export function ReportManagement() {
                   return (
                     <tr
                       key={report._id}
-                      className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
-                      <td className="p-3 px-4 text-gray-500 whitespace-nowrap">
+                      className="border-b border-hairline last:border-b-0 hover:bg-surface-hover">
+                      <td className="p-3 px-4 text-soft whitespace-nowrap">
                         {formatDistanceToNow(report._creationTime, { addSuffix: true })}
                       </td>
                       <td className="p-3 px-4">
@@ -235,14 +235,14 @@ export function ReportManagement() {
                           <Link
                             to={`/s/${report.story.slug}`}
                             target="_blank"
-                            className={`text-blue-600 hover:underline ${storyIsHidden || storyIsDeleted ? "line-through text-gray-400" : ""}`}>
+                            className={`text-blue-600 hover:underline ${storyIsHidden || storyIsDeleted ? "line-through text-faint" : ""}`}>
                             {report.story.title}
                           </Link>
                         ) : (
-                          <span className="text-gray-400 italic">Story (may be deleted)</span>
+                          <span className="text-faint italic">Story (may be deleted)</span>
                         )}
                       </td>
-                      <td className="p-3 px-4 text-gray-500">
+                      <td className="p-3 px-4 text-soft">
                         {report.reporter ? (
                           <Link
                             to={`/${report.reporter.username}`}
@@ -251,17 +251,17 @@ export function ReportManagement() {
                             {report.reporter.name || report.reporter.username}
                           </Link>
                         ) : (
-                          <span className="italic text-gray-400">Unknown reporter</span>
+                          <span className="italic text-faint">Unknown reporter</span>
                         )}
                       </td>
                       <td
-                        className="p-3 px-4 text-gray-600 max-w-xs truncate"
+                        className="p-3 px-4 text-copy max-w-xs truncate"
                         title={report.reason}>
                         {report.reason}
                       </td>
                       <td className="p-3 px-4">
                         <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${report.status === "pending" ? "bg-yellow-100 text-yellow-800" : report.status.startsWith("resolved") ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"}`}>
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${report.status === "pending" ? "bg-yellow-100 text-yellow-800" : report.status.startsWith("resolved") ? "bg-green-100 text-green-800" : "bg-surface-alt text-copy"}`}>
                           {report.status}
                         </span>
                       </td>
@@ -322,13 +322,13 @@ export function ReportManagement() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="text-gray-600 border-gray-300 hover:bg-gray-100"
+                              className="text-copy border-hairline-strong hover:bg-surface-hover"
                               onClick={() => handleAction(report._id, "dismissed")}>
                               <XCircle className="w-3 h-3 mr-1" /> Dismiss Report
                             </Button>
                           )}
                           {storyIsDeleted && !storyExists && (
-                            <span className="text-xs text-gray-500 italic">
+                            <span className="text-xs text-soft italic">
                               Story permanently deleted.
                             </span>
                           )}

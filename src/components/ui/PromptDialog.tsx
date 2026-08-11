@@ -62,19 +62,20 @@ const PromptDialog: React.FC<PromptDialogProps> = ({
       onClick={handleOverlayClick}
       aria-labelledby="prompt-dialog-title"
       aria-describedby="prompt-dialog-description"
+      aria-modal="true"
       role="dialog"
     >
-      <div className="bg-white rounded-lg border border-gray-200 p-6 w-full max-w-md m-4 transform transition-all duration-300 ease-in-out scale-100">
+      <div className="bg-surface rounded-lg border border-hairline p-6 w-full max-w-md m-4 transform transition-all duration-300 ease-in-out scale-100">
         <h2
           id="prompt-dialog-title"
-          className="text-lg font-semibold text-gray-900 mb-2"
+          className="text-lg font-semibold text-ink mb-2"
         >
           {title}
         </h2>
         {description && (
           <div
             id="prompt-dialog-description"
-            className="text-sm text-gray-600 mb-4"
+            className="text-sm text-copy mb-4"
           >
             {description}
           </div>
@@ -86,20 +87,20 @@ const PromptDialog: React.FC<PromptDialogProps> = ({
           placeholder={placeholder}
           onKeyDown={handleKeyDown}
           autoFocus
-          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent mb-6"
+          className="w-full px-3 py-2 border border-hairline-strong rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ink focus:border-transparent mb-6"
         />
         <div className="flex justify-end space-x-3">
           <button
             onClick={onClose}
             type="button"
-            className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+            className="px-4 py-2 rounded-md text-sm font-medium text-copy bg-surface-alt hover:bg-surface-hover transition-colors focus:outline-none focus:ring-2 focus:ring-hairline-strong focus:ring-offset-2"
           >
             {cancelButtonText}
           </button>
           <button
             onClick={handleConfirm}
             type="button"
-            className="px-4 py-2 rounded-md text-sm font-medium bg-black hover:bg-gray-800 text-white transition-colors focus:outline-none focus:ring-2 focus:ring-gray-700 focus:ring-offset-2"
+            className="px-4 py-2 rounded-md text-sm font-medium bg-cta hover:bg-cta-hover text-on-cta transition-colors focus:outline-none focus:ring-2 focus:ring-ink focus:ring-offset-2"
           >
             {confirmButtonText}
           </button>

@@ -14,14 +14,14 @@ export function ConvexBox() {
 
   return (
     <div
-      className="fixed right-4 bottom-4 bg-[#F8F7F7] border border-[#D8E1EC] rounded-lg p-4 shadow-sm flex flex-col justify-center items-center text-center overflow-hidden"
+      className="fixed right-4 bottom-4 bg-surface-alt border border-hairline rounded-lg p-4 shadow-sm flex flex-col justify-center items-center text-center overflow-hidden"
       style={{
         width: "350px",
         height: config.boxSize === "square" ? "350px" : "150px",
       }}>
       <button
         onClick={() => setIsLocallyVisible(false)}
-        className="absolute top-2 right-2 text-[#545454] hover:text-[#525252] z-10"
+        className="absolute top-2 right-2 text-soft hover:text-copy z-10"
         aria-label="Close">
         <X className="w-4 h-4" />
       </button>
@@ -32,7 +32,7 @@ export function ConvexBox() {
             href={config.linkUrl || "#"}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-[#525252] hover:text-[#292929] font-medium break-words mb-2">
+            className="text-sm text-copy hover:text-ink font-medium break-words mb-2">
             {config.displayText}
           </a>
           {config.logoUrl && (
@@ -72,7 +72,7 @@ export function ConvexBox() {
             href={config.linkUrl || "#"}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-[#525252] hover:text-[#292929] font-medium break-words">
+            className="text-sm text-copy hover:text-ink font-medium break-words">
             {config.displayText}
           </a>
         </>

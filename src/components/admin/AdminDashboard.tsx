@@ -163,17 +163,17 @@ export function AdminDashboard() {
       <div className="max-w-6xl mx-auto px-4 py-5">
         <Link
           to="/"
-          className="text-[13px] text-[#545454] hover:text-[#292929] inline-block mb-2"
+          className="text-[13px] text-soft hover:text-ink inline-block mb-2"
         >
           ← Back to Apps Home
         </Link>
 
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-medium text-[#292929]">
+          <h1 className="text-xl font-medium text-ink">
             Admin Dashboard
           </h1>
           {!access.isAdmin && (
-            <span className="text-xs font-medium text-gray-500 bg-gray-100 border border-gray-200 rounded-full px-3 py-1">
+            <span className="text-xs font-medium text-soft bg-surface-alt border border-hairline rounded-full px-3 py-1">
               Delegated access
             </span>
           )}
@@ -184,12 +184,12 @@ export function AdminDashboard() {
           onValueChange={handleMainTabChange}
           className="space-y-4"
         >
-          <Tabs.List className="flex flex-wrap gap-0.5 sm:gap-2 border-b border-gray-200">
+          <Tabs.List className="flex flex-wrap gap-0.5 sm:gap-2 border-b border-hairline">
             {visibleTabs.map((tab) => (
               <Tabs.Trigger
                 key={tab.value}
                 value={tab.value}
-                className="px-2.5 sm:px-3 py-1.5 text-[13px] font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-[#292929] data-[state=active]:border-b-2 data-[state=active]:border-[#292929] focus:outline-none focus:z-10 whitespace-nowrap"
+                className="px-2.5 sm:px-3 py-1.5 text-[13px] font-medium text-soft hover:text-copy data-[state=active]:text-ink data-[state=active]:border-b-2 data-[state=active]:border-ink focus:outline-none focus:z-10 whitespace-nowrap"
               >
                 {tab.label}
               </Tabs.Trigger>
@@ -223,16 +223,16 @@ export function AdminDashboard() {
                 }
                 className="space-y-4"
               >
-                <Tabs.List className="flex flex-wrap gap-1 sm:gap-4 border-b border-gray-200">
+                <Tabs.List className="flex flex-wrap gap-1 sm:gap-4 border-b border-hairline">
                   <Tabs.Trigger
                     value="form-fields"
-                    className="px-2.5 sm:px-3 py-1.5 text-[13px] font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-[#292929] data-[state=active]:border-b-2 data-[state=active]:border-[#292929] focus:outline-none focus:z-10 whitespace-nowrap"
+                    className="px-2.5 sm:px-3 py-1.5 text-[13px] font-medium text-soft hover:text-copy data-[state=active]:text-ink data-[state=active]:border-b-2 data-[state=active]:border-ink focus:outline-none focus:z-10 whitespace-nowrap"
                   >
                     Story Form Fields
                   </Tabs.Trigger>
                   <Tabs.Trigger
                     value="forms"
-                    className="px-2.5 sm:px-3 py-1.5 text-[13px] font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-[#292929] data-[state=active]:border-b-2 data-[state=active]:border-[#292929] focus:outline-none focus:z-10 whitespace-nowrap"
+                    className="px-2.5 sm:px-3 py-1.5 text-[13px] font-medium text-soft hover:text-copy data-[state=active]:text-ink data-[state=active]:border-b-2 data-[state=active]:border-ink focus:outline-none focus:z-10 whitespace-nowrap"
                   >
                     Custom Forms
                   </Tabs.Trigger>
@@ -266,11 +266,11 @@ export function AdminDashboard() {
                 onValueChange={(value) => handleSubTabChange("users", value)}
                 className="space-y-4"
               >
-                <Tabs.List className="flex flex-wrap gap-1 sm:gap-4 border-b border-gray-200">
+                <Tabs.List className="flex flex-wrap gap-1 sm:gap-4 border-b border-hairline">
                   {canViewUsers && (
                     <Tabs.Trigger
                       value="user-moderation"
-                      className="px-2.5 sm:px-3 py-1.5 text-[13px] font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-[#292929] data-[state=active]:border-b-2 data-[state=active]:border-[#292929] focus:outline-none focus:z-10 whitespace-nowrap"
+                      className="px-2.5 sm:px-3 py-1.5 text-[13px] font-medium text-soft hover:text-copy data-[state=active]:text-ink data-[state=active]:border-b-2 data-[state=active]:border-ink focus:outline-none focus:z-10 whitespace-nowrap"
                     >
                       Users
                     </Tabs.Trigger>
@@ -278,7 +278,7 @@ export function AdminDashboard() {
                   {canViewReports && (
                     <Tabs.Trigger
                       value="reports"
-                      className="px-2.5 sm:px-3 py-1.5 text-[13px] font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-[#292929] data-[state=active]:border-b-2 data-[state=active]:border-[#292929] focus:outline-none focus:z-10 whitespace-nowrap"
+                      className="px-2.5 sm:px-3 py-1.5 text-[13px] font-medium text-soft hover:text-copy data-[state=active]:text-ink data-[state=active]:border-b-2 data-[state=active]:border-ink focus:outline-none focus:z-10 whitespace-nowrap"
                     >
                       Content Reports
                     </Tabs.Trigger>
@@ -286,7 +286,7 @@ export function AdminDashboard() {
                   {canViewReports && (
                     <Tabs.Trigger
                       value="user-reports"
-                      className="px-2.5 sm:px-3 py-1.5 text-[13px] font-medium text-gray-500 hover:text-gray-700 data-[state=active]:text-[#292929] data-[state=active]:border-b-2 data-[state=active]:border-[#292929] focus:outline-none focus:z-10 whitespace-nowrap"
+                      className="px-2.5 sm:px-3 py-1.5 text-[13px] font-medium text-soft hover:text-copy data-[state=active]:text-ink data-[state=active]:border-b-2 data-[state=active]:border-ink focus:outline-none focus:z-10 whitespace-nowrap"
                     >
                       User Reports
                     </Tabs.Trigger>

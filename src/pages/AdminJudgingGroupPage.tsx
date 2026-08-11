@@ -113,7 +113,7 @@ export default function AdminJudgingGroupPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-8 text-center text-sm text-gray-500">
+      <div className="max-w-6xl mx-auto px-4 py-8 text-center text-sm text-soft">
         Loading...
       </div>
     );
@@ -129,7 +129,7 @@ export default function AdminJudgingGroupPage() {
 
   if (groupBySlug === undefined || group === undefined) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-8 text-center text-sm text-gray-500">
+      <div className="max-w-6xl mx-auto px-4 py-8 text-center text-sm text-soft">
         Loading judging group...
       </div>
     );
@@ -196,7 +196,7 @@ function GroupWorkspace({ group }: { group: GroupDetails }) {
         <div className="flex items-center gap-2">
           <Link
             to="/admin?tab=judging"
-            className="inline-flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-800 transition-colors"
+            className="inline-flex items-center gap-1.5 text-[13px] text-soft hover:text-ink transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             Judging groups
@@ -204,7 +204,7 @@ function GroupWorkspace({ group }: { group: GroupDetails }) {
           <button
             type="button"
             onClick={toggleSidebar}
-            className="hidden md:inline-flex p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            className="hidden md:inline-flex p-1.5 text-faint hover:text-copy hover:bg-surface-hover rounded-md transition-colors"
             title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             aria-label={
               sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
@@ -219,22 +219,22 @@ function GroupWorkspace({ group }: { group: GroupDetails }) {
           </button>
         </div>
         <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-          <h1 className="text-xl font-semibold text-[#292929]">{group.name}</h1>
+          <h1 className="text-xl font-semibold text-ink">{group.name}</h1>
           <span
             className={`px-2 py-0.5 text-xs rounded-full ${
               group.isActive
                 ? "bg-green-100 text-green-700"
-                : "bg-gray-100 text-gray-600"
+                : "bg-surface-alt text-copy"
             }`}
           >
             {group.isActive ? "Active" : "Inactive"}
           </span>
-          <span className="text-xs text-gray-400 font-mono">
+          <span className="text-xs text-faint font-mono">
             /judging/{group.slug}
           </span>
         </div>
         {group.description && (
-          <p className="text-[13px] text-gray-500 mt-1 max-w-2xl">
+          <p className="text-[13px] text-soft mt-1 max-w-2xl">
             {group.description}
           </p>
         )}
@@ -260,8 +260,8 @@ function GroupWorkspace({ group }: { group: GroupDetails }) {
                   aria-label={section.label}
                   className={`flex items-center gap-2 px-2.5 py-1.5 text-[13px] rounded-md transition-colors whitespace-nowrap text-left ${
                     isActive
-                      ? "bg-gray-100 text-[#292929] font-medium"
-                      : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+                      ? "bg-surface-alt text-ink font-medium"
+                      : "text-soft hover:text-ink hover:bg-surface-hover"
                   }`}
                 >
                   <section.icon className="w-4 h-4 flex-shrink-0" />

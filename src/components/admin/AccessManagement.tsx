@@ -354,16 +354,16 @@ export function AccessManagement() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="bg-surface rounded-lg border border-hairline p-6">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-            <Shield className="w-5 h-5 text-gray-600" />
+          <div className="w-10 h-10 rounded-full bg-surface-alt flex items-center justify-center flex-shrink-0">
+            <Shield className="w-5 h-5 text-copy" />
           </div>
           <div>
-            <h2 className="text-lg font-medium text-[#292929]">
+            <h2 className="text-lg font-medium text-ink">
               Delegated admin access
             </h2>
-            <p className="text-sm text-gray-500 mt-1 max-w-2xl">
+            <p className="text-sm text-soft mt-1 max-w-2xl">
               Give existing users access to specific admin sections without
               making them full admins. Judging access can be scoped to one or
               more judging groups. Changes take effect immediately and can be
@@ -377,29 +377,29 @@ export function AccessManagement() {
         <div className="mt-6 relative max-w-lg">
           <label
             htmlFor="access-user-search"
-            className="block text-sm font-medium text-gray-700 mb-1"
+            className="block text-sm font-medium text-copy mb-1"
           >
             Find a user to grant access
           </label>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-faint" />
             <input
               id="access-user-search"
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by name..."
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-hairline rounded-md bg-surface focus:outline-none focus:ring-2 focus:ring-hairline-strong focus:border-transparent"
             />
           </div>
           {searchTerm.trim().length > 0 && (
-            <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden">
+            <div className="absolute z-20 mt-1 w-full bg-surface border border-hairline rounded-md shadow-lg overflow-hidden">
               {searchResults === undefined ? (
-                <div className="px-4 py-3 text-sm text-gray-500">
+                <div className="px-4 py-3 text-sm text-soft">
                   Searching...
                 </div>
               ) : searchResults.length === 0 ? (
-                <div className="px-4 py-3 text-sm text-gray-500">
+                <div className="px-4 py-3 text-sm text-soft">
                   No users found
                 </div>
               ) : (
@@ -408,7 +408,7 @@ export function AccessManagement() {
                     key={user._id}
                     type="button"
                     onClick={() => openEditorForUser(user)}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-surface-hover transition-colors"
                   >
                     {user.imageUrl ? (
                       <img
@@ -417,20 +417,20 @@ export function AccessManagement() {
                         className="w-8 h-8 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                        <Users className="w-4 h-4 text-gray-400" />
+                      <div className="w-8 h-8 rounded-full bg-surface-alt flex items-center justify-center">
+                        <Users className="w-4 h-4 text-faint" />
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-[#292929] truncate">
+                      <div className="text-sm font-medium text-ink truncate">
                         {user.name}
                       </div>
-                      <div className="text-xs text-gray-500 truncate">
+                      <div className="text-xs text-soft truncate">
                         {user.username ? `@${user.username}` : user.email}
                       </div>
                     </div>
                     {user.hasGrant && (
-                      <span className="text-xs font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-full px-2 py-0.5 flex-shrink-0">
+                      <span className="text-xs font-medium text-copy bg-surface-alt border border-hairline rounded-full px-2 py-0.5 flex-shrink-0">
                         Has access
                       </span>
                     )}
@@ -444,7 +444,7 @@ export function AccessManagement() {
 
       {/* Grant editor */}
       {editor && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+        <div className="bg-surface rounded-lg border border-hairline p-6 space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {editor.userImageUrl ? (
@@ -454,17 +454,17 @@ export function AccessManagement() {
                   className="w-10 h-10 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-gray-400" />
+                <div className="w-10 h-10 rounded-full bg-surface-alt flex items-center justify-center">
+                  <Users className="w-5 h-5 text-faint" />
                 </div>
               )}
               <div>
-                <h3 className="text-base font-medium text-[#292929]">
+                <h3 className="text-base font-medium text-ink">
                   {editor.isExisting ? "Edit access for" : "Grant access to"}{" "}
                   {editor.userName}
                 </h3>
                 {editor.userUsername && (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-soft">
                     @{editor.userUsername}
                   </p>
                 )}
@@ -473,7 +473,7 @@ export function AccessManagement() {
             <button
               type="button"
               onClick={() => setEditor(null)}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-faint hover:text-copy transition-colors"
               aria-label="Close editor"
             >
               <X className="w-5 h-5" />
@@ -492,16 +492,16 @@ export function AccessManagement() {
                   key={section.id}
                   className={`rounded-lg border p-4 transition-colors ${
                     enabledCount > 0
-                      ? "border-gray-400 bg-gray-50"
-                      : "border-gray-200 bg-white"
+                      ? "border-hairline-strong bg-surface-alt"
+                      : "border-hairline bg-surface"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h4 className="text-sm font-medium text-[#292929]">
+                      <h4 className="text-sm font-medium text-ink">
                         {section.title}
                       </h4>
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      <p className="text-xs text-soft mt-0.5">
                         {section.description}
                       </p>
                     </div>
@@ -510,8 +510,8 @@ export function AccessManagement() {
                       onClick={() => toggleSection(section)}
                       className={`text-xs font-medium rounded-full px-2.5 py-1 border transition-colors flex-shrink-0 ${
                         allOn
-                          ? "bg-black text-white border-black hover:bg-gray-800"
-                          : "bg-white text-gray-600 border-gray-200 hover:bg-gray-100"
+                          ? "bg-cta text-on-cta border-ink hover:bg-cta-hover"
+                          : "bg-surface text-copy border-hairline hover:bg-surface-hover"
                       }`}
                     >
                       {allOn ? "All on" : "Enable all"}
@@ -529,7 +529,7 @@ export function AccessManagement() {
                             type="checkbox"
                             checked={checked}
                             onChange={() => togglePermission(k.key)}
-                            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-black focus:ring-gray-400"
+                            className="mt-0.5 h-4 w-4 rounded border-hairline-strong text-ink focus:ring-hairline-strong"
                           />
                           <span
                             className={`text-xs leading-5 ${
@@ -538,8 +538,8 @@ export function AccessManagement() {
                                   ? "text-red-700"
                                   : "text-red-600/70 group-hover:text-red-700"
                                 : checked
-                                  ? "text-[#292929]"
-                                  : "text-gray-600 group-hover:text-gray-800"
+                                  ? "text-ink"
+                                  : "text-copy group-hover:text-ink"
                             }`}
                           >
                             {k.label}
@@ -554,8 +554,8 @@ export function AccessManagement() {
                     [...editor.permissions].some((k) =>
                       k.startsWith("judging."),
                     ) && (
-                      <div className="mt-4 pt-3 border-t border-gray-200">
-                        <div className="text-xs font-medium text-gray-700 mb-2">
+                      <div className="mt-4 pt-3 border-t border-hairline">
+                        <div className="text-xs font-medium text-copy mb-2">
                           Judging group scope
                         </div>
                         <label className="flex items-center gap-2 cursor-pointer mb-2">
@@ -568,9 +568,9 @@ export function AccessManagement() {
                                 allJudgingGroups: !editor.allJudgingGroups,
                               })
                             }
-                            className="h-4 w-4 rounded border-gray-300 text-black focus:ring-gray-400"
+                            className="h-4 w-4 rounded border-hairline-strong text-ink focus:ring-hairline-strong"
                           />
-                          <span className="text-xs text-[#292929] font-medium">
+                          <span className="text-xs text-ink font-medium">
                             All judging groups (current and future)
                           </span>
                         </label>
@@ -587,13 +587,13 @@ export function AccessManagement() {
                                     .map((group) => (
                                       <span
                                         key={group._id}
-                                        className="inline-flex items-center gap-1 text-xs text-[#292929] bg-white border border-gray-300 rounded-full pl-2.5 pr-1 py-0.5"
+                                        className="inline-flex items-center gap-1 text-xs text-ink bg-surface border border-hairline-strong rounded-full pl-2.5 pr-1 py-0.5"
                                       >
                                         {group.name}
                                         <button
                                           type="button"
                                           onClick={() => toggleGroup(group._id)}
-                                          className="p-0.5 text-gray-400 hover:text-gray-700 transition-colors"
+                                          className="p-0.5 text-faint hover:text-copy transition-colors"
                                           aria-label={`Remove ${group.name}`}
                                         >
                                           <X className="w-3 h-3" />
@@ -605,23 +605,23 @@ export function AccessManagement() {
 
                             {/* Group search */}
                             <div className="relative">
-                              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-faint" />
                               <input
                                 type="text"
                                 value={groupSearch}
                                 onChange={(e) => setGroupSearch(e.target.value)}
                                 placeholder="Search judging groups..."
-                                className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
+                                className="w-full pl-8 pr-3 py-1.5 text-xs border border-hairline rounded-md bg-surface focus:outline-none focus:ring-2 focus:ring-hairline-strong focus:border-transparent"
                               />
                             </div>
 
                             <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
                               {filteredGroups === undefined ? (
-                                <div className="text-xs text-gray-500">
+                                <div className="text-xs text-soft">
                                   Loading groups...
                                 </div>
                               ) : filteredGroups.length === 0 ? (
-                                <div className="text-xs text-gray-500">
+                                <div className="text-xs text-soft">
                                   {groupSearch.trim() === ""
                                     ? "No judging groups exist yet"
                                     : `No groups match "${groupSearch.trim()}"`}
@@ -638,13 +638,13 @@ export function AccessManagement() {
                                         group._id,
                                       )}
                                       onChange={() => toggleGroup(group._id)}
-                                      className="h-4 w-4 rounded border-gray-300 text-black focus:ring-gray-400"
+                                      className="h-4 w-4 rounded border-hairline-strong text-ink focus:ring-hairline-strong"
                                     />
-                                    <span className="text-xs text-gray-700">
+                                    <span className="text-xs text-copy">
                                       {group.name}
                                     </span>
                                     {!group.isActive && (
-                                      <span className="text-[10px] text-gray-400 uppercase tracking-wide">
+                                      <span className="text-[10px] text-faint uppercase tracking-wide">
                                         inactive
                                       </span>
                                     )}
@@ -654,7 +654,7 @@ export function AccessManagement() {
                             </div>
 
                             {editor.judgingGroupIds.size > 0 && (
-                              <div className="text-[11px] text-gray-500">
+                              <div className="text-[11px] text-soft">
                                 {editor.judgingGroupIds.size}{" "}
                                 {editor.judgingGroupIds.size === 1
                                   ? "group selected"
@@ -673,16 +673,16 @@ export function AccessManagement() {
           {/* Summary chips */}
           {editor.permissions.size > 0 && (
             <div>
-              <div className="text-xs font-medium text-gray-700 mb-2">
+              <div className="text-xs font-medium text-copy mb-2">
                 {editor.userName} will be able to:
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {[...editor.permissions].sort().map((key) => (
                   <span
                     key={key}
-                    className="inline-flex items-center gap-1 text-xs text-gray-700 bg-gray-100 border border-gray-200 rounded-full px-2.5 py-1"
+                    className="inline-flex items-center gap-1 text-xs text-copy bg-surface-alt border border-hairline rounded-full px-2.5 py-1"
                   >
-                    <Check className="w-3 h-3 text-gray-500" />
+                    <Check className="w-3 h-3 text-soft" />
                     {chipLabel(key)}
                   </span>
                 ))}
@@ -694,7 +694,7 @@ export function AccessManagement() {
           <div>
             <label
               htmlFor="access-notes"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               Notes (optional)
             </label>
@@ -704,7 +704,7 @@ export function AccessManagement() {
               value={editor.notes}
               onChange={(e) => setEditor({ ...editor, notes: e.target.value })}
               placeholder="e.g. Hackathon organizer for the fall event"
-              className="w-full max-w-lg px-3 py-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
+              className="w-full max-w-lg px-3 py-2 text-sm border border-hairline rounded-md bg-surface focus:outline-none focus:ring-2 focus:ring-hairline-strong focus:border-transparent"
             />
           </div>
 
@@ -713,7 +713,7 @@ export function AccessManagement() {
               type="button"
               onClick={() => void handleSave()}
               disabled={isSaving}
-              className="px-4 py-2 rounded-md text-sm font-medium bg-black hover:bg-gray-800 text-white transition-colors disabled:opacity-50"
+              className="px-4 py-2 rounded-md text-sm font-medium bg-cta hover:bg-cta-hover text-on-cta transition-colors disabled:opacity-50"
             >
               {isSaving
                 ? "Saving..."
@@ -724,7 +724,7 @@ export function AccessManagement() {
             <button
               type="button"
               onClick={() => setEditor(null)}
-              className="px-4 py-2 rounded-md text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+              className="px-4 py-2 rounded-md text-sm font-medium text-copy bg-surface-alt hover:bg-surface-hover transition-colors"
             >
               Cancel
             </button>
@@ -733,12 +733,12 @@ export function AccessManagement() {
       )}
 
       {/* Grants list */}
-      <div className="bg-white rounded-lg border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-base font-medium text-[#292929]">
+      <div className="bg-surface rounded-lg border border-hairline">
+        <div className="px-6 py-4 border-b border-hairline">
+          <h3 className="text-base font-medium text-ink">
             Who has access
           </h3>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-soft mt-0.5">
             {grants === undefined
               ? "Loading..."
               : grants.length === 0
@@ -747,7 +747,7 @@ export function AccessManagement() {
           </p>
         </div>
         {grants !== undefined && grants.length > 0 && (
-          <ul className="divide-y divide-gray-100">
+          <ul className="divide-y divide-hairline">
             {grants.map((grant) => {
               const isExpanded = expandedGrantId === grant._id;
               return (
@@ -760,21 +760,21 @@ export function AccessManagement() {
                         className="w-9 h-9 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
-                        <Users className="w-4 h-4 text-gray-400" />
+                      <div className="w-9 h-9 rounded-full bg-surface-alt flex items-center justify-center">
+                        <Users className="w-4 h-4 text-faint" />
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-[#292929] truncate">
+                      <div className="text-sm font-medium text-ink truncate">
                         {grant.user?.name ?? "Unknown user"}
                         {grant.user?.username && (
-                          <span className="text-gray-400 font-normal">
+                          <span className="text-faint font-normal">
                             {" "}
                             @{grant.user.username}
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-gray-500 truncate">
+                      <div className="text-xs text-soft truncate">
                         {grant.permissions.length}{" "}
                         {grant.permissions.length === 1
                           ? "permission"
@@ -799,7 +799,7 @@ export function AccessManagement() {
                         onClick={() =>
                           setExpandedGrantId(isExpanded ? null : grant._id)
                         }
-                        className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                        className="p-2 text-faint hover:text-copy transition-colors"
                         aria-label={
                           isExpanded ? "Collapse details" : "Expand details"
                         }
@@ -813,7 +813,7 @@ export function AccessManagement() {
                       <button
                         type="button"
                         onClick={() => openEditorForGrant(grant)}
-                        className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                        className="p-2 text-faint hover:text-copy transition-colors"
                         aria-label="Edit access"
                       >
                         <Pencil className="w-4 h-4" />
@@ -826,7 +826,7 @@ export function AccessManagement() {
                             name: grant.user?.name ?? "this user",
                           })
                         }
-                        className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                        className="p-2 text-faint hover:text-red-600 transition-colors"
                         aria-label="Revoke access"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -839,7 +839,7 @@ export function AccessManagement() {
                         {grant.permissions.sort().map((key) => (
                           <span
                             key={key}
-                            className="text-xs text-gray-700 bg-gray-100 border border-gray-200 rounded-full px-2.5 py-1"
+                            className="text-xs text-copy bg-surface-alt border border-hairline rounded-full px-2.5 py-1"
                           >
                             {chipLabel(key)}
                           </span>
@@ -847,7 +847,7 @@ export function AccessManagement() {
                       </div>
                       {(grant.allJudgingGroups ||
                         grant.judgingGroups.length > 0) && (
-                        <div className="text-xs text-gray-600">
+                        <div className="text-xs text-copy">
                           <span className="font-medium">Judging groups:</span>{" "}
                           {grant.allJudgingGroups
                             ? "All groups (current and future)"
@@ -855,7 +855,7 @@ export function AccessManagement() {
                         </div>
                       )}
                       {grant.notes && (
-                        <div className="text-xs text-gray-600">
+                        <div className="text-xs text-copy">
                           <span className="font-medium">Notes:</span>{" "}
                           {grant.notes}
                         </div>

@@ -79,47 +79,47 @@ export function EmailTestingPanel() {
   };
 
   return (
-    <div className="bg-white rounded-lg p-6 border border-gray-200">
+    <div className="bg-surface rounded-lg p-6 border border-hairline">
       <div className="flex items-center gap-3 mb-4">
-        <TestTube className="w-6 h-6 text-[#525252]" />
-        <h2 className="text-xl font-medium text-[#525252]">
+        <TestTube className="w-6 h-6 text-copy" />
+        <h2 className="text-xl font-medium text-copy">
           Email System Testing
         </h2>
       </div>
 
-      <p className="text-sm text-gray-600 mb-6">
+      <p className="text-sm text-copy mb-6">
         Test that scheduled emails fetch fresh data from the database. Click
         test buttons to trigger emails and verify they contain current metrics.
       </p>
 
       {/* Current Database State */}
-      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-        <h3 className="font-medium text-[#525252] mb-3">
+      <div className="mb-6 p-4 bg-surface-alt rounded-lg">
+        <h3 className="font-medium text-copy mb-3">
           Current Database State
         </h3>
         {dataComparison ? (
           <div className="space-y-3">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-              <div className="bg-white p-3 rounded border">
-                <div className="text-gray-600 text-xs mb-1">Stories</div>
+              <div className="bg-surface p-3 rounded border">
+                <div className="text-copy text-xs mb-1">Stories</div>
                 <div className="font-mono font-semibold text-lg">
                   {dataComparison.currentState.totalStories}
                 </div>
               </div>
-              <div className="bg-white p-3 rounded border">
-                <div className="text-gray-600 text-xs mb-1">Users</div>
+              <div className="bg-surface p-3 rounded border">
+                <div className="text-copy text-xs mb-1">Users</div>
                 <div className="font-mono font-semibold text-lg">
                   {dataComparison.currentState.totalUsers}
                 </div>
               </div>
-              <div className="bg-white p-3 rounded border">
-                <div className="text-gray-600 text-xs mb-1">Votes</div>
+              <div className="bg-surface p-3 rounded border">
+                <div className="text-copy text-xs mb-1">Votes</div>
                 <div className="font-mono font-semibold text-lg">
                   {dataComparison.currentState.totalVotes}
                 </div>
               </div>
-              <div className="bg-white p-3 rounded border">
-                <div className="text-gray-600 text-xs mb-1">Comments</div>
+              <div className="bg-surface p-3 rounded border">
+                <div className="text-copy text-xs mb-1">Comments</div>
                 <div className="font-mono font-semibold text-lg">
                   {dataComparison.currentState.totalComments}
                 </div>
@@ -127,7 +127,7 @@ export function EmailTestingPanel() {
             </div>
 
             {dataComparison.lastEmailLog && (
-              <div className="mt-3 pt-3 border-t text-xs text-gray-600">
+              <div className="mt-3 pt-3 border-t text-xs text-copy">
                 <span className="font-medium">Last admin email:</span>{" "}
                 {dataComparison.lastEmailLog.sentAt} (
                 {dataComparison.lastEmailLog.status})
@@ -155,27 +155,27 @@ export function EmailTestingPanel() {
             </div>
           </div>
         ) : (
-          <div className="text-sm text-gray-500">Loading...</div>
+          <div className="text-sm text-soft">Loading...</div>
         )}
       </div>
 
       {/* Test Buttons */}
       <div className="space-y-4">
-        <h3 className="font-medium text-[#525252]">Test Email Types</h3>
+        <h3 className="font-medium text-copy">Test Email Types</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Daily Admin Email */}
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <h4 className="font-medium mb-2 text-[#525252]">
+          <div className="border rounded-lg p-4 bg-surface-alt">
+            <h4 className="font-medium mb-2 text-copy">
               Daily Admin Email
             </h4>
-            <p className="text-xs text-gray-600 mb-3">
+            <p className="text-xs text-copy mb-3">
               Tests admin metrics with current database state
             </p>
             <button
               onClick={() => handleTest("daily_admin")}
               disabled={isLoading}
-              className="w-full px-4 py-2 bg-[#292929] text-white rounded hover:bg-[#525252] disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors"
+              className="w-full px-4 py-2 bg-cta text-on-cta rounded hover:bg-cta-hover disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors"
             >
               {activeTest === "daily_admin" ? "Testing..." : "Test Admin Email"}
             </button>
@@ -187,17 +187,17 @@ export function EmailTestingPanel() {
           </div>
 
           {/* Daily Engagement Email */}
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <h4 className="font-medium mb-2 text-[#525252]">
+          <div className="border rounded-lg p-4 bg-surface-alt">
+            <h4 className="font-medium mb-2 text-copy">
               User Engagement Email
             </h4>
-            <p className="text-xs text-gray-600 mb-3">
+            <p className="text-xs text-copy mb-3">
               Tests user engagement processing with fresh activity
             </p>
             <button
               onClick={() => handleTest("daily_engagement")}
               disabled={isLoading}
-              className="w-full px-4 py-2 bg-[#292929] text-white rounded hover:bg-[#525252] disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors"
+              className="w-full px-4 py-2 bg-cta text-on-cta rounded hover:bg-cta-hover disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors"
             >
               {activeTest === "daily_engagement"
                 ? "Testing..."
@@ -211,15 +211,15 @@ export function EmailTestingPanel() {
           </div>
 
           {/* Weekly Digest */}
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <h4 className="font-medium mb-2 text-[#525252]">Weekly Digest</h4>
-            <p className="text-xs text-gray-600 mb-3">
+          <div className="border rounded-lg p-4 bg-surface-alt">
+            <h4 className="font-medium mb-2 text-copy">Weekly Digest</h4>
+            <p className="text-xs text-copy mb-3">
               Tests weekly leaderboard with current votes
             </p>
             <button
               onClick={() => handleTest("weekly_digest")}
               disabled={isLoading}
-              className="w-full px-4 py-2 bg-[#292929] text-white rounded hover:bg-[#525252] disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors"
+              className="w-full px-4 py-2 bg-cta text-on-cta rounded hover:bg-cta-hover disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors"
             >
               {activeTest === "weekly_digest"
                 ? "Testing..."
@@ -297,10 +297,10 @@ export function EmailTestingPanel() {
 
             {testResult.dataSnapshot && (
               <details className="mt-3">
-                <summary className="cursor-pointer text-xs text-gray-600 hover:text-gray-800">
+                <summary className="cursor-pointer text-xs text-copy hover:text-ink">
                   View detailed data snapshot
                 </summary>
-                <pre className="mt-2 text-xs bg-white p-3 rounded border overflow-auto max-h-64">
+                <pre className="mt-2 text-xs bg-surface p-3 rounded border overflow-auto max-h-64">
                   {JSON.stringify(testResult.dataSnapshot, null, 2)}
                 </pre>
               </details>
@@ -311,10 +311,10 @@ export function EmailTestingPanel() {
 
       {/* Help Text */}
       <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <h3 className="font-medium text-sm mb-2 text-[#525252]">
+        <h3 className="font-medium text-sm mb-2 text-copy">
           How Testing Works
         </h3>
-        <ul className="text-xs text-gray-700 space-y-1">
+        <ul className="text-xs text-copy space-y-1">
           <li>
             • Takes snapshot of database activity for the tested date range
           </li>
@@ -325,10 +325,10 @@ export function EmailTestingPanel() {
         </ul>
 
         <div className="mt-3 pt-3 border-t border-blue-300">
-          <h4 className="font-medium text-xs mb-1 text-[#525252]">
+          <h4 className="font-medium text-xs mb-1 text-copy">
             Date Ranges:
           </h4>
-          <ul className="text-xs text-gray-700 space-y-1">
+          <ul className="text-xs text-copy space-y-1">
             <li>
               • <strong>Daily Admin/Engagement:</strong> TODAY's activity
               (midnight to midnight)

@@ -55,6 +55,11 @@ export const baseStoryValidator = {
   isApproved: v.optional(v.boolean()),
   rejectionReason: v.optional(v.string()),
   email: v.optional(v.string()),
+  // AI spam moderation fields (mirrors stories table schema)
+  isSpam: v.optional(v.boolean()),
+  spamReason: v.optional(v.string()),
+  spamMarkedAt: v.optional(v.number()),
+  spamMarkedBy: v.optional(v.id("users")),
   // Hackathon team info
   teamName: v.optional(v.string()),
   teamMemberCount: v.optional(v.number()),
@@ -224,6 +229,11 @@ export type StoryWithDetailsPublic = {
   isApproved?: boolean;
   rejectionReason?: string;
   email?: string;
+  // AI spam moderation fields (mirrors stories table schema)
+  isSpam?: boolean;
+  spamReason?: string;
+  spamMarkedAt?: number;
+  spamMarkedBy?: Id<"users">;
   // Hackathon team info
   teamName?: string;
   teamMemberCount?: number;

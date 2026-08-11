@@ -140,6 +140,18 @@
     <!-- Discoverability files -->
     <link rel="robots" href="/robots.txt" />
     <link rel="alternate" type="text/plain" title="LLMs" href="/llms.txt" />
+    <!-- Apply saved theme before first paint to avoid a flash of the wrong theme -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("vibeapps-theme");
+          if (t !== "light" && t !== "classic" && t !== "dark") t = "light";
+          document.documentElement.setAttribute("data-theme", t);
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "light");
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

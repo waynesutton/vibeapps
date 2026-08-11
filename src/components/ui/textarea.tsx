@@ -6,7 +6,7 @@ export const Textarea = React.forwardRef<
 >(({ className, ...props }, ref) => {
   return (
     <textarea
-      className={`w-full p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-black ${className || ""}`}
+      className={`w-full p-2 border border-hairline-strong rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-ink ${className || ""}`}
       ref={ref}
       {...props}
     />

@@ -178,14 +178,14 @@ export function YCHackForm() {
     <div className="max-w-2xl mx-auto">
       <Link
         to="/"
-        className="text-[#545454] hover:text-[#525252] inline-block mb-6"
+        className="text-soft hover:text-copy inline-block mb-6"
       >
         ← Back to Apps
       </Link>
 
-      <div className="bg-white p-6 rounded-lg border border-[#D8E1EC]">
+      <div className="bg-surface p-6 rounded-lg border border-hairline">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <h2 className="text-2xl font-bold text-[#292929]">
+          <h2 className="text-2xl font-bold text-ink">
             YC AI Hackathon Submissions
           </h2>{" "}
           <span className="ml-2 text-md font-bold text-red-600">
@@ -196,13 +196,13 @@ export function YCHackForm() {
             </SignUpButton>{" "}
             to edit your submission after it's been submitted.
           </span>{" "}
-          <p className="ml-2 text-md font-bold text-gray-600">
+          <p className="ml-2 text-md font-bold text-copy">
             What did you build?
           </p>
           <div>
             <label
               htmlFor="title"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               App Title *
             </label>
@@ -214,7 +214,7 @@ export function YCHackForm() {
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, title: e.target.value }))
               }
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
               required
               disabled={isSubmitting}
             />
@@ -222,7 +222,7 @@ export function YCHackForm() {
           <div>
             <label
               htmlFor="tagline"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               App/Project Tagline*
             </label>
@@ -240,18 +240,18 @@ export function YCHackForm() {
                 }
               }}
               maxLength={MAX_TAGLINE_LENGTH}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
               required
               disabled={isSubmitting}
             />
-            <div className="text-xs text-right text-[#545454] mt-1">
+            <div className="text-xs text-right text-soft mt-1">
               {formData.tagline.length}/{MAX_TAGLINE_LENGTH}
             </div>
           </div>
           <div>
             <label
               htmlFor="longDescription"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               Description (Optional)
             </label>
@@ -266,18 +266,18 @@ export function YCHackForm() {
                 }))
               }
               rows={4}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
               disabled={isSubmitting}
             />
           </div>
           <div>
             <label
               htmlFor="url"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               App Website Link *
             </label>
-            <div className="text-sm text-[#545454] mb-2">
+            <div className="text-sm text-soft mb-2">
               Enter your app url (ex: https://)
             </div>
             <input
@@ -288,7 +288,7 @@ export function YCHackForm() {
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, url: e.target.value }))
               }
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
               required
               disabled={isSubmitting}
             />
@@ -296,11 +296,11 @@ export function YCHackForm() {
           <div>
             <label
               htmlFor="videoUrl"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               Video Demo - 3-5 minutes recommended (Optional)
             </label>
-            <div className="text-sm text-[#545454] mb-2">
+            <div className="text-sm text-soft mb-2">
               Share a video demo of your app (YouTube, Vimeo, etc.)
             </div>
             <input
@@ -311,14 +311,14 @@ export function YCHackForm() {
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, videoUrl: e.target.value }))
               }
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
               disabled={isSubmitting}
             />
           </div>
           <div>
             <label
               htmlFor="submitterName"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               Your Name *
             </label>
@@ -333,7 +333,7 @@ export function YCHackForm() {
                   submitterName: e.target.value,
                 }))
               }
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
               required
               disabled={isSubmitting}
             />
@@ -341,11 +341,11 @@ export function YCHackForm() {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               Email *
             </label>
-            <div className="text-sm text-[#545454] mb-2">
+            <div className="text-sm text-soft mb-2">
               Required for anonymous submissions (used for communication only)
             </div>
             <input
@@ -356,7 +356,7 @@ export function YCHackForm() {
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, email: e.target.value }))
               }
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
               required
               disabled={isSubmitting}
             />
@@ -364,7 +364,7 @@ export function YCHackForm() {
           <div>
             <label
               htmlFor="image"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               Upload Screenshot (Recommended but Optional)
             </label>
@@ -373,11 +373,11 @@ export function YCHackForm() {
               id="image"
               accept="image/*"
               onChange={handleImageChange}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#F4F0ED] file:text-[#525252] hover:file:bg-[#e5e1de]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-surface-alt file:text-copy hover:file:bg-surface-hover"
               disabled={isSubmitting}
             />
             {formData.image && (
-              <div className="text-sm text-[#545454] mt-1">
+              <div className="text-sm text-soft mt-1">
                 Selected: {formData.image.name}
               </div>
             )}
@@ -387,12 +387,12 @@ export function YCHackForm() {
             <div key={field.key}>
               <label
                 htmlFor={field.key}
-                className="block text-sm font-medium text-[#525252] mb-1"
+                className="block text-sm font-medium text-copy mb-1"
               >
                 {field.label}
               </label>
               {field.description && (
-                <div className="text-sm text-[#545454] mb-2">
+                <div className="text-sm text-soft mb-2">
                   {field.description}
                 </div>
               )}
@@ -407,25 +407,25 @@ export function YCHackForm() {
                     [field.key]: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
                 required={field.key === "githubUrl" ? false : field.isRequired}
                 disabled={isSubmitting}
               />
             </div>
           ))}
           {formFields === undefined && (
-            <div className="text-sm text-gray-500">Loading form fields...</div>
+            <div className="text-sm text-soft">Loading form fields...</div>
           )}
           <div>
-            <label className="block text-sm font-medium text-[#525252] mb-2">
+            <label className="block text-sm font-medium text-copy mb-2">
               Select Tags *
             </label>{" "}
-            <span className="ml-2 text-xs text-gray-600">
+            <span className="ml-2 text-xs text-copy">
               What apps did you use?
             </span>
             <div className="flex flex-wrap gap-2 mb-4">
               {availableTags === undefined && (
-                <span className="text-sm text-gray-500">Loading tags...</span>
+                <span className="text-sm text-soft">Loading tags...</span>
               )}
               {availableTags
                 ?.filter((tag: Tag) => tag.name !== "ychackathon")
@@ -434,13 +434,13 @@ export function YCHackForm() {
                     key={tag._id}
                     type="button"
                     onClick={() => toggleTag(tag._id)}
-                    className={`px-3 py-1 rounded-md text-sm transition-colors border ${selectedTagIds.includes(tag._id) ? "bg-[#F4F0ED] text-[#292929] border-[#D5D3D0]" : "bg-white text-[#545454] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"}`}
+                    className={`px-3 py-1 rounded-md text-sm transition-colors border ${selectedTagIds.includes(tag._id) ? "bg-surface-alt text-ink border-hairline-strong" : "bg-surface text-soft border-hairline-strong hover:border-hairline-strong hover:text-copy"}`}
                   >
                     {tag.name}
                   </button>
                 ))}
             </div>
-            <label className="block text-sm font-medium text-[#525252] mb-2">
+            <label className="block text-sm font-medium text-copy mb-2">
               Add New Tags (optional)
             </label>
             <div className="flex gap-2 mb-2">
@@ -454,7 +454,7 @@ export function YCHackForm() {
                     ? `Maximum ${maxTags} tags reached`
                     : "Enter new tag name..."
                 }
-                className="flex-1 px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
+                className="flex-1 px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline text-sm"
                 disabled={isSubmitting || countedTags >= maxTags}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -471,7 +471,7 @@ export function YCHackForm() {
                   isSubmitting ||
                   countedTags >= maxTags
                 }
-                className="px-3 py-1 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                className="px-3 py-1 bg-surface-alt text-copy rounded-md hover:bg-surface-hover transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 <Plus className="w-4 h-4" /> Add
               </button>
@@ -501,7 +501,7 @@ export function YCHackForm() {
             )}
           </div>
           <hr
-            className="my-4 border-t border-gray-200 w-full"
+            className="my-4 border-t border-hairline w-full"
             style={{ paddingBottom: "1rem" }}
           />
           <span className="ml-2 text-sm font-bold text-red-600">
@@ -514,7 +514,7 @@ export function YCHackForm() {
             </SignUpButton>{" "}
             first.
           </span>{" "}
-          <div className="flex gap-4 items-center pt-4 border-t border-[#F4F0ED]">
+          <div className="flex gap-4 items-center pt-4 border-t border-hairline">
             <button
               type="submit"
               disabled={
@@ -527,19 +527,19 @@ export function YCHackForm() {
                 !formData.submitterName ||
                 !formData.email
               }
-              className="px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-cta text-on-cta rounded-md hover:bg-cta-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "Submitting..." : "Submit App"}
             </button>
             <Link
               to="/"
-              className="px-4 py-2 text-[#545454] hover:text-[#525252] rounded-md text-sm"
+              className="px-4 py-2 text-soft hover:text-copy rounded-md text-sm"
             >
               Cancel
             </Link>
           </div>
           {settings?.showSubmissionLimit && (
-            <div className="text-sm text-[#545454]">
+            <div className="text-sm text-soft">
               You can submit up to {settings?.submissionLimitCount || 10}{" "}
               projects per day.
             </div>

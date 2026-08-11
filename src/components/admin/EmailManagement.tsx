@@ -402,7 +402,7 @@ export function EmailManagement() {
       <DialogComponents />
       <div className="space-y-8">
         {/* Sub tabs: send controls vs reusable templates */}
-        <div className="flex items-center gap-1 border-b border-gray-200">
+        <div className="flex items-center gap-1 border-b border-hairline">
           {(
             [
               { key: "send", label: "Send & Settings" },
@@ -416,8 +416,8 @@ export function EmailManagement() {
               aria-current={activeSubTab === tab.key ? "page" : undefined}
               className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 activeSubTab === tab.key
-                  ? "border-[#292929] text-[#292929]"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
+                  ? "border-ink text-ink"
+                  : "border-transparent text-soft hover:text-copy"
               }`}
             >
               {tab.label}
@@ -430,10 +430,10 @@ export function EmailManagement() {
         {activeSubTab === "send" && (
           <>
             {/* Global Email Toggle */}
-            <div className="bg-white rounded-lg p-6 border border-gray-200">
+            <div className="bg-surface rounded-lg p-6 border border-hairline">
               <div className="flex items-center gap-3 mb-6">
-                <Mail className="w-6 h-6 text-[#525252]" />
-                <h2 className="text-xl font-medium text-[#525252]">
+                <Mail className="w-6 h-6 text-copy" />
+                <h2 className="text-xl font-medium text-copy">
                   Email System Control
                 </h2>
               </div>
@@ -450,12 +450,12 @@ export function EmailManagement() {
                 </div>
               )}
 
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-surface-alt rounded-lg">
                 <div className="flex-1">
-                  <h3 className="text-lg font-medium text-[#292929] mb-1">
+                  <h3 className="text-lg font-medium text-ink mb-1">
                     Global Email System
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-copy">
                     Master switch to enable or disable all email notifications
                     across the platform. When disabled, no emails will be sent
                     to users.
@@ -489,14 +489,14 @@ export function EmailManagement() {
             </div>
 
             {/* Email Send Options: per-type toggles, subordinate to the master switch */}
-            <div className="bg-white rounded-lg p-6 border border-gray-200">
+            <div className="bg-surface rounded-lg p-6 border border-hairline">
               <div className="flex items-center gap-3 mb-2">
-                <ToggleRight className="w-6 h-6 text-[#525252]" />
-                <h2 className="text-xl font-medium text-[#525252]">
+                <ToggleRight className="w-6 h-6 text-copy" />
+                <h2 className="text-xl font-medium text-copy">
                   Email Send Options
                 </h2>
               </div>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-copy mb-4">
                 Turn individual email types on or off. The global master switch
                 above always wins: when it is off, nothing sends regardless of
                 these settings.
@@ -511,17 +511,17 @@ export function EmailManagement() {
               )}
 
               {emailTypeSettings === undefined ? (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-soft">
                   Loading email settings...
                 </p>
               ) : (
                 <div className="space-y-6">
                   {EMAIL_TYPE_GROUPS.map(({ group, types }) => (
                     <div key={group}>
-                      <h3 className="text-sm font-semibold text-[#292929] mb-2">
+                      <h3 className="text-sm font-semibold text-ink mb-2">
                         {group}
                       </h3>
-                      <div className="rounded-md border border-gray-200 divide-y divide-gray-100">
+                      <div className="rounded-md border border-hairline divide-y divide-hairline">
                         {types.map(({ key, label, description }) => {
                           const enabled = emailTypeSettings[key] ?? false;
                           const busy = typeToggling === key;
@@ -534,10 +534,10 @@ export function EmailManagement() {
                               }`}
                             >
                               <div className="min-w-0">
-                                <p className="text-sm font-medium text-[#292929]">
+                                <p className="text-sm font-medium text-ink">
                                   {label}
                                 </p>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-soft">
                                   {description}
                                 </p>
                               </div>
@@ -573,10 +573,10 @@ export function EmailManagement() {
             </div>
 
             {/* Admin Broadcast Emails */}
-            <div className="bg-white rounded-lg p-6 border border-gray-200">
+            <div className="bg-surface rounded-lg p-6 border border-hairline">
               <div className="flex items-center gap-3 mb-6">
-                <Send className="w-6 h-6 text-[#525252]" />
-                <h2 className="text-xl font-medium text-[#525252]">
+                <Send className="w-6 h-6 text-copy" />
+                <h2 className="text-xl font-medium text-copy">
                   Broadcast Emails
                 </h2>
               </div>
@@ -595,20 +595,20 @@ export function EmailManagement() {
                   </h4>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div className="p-3 bg-white rounded border">
-                      <h5 className="font-medium text-gray-900 mb-1">
+                    <div className="p-3 bg-surface rounded border">
+                      <h5 className="font-medium text-ink mb-1">
                         Database Status
                       </h5>
-                      <p className="text-sm text-gray-700">
+                      <p className="text-sm text-copy">
                         Total users: <strong>{debugUsers.length}</strong>
                       </p>
-                      <p className="text-sm text-gray-700">
+                      <p className="text-sm text-copy">
                         Users with email:{" "}
                         <strong>
                           {debugUsers.filter((u) => u.hasEmail).length}
                         </strong>
                       </p>
-                      <p className="text-sm text-gray-700">
+                      <p className="text-sm text-copy">
                         Missing emails:{" "}
                         <strong>
                           {debugUsers.filter((u) => !u.hasEmail).length}
@@ -616,8 +616,8 @@ export function EmailManagement() {
                       </p>
                     </div>
 
-                    <div className="p-3 bg-white rounded border">
-                      <h5 className="font-medium text-gray-900 mb-1">
+                    <div className="p-3 bg-surface rounded border">
+                      <h5 className="font-medium text-ink mb-1">
                         System Status
                       </h5>
                       <p className="text-sm text-green-700">
@@ -972,7 +972,7 @@ export function EmailManagement() {
               <div className="space-y-4">
                 {/* Recipient Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-[#525252] mb-2">
+                  <label className="block text-sm font-medium text-copy mb-2">
                     Recipients
                   </label>
                   <div className="space-y-3">
@@ -982,10 +982,10 @@ export function EmailManagement() {
                           type="radio"
                           checked={recipientMode === "all"}
                           onChange={() => setRecipientMode("all")}
-                          className="text-[#292929] focus:ring-[#292929]"
+                          className="text-ink focus:ring-ink"
                           disabled={isSendingBroadcast}
                         />
-                        <span className="text-sm text-[#525252]">
+                        <span className="text-sm text-copy">
                           Send to all users who haven't unsubscribed
                         </span>
                       </label>
@@ -996,10 +996,10 @@ export function EmailManagement() {
                           type="radio"
                           checked={recipientMode === "selected"}
                           onChange={() => setRecipientMode("selected")}
-                          className="text-[#292929] focus:ring-[#292929]"
+                          className="text-ink focus:ring-ink"
                           disabled={isSendingBroadcast}
                         />
-                        <span className="text-sm text-[#525252]">
+                        <span className="text-sm text-copy">
                           Send to selected users
                         </span>
                       </label>
@@ -1010,10 +1010,10 @@ export function EmailManagement() {
                           type="radio"
                           checked={recipientMode === "tag"}
                           onChange={() => setRecipientMode("tag")}
-                          className="text-[#292929] focus:ring-[#292929]"
+                          className="text-ink focus:ring-ink"
                           disabled={isSendingBroadcast}
                         />
-                        <span className="text-sm text-[#525252]">
+                        <span className="text-sm text-copy">
                           Send to everyone who used a tag
                         </span>
                       </label>
@@ -1057,7 +1057,7 @@ export function EmailManagement() {
                           return (
                             <div className="relative">
                               <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-faint" />
                                 <input
                                   type="text"
                                   value={tagSearchQuery}
@@ -1065,7 +1065,7 @@ export function EmailManagement() {
                                     setTagSearchQuery(e.target.value)
                                   }
                                   placeholder="Search tags by name..."
-                                  className="w-full pl-10 pr-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
+                                  className="w-full pl-10 pr-3 py-2 bg-surface border border-hairline rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink"
                                   disabled={
                                     isSendingBroadcast || allTags === undefined
                                   }
@@ -1075,7 +1075,7 @@ export function EmailManagement() {
                               {/* Results dropdown */}
                               {tagSearchQuery.trim().length >= 1 &&
                                 filteredTags.length > 0 && (
-                                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md max-h-48 overflow-y-auto">
+                                  <div className="absolute z-10 w-full mt-1 bg-surface border border-hairline rounded-md max-h-48 overflow-y-auto">
                                     {filteredTags.map((tag) => (
                                       <button
                                         key={tag._id}
@@ -1083,11 +1083,11 @@ export function EmailManagement() {
                                           setSelectedTagId(tag._id);
                                           setTagSearchQuery("");
                                         }}
-                                        className="w-full px-3 py-2 text-left hover:bg-gray-50 text-sm text-[#292929]"
+                                        className="w-full px-3 py-2 text-left hover:bg-surface-hover text-sm text-ink"
                                       >
                                         {tag.name}
                                         {tag.isHidden ? (
-                                          <span className="text-xs text-gray-400">
+                                          <span className="text-xs text-faint">
                                             {" "}
                                             (hidden)
                                           </span>
@@ -1100,7 +1100,7 @@ export function EmailManagement() {
                               {tagSearchQuery.trim().length >= 1 &&
                                 allTags !== undefined &&
                                 filteredTags.length === 0 && (
-                                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md px-3 py-2 text-xs text-gray-500">
+                                  <div className="absolute z-10 w-full mt-1 bg-surface border border-hairline rounded-md px-3 py-2 text-xs text-soft">
                                     No tags match "{tagSearchQuery}".
                                   </div>
                                 )}
@@ -1110,7 +1110,7 @@ export function EmailManagement() {
 
                         {/* Submission status filter */}
                         <div>
-                          <div className="text-xs text-gray-500 mb-1">
+                          <div className="text-xs text-soft mb-1">
                             Include submission statuses:
                           </div>
                           <div className="flex items-center gap-4">
@@ -1124,10 +1124,10 @@ export function EmailManagement() {
                                     type="checkbox"
                                     checked={tagStatuses.includes(status)}
                                     onChange={() => toggleTagStatus(status)}
-                                    className="text-[#292929] focus:ring-[#292929]"
+                                    className="text-ink focus:ring-ink"
                                     disabled={isSendingBroadcast}
                                   />
-                                  <span className="text-sm text-[#525252] capitalize">
+                                  <span className="text-sm text-copy capitalize">
                                     {status}
                                   </span>
                                 </label>
@@ -1137,7 +1137,7 @@ export function EmailManagement() {
                         </div>
 
                         {selectedTagId && (
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-soft">
                             {tagRecipientCount === undefined
                               ? "Counting recipients..."
                               : `${tagRecipientCount} subscribed user${tagRecipientCount !== 1 ? "s" : ""} authored a matching submission with this tag.`}
@@ -1151,13 +1151,13 @@ export function EmailManagement() {
                         {/* User Search */}
                         <div className="relative">
                           <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-faint" />
                             <input
                               type="text"
                               value={searchQuery}
                               onChange={(e) => setSearchQuery(e.target.value)}
                               placeholder="Search users by name or email..."
-                              className="w-full pl-10 pr-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
+                              className="w-full pl-10 pr-3 py-2 bg-surface border border-hairline rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink"
                               disabled={isSendingBroadcast}
                             />
                           </div>
@@ -1166,12 +1166,12 @@ export function EmailManagement() {
                           {searchResults &&
                             searchResults.length > 0 &&
                             searchQuery.length >= 2 && (
-                              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md max-h-48 overflow-y-auto">
+                              <div className="absolute z-10 w-full mt-1 bg-surface border border-hairline rounded-md max-h-48 overflow-y-auto">
                                 {searchResults.map((user: any) => (
                                   <button
                                     key={user._id}
                                     onClick={() => handleAddUser(user)}
-                                    className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center justify-between"
+                                    className="w-full px-3 py-2 text-left hover:bg-surface-hover flex items-center justify-between"
                                     disabled={
                                       !!selectedUsers.find(
                                         (u) => u._id === user._id,
@@ -1179,10 +1179,10 @@ export function EmailManagement() {
                                     }
                                   >
                                     <div>
-                                      <div className="text-sm font-medium text-[#292929]">
+                                      <div className="text-sm font-medium text-ink">
                                         {user.name || "Anonymous User"}
                                       </div>
-                                      <div className="text-xs text-gray-500">
+                                      <div className="text-xs text-soft">
                                         {user.email}
                                       </div>
                                     </div>
@@ -1202,7 +1202,7 @@ export function EmailManagement() {
                         {/* Selected Users */}
                         {selectedUsers.length > 0 && (
                           <div>
-                            <div className="text-xs text-gray-500 mb-2">
+                            <div className="text-xs text-soft mb-2">
                               Selected users ({selectedUsers.length}):
                             </div>
                             <div className="flex flex-wrap gap-2">
@@ -1232,7 +1232,7 @@ export function EmailManagement() {
                 <div>
                   <label
                     htmlFor="broadcastSubject"
-                    className="block text-sm font-medium text-[#525252] mb-2"
+                    className="block text-sm font-medium text-copy mb-2"
                   >
                     Email Subject
                   </label>
@@ -1242,7 +1242,7 @@ export function EmailManagement() {
                     value={broadcastSubject}
                     onChange={(e) => setBroadcastSubject(e.target.value)}
                     placeholder="Enter email subject (will be prefixed with 'VibeApps Updates:')"
-                    className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
+                    className="w-full px-3 py-2 bg-surface border border-hairline rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink"
                     disabled={isSendingBroadcast}
                   />
                 </div>
@@ -1250,7 +1250,7 @@ export function EmailManagement() {
                 <div>
                   <label
                     htmlFor="broadcastContent"
-                    className="block text-sm font-medium text-[#525252] mb-2"
+                    className="block text-sm font-medium text-copy mb-2"
                   >
                     Email Content
                   </label>
@@ -1260,10 +1260,10 @@ export function EmailManagement() {
                     onChange={(e) => setBroadcastContent(e.target.value)}
                     placeholder="Enter the email content in HTML format..."
                     rows={8}
-                    className="w-full px-3 py-2 bg-white border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] font-mono text-sm"
+                    className="w-full px-3 py-2 bg-surface border border-hairline rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink font-mono text-sm"
                     disabled={isSendingBroadcast}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-soft mt-1">
                     You can use HTML tags for formatting. The content will be
                     wrapped in the VibeApps email template with proper branding,
                     unsubscribe links, and List-Unsubscribe headers for
@@ -1279,10 +1279,10 @@ export function EmailManagement() {
                       !broadcastSubject.trim() ||
                       !broadcastContent.trim()
                     }
-                    className="flex items-center gap-2 px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 px-4 py-2 bg-cta text-on-cta rounded-md hover:bg-cta-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSendingBroadcast ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-surface"></div>
                     ) : (
                       <Users className="w-4 h-4" />
                     )}
@@ -1295,7 +1295,7 @@ export function EmailManagement() {
                           : `Send to ${selectedUsers.length} Selected User${selectedUsers.length !== 1 ? "s" : ""}`}
                   </button>
 
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-copy">
                     <AlertCircle className="w-4 h-4 inline mr-1" />
                     {recipientMode === "all"
                       ? "This will send to all users who haven't unsubscribed"
@@ -1308,8 +1308,8 @@ export function EmailManagement() {
             </div>
 
             {/* Email Status Overview */}
-            <div className="bg-white rounded-lg p-6 border border-gray-200">
-              <h3 className="text-lg font-medium text-[#525252] mb-4">
+            <div className="bg-surface rounded-lg p-6 border border-hairline">
+              <h3 className="text-lg font-medium text-copy mb-4">
                 Automated Email Types
               </h3>
 
@@ -1360,8 +1360,8 @@ export function EmailManagement() {
             </div>
 
             {/* Email Configuration Info */}
-            <div className="bg-white rounded-lg p-6 border border-gray-200">
-              <h3 className="text-lg font-medium text-[#525252] mb-4">
+            <div className="bg-surface rounded-lg p-6 border border-hairline">
+              <h3 className="text-lg font-medium text-copy mb-4">
                 Email Configuration
               </h3>
 

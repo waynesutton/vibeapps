@@ -54,23 +54,26 @@ const MessageDialog: React.FC<MessageDialogProps> = ({
       case "success":
         return {
           iconColor: "text-green-600",
-          buttonClass: "bg-green-600 hover:bg-green-700 focus:ring-green-500",
+          buttonClass:
+            "bg-green-600 hover:bg-green-700 focus:ring-green-500 text-white",
         };
       case "warning":
         return {
           iconColor: "text-yellow-600",
           buttonClass:
-            "bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500",
+            "bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500 text-white",
         };
       case "error":
         return {
           iconColor: "text-red-600",
-          buttonClass: "bg-red-600 hover:bg-red-700 focus:ring-red-500",
+          buttonClass:
+            "bg-red-600 hover:bg-red-700 focus:ring-red-500 text-white",
         };
       default:
         return {
           iconColor: "text-blue-600",
-          buttonClass: "bg-black hover:bg-gray-800 focus:ring-gray-700",
+          buttonClass:
+            "bg-cta hover:bg-cta-hover focus:ring-ink text-on-cta",
         };
     }
   };
@@ -83,19 +86,20 @@ const MessageDialog: React.FC<MessageDialogProps> = ({
       onClick={handleOverlayClick}
       aria-labelledby="message-dialog-title"
       aria-describedby="message-dialog-description"
+      aria-modal="true"
       role="alertdialog"
     >
-      <div className="bg-[#F4F2EE] rounded-lg border border-gray-200 p-6 w-full max-w-md m-4 transform transition-all duration-300 ease-in-out scale-100">
+      <div className="bg-canvas rounded-lg border border-hairline p-6 w-full max-w-md m-4 transform transition-all duration-300 ease-in-out scale-100">
         <div className="flex flex-col">
           <h2
             id="message-dialog-title"
-            className="text-lg font-semibold text-gray-900 mb-2"
+            className="text-lg font-semibold text-ink mb-2"
           >
             {title}
           </h2>
           <div
             id="message-dialog-description"
-            className="text-sm text-gray-600 mb-6"
+            className="text-sm text-copy mb-6"
           >
             {message}
           </div>
@@ -106,7 +110,7 @@ const MessageDialog: React.FC<MessageDialogProps> = ({
             onKeyDown={handleKeyDown}
             autoFocus
             type="button"
-            className={`px-4 py-2 rounded-md text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${styles.buttonClass}`}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${styles.buttonClass}`}
           >
             {buttonText}
           </button>

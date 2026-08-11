@@ -21,13 +21,13 @@ export function SearchResults({ query, stories, viewMode }: SearchResultsProps) 
   return (
     <div>
       <div className="mb-4">
-        <Link to="/" className="text-[#292929] hover:underline text-sm">
+        <Link to="/" className="text-ink hover:underline text-sm">
           ← Back to Apps
         </Link>
       </div>
       <div className="mb-6">
-        <h2 className="text-xl text-[#525252] mb-2">Search Results for "{query}"</h2>
-        <p className="text-[#545454]">
+        <h2 className="text-xl text-copy mb-2">Search Results for "{query}"</h2>
+        <p className="text-soft">
           Found {totalResults} {totalResults === 1 ? "result" : "results"}
           {stories.length > 0 && users && users.length > 0 && (
             <span> ({stories.length} {stories.length === 1 ? "app" : "apps"}, {users.length} {users.length === 1 ? "user" : "users"})</span>
@@ -38,13 +38,13 @@ export function SearchResults({ query, stories, viewMode }: SearchResultsProps) 
       {/* Users Section */}
       {users && users.length > 0 && (
         <div className="mb-8">
-          <h3 className="text-lg font-medium text-[#292929] mb-4">Users</h3>
+          <h3 className="text-lg font-medium text-ink mb-4">Users</h3>
           <div className="grid gap-3">
             {users.map((user) => (
               <Link
                 key={user._id}
                 to={`/${user.username}`}
-                className="flex items-center gap-3 p-3 rounded-md border border-[#D8E1EC] bg-white hover:bg-[#F4F2EE] transition-colors"
+                className="flex items-center gap-3 p-3 rounded-md border border-hairline bg-surface hover:bg-surface-hover transition-colors"
               >
                 {user.imageUrl ? (
                   <img
@@ -53,24 +53,24 @@ export function SearchResults({ query, stories, viewMode }: SearchResultsProps) 
                     className="w-12 h-12 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-12 h-12 rounded-full bg-[#292929] flex items-center justify-center">
-                    <User className="w-6 h-6 text-white" />
+                  <div className="w-12 h-12 rounded-full bg-cta flex items-center justify-center">
+                    <User className="w-6 h-6 text-on-cta" />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="font-medium text-[#292929]">{user.name}</p>
+                    <p className="font-medium text-ink">{user.name}</p>
                     {user.isVerified && (
-                      <span className="text-xs text-[#292929]" title="Verified">
+                      <span className="text-xs text-ink" title="Verified">
                         ✓
                       </span>
                     )}
                   </div>
                   {user.username && (
-                    <p className="text-sm text-[#545454]">@{user.username}</p>
+                    <p className="text-sm text-soft">@{user.username}</p>
                   )}
                   {user.bio && (
-                    <p className="text-sm text-[#545454] mt-1 line-clamp-1">
+                    <p className="text-sm text-soft mt-1 line-clamp-1">
                       {user.bio}
                     </p>
                   )}
@@ -85,7 +85,7 @@ export function SearchResults({ query, stories, viewMode }: SearchResultsProps) 
       {stories.length > 0 && (
         <div>
           {users && users.length > 0 && (
-            <h3 className="text-lg font-medium text-[#292929] mb-4">Apps</h3>
+            <h3 className="text-lg font-medium text-ink mb-4">Apps</h3>
           )}
           <StoryList
             stories={stories}
@@ -100,8 +100,8 @@ export function SearchResults({ query, stories, viewMode }: SearchResultsProps) 
       {/* No Results */}
       {stories.length === 0 && (!users || users.length === 0) && (
         <div className="text-center py-12">
-          <p className="text-[#545454] mb-4">No results found for "{query}"</p>
-          <p className="text-sm text-[#545454]">
+          <p className="text-soft mb-4">No results found for "{query}"</p>
+          <p className="text-sm text-soft">
             Try searching with different keywords
           </p>
         </div>

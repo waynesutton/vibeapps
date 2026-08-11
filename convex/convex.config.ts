@@ -6,12 +6,15 @@ import crons from "@convex-dev/crons/convex.config.js";
 import workpool from "@convex-dev/workpool/convex.config.js";
 import rateLimiter from "@convex-dev/rate-limiter/convex.config.js";
 import firecrawl from "@firecrawl/firecrawl-convex/convex.config";
+import contextDev from "@context-dot-dev/convex/convex.config.js";
 
-// FIRECRAWL_API_KEY is declared as app env and bound by reference into the
-// Firecrawl component, so one deployment env var powers every consumer.
+// FIRECRAWL_API_KEY and CONTEXT_DEV_API_KEY are declared as app env and bound
+// by reference into their components, so one deployment env var powers every
+// consumer.
 const app = defineApp({
   env: {
     FIRECRAWL_API_KEY: v.string(),
+    CONTEXT_DEV_API_KEY: v.string(),
   },
 });
 app.use(resend);
@@ -25,6 +28,13 @@ app.use(rateLimiter);
 app.use(firecrawl, {
   env: {
     FIRECRAWL_API_KEY: app.env.FIRECRAWL_API_KEY,
+  },
+});
+// Context.dev powers video transcript scraping for the AI judge (YouTube
+// captions plus general page scrapes for other video hosts).
+app.use(contextDev, {
+  env: {
+    CONTEXT_DEV_API_KEY: app.env.CONTEXT_DEV_API_KEY,
   },
 });
 

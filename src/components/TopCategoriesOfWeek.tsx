@@ -23,7 +23,7 @@ export function TopCategoriesOfWeek({
 
   if (topCategories === undefined) {
     return (
-      <div className="p-4 bg-white rounded-lg border border-[#D8E1EC]">
+      <div className="p-4 bg-surface rounded-lg border border-hairline">
         Loading categories...
       </div>
     );
@@ -31,11 +31,11 @@ export function TopCategoriesOfWeek({
 
   if (!topCategories || topCategories.length === 0) {
     return (
-      <div className="p-4 bg-white rounded-lg border border-[#D8E1EC]">
-        <h3 className="text-md font-normal text-[#292929] mb-3">
+      <div className="p-4 bg-surface rounded-lg border border-hairline">
+        <h3 className="text-md font-normal text-ink mb-3">
           Top Categories This Week
         </h3>
-        <p className="text-sm text-[#545454]">
+        <p className="text-sm text-soft">
           No active categories this week.
         </p>
       </div>
@@ -43,8 +43,8 @@ export function TopCategoriesOfWeek({
   }
 
   return (
-    <div className="p-4 bg-white rounded-lg border border-[#D8E1EC]">
-      <h3 className="text-md font-normal text-[#292929] mb-3">
+    <div className="p-4 bg-surface rounded-lg border border-hairline">
+      <h3 className="text-md font-normal text-ink mb-3">
         Top Categories This Week
       </h3>
       <ul className="space-y-2">
@@ -60,12 +60,12 @@ export function TopCategoriesOfWeek({
             className={`flex items-center w-full text-left gap-2 text-sm py-1 rounded-md focus:outline-none
                         ${
                           selectedTagId === undefined
-                            ? "text-[#292929] font-semibold ring-1 ring-offset-1 bg-[#F3F4F6] ring-gray-400"
-                            : "text-[#545454] hover:text-[#292929] hover:underline"
+                            ? "text-ink font-semibold ring-1 ring-offset-1 ring-offset-canvas bg-surface-alt ring-hairline-strong"
+                            : "text-soft hover:text-ink hover:underline"
                         }`}
             title="Show All Categories"
           >
-            <Hash className="w-4 h-4 text-[#787672]" />
+            <Hash className="w-4 h-4 text-faint" />
             <span className="flex-grow truncate" title="All Categories">
               All
             </span>
@@ -87,16 +87,16 @@ export function TopCategoriesOfWeek({
               return (
                 <li
                   key={category._id}
-                  className="flex boohide items-center gap-2 text-sm text-[#101828] py-1 opacity-90"
+                  className="flex boohide items-center gap-2 text-sm text-ink py-1 opacity-90"
                 >
-                  <Hash className="w-4 h-4 text-[#787672]" />
+                  <Hash className="w-4 h-4 text-faint" />
                   <span
                     className="flex-grow truncate"
                     title={`${category.name} (no slug)`}
                   >
                     {category.name}
                   </span>
-                  <span className="text-xs text-[#787672]">
+                  <span className="text-xs text-faint">
                     ({category.count})
                   </span>
                 </li>
@@ -117,16 +117,16 @@ export function TopCategoriesOfWeek({
                   className={`flex items-center w-full text-left gap-2 text-sm py-1 rounded-md focus:outline-none
                             ${
                               isSelected
-                                ? "text-[#292929] font-semibold ring-1 ring-offset-1  bg-[#ffffff] ring-gray-400"
-                                : "text-[#545454] hover:text-[#292929] hover:underline"
+                                ? "text-ink font-semibold ring-1 ring-offset-1 ring-offset-canvas bg-surface-alt ring-hairline-strong"
+                                : "text-soft hover:text-ink hover:underline"
                             }`}
                   title={category.name}
                 >
-                  <Hash className="w-4 h-4 text-[#787672]" />
+                  <Hash className="w-4 h-4 text-faint" />
                   <span className="flex-grow truncate" title={category.name}>
                     {category.name}
                   </span>
-                  <span className="text-xs text-[#787672]">
+                  <span className="text-xs text-faint">
                     ({category.count})
                   </span>
                 </button>

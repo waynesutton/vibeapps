@@ -42,15 +42,15 @@ export function GroupOverviewSection({
   return (
     <div className="space-y-4">
       {/* Slim stat strip instead of big stat cards */}
-      <div className="rounded-lg border border-gray-200 bg-white divide-y divide-gray-100 sm:divide-y-0 sm:divide-x sm:grid sm:grid-cols-4">
+      <div className="rounded-lg border border-hairline bg-surface divide-y divide-hairline sm:divide-y-0 sm:divide-x sm:grid sm:grid-cols-4">
         {stats.map((stat) => (
           <div key={stat.label} className="px-4 py-3 flex items-center gap-3">
-            <stat.icon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <stat.icon className="w-4 h-4 text-faint flex-shrink-0" />
             <div className="min-w-0">
-              <p className="text-lg font-semibold text-[#292929] leading-tight tabular-nums">
+              <p className="text-lg font-semibold text-ink leading-tight tabular-nums">
                 {stat.value}
               </p>
-              <p className="text-xs text-gray-500 truncate">{stat.label}</p>
+              <p className="text-xs text-soft truncate">{stat.label}</p>
             </div>
           </div>
         ))}
@@ -62,10 +62,10 @@ export function GroupOverviewSection({
       >
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[13px] font-medium text-[#292929]">
+            <p className="text-[13px] font-medium text-ink">
               Judging {group.isActive ? "active" : "paused"}
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-soft">
               {group.isActive
                 ? "Judges can score submissions right now"
                 : "Judges cannot access this group until activated"}
@@ -88,7 +88,7 @@ export function GroupOverviewSection({
               className={`px-2.5 py-1 text-xs rounded-full ${
                 group.isActive
                   ? "bg-green-100 text-green-700"
-                  : "bg-gray-100 text-gray-600"
+                  : "bg-surface-alt text-copy"
               }`}
             >
               {group.isActive ? "Active" : "Inactive"}
@@ -97,10 +97,10 @@ export function GroupOverviewSection({
         </div>
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[13px] font-medium text-[#292929]">
+            <p className="text-[13px] font-medium text-ink">
               Judge access
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-soft">
               {group.isPublic
                 ? "Anyone with the link can judge"
                 : "Judges need a password"}
@@ -119,7 +119,7 @@ export function GroupOverviewSection({
               offLabel="Private"
             />
           ) : (
-            <span className="px-2.5 py-1 text-xs rounded-full bg-gray-100 text-gray-600">
+            <span className="px-2.5 py-1 text-xs rounded-full bg-surface-alt text-copy">
               {group.isPublic ? "Public" : "Private"}
             </span>
           )}

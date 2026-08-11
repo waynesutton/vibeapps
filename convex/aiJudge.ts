@@ -232,7 +232,11 @@ const aiResultValidator = v.object({
   selfReportedModel: v.optional(v.string()),
   error: v.optional(v.string()),
   sourcesUsed: v.optional(
-    v.object({ github: v.boolean(), liveUrl: v.boolean() }),
+    v.object({
+      github: v.boolean(),
+      liveUrl: v.boolean(),
+      videoTranscript: v.optional(v.boolean()),
+    }),
   ),
   urlCheck: v.optional(urlCheckValidator),
   editedAt: v.optional(v.number()),
@@ -280,7 +284,7 @@ async function enrichResults(
     selfReportedHarness?: string;
     selfReportedModel?: string;
     error?: string;
-    sourcesUsed?: { github: boolean; liveUrl: boolean };
+    sourcesUsed?: { github: boolean; liveUrl: boolean; videoTranscript?: boolean };
     urlCheck?: {
       checkedUrl?: string;
       isLive: boolean;
@@ -810,7 +814,11 @@ export const getGroupAiReportData = query({
           selfReportedModel: v.optional(v.string()),
           urlCheck: v.optional(urlCheckValidator),
           sourcesUsed: v.optional(
-            v.object({ github: v.boolean(), liveUrl: v.boolean() }),
+            v.object({
+              github: v.boolean(),
+              liveUrl: v.boolean(),
+              videoTranscript: v.optional(v.boolean()),
+            }),
           ),
           error: v.optional(v.string()),
         }),
@@ -864,7 +872,7 @@ export const getGroupAiReportData = query({
         statusCode?: number;
         note: string;
       };
-      sourcesUsed?: { github: boolean; liveUrl: boolean };
+      sourcesUsed?: { github: boolean; liveUrl: boolean; videoTranscript?: boolean };
       error?: string;
     }> = [];
 
@@ -1023,7 +1031,11 @@ export const saveResult = internalMutation({
         repoAccess: v.optional(repoAccessValidator),
         judgeProvider: v.string(),
         judgeModel: v.string(),
-        sourcesUsed: v.object({ github: v.boolean(), liveUrl: v.boolean() }),
+        sourcesUsed: v.object({
+          github: v.boolean(),
+          liveUrl: v.boolean(),
+          videoTranscript: v.optional(v.boolean()),
+        }),
         urlCheck: v.optional(urlCheckValidator),
       }),
       v.object({

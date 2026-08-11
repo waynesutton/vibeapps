@@ -190,13 +190,13 @@ export function JudgingCriteriaEditor({
         {Array.from({ length: scoreScale }, (_, i) => i + 1).map((score) => (
           <span
             key={score}
-            className="px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 rounded"
+            className="px-1.5 py-0.5 text-xs font-medium bg-surface-alt text-copy rounded"
           >
             {score}
           </span>
         ))}
       </div>
-      <span className="ml-2 text-sm text-gray-600">
+      <span className="ml-2 text-sm text-copy">
         1-{scoreScale} Rating Scale
       </span>
     </div>
@@ -257,7 +257,7 @@ export function JudgingCriteriaEditor({
           {/* Criteria List */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">
+              <h3 className="text-lg font-medium text-ink">
                 Criteria ({criteria.length})
               </h3>
               <Button
@@ -272,7 +272,7 @@ export function JudgingCriteriaEditor({
             </div>
 
             {criteria.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
+              <div className="text-center py-8 text-soft border-2 border-dashed border-hairline rounded-lg">
                 <div className="space-y-2">
                   <p className="text-lg font-medium">No criteria yet</p>
                   <p className="text-sm">
@@ -297,7 +297,7 @@ export function JudgingCriteriaEditor({
                     onDragStart={() => handleCriteriaDragStart(index)}
                     onDragOver={handleCriteriaDragOver}
                     onDrop={() => handleCriteriaDrop(index)}
-                    className="bg-white border border-gray-200 rounded-lg p-4 space-y-4 cursor-move hover:border-gray-300 transition-colors"
+                    className="bg-surface border border-hairline rounded-lg p-4 space-y-4 cursor-move hover:border-hairline-strong transition-colors"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2">
@@ -305,13 +305,13 @@ export function JudgingCriteriaEditor({
                           <button
                             onClick={() => moveCriterion(index, "up")}
                             disabled={index === 0}
-                            className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                            className="p-1 text-faint hover:text-copy disabled:opacity-30"
                             title="Move up"
                           >
                             <GripVertical className="w-4 h-4" />
                           </button>
                         </div>
-                        <span className="text-sm font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                        <span className="text-sm font-medium text-soft bg-surface-alt px-2 py-1 rounded">
                           {index + 1}
                         </span>
                       </div>
@@ -362,7 +362,7 @@ export function JudgingCriteriaEditor({
 
                       <div className="flex items-center justify-center">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-copy">
                             Preview: {renderStarPreview()}
                           </p>
                         </div>
@@ -376,9 +376,9 @@ export function JudgingCriteriaEditor({
 
           {/* Save Actions */}
           {hasChanges && (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div className="bg-surface-alt border border-hairline rounded-lg p-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex items-center gap-2 text-sm text-copy">
                   <AlertCircle className="w-4 h-4 text-orange-500" />
                   You have unsaved changes
                 </div>

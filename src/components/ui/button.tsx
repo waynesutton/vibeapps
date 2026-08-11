@@ -13,18 +13,18 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       "px-4 py-2 rounded-md text-sm font-medium focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
 
     if (variant === "outline") {
-      baseStyle += " border border-gray-300 text-gray-700 hover:bg-gray-50";
+      baseStyle += " border border-hairline-strong text-copy hover:bg-surface-hover";
     } else if (variant === "destructive") {
       baseStyle += " bg-red-600 text-white hover:bg-red-700";
     } else if (variant === "destructive_outline") {
       baseStyle += " border border-red-300 text-red-600 hover:bg-red-50";
     } else if (variant === "ghost") {
-      baseStyle += " hover:bg-gray-100 text-gray-700";
+      baseStyle += " hover:bg-surface-hover text-copy";
     } else if (variant === "link") {
       baseStyle += " text-blue-600 hover:underline";
     } else {
       // default
-      baseStyle += " bg-black text-white hover:bg-gray-800";
+      baseStyle += " bg-cta text-on-cta hover:bg-cta-hover";
     }
 
     if (size === "sm") {

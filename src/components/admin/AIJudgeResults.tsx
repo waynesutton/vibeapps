@@ -18,12 +18,14 @@ import {
   Copy,
   Download,
   Users,
+  Video,
 } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
+import { SimpleSelect } from "../ui/SimpleSelect";
 import { useDialog } from "../../hooks/useDialog";
 
 // Rendered inside the group workspace; the workspace header and sidebar
@@ -51,7 +53,7 @@ type StatsResult = {
   convexFeaturesDetected?: Array<string>;
   componentsDetected?: Array<string>;
   urlCheck?: { isLive: boolean };
-  sourcesUsed?: { github: boolean; liveUrl: boolean };
+  sourcesUsed?: { github: boolean; liveUrl: boolean; videoTranscript?: boolean };
 };
 
 // Rollup numbers for the Stats tab and the report overview
@@ -146,7 +148,7 @@ type ReportSubmission = {
   convexFeaturesDetected?: Array<string>;
   componentsDetected?: Array<string>;
   urlCheck?: { checkedUrl?: string; isLive: boolean; statusCode?: number; note: string };
-  sourcesUsed?: { github: boolean; liveUrl: boolean };
+  sourcesUsed?: { github: boolean; liveUrl: boolean; videoTranscript?: boolean };
   error?: string;
 };
 
@@ -307,6 +309,96 @@ function buildHackathonReport(
 
   lines.push("");
   return lines.join("\n");
+}
+
+// Lazy viewer for the stored video transcript: the markdown is only fetched
+// when an organizer opens the section, so the results list stays light.
+function VideoTranscriptSection({
+  groupId,
+  storyId,
+}: {
+  groupId: Id<"judgingGroups">;
+  storyId: Id<"stories">;
+}) {
+  const [open, setOpen] = useState(false);
+  const transcript = useQuery(
+    api.videoTranscripts.getTranscriptForStory,
+    open ? { groupId, storyId } : "skip",
+  );
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(!open)}
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-ink hover:text-copy"
+      >
+        <Video className="w-3.5 h-3.5" />
+        Video Transcript
+        <span className="text-xs font-normal text-faint">
+          what the judge read, unverified builder narrative
+        </span>
+        {open ? (
+          <ChevronUp className="w-3.5 h-3.5" />
+        ) : (
+          <ChevronDown className="w-3.5 h-3.5" />
+        )}
+      </button>
+      {open && (
+        <div className="mt-2">
+          {transcript === undefined ? (
+            <p className="text-xs text-faint">Loading transcript...</p>
+          ) : transcript === null ? (
+            <p className="text-xs text-faint">
+              No transcript is stored for this submission.
+            </p>
+          ) : (
+            <div className="bg-surface-alt border border-hairline rounded-md p-3 space-y-2">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-soft">
+                {transcript.title && (
+                  <span className="font-medium text-ink">
+                    {transcript.title}
+                  </span>
+                )}
+                <span className="px-1.5 py-0.5 rounded-full border bg-surface border-hairline">
+                  {transcript.kind}
+                </span>
+                <span className="px-1.5 py-0.5 rounded-full border bg-surface border-hairline">
+                  {transcript.status.replace(/_/g, " ")}
+                </span>
+                <span className="px-1.5 py-0.5 rounded-full border bg-surface border-hairline">
+                  via {transcript.provider === "contextdev" ? "Context.dev" : "Firecrawl"}
+                </span>
+                <a
+                  href={transcript.videoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 hover:text-copy underline"
+                >
+                  open video
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+              {transcript.errorMessage && (
+                <p className="text-xs text-red-700">{transcript.errorMessage}</p>
+              )}
+              {transcript.markdown ? (
+                <pre className="text-xs text-copy whitespace-pre-wrap max-h-72 overflow-y-auto font-sans">
+                  {transcript.markdown}
+                </pre>
+              ) : (
+                <p className="text-xs text-faint">
+                  No markdown content was captured
+                  {transcript.status === "no_transcript"
+                    ? " (the video has no captions)."
+                    : "."}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
@@ -477,7 +569,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
         );
       default:
         return (
-          <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+          <span className="px-2 py-1 text-xs bg-surface-alt text-copy rounded-full">
             Pending
           </span>
         );
@@ -511,14 +603,14 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
     <div className="space-y-6">
       {/* Header: title left, run action right; navigation lives in the workspace */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-lg font-medium text-[#525252] flex items-center gap-2">
+        <h2 className="text-lg font-medium text-copy flex items-center gap-2">
           <Sparkles className="w-4 h-4" />
           AI Judge: Best Use of Convex
         </h2>
         <Button
           onClick={handleStartReview}
           disabled={isStarting || isRunning}
-          className="bg-[#292929] hover:bg-[#525252]"
+          className="bg-cta hover:bg-cta-hover"
         >
           {isStarting || isRunning ? (
             <>
@@ -542,7 +634,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {(
               [
-                { label: "Pending", value: data.counts.pending, color: "text-gray-600" },
+                { label: "Pending", value: data.counts.pending, color: "text-copy" },
                 { label: "Reviewing", value: data.counts.running, color: "text-blue-600" },
                 { label: "Completed", value: data.counts.completed, color: "text-green-600" },
                 { label: "Failed", value: data.counts.failed, color: "text-red-600" },
@@ -550,9 +642,9 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
             ).map((stat) => (
               <div
                 key={stat.label}
-                className="bg-white p-4 rounded-lg border border-gray-200"
+                className="bg-surface p-4 rounded-lg border border-hairline"
               >
-                <p className="text-sm text-gray-500">{stat.label}</p>
+                <p className="text-sm text-soft">{stat.label}</p>
                 <p className={`text-2xl font-semibold ${stat.color}`}>
                   {stat.value}
                 </p>
@@ -561,13 +653,13 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
           </div>
 
           {/* Tabs: results / stats / hackathon report */}
-          <div className="flex items-center gap-1 border-b border-gray-200">
+          <div className="flex items-center gap-1 border-b border-hairline">
             <button
               onClick={() => setActiveTab("results")}
               className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 activeTab === "results"
-                  ? "border-gray-900 text-gray-900"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
+                  ? "border-ink text-ink"
+                  : "border-transparent text-soft hover:text-copy"
               }`}
             >
               <ListOrdered className="w-4 h-4" />
@@ -583,10 +675,10 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
               }
               className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 activeTab === "stats"
-                  ? "border-gray-900 text-gray-900"
+                  ? "border-ink text-ink"
                   : statsReady
-                    ? "border-transparent text-gray-500 hover:text-gray-700"
-                    : "border-transparent text-gray-300 cursor-not-allowed"
+                    ? "border-transparent text-soft hover:text-copy"
+                    : "border-transparent text-faint cursor-not-allowed"
               }`}
             >
               <BarChart3 className="w-4 h-4" />
@@ -602,10 +694,10 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
               }
               className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 activeTab === "report"
-                  ? "border-gray-900 text-gray-900"
+                  ? "border-ink text-ink"
                   : reportReady
-                    ? "border-transparent text-gray-500 hover:text-gray-700"
-                    : "border-transparent text-gray-300 cursor-not-allowed"
+                    ? "border-transparent text-soft hover:text-copy"
+                    : "border-transparent text-faint cursor-not-allowed"
               }`}
             >
               <FileText className="w-4 h-4" />
@@ -620,12 +712,12 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
           {activeTab === "report" && reportReady && (
             <div className="space-y-4">
               {/* Generate + export actions */}
-              <div className="bg-white rounded-lg border border-gray-200 p-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="bg-surface rounded-lg border border-hairline p-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-sm font-medium text-gray-900">
+                  <h3 className="text-sm font-medium text-ink">
                     AI Hackathon Report
                   </h3>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-soft mt-0.5">
                     Markdown report with rankings, GitHub and live app links,
                     teams, and participation. Paste into Notion or Google Docs,
                     or download as a .md file.
@@ -635,7 +727,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                   <Button
                     onClick={handleGenerateReport}
                     disabled={reportData === undefined}
-                    className="bg-[#292929] hover:bg-[#525252]"
+                    className="bg-cta hover:bg-cta-hover"
                   >
                     {reportData === undefined ? (
                       <>
@@ -675,14 +767,14 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
 
               {/* Report preview */}
               {reportMarkdown ? (
-                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono max-h-[36rem] overflow-y-auto">
+                <div className="bg-surface rounded-lg border border-hairline p-4">
+                  <pre className="whitespace-pre-wrap text-sm text-ink font-mono max-h-[36rem] overflow-y-auto">
                     {reportMarkdown}
                   </pre>
                 </div>
               ) : (
-                <div className="text-center py-10 text-gray-500 bg-white rounded-lg border border-gray-200">
-                  <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <div className="text-center py-10 text-soft bg-surface rounded-lg border border-hairline">
+                  <Users className="w-12 h-12 mx-auto mb-4 text-faint" />
                   <p className="text-lg font-medium mb-2">
                     Ready to build the report
                   </p>
@@ -697,8 +789,8 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
           )}
 
           {activeTab === "results" && data.results.length === 0 && (
-            <div className="text-center py-8 text-gray-500 bg-white rounded-lg border border-gray-200">
-              <Sparkles className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <div className="text-center py-8 text-soft bg-surface rounded-lg border border-hairline">
+              <Sparkles className="w-12 h-12 mx-auto mb-4 text-faint" />
               <p className="text-lg font-medium mb-2">No AI reviews yet</p>
               <p className="text-sm">
                 Run the AI review to score every submission in this group on
@@ -714,27 +806,31 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
               <div className="flex items-center justify-end gap-2">
                 <label
                   htmlFor="timeline-filter"
-                  className="text-xs text-gray-500"
+                  className="text-xs text-soft"
                 >
                   Build timeline
                 </label>
-                <select
+                <SimpleSelect
                   id="timeline-filter"
                   value={timelineFilter}
-                  onChange={(e) =>
+                  onChange={(value) =>
                     setTimelineFilter(
-                      e.target.value as "all" | "in_window" | "started_before",
+                      value as "all" | "in_window" | "started_before",
                     )
                   }
-                  className="text-xs border border-gray-200 rounded-md px-2 py-1.5 bg-white text-gray-700"
-                >
-                  <option value="all">All submissions</option>
-                  <option value="in_window">Built in event window</option>
-                  <option value="started_before">Started before event</option>
-                </select>
+                  className="w-auto h-auto px-2 py-1.5 text-xs gap-1"
+                  options={[
+                    { value: "all", label: "All submissions" },
+                    { value: "in_window", label: "Built in event window" },
+                    {
+                      value: "started_before",
+                      label: "Started before event",
+                    },
+                  ]}
+                />
               </div>
               {visibleResults.length === 0 && (
-                <p className="text-sm text-gray-500 bg-white rounded-lg border border-gray-200 p-4">
+                <p className="text-sm text-soft bg-surface rounded-lg border border-hairline p-4">
                   No submissions match this timeline filter.
                 </p>
               )}
@@ -745,13 +841,13 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                 return (
                   <div
                     key={result._id}
-                    className="bg-white rounded-lg border border-gray-200"
+                    className="bg-surface rounded-lg border border-hairline"
                   >
                     {/* Row header */}
                     <div className="flex flex-wrap items-center justify-between gap-3 p-4">
                       <div className="flex items-center gap-3 min-w-0">
                         {result.status === "completed" && (
-                          <span className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center text-sm font-semibold">
+                          <span className="flex-shrink-0 w-8 h-8 rounded-full bg-surface-alt text-copy flex items-center justify-center text-sm font-semibold">
                             {index + 1}
                           </span>
                         )}
@@ -761,11 +857,11 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                               href={`/s/${result.storySlug}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="font-medium text-gray-900 hover:underline truncate"
+                              className="font-medium text-ink hover:underline truncate"
                             >
                               {result.storyTitle}
                             </a>
-                            <ExternalLink className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                            <ExternalLink className="w-3.5 h-3.5 text-faint flex-shrink-0" />
                             {statusBadge(result.status)}
                             {result.editedAt && (
                               <span className="px-2 py-1 text-xs bg-amber-50 text-amber-700 rounded-full">
@@ -773,11 +869,11 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                          <div className="flex items-center gap-3 mt-1 text-xs text-soft">
                             {result.sourcesUsed && (
                               <>
                                 <span
-                                  className={`inline-flex items-center gap-1 ${result.sourcesUsed.github ? "text-green-600" : "text-gray-400"}`}
+                                  className={`inline-flex items-center gap-1 ${result.sourcesUsed.github ? "text-green-600" : "text-faint"}`}
                                   title={
                                     result.sourcesUsed.github
                                       ? "GitHub repo was analyzed"
@@ -788,7 +884,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                   {result.sourcesUsed.github ? "repo" : "no repo"}
                                 </span>
                                 <span
-                                  className={`inline-flex items-center gap-1 ${result.sourcesUsed.liveUrl ? "text-green-600" : "text-gray-400"}`}
+                                  className={`inline-flex items-center gap-1 ${result.sourcesUsed.liveUrl ? "text-green-600" : "text-faint"}`}
                                   title={
                                     result.sourcesUsed.liveUrl
                                       ? "Live site was scraped"
@@ -797,6 +893,19 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                 >
                                   <Globe className="w-3 h-3" />
                                   {result.sourcesUsed.liveUrl ? "site" : "no site"}
+                                </span>
+                                <span
+                                  className={`inline-flex items-center gap-1 ${result.sourcesUsed.videoTranscript ? "text-green-600" : "text-faint"}`}
+                                  title={
+                                    result.sourcesUsed.videoTranscript
+                                      ? "Video transcript/content was included in the review"
+                                      : "No video transcript was available for this review"
+                                  }
+                                >
+                                  <Video className="w-3 h-3" />
+                                  {result.sourcesUsed.videoTranscript
+                                    ? "video"
+                                    : "no video"}
                                 </span>
                               </>
                             )}
@@ -865,11 +974,11 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                         {result.status === "completed" &&
                           result.averageScore !== undefined && (
                             <div className="text-right">
-                              <p className="text-lg font-semibold text-gray-900">
+                              <p className="text-lg font-semibold text-ink">
                                 {result.averageScore.toFixed(1)}
-                                <span className="text-sm text-gray-400">/10</span>
+                                <span className="text-sm text-faint">/10</span>
                               </p>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-soft">
                                 total {result.totalScore}
                                 {result.weightedScore !== undefined &&
                                   result.weightedScore !==
@@ -885,7 +994,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                         {result.status === "failed" && (
                           <button
                             onClick={() => handleRetry(result._id)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                             title="Retry AI review for this submission"
                           >
                             <RefreshCw className="w-3.5 h-3.5" />
@@ -897,7 +1006,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                             onClick={() =>
                               setExpandedId(isExpanded ? null : result._id)
                             }
-                            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="p-2 text-soft hover:text-copy hover:bg-surface-hover rounded-lg transition-colors"
                             title={isExpanded ? "Collapse" : "Expand details"}
                           >
                             {isExpanded ? (
@@ -921,16 +1030,16 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
 
                     {/* Expanded details */}
                     {isExpanded && result.status === "completed" && (
-                      <div className="border-t border-gray-100 p-4 space-y-4">
+                      <div className="border-t border-hairline p-4 space-y-4">
                         {/* Edit toggle */}
                         <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-medium text-gray-900">
+                          <h4 className="text-sm font-medium text-ink">
                             Criteria Scores
                           </h4>
                           {!isEditing ? (
                             <button
                               onClick={() => startEditing(result)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                             >
                               <Pencil className="w-3.5 h-3.5" />
                               Edit Scores
@@ -941,7 +1050,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                 size="sm"
                                 onClick={saveEditing}
                                 disabled={isSavingEdit}
-                                className="bg-[#292929] hover:bg-[#525252]"
+                                className="bg-cta hover:bg-cta-hover"
                               >
                                 <Check className="w-3.5 h-3.5 mr-1" />
                                 {isSavingEdit ? "Saving..." : "Save"}
@@ -965,10 +1074,10 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                             (cs, csIndex) => (
                               <div
                                 key={cs.key}
-                                className="bg-gray-50 border border-gray-200 rounded-md p-3"
+                                className="bg-surface-alt border border-hairline rounded-md p-3"
                               >
                                 <div className="flex items-center justify-between gap-3">
-                                  <p className="text-sm font-medium text-gray-900">
+                                  <p className="text-sm font-medium text-ink">
                                     {cs.label}
                                   </p>
                                   {isEditing ? (
@@ -989,8 +1098,8 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                             }
                                             className={`w-7 h-7 rounded text-xs font-medium border transition-colors ${
                                               cs.score === score
-                                                ? "bg-gray-900 text-white border-gray-900"
-                                                : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                                                ? "bg-cta text-on-cta border-ink"
+                                                : "bg-surface text-copy border-hairline hover:border-hairline-strong"
                                             }`}
                                           >
                                             {score}
@@ -999,7 +1108,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                       )}
                                     </div>
                                   ) : (
-                                    <span className="text-sm font-semibold text-gray-900">
+                                    <span className="text-sm font-semibold text-ink">
                                       {cs.score}/10
                                     </span>
                                   )}
@@ -1008,7 +1117,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                   <div className="mt-2">
                                     <Label
                                       htmlFor={`reasoning-${result._id}-${cs.key}`}
-                                      className="text-xs text-gray-500"
+                                      className="text-xs text-soft"
                                     >
                                       Reasoning
                                     </Label>
@@ -1033,7 +1142,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                   </div>
                                 ) : (
                                   cs.reasoning && (
-                                    <p className="text-sm text-gray-600 mt-2">
+                                    <p className="text-sm text-copy mt-2">
                                       {cs.reasoning}
                                     </p>
                                   )
@@ -1045,7 +1154,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
 
                         {/* Overall reasoning */}
                         <div>
-                          <h4 className="text-sm font-medium text-gray-900 mb-1">
+                          <h4 className="text-sm font-medium text-ink mb-1">
                             Overall Note
                           </h4>
                           {isEditing ? (
@@ -1055,7 +1164,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                               rows={3}
                             />
                           ) : (
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-copy">
                               {result.overallReasoning || "No overall note."}
                             </p>
                           )}
@@ -1065,7 +1174,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                         {result.convexFeaturesDetected &&
                           result.convexFeaturesDetected.length > 0 && (
                             <div>
-                              <h4 className="text-sm font-medium text-gray-900 mb-2">
+                              <h4 className="text-sm font-medium text-ink mb-2">
                                 Convex Features Detected
                               </h4>
                               <div className="flex flex-wrap gap-2">
@@ -1085,12 +1194,12 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                         {((result.componentsDetected?.length ?? 0) > 0 ||
                           (result.componentsUsed?.length ?? 0) > 0) && (
                           <div>
-                            <h4 className="text-sm font-medium text-gray-900 mb-2">
+                            <h4 className="text-sm font-medium text-ink mb-2">
                               Convex Components
                             </h4>
                             <div className="space-y-2">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-xs text-gray-500 w-16">
+                                <span className="text-xs text-soft w-16">
                                   Used
                                 </span>
                                 {(result.componentsUsed?.length ?? 0) > 0 ? (
@@ -1104,13 +1213,13 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                     </span>
                                   ))
                                 ) : (
-                                  <span className="text-xs text-gray-400">
+                                  <span className="text-xs text-faint">
                                     none referenced in code
                                   </span>
                                 )}
                               </div>
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-xs text-gray-500 w-16">
+                                <span className="text-xs text-soft w-16">
                                   Installed
                                 </span>
                                 {(result.componentsDetected?.length ?? 0) >
@@ -1119,7 +1228,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                     (component) => (
                                       <span
                                         key={component}
-                                        className="px-2.5 py-1 text-xs bg-gray-50 text-gray-600 border border-gray-200 rounded-full"
+                                        className="px-2.5 py-1 text-xs bg-surface-alt text-copy border border-hairline rounded-full"
                                         title="Found in package.json / convex.config.ts. Only used components count toward scoring."
                                       >
                                         {component}
@@ -1127,7 +1236,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                     ),
                                   )
                                 ) : (
-                                  <span className="text-xs text-gray-400">
+                                  <span className="text-xs text-faint">
                                     none installed
                                   </span>
                                 )}
@@ -1139,10 +1248,10 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                         {/* Verified repo facts (Phase 1, deterministic) */}
                         {result.repoFacts && (
                           <div>
-                            <h4 className="text-sm font-medium text-gray-900 mb-2">
+                            <h4 className="text-sm font-medium text-ink mb-2">
                               Verified Repo Facts
                               <span
-                                className="ml-2 text-xs font-normal text-gray-400"
+                                className="ml-2 text-xs font-normal text-faint"
                                 title="Counted deterministically from the repo source, not by the LLM"
                               >
                                 deterministic
@@ -1166,12 +1275,12 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                               ).map(([label, value]) => (
                                 <div
                                   key={label}
-                                  className="bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5"
+                                  className="bg-surface-alt border border-hairline rounded-md px-2.5 py-1.5"
                                 >
-                                  <span className="font-semibold text-gray-900">
+                                  <span className="font-semibold text-ink">
                                     {value}
                                   </span>{" "}
-                                  <span className="text-gray-500">{label}</span>
+                                  <span className="text-soft">{label}</span>
                                 </div>
                               ))}
                             </div>
@@ -1196,7 +1305,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                   className={`px-2 py-0.5 text-xs rounded-full border ${
                                     present
                                       ? "bg-blue-50 text-blue-700 border-blue-200"
-                                      : "bg-gray-50 text-gray-400 border-gray-200"
+                                      : "bg-surface-alt text-faint border-hairline"
                                   }`}
                                 >
                                   {label}
@@ -1209,50 +1318,50 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                         {/* Git timeline (Phase 3) */}
                         {result.gitFacts && (
                           <div>
-                            <h4 className="text-sm font-medium text-gray-900 mb-2">
+                            <h4 className="text-sm font-medium text-ink mb-2">
                               Git Timeline
                               <span
-                                className="ml-2 text-xs font-normal text-gray-400"
+                                className="ml-2 text-xs font-normal text-faint"
                                 title="Commit dates can be rewritten with force-push; treat these as strong signals, not proof."
                               >
                                 from commit history
                               </span>
                             </h4>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-                              <div className="bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
-                                <span className="text-gray-500">First commit</span>{" "}
-                                <span className="font-medium text-gray-900">
+                              <div className="bg-surface-alt border border-hairline rounded-md px-2.5 py-1.5">
+                                <span className="text-soft">First commit</span>{" "}
+                                <span className="font-medium text-ink">
                                   {shortDate(result.gitFacts.firstCommitAt)}
                                 </span>
                               </div>
-                              <div className="bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
-                                <span className="text-gray-500">Last commit</span>{" "}
-                                <span className="font-medium text-gray-900">
+                              <div className="bg-surface-alt border border-hairline rounded-md px-2.5 py-1.5">
+                                <span className="text-soft">Last commit</span>{" "}
+                                <span className="font-medium text-ink">
                                   {shortDate(result.gitFacts.lastCommitAt)}
                                 </span>
                               </div>
-                              <div className="bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
-                                <span className="text-gray-500">Repo created</span>{" "}
-                                <span className="font-medium text-gray-900">
+                              <div className="bg-surface-alt border border-hairline rounded-md px-2.5 py-1.5">
+                                <span className="text-soft">Repo created</span>{" "}
+                                <span className="font-medium text-ink">
                                   {shortDate(result.gitFacts.repoCreatedAt)}
                                 </span>
                               </div>
-                              <div className="bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
-                                <span className="text-gray-500">Commits</span>{" "}
-                                <span className="font-medium text-gray-900">
+                              <div className="bg-surface-alt border border-hairline rounded-md px-2.5 py-1.5">
+                                <span className="text-soft">Commits</span>{" "}
+                                <span className="font-medium text-ink">
                                   {result.gitFacts.commitCount}
                                   {result.gitFacts.commitCountCapped ? "+" : ""}
                                 </span>
                               </div>
-                              <div className="bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
-                                <span className="text-gray-500">Active days</span>{" "}
-                                <span className="font-medium text-gray-900">
+                              <div className="bg-surface-alt border border-hairline rounded-md px-2.5 py-1.5">
+                                <span className="text-soft">Active days</span>{" "}
+                                <span className="font-medium text-ink">
                                   {result.gitFacts.activeDayCount}
                                 </span>
                               </div>
-                              <div className="bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
-                                <span className="text-gray-500">Contributors</span>{" "}
-                                <span className="font-medium text-gray-900">
+                              <div className="bg-surface-alt border border-hairline rounded-md px-2.5 py-1.5">
+                                <span className="text-soft">Contributors</span>{" "}
+                                <span className="font-medium text-ink">
                                   {result.gitFacts.contributorCount}
                                 </span>
                               </div>
@@ -1260,14 +1369,22 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                           </div>
                         )}
 
+                        {/* Video demo transcript viewer (unverified narrative) */}
+                        {result.sourcesUsed?.videoTranscript && (
+                          <VideoTranscriptSection
+                            groupId={groupId}
+                            storyId={result.storyId}
+                          />
+                        )}
+
                         {/* Harness and model attribution (Phase 4, never scored) */}
                         {((result.harnessSignals?.length ?? 0) > 0 ||
                           result.selfReportedHarness ||
                           result.selfReportedModel) && (
                           <div>
-                            <h4 className="text-sm font-medium text-gray-900 mb-2">
+                            <h4 className="text-sm font-medium text-ink mb-2">
                               AI Tool Attribution
-                              <span className="ml-2 text-xs font-normal text-gray-400">
+                              <span className="ml-2 text-xs font-normal text-faint">
                                 informational only, never affects scores
                               </span>
                             </h4>
@@ -1280,8 +1397,8 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                       signal.confidence === "high"
                                         ? "bg-blue-50 text-blue-700 border-blue-200"
                                         : signal.confidence === "medium"
-                                          ? "bg-gray-100 text-gray-700 border-gray-300"
-                                          : "bg-gray-50 text-gray-500 border-gray-200"
+                                          ? "bg-surface-alt text-copy border-hairline-strong"
+                                          : "bg-surface-alt text-soft border-hairline"
                                     }`}
                                     title={`${signal.evidence} (${signal.confidence} confidence)`}
                                   >
@@ -1292,7 +1409,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                             )}
                             {(result.selfReportedHarness ||
                               result.selfReportedModel) && (
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-soft">
                                 Self-reported, unverified:{" "}
                                 {[
                                   result.selfReportedHarness,
@@ -1306,10 +1423,10 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                         )}
 
                         {/* Retry a completed review */}
-                        <div className="pt-2 border-t border-gray-100">
+                        <div className="pt-2 border-t border-hairline">
                           <button
                             onClick={() => handleRetry(result._id)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                             title="Re-run the AI review for this submission (overwrites current scores)"
                           >
                             <RefreshCw className="w-3.5 h-3.5" />
@@ -1373,17 +1490,17 @@ function StatsPanel({
   ];
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+    <div className="bg-surface rounded-lg border border-hairline p-6 space-y-6">
       {/* Report header for screenshots */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+          <h3 className="text-lg font-medium text-ink flex items-center gap-2">
             <Sparkles className="w-5 h-5" />
             Best Use of Convex: AI Review Stats
           </h3>
-          <p className="text-sm text-gray-500 mt-0.5">{groupName}</p>
+          <p className="text-sm text-soft mt-0.5">{groupName}</p>
         </div>
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-faint">
           {new Date().toLocaleDateString("en-US", {
             year: "numeric",
             month: "long",
@@ -1397,11 +1514,11 @@ function StatsPanel({
         {cards.map((card) => (
           <div
             key={card.label}
-            className="bg-gray-50 border border-gray-200 rounded-lg p-4"
+            className="bg-surface-alt border border-hairline rounded-lg p-4"
           >
-            <p className="text-3xl font-semibold text-gray-900">{card.value}</p>
-            <p className="text-sm font-medium text-gray-700 mt-1">{card.label}</p>
-            {card.sub && <p className="text-xs text-gray-500 mt-0.5">{card.sub}</p>}
+            <p className="text-3xl font-semibold text-ink">{card.value}</p>
+            <p className="text-sm font-medium text-copy mt-1">{card.label}</p>
+            {card.sub && <p className="text-xs text-soft mt-0.5">{card.sub}</p>}
           </div>
         ))}
       </div>
@@ -1409,25 +1526,25 @@ function StatsPanel({
       <div className="grid md:grid-cols-2 gap-6">
         {/* Top Convex features detected */}
         <div>
-          <h4 className="text-sm font-medium text-gray-900 mb-3">
+          <h4 className="text-sm font-medium text-ink mb-3">
             Top Convex features detected
           </h4>
           {stats.topFeatures.length === 0 ? (
-            <p className="text-sm text-gray-500">No features detected yet.</p>
+            <p className="text-sm text-soft">No features detected yet.</p>
           ) : (
             <div className="space-y-2">
               {stats.topFeatures.map(([feature, count]) => (
                 <div key={feature} className="flex items-center gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2 mb-0.5">
-                      <span className="text-sm text-gray-700 truncate">{feature}</span>
-                      <span className="text-xs text-gray-500 flex-shrink-0">
+                      <span className="text-sm text-copy truncate">{feature}</span>
+                      <span className="text-xs text-soft flex-shrink-0">
                         {count} app{count === 1 ? "" : "s"}
                       </span>
                     </div>
-                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-surface-alt rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gray-800 rounded-full"
+                        className="h-full bg-cta rounded-full"
                         style={{ width: `${(count / maxFeature) * 100}%` }}
                       />
                     </div>
@@ -1440,11 +1557,11 @@ function StatsPanel({
 
         {/* Convex components detected (deterministic, from repo files) */}
         <div>
-          <h4 className="text-sm font-medium text-gray-900 mb-3">
+          <h4 className="text-sm font-medium text-ink mb-3">
             Convex components used
           </h4>
           {stats.componentsUsed.length === 0 ? (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-soft">
               No components detected yet. Components are read from each repo's
               package.json and convex.config.ts during the AI review.
             </p>
@@ -1454,14 +1571,14 @@ function StatsPanel({
                 <div key={component} className="flex items-center gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2 mb-0.5">
-                      <span className="text-sm text-gray-700 truncate">{component}</span>
-                      <span className="text-xs text-gray-500 flex-shrink-0">
+                      <span className="text-sm text-copy truncate">{component}</span>
+                      <span className="text-xs text-soft flex-shrink-0">
                         {count} app{count === 1 ? "" : "s"}
                       </span>
                     </div>
-                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-surface-alt rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gray-800 rounded-full"
+                        className="h-full bg-cta rounded-full"
                         style={{
                           width: `${(count / Math.max(1, ...stats.componentsUsed.map(([, c]) => c))) * 100}%`,
                         }}
@@ -1476,22 +1593,22 @@ function StatsPanel({
 
         {/* Score distribution */}
         <div>
-          <h4 className="text-sm font-medium text-gray-900 mb-3">
+          <h4 className="text-sm font-medium text-ink mb-3">
             Score distribution (average per app)
           </h4>
           <div className="space-y-2">
             {stats.bands.map((band) => (
               <div key={band.label} className="flex items-center gap-3">
-                <span className="text-xs text-gray-500 w-12 flex-shrink-0 text-right">
+                <span className="text-xs text-soft w-12 flex-shrink-0 text-right">
                   {band.label}
                 </span>
-                <div className="flex-1 h-4 bg-gray-100 rounded overflow-hidden">
+                <div className="flex-1 h-4 bg-surface-alt rounded overflow-hidden">
                   <div
-                    className="h-full bg-gray-800 rounded"
+                    className="h-full bg-cta rounded"
                     style={{ width: `${(band.count / maxBand) * 100}%` }}
                   />
                 </div>
-                <span className="text-xs text-gray-500 w-6 flex-shrink-0">
+                <span className="text-xs text-soft w-6 flex-shrink-0">
                   {band.count}
                 </span>
               </div>
@@ -1500,7 +1617,7 @@ function StatsPanel({
         </div>
       </div>
 
-      <p className="text-xs text-gray-400 pt-2 border-t border-gray-100">
+      <p className="text-xs text-faint pt-2 border-t border-hairline">
         Generated by the vibeapps AI Judge. "Using Convex" counts apps with at
         least one detected Convex feature; "Advanced" counts scheduler, crons,
         file storage, search, vector, HTTP actions, components, or agents.

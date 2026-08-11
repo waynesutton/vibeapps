@@ -6,6 +6,7 @@ import { Id } from "../../../../convex/_generated/dataModel";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
 import { Textarea } from "../../ui/textarea";
+import { SimpleSelect } from "../../ui/SimpleSelect";
 import {
   ALWAYS_VISIBLE_FIELD_KEYS,
   CustomQuestion,
@@ -276,10 +277,10 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
       >
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[13px] font-medium text-[#292929]">
+            <p className="text-[13px] font-medium text-ink">
               Enable custom submission page
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-soft">
               {enabled
                 ? "The public submit page is available"
                 : "The public submit page is disabled"}
@@ -308,7 +309,7 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
 
         {enabled && (
           <>
-            <div className="border-t border-gray-100 pt-4 space-y-4">
+            <div className="border-t border-hairline pt-4 space-y-4">
               <div>
                 <Label htmlFor="page-title">Page title</Label>
                 <Input
@@ -351,8 +352,8 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                       disabled={saving}
                       className={`px-3 py-1.5 text-[13px] font-medium rounded-md border transition-colors ${
                         layout === option.value
-                          ? "bg-[#292929] border-[#292929] text-white"
-                          : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+                          ? "bg-cta border-ink text-on-cta"
+                          : "bg-surface border-hairline text-copy hover:border-hairline-strong"
                       }`}
                     >
                       {option.label}
@@ -368,7 +369,7 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                   Header image
                 </Label>
                 {hasStoredImage && !imageFile && (
-                  <div className="flex items-center gap-2 mt-1 text-[13px] text-gray-600">
+                  <div className="flex items-center gap-2 mt-1 text-[13px] text-copy">
                     <span>An image is currently set.</span>
                     <button
                       type="button"
@@ -386,7 +387,7 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                     <button
                       type="button"
                       onClick={() => setRemoveImage(false)}
-                      className="text-gray-600 hover:text-gray-800 text-xs font-medium"
+                      className="text-copy hover:text-ink text-xs font-medium"
                     >
                       Undo
                     </button>
@@ -416,7 +417,7 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                     value={imageSize}
                     onChange={(e) => setImageSize(parseInt(e.target.value))}
                     disabled={saving}
-                    className="w-full mt-1 accent-[#292929]"
+                    className="w-full mt-1 accent-cta"
                   />
                 </div>
               </div>
@@ -463,7 +464,7 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                           )
                         }
                         disabled={saving}
-                        className="p-1.5 text-gray-400 hover:text-red-600 rounded transition-colors flex-shrink-0"
+                        className="p-1.5 text-faint hover:text-red-600 rounded transition-colors flex-shrink-0"
                         aria-label="Remove link"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -476,7 +477,7 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                       setLinks((prev) => [...prev, { label: "", url: "" }])
                     }
                     disabled={saving}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium rounded-md border border-hairline text-copy hover:bg-surface-hover transition-colors"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     Add link
@@ -485,7 +486,7 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
               </div>
             </div>
 
-            <div className="border-t border-gray-100 pt-4 space-y-4">
+            <div className="border-t border-hairline pt-4 space-y-4">
               <div>
                 <Label htmlFor="form-title">Form title</Label>
                 <Input
@@ -512,20 +513,20 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
               {/* Required tag applied to every submission from this form */}
               <div>
                 <Label>Required tag</Label>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-soft mt-0.5">
                   Every submission from this form is tagged automatically so it
                   lands in this judging group.
                 </p>
                 {requiredTagName && (
                   <div className="flex items-center gap-2 mt-1.5">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded-full">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-surface-alt text-copy rounded-full">
                       {requiredTagName}
                     </span>
                     <button
                       type="button"
                       onClick={() => setRequiredTagId(null)}
                       disabled={saving}
-                      className="text-xs text-gray-500 hover:text-gray-700"
+                      className="text-xs text-soft hover:text-copy"
                     >
                       Clear
                     </button>
@@ -541,9 +542,9 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                   disabled={saving}
                   className="mt-2"
                 />
-                <div className="mt-1.5 max-h-36 overflow-y-auto rounded-md border border-gray-200 divide-y divide-gray-100">
+                <div className="mt-1.5 max-h-36 overflow-y-auto rounded-md border border-hairline divide-y divide-hairline">
                   {allTags === undefined && (
-                    <p className="px-3 py-2 text-[13px] text-gray-500">
+                    <p className="px-3 py-2 text-[13px] text-soft">
                       Loading tags...
                     </p>
                   )}
@@ -555,13 +556,13 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                       disabled={saving}
                       className={`w-full text-left px-3 py-1.5 text-[13px] transition-colors ${
                         requiredTagId === tag._id
-                          ? "bg-gray-100 text-[#292929] font-medium"
-                          : "text-gray-700 hover:bg-gray-50"
+                          ? "bg-surface-alt text-ink font-medium"
+                          : "text-copy hover:bg-surface-hover"
                       }`}
                     >
                       {tag.name}
                       {tag.isHidden && (
-                        <span className="ml-2 text-xs text-gray-400">
+                        <span className="ml-2 text-xs text-faint">
                           hidden
                         </span>
                       )}
@@ -574,7 +575,7 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                       type="button"
                       onClick={() => void handleCreateTag()}
                       disabled={saving || creatingTag}
-                      className="w-full text-left px-3 py-1.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      className="w-full text-left px-3 py-1.5 text-[13px] text-copy hover:bg-surface-hover transition-colors disabled:opacity-50"
                     >
                       <span className="inline-flex items-center gap-1.5">
                         {creatingTag ? (
@@ -584,20 +585,20 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                         )}
                         Create tag "{trimmedTagSearch}"
                         {newTagHidden && (
-                          <span className="text-xs text-gray-400">hidden</span>
+                          <span className="text-xs text-faint">hidden</span>
                         )}
                       </span>
                     </button>
                   )}
                 </div>
                 {trimmedTagSearch && !tagNameExists && (
-                  <label className="mt-1.5 flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
+                  <label className="mt-1.5 flex items-center gap-2 text-xs text-soft cursor-pointer">
                     <input
                       type="checkbox"
                       checked={newTagHidden}
                       onChange={(e) => setNewTagHidden(e.target.checked)}
                       disabled={saving || creatingTag}
-                      className="rounded border-gray-300"
+                      className="rounded border-hairline-strong"
                     />
                     Create as hidden tag (stays off story cards and never
                     counts toward the tag limit; recommended for tracking tags)
@@ -613,12 +614,12 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
               {/* Field visibility and requirements */}
               <div>
                 <Label>Form fields</Label>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-soft mt-0.5">
                   Choose which fields appear on the submission form and which
                   are required. Hidden fields are removed from the form
                   entirely.
                 </p>
-                <div className="mt-1.5 rounded-md border border-gray-200 divide-y divide-gray-100">
+                <div className="mt-1.5 rounded-md border border-hairline divide-y divide-hairline">
                   {SUBMISSION_FIELD_DEFS.map((field) => {
                     const alwaysVisible = ALWAYS_VISIBLE_FIELD_KEYS.includes(
                       field.key,
@@ -631,7 +632,7 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                       >
                         <span
                           className={`text-[13px] ${
-                            isVisible ? "text-gray-700" : "text-gray-400"
+                            isVisible ? "text-copy" : "text-faint"
                           }`}
                         >
                           {field.label}
@@ -649,8 +650,8 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                               disabled={saving}
                               className={`px-2 py-0.5 text-xs font-medium rounded-full transition-colors ${
                                 requirements[field.key]
-                                  ? "bg-[#292929] text-white"
-                                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                                  ? "bg-cta text-on-cta"
+                                  : "bg-surface-alt text-soft hover:bg-surface-hover"
                               }`}
                             >
                               {requirements[field.key]
@@ -659,7 +660,7 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                             </button>
                           )}
                           {alwaysVisible ? (
-                            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-50 text-gray-400 border border-gray-200">
+                            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-surface-alt text-faint border border-hairline">
                               Always shown
                             </span>
                           ) : (
@@ -675,7 +676,7 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                               className={`px-2 py-0.5 text-xs font-medium rounded-full transition-colors ${
                                 visibility[field.key]
                                   ? "bg-green-50 text-green-700 border border-green-200"
-                                  : "bg-gray-100 text-gray-500 hover:bg-gray-200 border border-transparent"
+                                  : "bg-surface-alt text-soft hover:bg-surface-hover border border-transparent"
                               }`}
                             >
                               {visibility[field.key] ? "Shown" : "Hidden"}
@@ -704,10 +705,10 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
               {/* Section visibility */}
               <div>
                 <Label>Form sections</Label>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-soft mt-0.5">
                   Show or hide the optional sections of the form.
                 </p>
-                <div className="mt-1.5 rounded-md border border-gray-200 divide-y divide-gray-100">
+                <div className="mt-1.5 rounded-md border border-hairline divide-y divide-hairline">
                   {SUBMISSION_SECTION_DEFS.map((section) => (
                     <div
                       key={section.key}
@@ -716,8 +717,8 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                       <span
                         className={`text-[13px] ${
                           visibility[section.key]
-                            ? "text-gray-700"
-                            : "text-gray-400"
+                            ? "text-copy"
+                            : "text-faint"
                         }`}
                       >
                         {section.label}
@@ -734,7 +735,7 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                         className={`px-2 py-0.5 text-xs font-medium rounded-full transition-colors flex-shrink-0 ${
                           visibility[section.key]
                             ? "bg-green-50 text-green-700 border border-green-200"
-                            : "bg-gray-100 text-gray-500 hover:bg-gray-200 border border-transparent"
+                            : "bg-surface-alt text-soft hover:bg-surface-hover border border-transparent"
                         }`}
                       >
                         {visibility[section.key] ? "Shown" : "Hidden"}
@@ -747,7 +748,7 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
               {/* Custom questions */}
               <div>
                 <Label>Custom questions</Label>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-soft mt-0.5">
                   Add extra questions to this form. Answers are stored with
                   the submission and shown to judges.
                 </p>
@@ -755,7 +756,7 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                   {customQuestions.map((question, index) => (
                     <div
                       key={question.key || `new-${index}`}
-                      className="rounded-md border border-gray-200 p-3 space-y-2"
+                      className="rounded-md border border-hairline p-3 space-y-2"
                     >
                       <div className="flex items-center gap-2">
                         <Input
@@ -773,30 +774,31 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                           disabled={saving}
                           className="flex-1"
                         />
-                        <select
+                        <SimpleSelect
                           value={question.fieldType}
-                          onChange={(e) =>
+                          onChange={(value) =>
                             setCustomQuestions((prev) =>
                               prev.map((q, i) =>
                                 i === index
                                   ? {
                                       ...q,
-                                      fieldType: e.target
-                                        .value as CustomQuestion["fieldType"],
+                                      fieldType:
+                                        value as CustomQuestion["fieldType"],
                                     }
                                   : q,
                               ),
                             )
                           }
                           disabled={saving}
-                          className="h-9 rounded-md border border-gray-200 bg-white px-2 text-[13px] text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#292929]"
                           aria-label="Question field type"
-                        >
-                          <option value="text">Short text</option>
-                          <option value="textarea">Long text</option>
-                          <option value="url">URL</option>
-                          <option value="email">Email</option>
-                        </select>
+                          className="w-auto h-9 px-2 text-[13px] gap-1"
+                          options={[
+                            { value: "text", label: "Short text" },
+                            { value: "textarea", label: "Long text" },
+                            { value: "url", label: "URL" },
+                            { value: "email", label: "Email" },
+                          ]}
+                        />
                         <button
                           type="button"
                           onClick={() =>
@@ -805,7 +807,7 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                             )
                           }
                           disabled={saving}
-                          className="p-1.5 text-gray-400 hover:text-red-600 rounded transition-colors flex-shrink-0"
+                          className="p-1.5 text-faint hover:text-red-600 rounded transition-colors flex-shrink-0"
                           aria-label="Remove question"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -856,8 +858,8 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                           disabled={saving}
                           className={`px-2 py-0.5 text-xs font-medium rounded-full transition-colors flex-shrink-0 ${
                             question.required
-                              ? "bg-[#292929] text-white"
-                              : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                              ? "bg-cta text-on-cta"
+                              : "bg-surface-alt text-soft hover:bg-surface-hover"
                           }`}
                         >
                           {question.required ? "Required" : "Optional"}
@@ -879,7 +881,7 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                       ])
                     }
                     disabled={saving}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium rounded-md border border-hairline text-copy hover:bg-surface-hover transition-colors"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     Add question
@@ -900,7 +902,7 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
             type="button"
             onClick={() => void handleSyncByTag()}
             disabled={isSyncing}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-medium rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-medium rounded-md border border-hairline text-copy hover:bg-surface-hover transition-colors disabled:opacity-50"
           >
             {isSyncing ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -910,7 +912,7 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
             {isSyncing ? "Syncing..." : "Sync matching submissions"}
           </button>
           {syncMessage && (
-            <span className="text-[13px] text-gray-600">{syncMessage}</span>
+            <span className="text-[13px] text-copy">{syncMessage}</span>
           )}
         </div>
       </SectionCard>

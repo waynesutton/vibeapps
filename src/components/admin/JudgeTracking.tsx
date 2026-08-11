@@ -450,32 +450,32 @@ export function JudgeTracking({
             <div>
               <button
                 onClick={onBack}
-                className="text-sm text-gray-500 hover:text-gray-700 mb-2 flex items-center gap-1"
+                className="text-sm text-soft hover:text-copy mb-2 flex items-center gap-1"
               >
                 ← Back to Judging System
               </button>
-              <h2 className="text-xl font-medium text-[#525252]">
+              <h2 className="text-xl font-medium text-copy">
                 Judge Tracking: {groupName}
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-copy mt-1">
                 Monitor and moderate judge activity and scores
               </p>
             </div>
           )}
           <div className="flex items-center gap-3 text-sm">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-faint" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search judges, submissions, notes..."
-                className="pl-9 pr-8 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
+                className="pl-9 pr-8 py-2 border border-hairline-strong rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
               />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm("")}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-faint hover:text-copy"
                   title="Clear search"
                 >
                   <X className="w-4 h-4" />
@@ -485,7 +485,7 @@ export function JudgeTracking({
             <button
               onClick={handleExportCSV}
               disabled={!exportData || exportData.length === 0}
-              className="flex items-center gap-2 px-3 py-2 bg-black text-white rounded hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-2 px-3 py-2 bg-cta text-on-cta rounded hover:bg-cta-hover disabled:bg-surface-hover disabled:cursor-not-allowed transition-colors"
               title="Export all judge scores to CSV"
             >
               <Download className="w-4 h-4" />
@@ -495,12 +495,12 @@ export function JudgeTracking({
               className={`px-2 py-1 rounded text-xs font-medium ${
                 group.isActive
                   ? "bg-green-100 text-green-800"
-                  : "bg-gray-100 text-gray-800"
+                  : "bg-surface-alt text-ink"
               }`}
             >
               {group.isActive ? "Active" : "Inactive"}
             </div>
-            <span className="text-gray-500">
+            <span className="text-soft">
               {filteredJudges.length} / {judges.length} judge
               {judges.length !== 1 ? "s" : ""}
             </span>
@@ -509,7 +509,7 @@ export function JudgeTracking({
 
         {/* Section anchor links, standalone page only */}
         {onBack && (
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="bg-surface rounded-lg border border-hairline p-4">
             <nav className="flex flex-wrap gap-4 text-sm">
               <a
                 href="#stats"
@@ -518,7 +518,7 @@ export function JudgeTracking({
                 <BarChart3 className="w-4 h-4" />
                 Stats Overview
               </a>
-              <span className="text-gray-300">|</span>
+              <span className="text-faint">|</span>
               <a
                 href="#activity"
                 className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
@@ -526,7 +526,7 @@ export function JudgeTracking({
                 <Users className="w-4 h-4" />
                 Judge Activity
               </a>
-              <span className="text-gray-300">|</span>
+              <span className="text-faint">|</span>
               <a
                 href="#scores"
                 className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
@@ -543,44 +543,44 @@ export function JudgeTracking({
           id="stats"
           className="grid grid-cols-1 md:grid-cols-4 gap-4 scroll-mt-6"
         >
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="bg-surface rounded-lg border border-hairline p-4">
             <div className="flex items-center gap-2 mb-2">
               <Users className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-medium text-copy">
                 {searchTerm ? "Filtered Judges" : "Total Judges"}
               </span>
             </div>
-            <div className="text-2xl font-semibold text-gray-900">
+            <div className="text-2xl font-semibold text-ink">
               {filteredJudges.length}
               {searchTerm && (
-                <span className="text-sm text-gray-500 ml-2">
+                <span className="text-sm text-soft ml-2">
                   / {judges.length}
                 </span>
               )}
             </div>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="bg-surface rounded-lg border border-hairline p-4">
             <div className="flex items-center gap-2 mb-2">
               <Award className="w-4 h-4 text-green-600" />
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-medium text-copy">
                 Submissions Judged
               </span>
             </div>
-            <div className="text-2xl font-semibold text-gray-900">
+            <div className="text-2xl font-semibold text-ink">
               {filteredJudges.reduce(
                 (sum, judge) => sum + judge.submissionsJudged,
                 0,
               )}
             </div>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="bg-surface rounded-lg border border-hairline p-4">
             <div className="flex items-center gap-2 mb-2">
               <BarChart3 className="w-4 h-4 text-purple-600" />
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-medium text-copy">
                 Avg Score
               </span>
             </div>
-            <div className="text-2xl font-semibold text-gray-900">
+            <div className="text-2xl font-semibold text-ink">
               {filteredJudges.length > 0
                 ? (
                     filteredJudges.reduce(
@@ -591,14 +591,14 @@ export function JudgeTracking({
                 : "0.0"}
             </div>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="bg-surface rounded-lg border border-hairline p-4">
             <div className="flex items-center gap-2 mb-2">
               <MessageSquare className="w-4 h-4 text-indigo-600" />
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-medium text-copy">
                 Notes & Comments
               </span>
             </div>
-            <div className="text-2xl font-semibold text-gray-900">
+            <div className="text-2xl font-semibold text-ink">
               {filteredJudges.reduce(
                 (sum, judge) => sum + (judge.notesCount || 0),
                 0,
@@ -626,23 +626,23 @@ export function JudgeTracking({
         {/* Judge Activity */}
         <div
           id="activity"
-          className="bg-white rounded-lg border border-gray-200 scroll-mt-6"
+          className="bg-surface rounded-lg border border-hairline scroll-mt-6"
         >
-          <div className="p-4 border-b border-gray-200">
-            <h3 className="font-medium text-gray-900">Judge Activity</h3>
-            <p className="text-sm text-gray-600 mt-1">
+          <div className="p-4 border-b border-hairline">
+            <h3 className="font-medium text-ink">Judge Activity</h3>
+            <p className="text-sm text-copy mt-1">
               Click on a judge to view and moderate their scores
             </p>
           </div>
 
           {judges.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <div className="p-8 text-center text-soft">
+              <Users className="w-12 h-12 mx-auto mb-4 text-faint" />
               <p>No judges have registered for this group yet.</p>
             </div>
           ) : filteredJudges.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <Search className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <div className="p-8 text-center text-soft">
+              <Search className="w-12 h-12 mx-auto mb-4 text-faint" />
               <p>No judges match your search criteria.</p>
               <button
                 onClick={() => setSearchTerm("")}
@@ -652,22 +652,22 @@ export function JudgeTracking({
               </button>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-hairline">
               {filteredJudges.map((judge) => (
                 <div key={judge._id} className="p-4">
                   {/* Judge Header */}
                   <div className="flex items-center justify-between gap-8">
                     <button
                       onClick={() => handleExpandJudge(judge._id)}
-                      className="flex items-center gap-3 text-left hover:bg-gray-50 rounded p-2 -m-2"
+                      className="flex items-center gap-3 text-left hover:bg-surface-hover rounded p-2 -m-2"
                     >
                       <div className="flex items-center gap-2">
                         {expandedJudges.has(judge._id) ? (
-                          <ChevronDown className="w-4 h-4 text-gray-400" />
+                          <ChevronDown className="w-4 h-4 text-faint" />
                         ) : (
-                          <ChevronRight className="w-4 h-4 text-gray-400" />
+                          <ChevronRight className="w-4 h-4 text-faint" />
                         )}
-                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                        <div className="w-8 h-8 bg-surface-alt rounded-full flex items-center justify-center">
                           {judge.userProfile?.imageUrl ? (
                             <img
                               src={judge.userProfile.imageUrl}
@@ -675,13 +675,13 @@ export function JudgeTracking({
                               className="w-8 h-8 rounded-full"
                             />
                           ) : (
-                            <User className="w-4 h-4 text-gray-600" />
+                            <User className="w-4 h-4 text-copy" />
                           )}
                         </div>
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900">
+                          <span className="font-medium text-ink">
                             {judge.name}
                           </span>
                           {judge.type === "agent" && (
@@ -711,7 +711,7 @@ export function JudgeTracking({
                             </ProfileHoverCard>
                           )}
                         </div>
-                        <div className="text-sm text-gray-500 flex items-center gap-4">
+                        <div className="text-sm text-soft flex items-center gap-4">
                           {judge.email && (
                             <span className="flex items-center gap-1">
                               <Mail className="w-3 h-3" />
@@ -724,32 +724,32 @@ export function JudgeTracking({
                         </div>
                       </div>
                     </button>
-                    <div className="flex items-center gap-6 text-sm text-gray-500 ml-auto">
+                    <div className="flex items-center gap-6 text-sm text-soft ml-auto">
                       <div className="text-center min-w-20">
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium text-ink">
                           {judge.submissionsJudged}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-soft">
                           submissions judged
                         </div>
                       </div>
                       <div className="text-center min-w-16">
-                        <div className="font-medium text-gray-900 flex items-center gap-1 justify-center">
+                        <div className="font-medium text-ink flex items-center gap-1 justify-center">
                           {judge.notesCount || 0}
                           <MessageSquare className="w-3 h-3 text-purple-500" />
                         </div>
-                        <div className="text-xs text-gray-500">notes</div>
+                        <div className="text-xs text-soft">notes</div>
                       </div>
                       <div className="text-center min-w-16">
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium text-ink">
                           {judge.averageScore
                             ? judge.averageScore.toFixed(1)
                             : "N/A"}
                         </div>
-                        <div className="text-xs text-gray-500">avg score</div>
+                        <div className="text-xs text-soft">avg score</div>
                       </div>
                       <div className="text-center min-w-24">
-                        <div className="text-xs text-gray-600">
+                        <div className="text-xs text-copy">
                           {judge.lastScoreAt
                             ? formatDistanceToNow(judge.lastScoreAt, {
                                 addSuffix: true,
@@ -769,20 +769,20 @@ export function JudgeTracking({
 
                   {/* Expanded Judge Details */}
                   {expandedJudges.has(judge._id) && judgeScores && (
-                    <div className="mt-4 pl-6 border-l-2 border-gray-100">
+                    <div className="mt-4 pl-6 border-l-2 border-hairline">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-gray-900">
+                          <h4 className="font-medium text-ink">
                             Judge Scores
                           </h4>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-soft">
                             {judgeScores.length} total scores
                           </div>
                         </div>
 
                         {judgeScores.length === 0 ? (
-                          <div className="text-center py-4 text-gray-500">
-                            <Target className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                          <div className="text-center py-4 text-soft">
+                            <Target className="w-8 h-8 mx-auto mb-2 text-faint" />
                             <p>No scores submitted yet</p>
                           </div>
                         ) : (
@@ -793,7 +793,7 @@ export function JudgeTracking({
                                 className={`p-3 rounded border ${
                                   score.isHidden
                                     ? "bg-red-50 border-red-200"
-                                    : "bg-gray-50 border-gray-200"
+                                    : "bg-surface-alt border-hairline"
                                 }`}
                               >
                                 <div className="flex items-start justify-between">
@@ -823,10 +823,10 @@ export function JudgeTracking({
                                           </span>
                                         )}
                                     </div>
-                                    <div className="text-sm text-gray-600 mb-2">
+                                    <div className="text-sm text-copy mb-2">
                                       <strong>{score.criteria.question}</strong>
                                       {score.criteria.description && (
-                                        <span className="text-gray-500">
+                                        <span className="text-soft">
                                           {" "}
                                           - {score.criteria.description}
                                         </span>
@@ -839,7 +839,7 @@ export function JudgeTracking({
                                           {score.score}/{scoreScale}
                                         </span>
                                       </div>
-                                      <div className="flex items-center gap-1 text-gray-500">
+                                      <div className="flex items-center gap-1 text-soft">
                                         <Clock className="w-3 h-3" />
                                         {formatDistanceToNow(
                                           score._creationTime,
@@ -848,7 +848,7 @@ export function JudgeTracking({
                                       </div>
                                     </div>
                                     {score.comments && (
-                                      <div className="mt-2 text-sm text-gray-700 bg-white p-2 rounded border">
+                                      <div className="mt-2 text-sm text-copy bg-surface p-2 rounded border">
                                         {score.comments}
                                       </div>
                                     )}
@@ -919,20 +919,20 @@ export function JudgeTracking({
                                 {/* Judge Notes Section */}
                                 {expandedScoreForNotes === score._id &&
                                   submissionNotes && (
-                                    <div className="mt-4 pt-4 border-t border-gray-200">
+                                    <div className="mt-4 pt-4 border-t border-hairline">
                                       <div className="flex items-center justify-between mb-3">
-                                        <h5 className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                                        <h5 className="text-sm font-medium text-ink flex items-center gap-2">
                                           <MessageSquare className="w-4 h-4" />
                                           Judge Notes for this Submission
                                         </h5>
-                                        <span className="text-xs text-gray-500">
+                                        <span className="text-xs text-soft">
                                           {submissionNotes.length} notes
                                         </span>
                                       </div>
 
                                       {submissionNotes.length === 0 ? (
-                                        <div className="text-center py-4 text-gray-500 text-xs">
-                                          <MessageSquare className="w-6 h-6 mx-auto mb-2 text-gray-300" />
+                                        <div className="text-center py-4 text-soft text-xs">
+                                          <MessageSquare className="w-6 h-6 mx-auto mb-2 text-faint" />
                                           <p>No notes left by judges yet</p>
                                         </div>
                                       ) : (
@@ -940,15 +940,15 @@ export function JudgeTracking({
                                           {submissionNotes.map((note) => (
                                             <div
                                               key={note._id}
-                                              className="bg-[#FFF9C4] border border-[#F9E79F] rounded p-3"
+                                              className="bg-brand-soft border border-hairline-strong rounded p-3"
                                             >
                                               <div className="flex items-start justify-between mb-2">
                                                 <div className="flex items-center gap-2">
-                                                  <User className="w-3 h-3 text-gray-600" />
-                                                  <span className="text-xs font-medium text-black">
+                                                  <User className="w-3 h-3 text-copy" />
+                                                  <span className="text-xs font-medium text-ink">
                                                     {note.judgeName}
                                                   </span>
-                                                  <span className="text-xs text-gray-700">
+                                                  <span className="text-xs text-copy">
                                                     {formatDistanceToNow(
                                                       note._creationTime,
                                                       { addSuffix: true },
@@ -965,7 +965,7 @@ export function JudgeTracking({
                                                 </button>
                                               </div>
 
-                                              <div className="text-xs text-black whitespace-pre-wrap mb-2">
+                                              <div className="text-xs text-ink whitespace-pre-wrap mb-2">
                                                 {renderTextWithMentions(
                                                   note.content,
                                                 )}
@@ -974,19 +974,19 @@ export function JudgeTracking({
                                               {/* Replies */}
                                               {note.replies &&
                                                 note.replies.length > 0 && (
-                                                  <div className="ml-4 mt-3 space-y-2 border-l-2 border-[#F9E79F] pl-3">
+                                                  <div className="ml-4 mt-3 space-y-2 border-l-2 border-hairline-strong pl-3">
                                                     {note.replies.map(
                                                       (reply) => (
                                                         <div
                                                           key={reply._id}
-                                                          className="bg-[#FFFDE7] rounded p-2 border border-[#F9E79F]"
+                                                          className="bg-surface-alt rounded p-2 border border-hairline-strong"
                                                         >
                                                           <div className="flex items-center gap-2 mb-1">
-                                                            <User className="w-3 h-3 text-gray-600" />
-                                                            <span className="text-xs font-medium text-black">
+                                                            <User className="w-3 h-3 text-copy" />
+                                                            <span className="text-xs font-medium text-ink">
                                                               {reply.judgeName}
                                                             </span>
-                                                            <span className="text-xs text-gray-700">
+                                                            <span className="text-xs text-copy">
                                                               {formatDistanceToNow(
                                                                 reply._creationTime,
                                                                 {
@@ -995,7 +995,7 @@ export function JudgeTracking({
                                                               )}
                                                             </span>
                                                           </div>
-                                                          <div className="text-xs text-black whitespace-pre-wrap">
+                                                          <div className="text-xs text-ink whitespace-pre-wrap">
                                                             {renderTextWithMentions(
                                                               reply.content,
                                                             )}
@@ -1008,7 +1008,7 @@ export function JudgeTracking({
 
                                               {/* Reply Form */}
                                               {replyingToNote === note._id && (
-                                                <div className="ml-4 mt-3 border-l-2 border-[#F9E79F] pl-3">
+                                                <div className="ml-4 mt-3 border-l-2 border-hairline-strong pl-3">
                                                   <MentionTextarea
                                                     value={replyContent}
                                                     onChange={setReplyContent}
@@ -1069,17 +1069,17 @@ export function JudgeTracking({
         {judgeDetailsData && judgeDetailsData.length > 0 && (
           <div
             id="scores"
-            className="bg-white rounded-lg border border-gray-200 scroll-mt-6"
+            className="bg-surface rounded-lg border border-hairline scroll-mt-6"
           >
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <div className="px-6 py-4 border-b border-hairline">
+              <h3 className="text-lg font-semibold text-ink flex items-center gap-2">
                 <Star className="w-5 h-5" />
                 Judge Scores & Comments
               </h3>
             </div>
 
             {/* Judge Tabs */}
-            <div className="border-b border-gray-200">
+            <div className="border-b border-hairline">
               <div className="flex flex-wrap gap-1 p-4">
                 {judgeDetailsData.map((judge, index) => (
                   <button
@@ -1088,11 +1088,11 @@ export function JudgeTracking({
                     className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                       selectedJudgeTabIndex === index
                         ? "bg-blue-100 text-blue-700 border border-blue-200"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 border border-transparent"
+                        : "text-copy hover:text-ink hover:bg-surface-hover border border-transparent"
                     }`}
                   >
                     {judge.judgeName}
-                    <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                    <span className="ml-2 text-xs bg-surface-alt text-copy px-2 py-1 rounded-full">
                       {judge.totalScores}
                     </span>
                   </button>
@@ -1108,11 +1108,11 @@ export function JudgeTracking({
                   <div key={judge.judgeId}>
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h4 className="font-medium text-gray-900">
+                        <h4 className="font-medium text-ink">
                           {judge.judgeName}
                         </h4>
                         {judge.judgeEmail && (
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-copy">
                             {judge.judgeEmail}
                           </p>
                         )}
@@ -1126,7 +1126,7 @@ export function JudgeTracking({
                               : "No scores"}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-copy">
                           {judge.totalScores} scores submitted
                         </p>
                       </div>
@@ -1161,22 +1161,22 @@ export function JudgeTracking({
                         ).map(([storyId, submissionData], submissionIndex) => (
                           <div
                             key={storyId}
-                            className={`rounded-lg p-4 border border-gray-200 ${
+                            className={`rounded-lg p-4 border border-hairline ${
                               submissionIndex % 2 === 0
-                                ? "bg-white"
-                                : "bg-gray-50"
+                                ? "bg-surface"
+                                : "bg-surface-alt"
                             }`}
                           >
                             {/* Submission Header */}
-                            <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200">
-                              <h5 className="font-semibold text-gray-900">
+                            <div className="flex items-center justify-between mb-3 pb-2 border-b border-hairline">
+                              <h5 className="font-semibold text-ink">
                                 {submissionData.storyTitle}
                               </h5>
                               <div className="text-right">
-                                <div className="text-lg font-bold text-gray-900">
+                                <div className="text-lg font-bold text-ink">
                                   {submissionData.totalScore}
                                 </div>
-                                <div className="text-sm text-gray-500">
+                                <div className="text-sm text-soft">
                                   Total Score
                                 </div>
                               </div>
@@ -1187,11 +1187,11 @@ export function JudgeTracking({
                               {submissionData.scores.map((score) => (
                                 <div
                                   key={`${score.storyId}-${score.criteriaId}`}
-                                  className="bg-white bg-opacity-50 rounded p-3 border border-gray-100"
+                                  className="bg-surface bg-opacity-50 rounded p-3 border border-hairline"
                                 >
                                   <div className="flex items-center justify-between mb-2">
                                     <div className="flex-1">
-                                      <p className="text-sm font-medium text-gray-700">
+                                      <p className="text-sm font-medium text-copy">
                                         {score.criteriaQuestion}
                                       </p>
                                     </div>
@@ -1203,7 +1203,7 @@ export function JudgeTracking({
                                     </div>
                                   </div>
                                   {score.comments && (
-                                    <p className="text-sm text-gray-600 italic bg-white rounded p-2 border border-gray-200 mt-2">
+                                    <p className="text-sm text-copy italic bg-surface rounded p-2 border border-hairline mt-2">
                                       "{score.comments}"
                                     </p>
                                   )}
@@ -1224,8 +1224,8 @@ export function JudgeTracking({
         {/* Edit Score Modal */}
         {editingScore && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-md w-full p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
+            <div className="bg-surface rounded-lg max-w-md w-full p-6">
+              <h3 className="text-lg font-medium text-ink mb-4">
                 Edit Score
               </h3>
               <div className="space-y-4">
@@ -1276,14 +1276,14 @@ export function JudgeTracking({
         {/* Delete Judge Confirmation */}
         {deleteConfirmJudge && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="bg-surface rounded-lg max-w-md w-full p-6">
               <div className="flex items-center gap-3 mb-4">
                 <AlertTriangle className="w-6 h-6 text-red-600" />
-                <h3 className="text-lg font-medium text-gray-900">
+                <h3 className="text-lg font-medium text-ink">
                   Delete Judge
                 </h3>
               </div>
-              <p className="text-gray-600 mb-6">
+              <p className="text-copy mb-6">
                 This will permanently delete the judge and all their scores.
                 This action cannot be undone.
               </p>
@@ -1310,14 +1310,14 @@ export function JudgeTracking({
         {/* Delete Score Confirmation */}
         {deleteConfirmScore && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="bg-surface rounded-lg max-w-md w-full p-6">
               <div className="flex items-center gap-3 mb-4">
                 <AlertTriangle className="w-6 h-6 text-red-600" />
-                <h3 className="text-lg font-medium text-gray-900">
+                <h3 className="text-lg font-medium text-ink">
                   Delete Score
                 </h3>
               </div>
-              <p className="text-gray-600 mb-6">
+              <p className="text-copy mb-6">
                 This will permanently delete this score. This action cannot be
                 undone.
               </p>
@@ -1346,14 +1346,14 @@ export function JudgeTracking({
           <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-40">
             <button
               onClick={scrollToTop}
-              className="p-3 bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
+              className="p-3 bg-cta text-on-cta rounded-full hover:bg-cta-hover transition-colors"
               title="Scroll to top"
             >
               <ArrowUp className="w-5 h-5" />
             </button>
             <button
               onClick={scrollToBottom}
-              className="p-3 bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
+              className="p-3 bg-cta text-on-cta rounded-full hover:bg-cta-hover transition-colors"
               title="Scroll to bottom"
             >
               <ArrowDown className="w-5 h-5" />

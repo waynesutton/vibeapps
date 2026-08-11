@@ -13,11 +13,76 @@
     text-rendering: optimizeLegibility;
   }
 
-  body {
-    @apply bg-[#F4F2EE] text-[#292929];
-    /* @apply bg-gradient-to-b from-[#F2F4F7] to-[#ffffff] text-[#292929]; */
-    /* @apply bg-[#F4F2EE] text-[#292929]; */
+  /* ------------------------------------------------------------------
+     Theme tokens
+     - :root holds the default "light" theme (mono: soft-grey canvas, white
+       cards, black CTAs, hairline separation — flat, no shadows)
+     - [data-theme="classic"] preserves the original site palette
+     - [data-theme="dark"] is the deep black technical theme (blue accent)
+     ------------------------------------------------------------------ */
+  :root,
+  [data-theme="light"] {
+    --th-canvas: #f7f7f7;
+    --th-surface: #ffffff;
+    --th-surface-alt: #f3f3f3;
+    --th-surface-hover: #e8e8e8;
+    --th-ink: #000000;
+    --th-copy: #1f1f1f;
+    --th-soft: #545454;
+    --th-faint: #6b6b6b;
+    --th-hairline: #e2e2e2;
+    --th-hairline-strong: #cccccc;
+    --th-cta: #000000;
+    --th-cta-hover: #333333;
+    --th-on-cta: #ffffff;
+    --th-brand: #000000;
+    --th-brand-soft: #ededed;
+    --th-scrim: rgba(0, 0, 0, 0.5);
   }
+
+  [data-theme="classic"] {
+    --th-canvas: #f4f2ee;
+    --th-surface: #ffffff;
+    --th-surface-alt: #f4f0ed;
+    --th-surface-hover: #e5e1de;
+    --th-ink: #292929;
+    --th-copy: #525252;
+    --th-soft: #545454;
+    --th-faint: #787672;
+    --th-hairline: #d8e1ec;
+    --th-hairline-strong: #d5d3d0;
+    --th-cta: #292929;
+    --th-cta-hover: #525252;
+    --th-on-cta: #ffffff;
+    --th-brand: #292929;
+    --th-brand-soft: #f3ece1;
+    --th-scrim: rgba(0, 0, 0, 0.5);
+  }
+
+  [data-theme="dark"] {
+    --th-canvas: #0f0f0f;
+    --th-surface: #1a1a1a;
+    --th-surface-alt: #1e1e1e;
+    --th-surface-hover: #2a2a2a;
+    --th-ink: #ffffff;
+    --th-copy: rgba(255, 255, 255, 0.78);
+    --th-soft: rgba(255, 255, 255, 0.62);
+    --th-faint: rgba(255, 255, 255, 0.45);
+    --th-hairline: rgba(255, 255, 255, 0.14);
+    --th-hairline-strong: rgba(255, 255, 255, 0.25);
+    --th-cta: #f6f6f6;
+    --th-cta-hover: #d4d4d4;
+    --th-on-cta: #0f0f0f;
+    --th-brand: #51a2ff;
+    --th-brand-soft: rgba(81, 162, 255, 0.15);
+    --th-scrim: rgba(0, 0, 0, 0.65);
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-canvas text-ink;
+  }
+
   :root {
     --background: 0 0% 95.7%;
     --foreground: 0 0% 3.9%;
@@ -45,12 +110,13 @@
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
   }
-  .dark {
-    --background: 0 0% 3.9%;
+  .dark,
+  [data-theme="dark"] {
+    --background: 0 0% 5.9%;
     --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
+    --card: 0 0% 10.2%;
     --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
+    --popover: 0 0% 10.2%;
     --popover-foreground: 0 0% 98%;
     --primary: 0 0% 98%;
     --primary-foreground: 0 0% 9%;
@@ -60,10 +126,10 @@
     --muted-foreground: 0 0% 63.9%;
     --accent: 0 0% 14.9%;
     --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 62.8% 45%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
+    --border: 0 0% 16.5%;
+    --input: 0 0% 16.5%;
     --ring: 0 0% 83.1%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -75,7 +141,7 @@
 
 .cl-cardBox,
 .cl-internal-17dpwu0 {
-  background-color: #f2f4f7;
+  background-color: var(--th-surface-alt);
   box-shadow: none;
   border: none;
 }
@@ -90,9 +156,9 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-canvas text-ink;
   }
   a {
-    @apply text-black;
+    @apply text-ink;
   }
 }

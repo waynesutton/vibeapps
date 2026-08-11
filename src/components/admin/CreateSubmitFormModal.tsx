@@ -100,16 +100,16 @@ export function CreateSubmitFormModal({
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-        <div className="bg-[#F4F2EE] rounded-lg border border-gray-200 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="bg-canvas rounded-lg border border-hairline max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">
+          <div className="flex items-center justify-between p-6 border-b border-hairline">
+            <h2 className="text-xl font-semibold text-ink">
               Create New Submit Form
             </h2>
             <button
               onClick={handleClose}
               disabled={isLoading}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-faint hover:text-copy transition-colors"
             >
               <X className="w-6 h-6" />
             </button>
@@ -127,7 +127,7 @@ export function CreateSubmitFormModal({
             <div className="space-y-2">
               <Label
                 htmlFor="title"
-                className="text-sm font-medium text-gray-700"
+                className="text-sm font-medium text-copy"
               >
                 Form Title *
               </Label>
@@ -139,7 +139,7 @@ export function CreateSubmitFormModal({
                 disabled={isLoading}
                 className="w-full"
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-soft">
                 This will be displayed as the main heading of your form
               </p>
             </div>
@@ -148,12 +148,12 @@ export function CreateSubmitFormModal({
             <div className="space-y-2">
               <Label
                 htmlFor="slug"
-                className="text-sm font-medium text-gray-700"
+                className="text-sm font-medium text-copy"
               >
                 URL Slug
               </Label>
               <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-500">/</span>
+                <span className="text-sm text-soft">/</span>
                 <Input
                   id="slug"
                   value={formData.slug}
@@ -163,7 +163,7 @@ export function CreateSubmitFormModal({
                   className="flex-1"
                 />
               </div>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-soft">
                 Leave empty to auto-generate from title. Only letters, numbers,
                 and hyphens allowed.
               </p>
@@ -173,7 +173,7 @@ export function CreateSubmitFormModal({
             <div className="space-y-2">
               <Label
                 htmlFor="description"
-                className="text-sm font-medium text-gray-700"
+                className="text-sm font-medium text-copy"
               >
                 Description
               </Label>
@@ -192,7 +192,7 @@ export function CreateSubmitFormModal({
             <div className="space-y-2">
               <Label
                 htmlFor="customHiddenTag"
-                className="text-sm font-medium text-gray-700"
+                className="text-sm font-medium text-copy"
               >
                 Hidden Tag *
               </Label>
@@ -206,7 +206,7 @@ export function CreateSubmitFormModal({
                 disabled={isLoading}
                 className="w-full"
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-soft">
                 This tag will be automatically added to all submissions (not
                 visible to users)
               </p>
@@ -216,7 +216,7 @@ export function CreateSubmitFormModal({
             <div className="space-y-2">
               <Label
                 htmlFor="headerText"
-                className="text-sm font-medium text-gray-700"
+                className="text-sm font-medium text-copy"
               >
                 Header Text
               </Label>
@@ -235,7 +235,7 @@ export function CreateSubmitFormModal({
             <div className="space-y-2">
               <Label
                 htmlFor="submitButtonText"
-                className="text-sm font-medium text-gray-700"
+                className="text-sm font-medium text-copy"
               >
                 Submit Button Text
               </Label>
@@ -255,7 +255,7 @@ export function CreateSubmitFormModal({
             <div className="space-y-2">
               <Label
                 htmlFor="successMessage"
-                className="text-sm font-medium text-gray-700"
+                className="text-sm font-medium text-copy"
               >
                 Success Message
               </Label>
@@ -274,7 +274,7 @@ export function CreateSubmitFormModal({
             <div className="space-y-2">
               <Label
                 htmlFor="disabledMessage"
-                className="text-sm font-medium text-gray-700"
+                className="text-sm font-medium text-copy"
               >
                 Disabled Message
               </Label>
@@ -289,13 +289,13 @@ export function CreateSubmitFormModal({
                 rows={2}
                 className="w-full"
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-soft">
                 Message shown when the form is disabled
               </p>
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
+            <div className="flex items-center justify-end space-x-3 pt-6 border-t border-hairline">
               <Button
                 type="button"
                 variant="outline"

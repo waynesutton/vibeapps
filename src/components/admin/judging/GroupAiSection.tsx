@@ -60,7 +60,7 @@ export function GroupAiSection({
       {canAi && group.aiJudgeEnabled && <SystemPromptCard group={group} />}
       {canAi && group.aiJudgeEnabled && <AgentKeysCard group={group} />}
       {!canManage && !canAi && (
-        <p className="text-[13px] text-gray-500">
+        <p className="text-[13px] text-soft">
           You do not have access to AI judge settings for this group.
         </p>
       )}
@@ -166,10 +166,10 @@ function AiSettingsCard({ group }: { group: GroupDetails }) {
     >
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-[13px] font-medium text-[#292929]">
+          <p className="text-[13px] font-medium text-ink">
             Enable AI judge
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-soft">
             {enabled
               ? "AI analysis and the AI results page are available"
               : "AI analysis is off for this group"}
@@ -188,10 +188,10 @@ function AiSettingsCard({ group }: { group: GroupDetails }) {
         <>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-[13px] font-medium text-[#292929]">
+              <p className="text-[13px] font-medium text-ink">
                 Public AI results
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-soft">
                 {resultsPublic
                   ? "Anyone with the link can view AI results"
                   : "The AI results page asks for a password"}
@@ -223,11 +223,11 @@ function AiSettingsCard({ group }: { group: GroupDetails }) {
               />
             </div>
           )}
-          <div className="border-t border-gray-100 pt-4">
-            <p className="text-[13px] font-medium text-[#292929]">
+          <div className="border-t border-hairline pt-4">
+            <p className="text-[13px] font-medium text-ink">
               Event window
             </p>
-            <p className="text-xs text-gray-500 mt-0.5 mb-2">
+            <p className="text-xs text-soft mt-0.5 mb-2">
               Used by the build-timeline check to verify apps were built during
               the event.
             </p>
@@ -261,11 +261,11 @@ function AiSettingsCard({ group }: { group: GroupDetails }) {
 
       {/* Links appear after a successful save (server state, not the local toggle) */}
       {group.aiJudgeEnabled && (
-        <div className="border-t border-gray-100 pt-4">
-          <p className="text-[13px] font-medium text-[#292929]">
+        <div className="border-t border-hairline pt-4">
+          <p className="text-[13px] font-medium text-ink">
             AI judge links
           </p>
-          <p className="text-xs text-gray-500 mt-0.5 mb-2">
+          <p className="text-xs text-soft mt-0.5 mb-2">
             Share these with organizers and agents. They are also listed in the
             Links section.
           </p>
@@ -386,7 +386,7 @@ function RubricWeightsCard({ group }: { group: GroupDetails }) {
         />
       }
     >
-      <div className="rounded-md border border-gray-200 divide-y divide-gray-100">
+      <div className="rounded-md border border-hairline divide-y divide-hairline">
         {rubricDefs.map((def) => {
           const isOff = !!disabled[def.key];
           return (
@@ -395,11 +395,11 @@ function RubricWeightsCard({ group }: { group: GroupDetails }) {
               className="flex items-center justify-between gap-3 px-3 py-2"
             >
               <span
-                className={`text-[13px] ${isOff ? "text-gray-400" : "text-gray-700"}`}
+                className={`text-[13px] ${isOff ? "text-faint" : "text-copy"}`}
               >
                 {def.label}
                 {!def.builtIn && (
-                  <span className="ml-2 text-xs text-gray-400">custom</span>
+                  <span className="ml-2 text-xs text-faint">custom</span>
                 )}
               </span>
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -436,15 +436,15 @@ function RubricWeightsCard({ group }: { group: GroupDetails }) {
         {/* Components check preset: explicit Add button so a deleted
             criterion never silently returns */}
         {!hasComponentsCheck && (
-          <div className="flex items-center justify-between gap-3 px-3 py-2 bg-gray-50/60">
+          <div className="flex items-center justify-between gap-3 px-3 py-2 bg-surface-alt">
             <div className="min-w-0">
-              <span className="text-[13px] text-gray-500">
+              <span className="text-[13px] text-soft">
                 {COMPONENTS_CHECK_PRESET.label}
-                <span className="ml-2 text-xs text-gray-400">
+                <span className="ml-2 text-xs text-faint">
                   preset, not in rubric
                 </span>
               </span>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-faint">
                 Scores repo-verified Convex component usage. Not added until
                 you click Add.
               </p>
@@ -455,7 +455,7 @@ function RubricWeightsCard({ group }: { group: GroupDetails }) {
               disabled={
                 addingPreset || rubricDefs.length - AI_RUBRIC_DEFS.length >= 10
               }
-              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 shrink-0"
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border border-hairline text-copy hover:bg-surface-hover transition-colors disabled:opacity-50 shrink-0"
             >
               {addingPreset ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -541,16 +541,16 @@ function CustomCriteriaCard({ group }: { group: GroupDetails }) {
             setCriteria((prev) => [...prev, { key: "", label: "", description: "" }])
           }
           disabled={saving || criteria.length >= 10}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium rounded-md border border-hairline text-copy hover:bg-surface-hover transition-colors disabled:opacity-50"
         >
           <Plus className="w-3.5 h-3.5" />
           Add criterion
         </button>
-        <span className="text-xs text-gray-400">{criteria.length}/10</span>
+        <span className="text-xs text-faint">{criteria.length}/10</span>
       </div>
 
       {criteria.length === 0 && (
-        <p className="text-[13px] text-gray-500">
+        <p className="text-[13px] text-soft">
           No custom criteria. The AI judge uses only the built-in rubric.
         </p>
       )}
@@ -558,7 +558,7 @@ function CustomCriteriaCard({ group }: { group: GroupDetails }) {
       {criteria.map((row, index) => (
         <div
           key={index}
-          className="rounded-md border border-gray-200 px-3 py-3 space-y-2"
+          className="rounded-md border border-hairline px-3 py-3 space-y-2"
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
@@ -640,10 +640,10 @@ function SystemPromptCard({ group }: { group: GroupDetails }) {
       description="Edit, paste, or reset the prompt body the AI judge runs with. {{rubric}} expands to the criteria list; the JSON response format is always enforced separately."
     >
       {promptConfig === undefined && (
-        <p className="text-[13px] text-gray-500">Loading prompt...</p>
+        <p className="text-[13px] text-soft">Loading prompt...</p>
       )}
       {promptConfig === null && (
-        <p className="text-[13px] text-gray-500">Prompt unavailable.</p>
+        <p className="text-[13px] text-soft">Prompt unavailable.</p>
       )}
       {promptConfig && (
         <SystemPromptEditor
@@ -688,7 +688,7 @@ function SystemPromptEditor({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-soft">
           {isCustom
             ? "This group runs a custom prompt."
             : "This group runs the built-in default prompt."}
@@ -697,7 +697,7 @@ function SystemPromptEditor({
           type="button"
           onClick={handleReset}
           disabled={saving || (!isCustom && text === defaultPrompt)}
-          className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 flex-shrink-0"
+          className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md border border-hairline text-copy hover:bg-surface-hover transition-colors disabled:opacity-50 flex-shrink-0"
         >
           <RotateCcw className="w-3 h-3" />
           Reset to default
@@ -720,7 +720,7 @@ function SystemPromptEditor({
               <Check className="w-3.5 h-3.5" /> Saved
             </span>
           ) : (
-            <span className="text-gray-400">
+            <span className="text-faint">
               Saving the unchanged default keeps the built-in prompt.
             </span>
           )}
@@ -729,7 +729,7 @@ function SystemPromptEditor({
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="px-3.5 py-1.5 text-[13px] font-medium rounded-md bg-[#292929] text-white hover:bg-[#525252] transition-colors disabled:opacity-50 flex-shrink-0"
+          className="px-3.5 py-1.5 text-[13px] font-medium rounded-md bg-cta text-on-cta hover:bg-cta-hover transition-colors disabled:opacity-50 flex-shrink-0"
         >
           {saving ? "Saving..." : "Save prompt"}
         </button>
@@ -815,10 +815,10 @@ function AgentKeysCard({ group }: { group: GroupDetails }) {
     >
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-[13px] font-medium text-[#292929]">
+          <p className="text-[13px] font-medium text-ink">
             Agent API for this group
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-soft">
             {apiEnabled
               ? "External agents with a key can read submissions and post scores"
               : "All agent API calls return 403 and new keys cannot be created. Keys are kept and work again when re-enabled."}
@@ -839,10 +839,10 @@ function AgentKeysCard({ group }: { group: GroupDetails }) {
 
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-[13px] font-medium text-[#292929]">
+          <p className="text-[13px] font-medium text-ink">
             Agent scores are advisory
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-soft">
             {group.agentScoresAdvisory
               ? "Agent scores are shown separately and excluded from official rankings"
               : "Agent scores count toward official rankings"}
@@ -907,7 +907,7 @@ function AgentKeysCard({ group }: { group: GroupDetails }) {
           type="button"
           onClick={() => void handleCreate()}
           disabled={creating || !apiEnabled}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-medium rounded-md bg-[#292929] text-white hover:bg-[#525252] transition-colors disabled:opacity-50 flex-shrink-0"
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-medium rounded-md bg-cta text-on-cta hover:bg-cta-hover transition-colors disabled:opacity-50 flex-shrink-0"
         >
           {creating ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -921,22 +921,22 @@ function AgentKeysCard({ group }: { group: GroupDetails }) {
 
       {/* Existing keys */}
       {agentKeys === undefined && (
-        <p className="text-[13px] text-gray-500">Loading keys...</p>
+        <p className="text-[13px] text-soft">Loading keys...</p>
       )}
       {agentKeys && agentKeys.length === 0 && (
-        <p className="text-[13px] text-gray-500">No agent keys yet.</p>
+        <p className="text-[13px] text-soft">No agent keys yet.</p>
       )}
       {agentKeys && agentKeys.length > 0 && (
-        <div className="rounded-md border border-gray-200 divide-y divide-gray-100">
+        <div className="rounded-md border border-hairline divide-y divide-hairline">
           {agentKeys.map((key) => (
             <div
               key={key._id}
               className="flex items-center justify-between gap-3 px-3 py-2"
             >
               <div className="min-w-0 flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <KeyRound className="w-4 h-4 text-faint flex-shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-[#292929] truncate">
+                  <p className="text-[13px] font-medium text-ink truncate">
                     {key.name}
                     {key.revokedAt && (
                       <span className="ml-2 text-xs text-red-600 font-normal">
@@ -944,7 +944,7 @@ function AgentKeysCard({ group }: { group: GroupDetails }) {
                       </span>
                     )}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-soft">
                     {key.scoreCount} score{key.scoreCount === 1 ? "" : "s"}
                     {key.lastUsedAt
                       ? ` · last used ${formatDistanceToNow(key.lastUsedAt)} ago`
@@ -959,7 +959,7 @@ function AgentKeysCard({ group }: { group: GroupDetails }) {
                   className={`px-2.5 py-1 text-xs font-medium rounded-md border transition-colors flex-shrink-0 ${
                     revokeArmedId === key._id
                       ? "bg-red-600 border-red-600 text-white"
-                      : "border-gray-200 text-red-600 hover:bg-red-50"
+                      : "border-hairline text-red-600 hover:bg-red-50"
                   }`}
                 >
                   {revokeArmedId === key._id ? "Confirm revoke" : "Revoke"}

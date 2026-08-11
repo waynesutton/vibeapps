@@ -277,6 +277,8 @@ export default defineSchema({
     submissionLimitCount: v.optional(v.number()),
     // Hackathon team info settings
     showHackathonTeamInfo: v.optional(v.boolean()),
+    // Default /submit page layout: hide right sidebar and widen the form
+    hideSubmitPageSidebar: v.optional(v.boolean()),
     // Tag limit settings (managed from Tags admin section)
     maxTagsPerSubmission: v.optional(v.number()), // Max visible tags per submission (hidden tags exempt)
     maxTagLength: v.optional(v.number()), // Max characters for a new tag name
@@ -669,6 +671,7 @@ export default defineSchema({
       v.object({
         github: v.boolean(), // Whether the GitHub repo was fetched
         liveUrl: v.boolean(), // Whether the live URL was scraped
+        videoTranscript: v.optional(v.boolean()), // Whether a video transcript/page scrape was included
       }),
     ),
     urlCheck: v.optional(
@@ -684,6 +687,37 @@ export default defineSchema({
   })
     .index("by_groupId", ["groupId"])
     .index("by_groupId_storyId", ["groupId", "storyId"]),
+
+  // Video demo transcripts scraped for AI judging. One row per story,
+  // upserted on refetch. Markdown is unverified builder narrative and must
+  // never override verified repo facts in the judge prompt.
+  videoTranscripts: defineTable({
+    storyId: v.id("stories"), // Submission the video belongs to
+    videoUrl: v.string(), // The exact URL that was scraped (cache key)
+    provider: v.union(v.literal("contextdev"), v.literal("firecrawl")), // Which scraper produced the result
+    kind: v.union(
+      v.literal("youtube"), // YouTube video: transcript from captions when available
+      v.literal("page"), // Other video host page scrape (Vimeo, Loom, etc.)
+      v.literal("unsupported"), // Direct media file or unrecognized URL
+    ),
+    status: v.union(
+      v.literal("completed"), // Markdown captured (transcript or page content)
+      v.literal("no_transcript"), // YouTube video without captions: metadata only
+      v.literal("failed"), // Scrape attempted but errored
+      v.literal("unsupported"), // Not scrapeable (direct media file)
+    ),
+    markdown: v.optional(v.string()), // Scraped markdown, capped before storage
+    metadata: v.optional(
+      v.object({
+        title: v.optional(v.string()),
+        channel: v.optional(v.string()),
+        durationSeconds: v.optional(v.number()),
+      }),
+    ),
+    contentLength: v.number(), // Character length of stored markdown (0 when none)
+    errorMessage: v.optional(v.string()), // Why the scrape failed, when it did
+    fetchedAt: v.number(), // When the scrape ran (cache freshness)
+  }).index("by_story", ["storyId"]),
 
   judgingCriteria: defineTable({
     groupId: v.id("judgingGroups"), // Associated judging group

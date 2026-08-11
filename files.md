@@ -35,6 +35,8 @@
 
 All PRD files are now organized in the `prds/` folder for better project structure:
 
+- `prds/submit-page-sidebar-setting.md`: Admin setting to hide the /submit right sidebar and widen the form for all users
+- `prds/web-interface-guidelines-audit.md`: Web Interface Guidelines UI audit with file:line findings across all src/ files and a prioritized fix order
 - `prds/resend-email-audit.md`: Full Resend email system audit PRD (toggle enforcement map, bugs found and fixed, prod enablement checklist)
 - `prds/mentions.md`: @Mentions system PRD and implementation documentation
 - `prds/addresend.md`: Resend email integration PRD and requirements (daily admin/user digests, weekly digest, @mentions emails, unsubscribe, admin broadcast, alerts cross-ref)
@@ -47,6 +49,8 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `prds/clerk-admin-fix.MD`: Clerk authentication admin setup documentation
 - `prds/clerksubmit.md`: Clerk submission integration documentation
 - `prds/themss.MD`: Theme and styling documentation
+- `prds/theme-system-and-view-refresh.md`: Three-theme token system (light/classic/dark), header theme switcher, and list/vibe view redesign PRD
+- `.interface-design/system.md`: Saved design system reference: theme tokens, palette table, depth strategy, and component patterns for future design sessions
 - `prds/adminroles.md`: Admin roles and permissions documentation
 - `prds/alerts.md`: Notification system documentation
 - `prds/codeblocksinsubmit.md`: Code block support in submissions
@@ -77,7 +81,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
   - `api.d.ts` & `api.js`: Generated API definitions for all functions
   - `dataModel.d.ts`: Generated TypeScript types for database schema
   - `server.d.ts` & `server.js`: Generated server-side definitions
-- `convex/schema.ts`: Database schema definition with all tables and indexes (includes `submissionJudgeCompletions` table for multi-judge OCC-safe completion tracking, `aiJudgeResults` table for AI Judge scores, reasoning, and run status per group+story, hackathon skill fields on `judgingGroups`, and the `hackathonRegistrations` table for teams registered through the hackathon skill)
+- `convex/schema.ts`: Database schema definition with all tables and indexes (includes `submissionJudgeCompletions` table for multi-judge OCC-safe completion tracking, `aiJudgeResults` table for AI Judge scores, reasoning, and run status per group+story, `videoTranscripts` table for scraped video demo transcripts used by the AI judge, hackathon skill fields on `judgingGroups`, and the `hackathonRegistrations` table for teams registered through the hackathon skill)
 - `convex/auth.config.js` & `convex/auth.ts`: Convex authentication configuration
 - `convex/tsconfig.json`: TypeScript configuration for Convex functions
 - `convex/README.md`: Convex-specific documentation
@@ -128,10 +132,11 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `convex/judgeScores.ts`: Score submission, calculation, results with CSV export, weighted scoring, and `getSubmissionJudgeBreakdown` query for per-judge score breakdown with after-self reveal rule
 - `convex/adminJudgeTracking.ts`: Admin utilities for judge monitoring, submission status management, and comprehensive CSV export of judge activity including individual scores, total scores per submission, submissions, criteria, and comments
 - `convex/aiJudge.ts`: AI Judge (Best Use of Convex) backend: built-in rubric (five Convex criteria plus a low-weight "Live app status" liveness criterion) extendable per group with custom criteria and per-criterion on/off toggles via `getRubricForGroup` (filters `aiDisabledCriteria`, never returns an empty rubric), `updateAiCustomCriteria` (up to 10 admin-defined criteria with key/label/description validation and stale weight/disabled-flag pruning), `updateAiSystemPrompt`/`getAiPromptConfig` for the editable system prompt with `DEFAULT_AI_JUDGE_PROMPT_BODY` and reset-to-default, `updateAiRubricWeights` accepting weights plus disabled keys (at least one criterion must stay enabled), `startReview`/`retrySubmission` admin mutations that queue submissions and schedule sequential analysis, `updateResultScore` for admin edits with recomputed totals, `getGroupAiResults` admin query with progress counts, `getGroupAiReportData` admin-only query for the hackathon report (submissions with team names/members and AI results; team emails never exposed publicly), and public results queries with the same password/public/admin-bypass gate pattern as human results (`getPublicAiResultsInfo`, `validateAiResultsPassword`, `verifyAiResultsPassword`, `getPublicAiResults`, `getValidatedAiResults`); never touches `submissionStatuses`, `judgeScores`, or alerts
-- `convex/aiJudgeAnalysis.ts`: `analyzeSubmission` internal action for the AI Judge: fetches GitHub repo context (metadata, file tree, `convex/` files, README, root hackathon log files like hackathon.md/changelog.md/task.md/files.md capped at 5k chars each, and `.agents/skills/` skill paths via optional `GITHUB_TOKEN`), fetches an optional `/hackathon.json` manifest from the live app origin for self-reported context, scrapes the live URL with Firecrawl (optional `FIRECRAWL_API_KEY`), runs a deterministic liveness check of the live app URL (GET with 15s timeout; result stored as `urlCheck` and the liveness score is server-side capped at 2 when the URL is dead/404), detects Convex components deterministically from the repo's `package.json` (`@convex-dev/*` deps) and `convex.config.ts` imports (stored as `componentsDetected` and rewarded with higher advanced scores in the prompt), builds the system prompt from the group's custom prompt (with `{{rubric}}` substitution) or the default, always appends the JSON response contract, prompts an LLM with the group's effective rubric (built-in plus custom criteria) using provider fallback Anthropic → OpenAI → OpenRouter, parses structured JSON scores/reasoning against that rubric, and saves results or per-submission failures for retry
+- `convex/aiJudgeAnalysis.ts`: `analyzeSubmission` internal action for the AI Judge: fetches GitHub repo context (metadata, file tree, `convex/` files, README, root hackathon log files like hackathon.md/changelog.md/task.md/files.md capped at 5k chars each, and `.agents/skills/` skill paths via optional `GITHUB_TOKEN`), fetches an optional `/hackathon.json` manifest from the live app origin for self-reported context, scrapes the live URL with Firecrawl (optional `FIRECRAWL_API_KEY`), runs a deterministic liveness check of the live app URL (GET with 15s timeout; result stored as `urlCheck` and the liveness score is server-side capped at 2 when the URL is dead/404), detects Convex components deterministically from the repo's `package.json` (`@convex-dev/*` deps) and `convex.config.ts` imports (stored as `componentsDetected` and rewarded with higher advanced scores in the prompt), builds the system prompt from the group's custom prompt (with `{{rubric}}` substitution) or the default, always appends the JSON response contract, fetches the submission's video demo transcript via `fetchVideoContext` (included in the prompt as an unverified builder narrative section that never overrides verified facts and never penalizes a missing video), prompts an LLM with the group's effective rubric (built-in plus custom criteria) using provider fallback Anthropic → OpenAI → OpenRouter, parses structured JSON scores/reasoning against that rubric, and saves results (including `sourcesUsed.videoTranscript`) or per-submission failures for retry
 - `convex/spamCheck.ts`: AI spam check backend: `listSpamResults` admin query (story-enriched scan rows with server-side verdict filter, date range, sort, and live counts), `startBatchScan` (queues up to 100 submissions into the dedicated `spamWorkpool`, skip-or-rescan aware, optional date range via the built-in `by_creation_time` index), `scanStory` single re-scan, `markAsSpam`/`unmarkSpam` (hide + label + in-app alert + reason email, fully reversible), `bulkMarkAsSpam`/`bulkHide`/`bulkDelete` (delete cascades comments, votes, ratings, bookmarks, scan rows, and stored images), the admin-editable AI system prompt (`DEFAULT_SPAM_SYSTEM_PROMPT`, `getSpamPrompt`/`setSpamPrompt` with reset-to-default, `getSpamPromptInternal` stored under appSettings key `spamCheckSystemPrompt`), and internal plumbing (`autoScanStory` scheduled from submit mutations, `markRunning`, `getStoryForAnalysis` with duplicate-URL count, `saveResult`)
 - `convex/spamCheckAnalysis.ts`: `analyzeSubmission` internal action for spam scans: deterministic checks in parallel (live URL GET with timeout, GitHub repo reachability and file count with empty-repo detection via optional `GITHUB_TOKEN`, video/LinkedIn/X link liveness), Firecrawl component scrape of the app URL, then an AI verdict (spam/suspicious/clean with confidence and reasons) using the Anthropic → OpenAI → OpenRouter fallback chain, or a deterministic heuristic when no AI key is configured; failures are recorded on the result row and never thrown upstream
 - `convex/agentJudges.ts`: Agent judging API key backend: `storeAgentKey` (SHA-256 hashed keys, blocked when the group's agent API is disabled), `revokeAgentKey`, `listAgentKeys`, `updateAgentKeysEnabled` per-group agent API on/off toggle, and `getAgentContext` used by the HTTP endpoints for key authentication (returns null when the API is disabled so existing keys stop working without being deleted)
+- `convex/videoTranscripts.ts`: Video demo transcript scraping for the AI judge: `classifyVideoUrl` (YouTube video vs other video host page vs direct media file), `fetchVideoContext` action helper (7-day per-URL cache in the `videoTranscripts` table, Context.dev component scrape for YouTube captions and page content with a Firecrawl REST fallback for non-YouTube pages, never throws), `getForStory`/`save` internal upsert plumbing, and `getTranscriptForStory` admin query (gated by the `judging.ai` permission) powering the transcript viewer in the AI results dashboard
 - `convex/hackathon.ts`: Hackathon skill backend for the `/api/hackathon/{slug}` endpoints: `validateCode` internal query (slug + registration code to group context, gated by `hackathonSkillEnabled`), `registerTeam` idempotent internal mutation into `hackathonRegistrations`, `getRules` internal query (rules markdown, judging criteria, AI rubric, dates, score scale, submit/results paths, `updatedAt` staleness marker), `getStatusForUrl` internal query (submission lifecycle for a normalized project URL with admin-safe wording for hidden/spam stories), `updateHackathonSettings` admin mutation (toggle, codes stored uppercase and de-duplicated, rules edits bump `hackathonRulesUpdatedAt`), `listRegistrations` admin query, plus shared helpers `normalizeProjectUrl` and `groupHasDuplicateUrl` (per-group duplicate URL guard used by `stories.submit`; hidden or rejected entries free the URL)
 
 ### Email System (Resend Integration) ✅ FULLY IMPLEMENTED
@@ -161,7 +166,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `convex/utils.ts`: Shared utility functions for backend operations
 - `convex/validators.ts`: Shared document and return validators (tag docs with per-view visibility flags, story-with-details including self-reported AI attribution and custom form answers) used across queries
 - `convex/convexBoxConfig.ts`: Configuration for ConvexBox notification system
-- `convex/convex.config.ts`: Convex app definition installing the Resend, crons, workpool, and Agent Ready components
+- `convex/convex.config.ts`: Convex app definition installing the Resend, crons, workpool (plus a separate spamWorkpool), Agent Ready, rate limiter, Firecrawl (bound to `FIRECRAWL_API_KEY`), and Context.dev (bound to `CONTEXT_DEV_API_KEY`, used for video transcript scraping) components
 - `convex/http.ts`: HTTP actions for external requests, Resend webhook handler, Agent Ready component routes (agents.md, llms-full.txt, llms-status; /llms.txt and /robots.txt skipped since the app serves them from siteFiles), and the agent judging API under `/api/judging/:slug` (openapi.json discovery plus keyed criteria/submissions/results/scores endpoints with rate limiting and a 403 that distinguishes invalid keys from a group with the agent API turned off), plus the hackathon skill API under `/api/hackathon/:slug` (public openapi.json; code-authenticated rules.json with ETag support, status?url= lifecycle lookup, POST register, and POST check deterministic pre-submit checks with its own 60/min read and 10/min check rate limits)
 - `convex/agentReady/content.ts`: Admin-gated app-facing wrappers for the Agent Ready component (settings, generated files, pages)
 - `convex/agentReady/analytics.ts`: App-facing analytics wrappers for the Agent Ready component (request summary and time series)
@@ -172,10 +177,12 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 ### Main Application Files
 
-- `src/main.tsx`: React application entry point
-- `src/App.tsx`: Main app component with routing configuration
-- `src/index.css`: Global CSS styles and Tailwind imports
+- `src/main.tsx`: React application entry point, wraps the app in ThemeProvider and themes Clerk per active theme
+- `src/App.tsx`: Main app component with routing configuration and the global themed sonner Toaster
+- `src/index.css`: Global CSS styles, Tailwind imports, and the three-theme CSS variable definitions (light, classic, dark)
 - `src/vite-env.d.ts`: `Vite` environment type definitions
+- `src/lib/ThemeContext.tsx`: Theme provider and useTheme hook (light/classic/dark, persisted to localStorage, syncs data-theme on html)
+- `src/components/ThemeToggle.tsx`: Header theme switcher button cycling light, classic, dark with Phosphor icons
 
 ### Core Components
 
@@ -191,7 +198,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/components/ResendForm.tsx`: Resend integration form for email collection
 - `src/components/YCHackForm.tsx`: YC AI Hackathon submission form with team information support
 - `src/components/StoryDetail.tsx`: Detailed app view with comments, ratings, voting, image gallery, and sticky sidebar for project links and tags
-- `src/components/StoryList.tsx`: List/grid view of app submissions
+- `src/components/StoryList.tsx`: Story rendering in three view modes: ranked Product Hunt style list rows, grid cards, and refreshed vibe cards
 - `src/components/ImageGallery.tsx`: Multi-image gallery component with thumbnail navigation and modal Lightbox
 
 ### User Interaction Components
@@ -218,7 +225,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/components/admin/SpamCheck.tsx`: AI Spam admin tab in two steps: a "Run a scan" card (own date range picker with presets, Scan and Re-scan buttons that scope to the picked range or the 100 most recent, inline help copy) and a "Scan results" section with view-only filters (verdict, sort, submission date range), live counts strip, editable AI system prompt panel with reset to default, select all with bulk mark-as-spam (optional custom reason sent to submitters), bulk hide and delete, per-row mark/unmark/re-scan, verdict badges with confidence, inline URL/repo/duplicate signals, and expandable rows with full AI reasoning and scan metadata; both date ranges persist in localStorage across tab switches and reloads, and the counts strip pills are clickable quick filters synced with the verdict dropdown
 - `src/components/admin/UserModeration.tsx`: User management, verification, and ban/pause functionality
 - `src/components/admin/TagManagement.tsx`: Tag creation and customization with colors, emojis, and ordering. Per-tag toggles control visibility in the header, on the app detail page, and on app card lists, plus archive. Save and drag-and-drop reorder persist only changed tags in parallel (fast with large tag sets); includes paginated list with selectable page size (5-200), synced top and bottom pagination controls, search across all tags, a Tag limits card (max tags per submission, max tag name length), and bulk selection with Archive/Unarchive/Delete actions and inline delete confirm
-- `src/components/admin/Settings.tsx`: Site-wide settings configuration with view mode controls
+- `src/components/admin/Settings.tsx`: Site-wide settings configuration with view mode controls, submission limits, and submit page layout (hide /submit sidebar)
 - `src/components/admin/NumbersView.tsx`: Analytics and metrics dashboard with detailed tracking
 - `src/components/admin/ReportManagement.tsx`: User report review and resolution with status tracking and email notification integration
 - `src/components/admin/EmailManagement.tsx`: Complete email system management with Send & Settings and Templates sub tabs: global toggle, per-type send options (including the judging group emails toggle), broadcast emails (all users, selected users, or everyone who used a tag), user search, testing tools, and admin alert configuration
@@ -271,14 +278,15 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/components/ui/button.tsx`: Reusable button component
 - `src/components/ui/input.tsx`: Form input component
 - `src/components/ui/textarea.tsx`: Multi-line text input
-- `src/components/ui/select.tsx`: Dropdown selection component
+- `src/components/ui/select.tsx`: Radix select primitives themed with site tokens (used by SimpleSelect)
+- `src/components/ui/SimpleSelect.tsx`: Themed dropdown with native-select ergonomics (value/onChange/options), replaces all native selects so open menus match the active theme with full keyboard support
 - `src/components/ui/checkbox.tsx`: Checkbox input component
 - `src/components/ui/label.tsx`: Form label component
 - `src/components/ui/dialog.tsx`: Modal dialog component
 - `src/components/ui/popover.tsx`: Radix popover surface styled to match the site design system
 - `src/components/ui/calendar.tsx`: Site-styled calendar built on react-day-picker (replaces native date inputs)
 - `src/components/ui/date-range-picker.tsx`: Date range picker with preset windows (last 7/30 days, this/last month, last 3 months) and a two-month range calendar
-- `src/components/ui/AlertDialog.tsx`: Alert and confirmation dialogs
+- `src/components/ui/AlertDialog.tsx`: Alert and confirmation dialogs with keyboard support (autofocus Cancel, Tab trap between buttons, Enter activates, aria-modal)
 - `src/components/ui/AuthRequiredDialog.tsx`: Authentication requirement modal
 
 ### Hooks (src/hooks/)

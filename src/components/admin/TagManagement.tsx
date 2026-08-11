@@ -20,6 +20,7 @@ import {
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id, Doc } from "../../../convex/_generated/dataModel";
+import { SimpleSelect } from "../ui/SimpleSelect";
 
 // Default tag color constants used across UI and when clearing values
 const DEFAULT_TAG_BG = "#F4F0ED";
@@ -804,19 +805,19 @@ export function TagManagement() {
         <button
           onClick={() => setCurrentPage(1)}
           disabled={safePage === 1}
-          className="px-3 py-1.5 text-sm border border-[#D8E1EC] rounded-md text-[#525252] hover:bg-[#F4F0ED] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-3 py-1.5 text-sm border border-hairline rounded-md text-copy hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           First
         </button>
         <button
           onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
           disabled={safePage === 1}
-          className="px-3 py-1.5 text-sm border border-[#D8E1EC] rounded-md text-[#525252] hover:bg-[#F4F0ED] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-3 py-1.5 text-sm border border-hairline rounded-md text-copy hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Prev
         </button>
         {pageNumbers[0] > 1 && (
-          <span className="px-2 text-sm text-gray-400">...</span>
+          <span className="px-2 text-sm text-faint">...</span>
         )}
         {pageNumbers.map((p) => (
           <button
@@ -824,27 +825,27 @@ export function TagManagement() {
             onClick={() => setCurrentPage(p)}
             className={`px-3 py-1.5 text-sm border rounded-md transition-colors ${
               p === safePage
-                ? "bg-[#525252] text-white border-[#525252]"
-                : "border-[#D8E1EC] text-[#525252] hover:bg-[#F4F0ED]"
+                ? "bg-cta-hover text-on-cta border-ink"
+                : "border-hairline text-copy hover:bg-surface-hover"
             }`}
           >
             {p}
           </button>
         ))}
         {pageNumbers[pageNumbers.length - 1] < totalPages && (
-          <span className="px-2 text-sm text-gray-400">...</span>
+          <span className="px-2 text-sm text-faint">...</span>
         )}
         <button
           onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
           disabled={safePage === totalPages}
-          className="px-3 py-1.5 text-sm border border-[#D8E1EC] rounded-md text-[#525252] hover:bg-[#F4F0ED] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-3 py-1.5 text-sm border border-hairline rounded-md text-copy hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Next
         </button>
         <button
           onClick={() => setCurrentPage(totalPages)}
           disabled={safePage === totalPages}
-          className="px-3 py-1.5 text-sm border border-[#D8E1EC] rounded-md text-[#525252] hover:bg-[#F4F0ED] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-3 py-1.5 text-sm border border-hairline rounded-md text-copy hover:bg-surface-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Last
         </button>
@@ -856,7 +857,7 @@ export function TagManagement() {
   if (authIsLoading) {
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-lg p-6 border border-gray-200 text-center">
+        <div className="bg-surface rounded-lg p-6 border border-hairline text-center">
           Loading authentication...
         </div>
       </div>
@@ -865,15 +866,15 @@ export function TagManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg p-6 border border-gray-200">
+      <div className="bg-surface rounded-lg p-6 border border-hairline">
         {/* Header and Save Button */}
         <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
-          <h2 className="text-xl font-medium text-[#525252]">Manage Tags</h2>
+          <h2 className="text-xl font-medium text-copy">Manage Tags</h2>
           {hasPendingChanges && (
             <button
               onClick={handleSave}
               disabled={isProcessing}
-              className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 disabled:opacity-50 text-sm"
+              className="px-4 py-2 bg-surface-alt text-copy rounded-md hover:bg-surface-hover transition-colors flex items-center gap-2 disabled:opacity-50 text-sm"
             >
               <Save className="w-4 h-4" />
               {isProcessing ? "Saving..." : "Save Changes"}
@@ -895,15 +896,15 @@ export function TagManagement() {
         )}
 
         {/* Tag Limit Settings */}
-        <div className="mb-6 p-4 border border-[#D8E1EC] rounded-md bg-[#FBFAF9]">
-          <h3 className="text-sm font-medium text-[#525252] mb-3">
+        <div className="mb-6 p-4 border border-hairline rounded-md bg-surface-alt">
+          <h3 className="text-sm font-medium text-copy mb-3">
             Tag limits
           </h3>
           <div className="flex flex-wrap items-end gap-4">
             <div className="flex flex-col">
               <label
                 htmlFor="max-tags-per-submission"
-                className="text-xs text-gray-500 mb-1"
+                className="text-xs text-soft mb-1"
               >
                 Max tags per submission
               </label>
@@ -917,14 +918,14 @@ export function TagManagement() {
                   setMaxTagsDraft(e.target.value);
                   setLimitsMessage(null);
                 }}
-                className="w-28 px-2 py-1.5 text-sm border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] focus:border-[#292929]"
+                className="w-28 px-2 py-1.5 text-sm border border-hairline rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink focus:border-ink"
                 disabled={limitsSaving}
               />
             </div>
             <div className="flex flex-col">
               <label
                 htmlFor="max-tag-length"
-                className="text-xs text-gray-500 mb-1"
+                className="text-xs text-soft mb-1"
               >
                 Max tag name length
               </label>
@@ -938,14 +939,14 @@ export function TagManagement() {
                   setMaxLenDraft(e.target.value);
                   setLimitsMessage(null);
                 }}
-                className="w-28 px-2 py-1.5 text-sm border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] focus:border-[#292929]"
+                className="w-28 px-2 py-1.5 text-sm border border-hairline rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink focus:border-ink"
                 disabled={limitsSaving}
               />
             </div>
             <button
               onClick={handleSaveLimits}
               disabled={limitsSaving || !limitsChanged}
-              className="px-4 py-1.5 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-1.5 bg-surface-alt text-copy rounded-md hover:bg-surface-hover transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {limitsSaving ? "Saving..." : "Save Limits"}
             </button>
@@ -957,7 +958,7 @@ export function TagManagement() {
               </span>
             )}
           </div>
-          <p className="mt-2 text-xs text-gray-500">
+          <p className="mt-2 text-xs text-soft">
             Hidden tags added by custom forms never count toward the
             submission limit. The name length limit only applies to new tags
             typed by users.
@@ -974,7 +975,7 @@ export function TagManagement() {
               setCurrentPage(1); // Reset to first page on new search
             }}
             placeholder="Search all tags..."
-            className="w-full px-3 py-2 border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] focus:border-[#292929] text-sm"
+            className="w-full px-3 py-2 border border-hairline rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink focus:border-ink text-sm"
             disabled={isProcessing}
           />
         </div>
@@ -982,31 +983,29 @@ export function TagManagement() {
         {/* Page Size Selector + Top Pagination + Result Count */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 text-sm text-[#525252]">
-              <label htmlFor="tag-page-size" className="text-xs text-gray-500">
+            <div className="flex items-center gap-2 text-sm text-copy">
+              <label htmlFor="tag-page-size" className="text-xs text-soft">
                 Tags per page:
               </label>
-              <select
+              <SimpleSelect
                 id="tag-page-size"
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
+                value={String(pageSize)}
+                onChange={(value) => {
+                  setPageSize(Number(value));
                   setCurrentPage(1); // Reset to first page on size change
                 }}
-                className="px-2 py-1 border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] focus:border-[#292929] text-sm"
                 disabled={isProcessing}
-              >
-                {PAGE_SIZE_OPTIONS.map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
+                className="w-auto h-auto px-2 py-1 text-sm gap-1"
+                options={PAGE_SIZE_OPTIONS.map((size) => ({
+                  value: String(size),
+                  label: String(size),
+                }))}
+              />
             </div>
             {/* Top pagination, in sync with bottom controls */}
             {renderPagination()}
           </div>
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-soft">
             {totalFiltered === 0
               ? "No tags"
               : `Showing ${startIndex + 1}-${Math.min(startIndex + pageSize, totalFiltered)} of ${totalFiltered}${searchQuery ? " matching" : ""} tags`}
@@ -1023,13 +1022,13 @@ export function TagManagement() {
               if (error?.includes("already exists")) setError(null); // Clear name error on type
             }}
             placeholder="Enter new tag name"
-            className="flex-1 px-3 py-2 border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] focus:border-[#292929] text-sm"
+            className="flex-1 px-3 py-2 border border-hairline rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink focus:border-ink text-sm"
             disabled={isProcessing}
           />
           <button
             type="submit"
             disabled={!newTagName.trim() || isProcessing}
-            className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            className="px-4 py-2 bg-surface-alt text-copy rounded-md hover:bg-surface-hover transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
           >
             <Plus className="w-4 h-4" />
             Add Tag
@@ -1038,7 +1037,7 @@ export function TagManagement() {
 
         {/* Bulk Selection Controls */}
         <div className="flex flex-wrap items-center gap-3 mb-4">
-          <label className="flex items-center gap-2 text-sm text-[#525252] cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-copy cursor-pointer">
             <input
               type="checkbox"
               checked={
@@ -1063,7 +1062,7 @@ export function TagManagement() {
                 });
               }}
               disabled={isProcessing}
-              className="rounded border-gray-300"
+              className="rounded border-hairline-strong"
             />
             Select all on page
           </label>
@@ -1079,14 +1078,14 @@ export function TagManagement() {
             </button>
           )}
           {selectedTagIds.size > 0 && (
-            <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 bg-[#F4F0ED] rounded-md">
-              <span className="text-sm text-[#525252] font-medium">
+            <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 bg-surface-alt rounded-md">
+              <span className="text-sm text-copy font-medium">
                 {selectedTagIds.size} selected
               </span>
               <button
                 onClick={() => handleBulkSetHidden(true)}
                 disabled={isProcessing}
-                className="px-3 py-1 text-sm text-[#525252] bg-white border border-[#D5D3D0] rounded-md hover:bg-[#FBFAF9] transition-colors disabled:opacity-50 flex items-center gap-1"
+                className="px-3 py-1 text-sm text-copy bg-surface border border-hairline-strong rounded-md hover:bg-surface-hover transition-colors disabled:opacity-50 flex items-center gap-1"
                 title="Archive selected tags (hide from public view)"
               >
                 <Archive className="w-3.5 h-3.5" />
@@ -1095,7 +1094,7 @@ export function TagManagement() {
               <button
                 onClick={() => handleBulkSetHidden(false)}
                 disabled={isProcessing}
-                className="px-3 py-1 text-sm text-[#525252] bg-white border border-[#D5D3D0] rounded-md hover:bg-[#FBFAF9] transition-colors disabled:opacity-50 flex items-center gap-1"
+                className="px-3 py-1 text-sm text-copy bg-surface border border-hairline-strong rounded-md hover:bg-surface-hover transition-colors disabled:opacity-50 flex items-center gap-1"
                 title="Unarchive selected tags"
               >
                 <ArchiveRestore className="w-3.5 h-3.5" />
@@ -1107,7 +1106,7 @@ export function TagManagement() {
                 className={`px-3 py-1 text-sm rounded-md transition-colors disabled:opacity-50 flex items-center gap-1 border ${
                   confirmBulkDelete
                     ? "bg-red-600 text-white border-red-600 hover:bg-red-700"
-                    : "bg-white text-red-600 border-red-300 hover:bg-red-50"
+                    : "bg-surface text-red-600 border-red-300 hover:bg-red-50"
                 }`}
                 title="Delete selected tags permanently"
               >
@@ -1120,7 +1119,7 @@ export function TagManagement() {
                 <button
                   onClick={() => setConfirmBulkDelete(false)}
                   disabled={isProcessing}
-                  className="px-3 py-1 text-sm text-[#525252] bg-white border border-[#D5D3D0] rounded-md hover:bg-[#FBFAF9] transition-colors disabled:opacity-50"
+                  className="px-3 py-1 text-sm text-copy bg-surface border border-hairline-strong rounded-md hover:bg-surface-hover transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -1128,7 +1127,7 @@ export function TagManagement() {
               <button
                 onClick={clearSelection}
                 disabled={isProcessing}
-                className="text-xs text-gray-500 hover:text-black transition-colors disabled:opacity-50"
+                className="text-xs text-soft hover:text-ink transition-colors disabled:opacity-50"
               >
                 Clear
               </button>
@@ -1144,7 +1143,7 @@ export function TagManagement() {
           {paginatedTags.map((tag) => (
               <div
                 key={tag._id}
-                className={`border rounded-md overflow-hidden transition-all duration-200 ease-in-out ${tag.isDeleted ? "border-red-300 bg-red-50" : tag.isNew ? "border-green-300 bg-green-50" : tag.isModified ? "border-blue-300 bg-blue-50" : "border-gray-200 bg-white"}`}
+                className={`border rounded-md overflow-hidden transition-all duration-200 ease-in-out ${tag.isDeleted ? "border-red-300 bg-red-50" : tag.isNew ? "border-green-300 bg-green-50" : tag.isModified ? "border-blue-300 bg-blue-50" : "border-hairline bg-surface"}`}
                 draggable={!tag.isDeleted}
                 onDragStart={() => handleDragStart(tag._id)}
                 onDragOver={handleDragOver}
@@ -1161,7 +1160,7 @@ export function TagManagement() {
                       checked={selectedTagIds.has(String(tag._id))}
                       onChange={() => toggleTagSelection(tag._id)}
                       disabled={isProcessing}
-                      className="mr-3 rounded border-gray-300 flex-shrink-0"
+                      className="mr-3 rounded border-hairline-strong flex-shrink-0"
                       title="Select tag for bulk actions"
                     />
                   )}
@@ -1169,7 +1168,7 @@ export function TagManagement() {
                   {/* Order Input */}
                   {!tag.isDeleted && (
                     <div className="flex flex-col items-center mr-3">
-                      <label className="text-xs text-gray-500 mb-1">
+                      <label className="text-xs text-soft mb-1">
                         Order
                       </label>
                       <input
@@ -1181,7 +1180,7 @@ export function TagManagement() {
                           handleOrderChange(tag._id, e.target.value)
                         }
                         placeholder="0"
-                        className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-center focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="w-16 px-2 py-1 text-xs border border-hairline-strong rounded text-center focus:outline-none focus:ring-1 focus:ring-blue-500"
                         disabled={isProcessing}
                         title="Order (0-999, lower numbers appear first)"
                       />
@@ -1242,21 +1241,21 @@ export function TagManagement() {
                         <span
                           className="inline-block px-2 py-0.5 rounded text-sm font-medium max-w-full truncate"
                           style={{
-                            backgroundColor: tag.backgroundColor || "#F4F0ED", // Default BG
-                            color: tag.textColor || "#525252", // Default Text
-                            border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "#D5D3D0")}`,
+                            backgroundColor: tag.backgroundColor || "var(--th-surface-alt)", // Default BG
+                            color: tag.textColor || "var(--th-copy)", // Default Text
+                            border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "var(--th-hairline-strong)")}`,
                           }}
                           title={tag.name} // Show full name on hover if truncated
                         >
                           {tag.name}
                         </span>
                         {!tag.isDeleted && (
-                          <Edit3 className="w-3 h-3 text-gray-400 group-hover:text-gray-600" />
+                          <Edit3 className="w-3 h-3 text-faint group-hover:text-copy" />
                         )}
                       </div>
                     )}
                     {tag.isHidden && (
-                      <span className="text-xs text-gray-500 flex-shrink-0">
+                      <span className="text-xs text-soft flex-shrink-0">
                         (Hidden)
                       </span>
                     )}
@@ -1298,7 +1297,7 @@ export function TagManagement() {
                               editIconEmojiTagId === tag._id ? null : tag._id,
                             )
                           }
-                          className="text-[#545454] hover:text-[#525252] disabled:opacity-50 p-1"
+                          className="text-soft hover:text-copy disabled:opacity-50 p-1"
                           title="Edit Emoji/Icon"
                           disabled={isProcessing}
                         >
@@ -1312,7 +1311,7 @@ export function TagManagement() {
                               editColorsTagId === tag._id ? null : tag._id,
                             )
                           }
-                          className="text-[#545454] hover:text-[#525252] disabled:opacity-50 p-1"
+                          className="text-soft hover:text-copy disabled:opacity-50 p-1"
                           title="Edit Colors"
                           disabled={isProcessing}
                         >
@@ -1322,7 +1321,7 @@ export function TagManagement() {
                         {/* Toggle Hidden (Archive) */}
                         <button
                           onClick={() => handleToggleHidden(tag._id)}
-                          className="text-[#545454] hover:text-[#525252] disabled:opacity-50 p-1"
+                          className="text-soft hover:text-copy disabled:opacity-50 p-1"
                           title={
                             tag.isHidden
                               ? "Archived (Click to Unarchive)"
@@ -1340,7 +1339,7 @@ export function TagManagement() {
                         {/* Toggle Visibility on App Detail Page */}
                         <button
                           onClick={() => handleToggleStoryDetail(tag._id)}
-                          className="text-[#545454] hover:text-[#525252] disabled:opacity-50 p-1 relative"
+                          className="text-soft hover:text-copy disabled:opacity-50 p-1 relative"
                           title={
                             tag.hideInStoryDetail
                               ? "Hidden on app detail page (Click to show)"
@@ -1356,7 +1355,7 @@ export function TagManagement() {
                         {/* Toggle Visibility on App Lists */}
                         <button
                           onClick={() => handleToggleStoryList(tag._id)}
-                          className="text-[#545454] hover:text-[#525252] disabled:opacity-50 p-1 relative"
+                          className="text-soft hover:text-copy disabled:opacity-50 p-1 relative"
                           title={
                             tag.hideInStoryList
                               ? "Hidden on app lists (Click to show)"
@@ -1372,7 +1371,7 @@ export function TagManagement() {
                         {/* Toggle Header Visibility */}
                         <button
                           onClick={() => handleToggleHeader(tag._id)}
-                          className="text-[#545454] hover:text-[#525252] disabled:opacity-50 p-1"
+                          className="text-soft hover:text-copy disabled:opacity-50 p-1"
                           title={
                             tag.showInHeader
                               ? "Visible in header"
@@ -1401,7 +1400,7 @@ export function TagManagement() {
                       // Undelete Button
                       <button
                         onClick={() => handleUndeleteTag(tag._id)}
-                        className="text-xs text-gray-600 hover:text-black font-medium disabled:opacity-50 p-1"
+                        className="text-xs text-copy hover:text-ink font-medium disabled:opacity-50 p-1"
                         disabled={isProcessing}
                       >
                         Undo Delete
@@ -1412,14 +1411,14 @@ export function TagManagement() {
 
                 {/* Color Editor (Collapsible) */}
                 {editColorsTagId === tag._id && !tag.isDeleted && (
-                  <div className="p-3 border-t border-gray-200 bg-gray-50 space-y-2">
-                    <p className="text-xs font-medium text-gray-700 mb-1">
+                  <div className="p-3 border-t border-hairline bg-surface-alt space-y-2">
+                    <p className="text-xs font-medium text-copy mb-1">
                       Edit Colors:
                     </p>
                     <div className="flex items-center gap-3">
                       <label
                         htmlFor={`bg-color-${tag._id}`}
-                        className="text-xs font-medium text-gray-600 w-20 flex-shrink-0"
+                        className="text-xs font-medium text-copy w-20 flex-shrink-0"
                       >
                         BG Color:
                       </label>
@@ -1434,7 +1433,7 @@ export function TagManagement() {
                             e.target.value,
                           )
                         }
-                        className="h-6 w-10 border border-gray-300 rounded cursor-pointer p-0.5 bg-clip-content"
+                        className="h-6 w-10 border border-hairline-strong rounded cursor-pointer p-0.5 bg-clip-content"
                         disabled={isProcessing}
                       />
                       <input
@@ -1448,7 +1447,7 @@ export function TagManagement() {
                             e.target.value || null,
                           )
                         } // Set to null if empty
-                        className="px-2 py-1 text-xs border border-gray-300 rounded w-20"
+                        className="px-2 py-1 text-xs border border-hairline-strong rounded w-20"
                         disabled={isProcessing}
                       />
                       <button
@@ -1459,7 +1458,7 @@ export function TagManagement() {
                             DEFAULT_TAG_BG,
                           )
                         }
-                        className="text-xs text-gray-500 hover:text-black"
+                        className="text-xs text-soft hover:text-ink"
                         disabled={isProcessing}
                       >
                         Clear
@@ -1468,7 +1467,7 @@ export function TagManagement() {
                     <div className="flex items-center gap-3">
                       <label
                         htmlFor={`text-color-${tag._id}`}
-                        className="text-xs font-medium text-gray-600 w-20 flex-shrink-0"
+                        className="text-xs font-medium text-copy w-20 flex-shrink-0"
                       >
                         Text Color:
                       </label>
@@ -1483,7 +1482,7 @@ export function TagManagement() {
                             e.target.value,
                           )
                         }
-                        className="h-6 w-10 border border-gray-300 rounded cursor-pointer p-0.5 bg-clip-content"
+                        className="h-6 w-10 border border-hairline-strong rounded cursor-pointer p-0.5 bg-clip-content"
                         disabled={isProcessing}
                       />
                       <input
@@ -1497,7 +1496,7 @@ export function TagManagement() {
                             e.target.value || null,
                           )
                         } // Set to null if empty
-                        className="px-2 py-1 text-xs border border-gray-300 rounded w-20"
+                        className="px-2 py-1 text-xs border border-hairline-strong rounded w-20"
                         disabled={isProcessing}
                       />
                       <button
@@ -1508,7 +1507,7 @@ export function TagManagement() {
                             DEFAULT_TAG_TEXT,
                           )
                         }
-                        className="text-xs text-gray-500 hover:text-black"
+                        className="text-xs text-soft hover:text-ink"
                         disabled={isProcessing}
                       >
                         Clear
@@ -1517,7 +1516,7 @@ export function TagManagement() {
                     <div className="flex items-center gap-3">
                       <label
                         htmlFor={`border-color-${tag._id}`}
-                        className="text-xs font-medium text-gray-600 w-20 flex-shrink-0"
+                        className="text-xs font-medium text-copy w-20 flex-shrink-0"
                       >
                         Border Color:
                       </label>
@@ -1532,7 +1531,7 @@ export function TagManagement() {
                             e.target.value,
                           )
                         }
-                        className="h-6 w-10 border border-gray-300 rounded cursor-pointer p-0.5 bg-clip-content"
+                        className="h-6 w-10 border border-hairline-strong rounded cursor-pointer p-0.5 bg-clip-content"
                         disabled={isProcessing}
                       />
                       <input
@@ -1546,7 +1545,7 @@ export function TagManagement() {
                             e.target.value || null,
                           )
                         } // Set to null if empty
-                        className="px-2 py-1 text-xs border border-gray-300 rounded w-20"
+                        className="px-2 py-1 text-xs border border-hairline-strong rounded w-20"
                         disabled={isProcessing}
                       />
                       <button
@@ -1557,7 +1556,7 @@ export function TagManagement() {
                             DEFAULT_TAG_BORDER,
                           )
                         }
-                        className="text-xs text-gray-500 hover:text-black"
+                        className="text-xs text-soft hover:text-ink"
                         disabled={isProcessing}
                       >
                         Clear
@@ -1568,15 +1567,15 @@ export function TagManagement() {
 
                 {/* Emoji/Icon Editor (Collapsible) */}
                 {editIconEmojiTagId === tag._id && !tag.isDeleted && (
-                  <div className="p-3 border-t border-gray-200 bg-gray-50 space-y-3">
-                    <p className="text-xs font-medium text-gray-700 mb-1">
+                  <div className="p-3 border-t border-hairline bg-surface-alt space-y-3">
+                    <p className="text-xs font-medium text-copy mb-1">
                       Edit Emoji/Icon:
                     </p>
                     {/* Emoji Input */}
                     <div className="flex items-center gap-3">
                       <label
                         htmlFor={`emoji-${tag._id}`}
-                        className="text-xs font-medium text-gray-600 w-20 flex-shrink-0"
+                        className="text-xs font-medium text-copy w-20 flex-shrink-0"
                       >
                         Emoji:
                       </label>
@@ -1597,13 +1596,13 @@ export function TagManagement() {
                           }
                         }}
                         placeholder="e.g. ✨"
-                        className="px-2 py-1 text-xs border border-gray-300 rounded w-20"
+                        className="px-2 py-1 text-xs border border-hairline-strong rounded w-20"
                         maxLength={5} // Keep emoji input short
                         disabled={isProcessing}
                       />
                       <button
                         onClick={() => handleClearEmoji(tag._id)}
-                        className="text-xs text-gray-500 hover:text-black"
+                        className="text-xs text-soft hover:text-ink"
                         disabled={isProcessing || !tag.emoji}
                       >
                         Clear Emoji
@@ -1614,7 +1613,7 @@ export function TagManagement() {
                     <div className="flex items-center gap-3">
                       <label
                         htmlFor={`icon-file-${tag._id}`}
-                        className="text-xs font-medium text-gray-600 w-20 flex-shrink-0"
+                        className="text-xs font-medium text-copy w-20 flex-shrink-0"
                       >
                         Icon (PNG):
                       </label>
@@ -1623,13 +1622,13 @@ export function TagManagement() {
                         id={`icon-file-${tag._id}`}
                         accept="image/png"
                         onChange={(e) => handleFileChange(tag._id, e)}
-                        className="text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+                        className="text-xs file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-surface-alt file:text-copy hover:file:bg-surface-hover"
                         ref={fileInputRef} // Use ref if direct click needed
                         disabled={isProcessing}
                       />
                       <button
                         onClick={() => handleClearIcon(tag._id)}
-                        className="text-xs text-gray-500 hover:text-black"
+                        className="text-xs text-soft hover:text-ink"
                         disabled={
                           isProcessing || (!tag.iconFile && !tag.iconUrl)
                         }
@@ -1638,12 +1637,12 @@ export function TagManagement() {
                       </button>
                     </div>
                     {tag.iconFile && (
-                      <div className="pl-24 text-xs text-gray-500">
+                      <div className="pl-24 text-xs text-soft">
                         Selected: {tag.iconFile.name}
                       </div>
                     )}
                     {tag.iconUrl && !tag.iconFile && (
-                      <div className="pl-24 text-xs text-gray-500">
+                      <div className="pl-24 text-xs text-soft">
                         Current:{" "}
                         <a
                           href={tag.iconUrl}
@@ -1655,7 +1654,7 @@ export function TagManagement() {
                         </a>
                       </div>
                     )}
-                    <p className="text-xs text-gray-500 pl-24">
+                    <p className="text-xs text-soft pl-24">
                       Set emoji OR upload icon.
                     </p>
                   </div>
@@ -1666,7 +1665,7 @@ export function TagManagement() {
 
         {/* Empty State */}
         {allTagsAdmin !== undefined && totalFiltered === 0 && (
-          <div className="text-center text-sm text-gray-500 py-6">
+          <div className="text-center text-sm text-soft py-6">
             {searchQuery
               ? `No tags match "${searchQuery}".`
               : "No tags yet. Add one above."}
@@ -1677,7 +1676,7 @@ export function TagManagement() {
         {totalPages > 1 && <div className="mt-6">{renderPagination()}</div>}
 
         {/* Legend/Help Text */}
-        <div className="mt-6 text-xs text-[#545454]">
+        <div className="mt-6 text-xs text-soft">
           <p>
             Manage tags for submitted apps. Changes require saving. Admin tags
             appear first, then user tags.
@@ -1747,14 +1746,14 @@ export function TagManagement() {
         <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-40">
           <button
             onClick={scrollToTop}
-            className="p-3 bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
+            className="p-3 bg-cta text-on-cta rounded-full hover:bg-cta-hover transition-colors"
             title="Scroll to top"
           >
             <ArrowUp className="w-5 h-5" />
           </button>
           <button
             onClick={scrollToBottom}
-            className="p-3 bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
+            className="p-3 bg-cta text-on-cta rounded-full hover:bg-cta-hover transition-colors"
             title="Scroll to bottom"
           >
             <ArrowDown className="w-5 h-5" />

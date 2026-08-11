@@ -14,6 +14,7 @@ import {
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Id, Doc } from "../../../convex/_generated/dataModel";
+import { SimpleSelect } from "../ui/SimpleSelect";
 
 // Interface for editable form field
 interface EditableFormField extends Doc<"storyFormFields"> {
@@ -224,7 +225,7 @@ export function FormFieldManagement() {
   if (authIsLoading) {
     return (
       <div className="space-y-6">
-        <div className="bg-white rounded-lg p-6 border border-gray-200 text-center">
+        <div className="bg-surface rounded-lg p-6 border border-hairline text-center">
           Loading authentication...
         </div>
       </div>
@@ -233,10 +234,10 @@ export function FormFieldManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-[#F4F2EE] rounded-lg p-6 border border-gray-200">
+      <div className="bg-canvas rounded-lg p-6 border border-hairline">
         {/* Header and Save Button */}
         <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
-          <h2 className="text-xl font-medium text-[#525252]">
+          <h2 className="text-xl font-medium text-copy">
             Manage Form Fields
           </h2>
           <div className="flex gap-2">
@@ -244,7 +245,7 @@ export function FormFieldManagement() {
               <button
                 onClick={handleSave}
                 disabled={isProcessing}
-                className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 disabled:opacity-50 text-sm"
+                className="px-4 py-2 bg-surface-alt text-copy rounded-md hover:bg-surface-hover transition-colors flex items-center gap-2 disabled:opacity-50 text-sm"
               >
                 <Save className="w-4 h-4" />
                 {isProcessing ? "Saving..." : "Save Changes"}
@@ -252,7 +253,7 @@ export function FormFieldManagement() {
             )}
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors flex items-center gap-2 text-sm"
+              className="px-4 py-2 bg-cta text-on-cta rounded-md hover:bg-cta-hover transition-colors flex items-center gap-2 text-sm"
             >
               <Plus className="w-4 h-4" />
               Add Field
@@ -308,14 +309,14 @@ export function FormFieldManagement() {
 
         {/* Add Field Form */}
         {showAddForm && (
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <h3 className="text-lg font-medium text-[#525252] mb-4">
+          <div className="mb-6 p-4 bg-surface-alt rounded-lg border border-hairline">
+            <h3 className="text-lg font-medium text-copy mb-4">
               Add New Form Field
             </h3>
             <form onSubmit={handleAddField} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#525252] mb-1">
+                  <label className="block text-sm font-medium text-copy mb-1">
                     Key (unique identifier) *
                   </label>
                   <input
@@ -328,12 +329,12 @@ export function FormFieldManagement() {
                       }))
                     }
                     placeholder="e.g., customUrl"
-                    className="w-full px-3 py-2 border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] text-sm"
+                    className="w-full px-3 py-2 border border-hairline rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink text-sm"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[#525252] mb-1">
+                  <label className="block text-sm font-medium text-copy mb-1">
                     Story Property Name *
                   </label>
                   <input
@@ -346,13 +347,13 @@ export function FormFieldManagement() {
                       }))
                     }
                     placeholder="e.g., customUrl"
-                    className="w-full px-3 py-2 border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] text-sm"
+                    className="w-full px-3 py-2 border border-hairline rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink text-sm"
                     required
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#525252] mb-1">
+                <label className="block text-sm font-medium text-copy mb-1">
                   Label *
                 </label>
                 <input
@@ -365,12 +366,12 @@ export function FormFieldManagement() {
                     }))
                   }
                   placeholder="e.g., Custom URL (Optional)"
-                  className="w-full px-3 py-2 border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] text-sm"
+                  className="w-full px-3 py-2 border border-hairline rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink text-sm"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#525252] mb-1">
+                <label className="block text-sm font-medium text-copy mb-1">
                   Placeholder *
                 </label>
                 <input
@@ -383,29 +384,31 @@ export function FormFieldManagement() {
                     }))
                   }
                   placeholder="e.g., https://example.com/..."
-                  className="w-full px-3 py-2 border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] text-sm"
+                  className="w-full px-3 py-2 border border-hairline rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink text-sm"
                   required
                 />
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#525252] mb-1">
+                  <label className="block text-sm font-medium text-copy mb-1">
                     Field Type
                   </label>
-                  <select
+                  <SimpleSelect
                     value={newFieldData.fieldType}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setNewFieldData((prev) => ({
                         ...prev,
-                        fieldType: e.target.value as any,
+                        fieldType: value as any,
                       }))
                     }
-                    className="w-full px-3 py-2 border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] text-sm"
-                  >
-                    <option value="url">URL</option>
-                    <option value="text">Text</option>
-                    <option value="email">Email</option>
-                  </select>
+                    aria-label="Field type"
+                    className="w-full h-auto py-2 text-sm"
+                    options={[
+                      { value: "url", label: "URL" },
+                      { value: "text", label: "Text" },
+                      { value: "email", label: "Email" },
+                    ]}
+                  />
                 </div>
                 <div className="flex items-center gap-4">
                   <label className="flex items-center gap-2">
@@ -420,7 +423,7 @@ export function FormFieldManagement() {
                       }
                       className="rounded"
                     />
-                    <span className="text-sm text-[#525252]">Enabled</span>
+                    <span className="text-sm text-copy">Enabled</span>
                   </label>
                   <label className="flex items-center gap-2">
                     <input
@@ -434,12 +437,12 @@ export function FormFieldManagement() {
                       }
                       className="rounded"
                     />
-                    <span className="text-sm text-[#525252]">Required</span>
+                    <span className="text-sm text-copy">Required</span>
                   </label>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#525252] mb-1">
+                <label className="block text-sm font-medium text-copy mb-1">
                   Description (Optional)
                 </label>
                 <input
@@ -452,21 +455,21 @@ export function FormFieldManagement() {
                     }))
                   }
                   placeholder="Brief description of the field"
-                  className="w-full px-3 py-2 border border-[#D8E1EC] rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] text-sm"
+                  className="w-full px-3 py-2 border border-hairline rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink text-sm"
                 />
               </div>
               <div className="flex gap-2">
                 <button
                   type="submit"
                   disabled={isProcessing}
-                  className="px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors disabled:opacity-50 text-sm"
+                  className="px-4 py-2 bg-cta text-on-cta rounded-md hover:bg-cta-hover transition-colors disabled:opacity-50 text-sm"
                 >
                   {isProcessing ? "Adding..." : "Add Field"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAddForm(false)}
-                  className="px-4 py-2 text-[#545454] hover:text-[#525252] rounded-md text-sm"
+                  className="px-4 py-2 text-soft hover:text-copy rounded-md text-sm"
                 >
                   Cancel
                 </button>
@@ -490,7 +493,7 @@ export function FormFieldManagement() {
                     ? "border-green-300 bg-green-50"
                     : field.isModified
                       ? "border-blue-300 bg-blue-50"
-                      : "border-gray-200 bg-white"
+                      : "border-hairline bg-surface"
               }`}
             >
               <div
@@ -502,7 +505,7 @@ export function FormFieldManagement() {
                     <button
                       onClick={() => handleMoveField(field._id, "up")}
                       disabled={index === 0 || isProcessing}
-                      className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-1 text-soft hover:text-copy disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Move Up"
                     >
                       <ArrowUp className="w-4 h-4" />
@@ -514,7 +517,7 @@ export function FormFieldManagement() {
                           editableFields.filter((f) => !f.isDeleted).length -
                             1 || isProcessing
                       }
-                      className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-1 text-soft hover:text-copy disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Move Down"
                     >
                       <ArrowDown className="w-4 h-4" />
@@ -529,7 +532,7 @@ export function FormFieldManagement() {
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-xs font-medium text-[#525252] mb-1">
+                          <label className="block text-xs font-medium text-copy mb-1">
                             Label *
                           </label>
                           <input
@@ -542,12 +545,12 @@ export function FormFieldManagement() {
                                 e.target.value,
                               )
                             }
-                            className="w-full px-2 py-1 border border-[#D8E1EC] rounded text-xs"
+                            className="w-full px-2 py-1 border border-hairline rounded text-xs"
                             placeholder="Field label"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-[#525252] mb-1">
+                          <label className="block text-xs font-medium text-copy mb-1">
                             Key *
                           </label>
                           <input
@@ -560,14 +563,14 @@ export function FormFieldManagement() {
                                 e.target.value,
                               )
                             }
-                            className="w-full px-2 py-1 border border-[#D8E1EC] rounded text-xs"
+                            className="w-full px-2 py-1 border border-hairline rounded text-xs"
                             placeholder="Unique key"
                           />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-xs font-medium text-[#525252] mb-1">
+                          <label className="block text-xs font-medium text-copy mb-1">
                             Placeholder *
                           </label>
                           <input
@@ -580,12 +583,12 @@ export function FormFieldManagement() {
                                 e.target.value,
                               )
                             }
-                            className="w-full px-2 py-1 border border-[#D8E1EC] rounded text-xs"
+                            className="w-full px-2 py-1 border border-hairline rounded text-xs"
                             placeholder="Placeholder text"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-[#525252] mb-1">
+                          <label className="block text-xs font-medium text-copy mb-1">
                             Property Name *
                           </label>
                           <input
@@ -598,31 +601,29 @@ export function FormFieldManagement() {
                                 e.target.value,
                               )
                             }
-                            className="w-full px-2 py-1 border border-[#D8E1EC] rounded text-xs"
+                            className="w-full px-2 py-1 border border-hairline rounded text-xs"
                             placeholder="Story property"
                           />
                         </div>
                       </div>
                       <div className="grid grid-cols-3 gap-2">
                         <div>
-                          <label className="block text-xs font-medium text-[#525252] mb-1">
+                          <label className="block text-xs font-medium text-copy mb-1">
                             Type
                           </label>
-                          <select
+                          <SimpleSelect
                             value={field.fieldType}
-                            onChange={(e) =>
-                              handleFieldChange(
-                                field._id,
-                                "fieldType",
-                                e.target.value,
-                              )
+                            onChange={(value) =>
+                              handleFieldChange(field._id, "fieldType", value)
                             }
-                            className="w-full px-2 py-1 border border-[#D8E1EC] rounded text-xs"
-                          >
-                            <option value="url">URL</option>
-                            <option value="text">Text</option>
-                            <option value="email">Email</option>
-                          </select>
+                            aria-label="Field type"
+                            className="w-full h-auto px-2 py-1 text-xs gap-1"
+                            options={[
+                              { value: "url", label: "URL" },
+                              { value: "text", label: "Text" },
+                              { value: "email", label: "Email" },
+                            ]}
+                          />
                         </div>
                         <div className="flex items-center gap-2 mt-4">
                           <label className="flex items-center gap-1">
@@ -638,7 +639,7 @@ export function FormFieldManagement() {
                               }
                               className="rounded"
                             />
-                            <span className="text-xs text-[#525252]">
+                            <span className="text-xs text-copy">
                               Enabled
                             </span>
                           </label>
@@ -655,14 +656,14 @@ export function FormFieldManagement() {
                               }
                               className="rounded"
                             />
-                            <span className="text-xs text-[#525252]">
+                            <span className="text-xs text-copy">
                               Required
                             </span>
                           </label>
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-[#525252] mb-1">
+                        <label className="block text-xs font-medium text-copy mb-1">
                           Description (Optional)
                         </label>
                         <input
@@ -675,7 +676,7 @@ export function FormFieldManagement() {
                               e.target.value,
                             )
                           }
-                          className="w-full px-2 py-1 border border-[#D8E1EC] rounded text-xs"
+                          className="w-full px-2 py-1 border border-hairline rounded text-xs"
                           placeholder="Brief description"
                         />
                       </div>
@@ -687,25 +688,25 @@ export function FormFieldManagement() {
                       onClick={() => setEditingFieldId(field._id)}
                     >
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-[#292929]">
+                        <span className="font-medium text-ink">
                           {field.label}
                         </span>
-                        <Edit3 className="w-3 h-3 text-gray-400" />
+                        <Edit3 className="w-3 h-3 text-faint" />
                         {field.isRequired && (
                           <span className="text-xs text-red-600 bg-red-100 px-1 rounded">
                             Required
                           </span>
                         )}
                         {!field.isEnabled && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-soft">
                             (Disabled)
                           </span>
                         )}
                       </div>
-                      <div className="text-sm text-[#545454] space-y-1">
+                      <div className="text-sm text-soft space-y-1">
                         <div>
                           Key:{" "}
-                          <code className="bg-gray-100 px-1 rounded">
+                          <code className="bg-surface-alt px-1 rounded">
                             {field.key}
                           </code>
                         </div>
@@ -713,7 +714,7 @@ export function FormFieldManagement() {
                         <div>Type: {field.fieldType}</div>
                         <div>
                           Property:{" "}
-                          <code className="bg-gray-100 px-1 rounded">
+                          <code className="bg-surface-alt px-1 rounded">
                             {field.storyPropertyName}
                           </code>
                         </div>
@@ -779,7 +780,7 @@ export function FormFieldManagement() {
                         <>
                           <button
                             onClick={() => handleToggleEnabled(field._id)}
-                            className="text-[#545454] hover:text-[#525252] disabled:opacity-50 p-1"
+                            className="text-soft hover:text-copy disabled:opacity-50 p-1"
                             title={
                               field.isEnabled ? "Disable field" : "Enable field"
                             }
@@ -803,7 +804,7 @@ export function FormFieldManagement() {
                       ) : (
                         <button
                           onClick={() => handleUndeleteField(field._id)}
-                          className="text-xs text-gray-600 hover:text-black font-medium disabled:opacity-50 p-1"
+                          className="text-xs text-copy hover:text-ink font-medium disabled:opacity-50 p-1"
                           disabled={isProcessing}
                         >
                           Undo Delete
@@ -818,7 +819,7 @@ export function FormFieldManagement() {
         </div>
 
         {/* Legend */}
-        <div className="mt-6 text-xs text-[#545454]">
+        <div className="mt-6 text-xs text-soft">
           <p>Manage form fields that appear in the story submission form.</p>
           <p className="mt-1">
             <span className="font-medium">Note:</span> The core fields (Title,

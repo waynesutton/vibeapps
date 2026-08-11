@@ -77,13 +77,13 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
           disabled={!canSubmit}
         />
         {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
-        <div className="mt-2 text-sm text-[#545454]">
+        <div className="mt-2 text-sm text-soft">
           {/* Comments are held for moderation before appearing on the site. */}
         </div>
         <button
           type="submit"
           disabled={!canSubmit || !content.trim() || !isContentValid}
-          className="mt-2 px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-400"
+          className="mt-2 px-4 py-2 bg-cta text-on-cta rounded-md hover:bg-cta-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-faint"
           title={
             !canSubmit
               ? "Sign in to comment"
@@ -97,23 +97,23 @@ export function CommentForm({ onSubmit, parentId }: CommentFormProps) {
       </form>
 
       {!isClerkLoaded && (
-        <p className="mt-2 text-sm text-gray-500">Loading user status...</p>
+        <p className="mt-2 text-sm text-soft">Loading user status...</p>
       )}
 
       {isClerkLoaded && !isSignedIn && (
-        <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-md text-sm">
-          <p className="text-gray-700">
+        <div className="mt-4 p-3 bg-surface-alt border border-hairline rounded-md text-sm">
+          <p className="text-copy">
             Please{" "}
             <button
               onClick={handleSignIn}
-              className="text-black hover:underline font-medium focus:outline-none"
+              className="text-ink hover:underline font-medium focus:outline-none"
             >
               sign in
             </button>{" "}
             or{" "}
             <button
               onClick={handleSignIn}
-              className="text-black hover:underline font-medium focus:outline-none"
+              className="text-ink hover:underline font-medium focus:outline-none"
             >
               sign up
             </button>{" "}

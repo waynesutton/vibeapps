@@ -83,7 +83,7 @@ function VerdictBadge({
 }) {
   if (status === "pending" || status === "running") {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-100 border border-gray-200 rounded-full px-2 py-0.5">
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-soft bg-surface-alt border border-hairline rounded-full px-2 py-0.5">
         <Loader2 className="w-3 h-3 animate-spin" />
         {status === "pending" ? "Queued" : "Scanning"}
       </span>
@@ -152,7 +152,7 @@ function CountPill({
             : `Show only ${label} results`
       }
       onClick={() => onSelect(isActive && !isAllPill ? "all" : filter)}
-      className={`px-2 py-1 border rounded-full transition-shadow cursor-pointer hover:shadow-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-[#292929] ${colorClass} ${
+      className={`px-2 py-1 border rounded-full transition-shadow cursor-pointer hover:shadow-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-ink ${colorClass} ${
         isActive ? "ring-1 ring-current shadow-sm font-medium" : ""
       }`}
     >
@@ -453,8 +453,8 @@ export function SpamCheck() {
       {/* Header and counts */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-medium text-[#292929]">AI Spam Check</h2>
-          <p className="text-sm text-[#545454] mt-1">
+          <h2 className="text-lg font-medium text-ink">AI Spam Check</h2>
+          <p className="text-sm text-soft mt-1">
             New submissions are scanned automatically. Scans check the live
             URL, scrape page content with Firecrawl, verify the GitHub repo,
             and ask the AI for a verdict.
@@ -480,10 +480,10 @@ export function SpamCheck() {
 
       {/* Step 1: run a scan (pick an optional date range, then scan) */}
       {canModerate && (
-        <div className="border border-gray-200 rounded-lg bg-white p-4 space-y-3">
+        <div className="border border-hairline rounded-lg bg-surface p-4 space-y-3">
           <div>
-            <h3 className="text-sm font-medium text-[#292929]">Run a scan</h3>
-            <p className="text-xs text-[#545454] mt-0.5">
+            <h3 className="text-sm font-medium text-ink">Run a scan</h3>
+            <p className="text-xs text-soft mt-0.5">
               New submissions are scanned on their own. Use this to scan older
               submissions: pick a date range (or a month preset), or leave it
               empty to scan the 100 most recent.
@@ -515,7 +515,7 @@ export function SpamCheck() {
               {scanRange?.from ? "Re-scan this range" : "Re-scan recent"}
             </Button>
           </div>
-          <p className="text-xs text-[#787672]">
+          <p className="text-xs text-faint">
             Scan checks submissions that have no verdict yet. Re-scan also
             re-checks ones already scanned. Up to 100 per run.
           </p>
@@ -524,13 +524,13 @@ export function SpamCheck() {
 
       {/* AI system prompt editor */}
       {promptDraft !== null && promptData && (
-        <div className="border border-gray-200 rounded-lg p-4 bg-white space-y-3">
+        <div className="border border-hairline rounded-lg p-4 bg-surface space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h3 className="text-sm font-medium text-[#292929]">
+              <h3 className="text-sm font-medium text-ink">
                 AI spam review prompt
               </h3>
-              <p className="text-xs text-[#545454] mt-0.5">
+              <p className="text-xs text-soft mt-0.5">
                 This system prompt drives the spam / suspicious / clean
                 verdict. Edits apply to future scans only.{" "}
                 {promptData.isCustom
@@ -544,7 +544,7 @@ export function SpamCheck() {
             onChange={(e) => setPromptDraft(e.target.value)}
             rows={14}
             spellCheck={false}
-            className="w-full text-xs font-mono text-[#292929] border border-gray-200 rounded-md p-3 bg-[#FAFAF9] focus:outline-none focus:ring-1 focus:ring-[#292929] resize-y"
+            className="w-full text-xs font-mono text-ink border border-hairline rounded-md p-3 bg-surface-alt focus:outline-none focus:ring-1 focus:ring-ink resize-y"
             aria-label="AI spam review system prompt"
           />
           <div className="flex flex-wrap items-center gap-2">
@@ -577,8 +577,8 @@ export function SpamCheck() {
 
       {/* Step 2: scan results with view-only filters */}
       <div className="pt-1">
-        <h3 className="text-sm font-medium text-[#292929]">Scan results</h3>
-        <p className="text-xs text-[#545454] mt-0.5">
+        <h3 className="text-sm font-medium text-ink">Scan results</h3>
+        <p className="text-xs text-soft mt-0.5">
           Every submission that has been scanned shows up here. The filters
           below only change what you see; they do not start a scan.
         </p>
@@ -593,7 +593,7 @@ export function SpamCheck() {
             filter="all"
             activeFilter={verdictFilter}
             onSelect={setVerdictFilter}
-            colorClass="bg-gray-100 border-gray-200 text-gray-600"
+            colorClass="bg-surface-alt border-hairline text-copy"
           />
           <CountPill
             label="spam"
@@ -625,7 +625,7 @@ export function SpamCheck() {
             filter="marked"
             activeFilter={verdictFilter}
             onSelect={setVerdictFilter}
-            colorClass="bg-gray-100 border-gray-200 text-gray-600"
+            colorClass="bg-surface-alt border-hairline text-copy"
           />
           {counts.pending + counts.running > 0 && (
             <span className="px-2 py-1 bg-blue-50 border border-blue-200 rounded-full text-blue-700">
@@ -683,14 +683,14 @@ export function SpamCheck() {
           placeholder="Filter by submission date"
         />
         {results.length > 0 && (
-          <label className="flex items-center gap-2 text-sm text-[#545454] ml-1 cursor-pointer">
+          <label className="flex items-center gap-2 text-sm text-soft ml-1 cursor-pointer">
             <input
               type="checkbox"
               checked={
                 selectedIds.size === results.length && results.length > 0
               }
               onChange={toggleSelectAll}
-              className="rounded border-gray-300"
+              className="rounded border-hairline-strong"
             />
             Select all ({results.length})
           </label>
@@ -699,15 +699,15 @@ export function SpamCheck() {
 
       {/* Bulk action bar */}
       {selectedIds.size > 0 && canModerate && (
-        <div className="flex flex-wrap items-center gap-2 p-3 bg-[#F4F2EE] border border-gray-200 rounded-lg">
-          <span className="text-sm font-medium text-[#292929]">
+        <div className="flex flex-wrap items-center gap-2 p-3 bg-canvas border border-hairline rounded-lg">
+          <span className="text-sm font-medium text-ink">
             {selectedIds.size} selected
           </span>
           <Input
             value={bulkReason}
             onChange={(e) => setBulkReason(e.target.value)}
             placeholder="Optional reason sent to submitters (default: AI reasons)"
-            className="h-8 text-sm flex-1 min-w-[220px] max-w-md bg-white"
+            className="h-8 text-sm flex-1 min-w-[220px] max-w-md bg-surface"
           />
           <Button
             variant="destructive"
@@ -740,11 +740,11 @@ export function SpamCheck() {
 
       {/* Results list */}
       {data === undefined ? (
-        <div className="text-sm text-[#545454] py-8 text-center">
+        <div className="text-sm text-soft py-8 text-center">
           Loading scan results...
         </div>
       ) : results.length === 0 ? (
-        <div className="text-sm text-[#545454] py-8 text-center border border-dashed border-gray-200 rounded-lg">
+        <div className="text-sm text-soft py-8 text-center border border-dashed border-hairline rounded-lg">
           {filterRange?.from || verdictFilter !== "all"
             ? "No scan results match these filters. Clear the filters, or run a scan above to check submissions from this period."
             : 'No scan results yet. New submissions are scanned automatically, or use "Run a scan" above to check existing ones.'}
@@ -756,12 +756,12 @@ export function SpamCheck() {
             return (
               <div
                 key={result._id}
-                className={`border rounded-lg bg-white ${
+                className={`border rounded-lg bg-surface ${
                   result.isSpam
                     ? "border-red-200"
                     : result.verdict === "spam"
                       ? "border-red-100"
-                      : "border-gray-200"
+                      : "border-hairline"
                 }`}
               >
                 <div className="flex items-start gap-3 p-3">
@@ -769,13 +769,13 @@ export function SpamCheck() {
                     type="checkbox"
                     checked={selectedIds.has(result.storyId)}
                     onChange={() => toggleSelect(result.storyId)}
-                    className="mt-1 rounded border-gray-300"
+                    className="mt-1 rounded border-hairline-strong"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <Link
                         to={`/s/${result.storySlug}`}
-                        className="text-sm font-medium text-[#292929] hover:underline truncate"
+                        className="text-sm font-medium text-ink hover:underline truncate"
                       >
                         {result.storyTitle}
                       </Link>
@@ -790,15 +790,15 @@ export function SpamCheck() {
                         </span>
                       )}
                       {result.isHidden && !result.isSpam && (
-                        <span className="text-xs font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-full px-2 py-0.5">
+                        <span className="text-xs font-medium text-copy bg-surface-alt border border-hairline rounded-full px-2 py-0.5">
                           Hidden
                         </span>
                       )}
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-faint">
                         {result.triggeredBy === "auto" ? "auto scan" : "manual scan"}
                       </span>
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-[#545454]">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-soft">
                       <span>
                         by{" "}
                         {result.authorUsername ? (
@@ -855,7 +855,7 @@ export function SpamCheck() {
                         )}
                     </div>
                     {result.reasons && result.reasons.length > 0 && (
-                      <div className="mt-1 text-xs text-[#545454]">
+                      <div className="mt-1 text-xs text-soft">
                         {result.reasons.join(" · ")}
                       </div>
                     )}
@@ -925,10 +925,10 @@ export function SpamCheck() {
 
                 {/* Expanded details */}
                 {isExpanded && (
-                  <div className="border-t border-gray-100 px-4 py-3 space-y-2 text-xs text-[#545454] bg-gray-50 rounded-b-lg">
+                  <div className="border-t border-hairline px-4 py-3 space-y-2 text-xs text-soft bg-surface-alt rounded-b-lg">
                     {result.llmReasoning && (
                       <div>
-                        <span className="font-medium text-[#292929]">
+                        <span className="font-medium text-ink">
                           AI reasoning:
                         </span>{" "}
                         {result.llmReasoning}
@@ -936,7 +936,7 @@ export function SpamCheck() {
                     )}
                     {result.spamReason && (
                       <div>
-                        <span className="font-medium text-[#292929]">
+                        <span className="font-medium text-ink">
                           Reason sent to submitter:
                         </span>{" "}
                         {result.spamReason}
@@ -945,7 +945,7 @@ export function SpamCheck() {
                     {result.signals && (
                       <div className="space-y-1">
                         <div>
-                          <span className="font-medium text-[#292929]">
+                          <span className="font-medium text-ink">
                             URL:
                           </span>{" "}
                           {result.signals.urlLive ? "live" : "not reachable"} (
@@ -956,7 +956,7 @@ export function SpamCheck() {
                         </div>
                         {result.signals.repoChecked && (
                           <div>
-                            <span className="font-medium text-[#292929]">
+                            <span className="font-medium text-ink">
                               Repo:
                             </span>{" "}
                             {result.signals.repoNote}
@@ -967,7 +967,7 @@ export function SpamCheck() {
                         )}
                         {result.signals.linksChecked.length > 0 && (
                           <div>
-                            <span className="font-medium text-[#292929]">
+                            <span className="font-medium text-ink">
                               Other links:
                             </span>{" "}
                             {result.signals.linksChecked
@@ -979,7 +979,7 @@ export function SpamCheck() {
                         )}
                       </div>
                     )}
-                    <div className="text-gray-400">
+                    <div className="text-faint">
                       {result.provider && result.model
                         ? `Verdict by ${result.provider} (${result.model})`
                         : ""}

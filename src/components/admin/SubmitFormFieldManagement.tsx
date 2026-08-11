@@ -50,10 +50,10 @@ function SortableFieldItem({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-4 p-3 bg-white border-b"
+      className="flex items-center gap-4 p-3 bg-surface border-b"
     >
       <div {...listeners} {...attributes} className="cursor-grab p-2">
-        <GripVertical className="w-5 h-5 text-gray-400" />
+        <GripVertical className="w-5 h-5 text-faint" />
       </div>
       <Checkbox
         id={field._id}
@@ -61,11 +61,11 @@ function SortableFieldItem({
         onCheckedChange={() => onToggle(field._id)}
       />
       <div className="flex-1">
-        <label htmlFor={field._id} className="font-medium text-gray-800">
+        <label htmlFor={field._id} className="font-medium text-ink">
           {field.label}
         </label>
-        <p className="text-sm text-gray-500">{field.description}</p>
-        <code className="text-xs text-gray-400">{field.key}</code>
+        <p className="text-sm text-soft">{field.description}</p>
+        <code className="text-xs text-faint">{field.key}</code>
       </div>
     </div>
   );
@@ -192,12 +192,12 @@ export function SubmitFormFieldManagement({
           items={orderedFields.map((f) => f._id)}
           strategy={verticalListSortingStrategy}
         >
-          <div className="bg-[#F4F2EE] rounded-lg border border-gray-200">
-            <div className="p-3 border-b border-gray-200 bg-gray-100 rounded-t-lg">
-              <h4 className="text-sm font-medium text-gray-700">
+          <div className="bg-canvas rounded-lg border border-hairline">
+            <div className="p-3 border-b border-hairline bg-surface-alt rounded-t-lg">
+              <h4 className="text-sm font-medium text-copy">
                 Additional Fields
               </h4>
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-copy">
                 Drag to reorder, toggle to enable/disable
               </p>
             </div>

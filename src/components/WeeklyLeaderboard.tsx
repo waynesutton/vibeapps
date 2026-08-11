@@ -11,7 +11,7 @@ export function WeeklyLeaderboard() {
 
   if (topStories === undefined) {
     return (
-      <div className="p-4 bg-white rounded-lg border border-[#D8E1EC]">
+      <div className="p-4 bg-surface rounded-lg border border-hairline">
         Loading leaderboard...
       </div>
     );
@@ -19,11 +19,11 @@ export function WeeklyLeaderboard() {
 
   if (!topStories || topStories.length === 0) {
     return (
-      <div className="p-4 boohide bg-white rounded-lg border border-[#D8E1EC]">
-        <h3 className="text-md font-normal text-[#292929] mb-3">
+      <div className="p-4 boohide bg-surface rounded-lg border border-hairline">
+        <h3 className="text-md font-normal text-ink mb-3">
           Most Vibes This Week
         </h3>
-        <p className="text-sm text-[#545454]">
+        <p className="text-sm text-soft">
           No apps trending this week yet.
         </p>
       </div>
@@ -31,25 +31,25 @@ export function WeeklyLeaderboard() {
   }
 
   return (
-    <div className="p-4 bg-white rounded-lg border border-[#D8E1EC]">
-      <h3 className="text-md font-normal text-[#292929] mb-3">
+    <div className="p-4 bg-surface rounded-lg border border-hairline">
+      <h3 className="text-md font-normal text-ink mb-3">
         Most Vibes This Week
       </h3>
       <ul className="space-y-3">
         {topStories.map((story, index) => (
           <li key={story._id} className="flex items-start gap-3">
-            <span className="text-sm font-medium text-[#787672] pt-0.5">
+            <span className="text-sm font-medium text-faint pt-0.5">
               {index + 1}.
             </span>
             <div className="flex-grow min-w-0">
               <Link
                 to={`/s/${story.slug}`}
-                className="text-sm text-[#292929] hover:text-[#525252] hover:underline font-medium break-words line-clamp-2"
+                className="text-sm text-ink hover:text-copy hover:underline font-medium break-words line-clamp-2"
                 title={story.title}
               >
                 {story.title}
               </Link>
-              <div className="text-xs text-[#787672] flex items-center gap-2 mt-0.5">
+              <div className="text-xs text-faint flex items-center gap-2 mt-0.5">
                 {story.authorUsername ? (
                   <ProfileHoverCard username={story.authorUsername}>
                     <Link

@@ -379,10 +379,10 @@ export default function UserProfilePage() {
     // Removed searchParams and clerkProfilePath logic for selecting sub-sections
     // The UserProfile component with routing="path" will handle sub-paths like /user-settings/security
     return (
-      <div className="max-w-5xl mx-auto p-4 sm:p-6 bg-white rounded-lg shadow min-h-screen">
+      <div className="max-w-5xl mx-auto p-4 sm:p-6 bg-surface rounded-lg border border-hairline min-h-screen">
         <button
           onClick={() => navigate(-1)}
-          className="text-sm text-[#545454] hover:text-[#525252] inline-block mb-6 bg-transparent border-none cursor-pointer p-0"
+          className="text-sm text-soft hover:text-copy inline-block mb-6 bg-transparent border-none cursor-pointer p-0"
         >
           ← Back to previous page
         </button>{" "}
@@ -686,7 +686,7 @@ export default function UserProfilePage() {
     size?: string;
   }) => (
     <div
-      className={`rounded-full bg-gray-300 flex items-center justify-center text-gray-500 text-4xl font-bold border-2 border-gray-400 ${size}`}
+      className={`rounded-full bg-surface-hover flex items-center justify-center text-soft text-4xl font-bold border-2 border-hairline-strong ${size}`}
     >
       {name ? name.charAt(0).toUpperCase() : "U"}
     </div>
@@ -967,7 +967,7 @@ export default function UserProfilePage() {
       <DialogComponents />
       <div className="max-w-4xl mx-auto p-4 sm:p-6 from-slate-50 to-gray-100 min-h-screen">
         <header
-          className="mb-4 p-6 bg-[#ffffff] rounded-lg border border-gray-200"
+          className="mb-4 p-6 bg-surface rounded-lg border border-hairline"
           style={{ fontFamily: "Inter, sans-serif" }}
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-start">
@@ -982,7 +982,7 @@ export default function UserProfilePage() {
                     <img
                       src={newProfileImagePreview}
                       alt="Profile preview"
-                      className="w-full h-full object-cover border-4 border-gray-300 group-hover:opacity-75 w-24 h-24 overflow-hidden rounded-full transition-opacity"
+                      className="w-full h-full object-cover border-4 border-hairline-strong group-hover:opacity-75 w-24 h-24 overflow-hidden rounded-full transition-opacity"
                     />
                   ) : (
                     <ProfileImagePlaceholder
@@ -1005,7 +1005,7 @@ export default function UserProfilePage() {
                 <img
                   src={currentImageUrl}
                   alt={`${loadedProfileUser?.name || "User"}'s profile`}
-                  className="rounded-full h-19 object-cover border-2 border-gray-300"
+                  className="rounded-full h-19 object-cover border-2 border-hairline-strong"
                 />
               ) : (
                 <ProfileImagePlaceholder
@@ -1024,14 +1024,14 @@ export default function UserProfilePage() {
                     type="text"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    className="text-xl font-normal text-[#292929] w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
+                    className="text-xl font-normal text-ink w-full px-2 py-1 border border-hairline-strong rounded-md text-sm focus:outline-none focus:border-ink"
                     placeholder="Display Name"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   />
                   {/* Username Input */}
                   {/* <div className="flex items-center">
                   <span
-                    className="text-lg text-gray-500 mr-1"
+                    className="text-lg text-soft mr-1"
                     style={{ fontFamily: "Inter, sans-serif" }}>
                     @
                   </span>
@@ -1039,7 +1039,7 @@ export default function UserProfilePage() {
                     type="text"
                     value={newUsername}
                     onChange={(e) => setNewUsername(e.target.value.toLowerCase())}
-                    className="text-lg text-gray-500 w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
+                    className="text-lg text-soft w-full px-2 py-1 border border-hairline-strong rounded-md text-sm focus:outline-none focus:border-ink"
                     placeholder="username"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   />
@@ -1048,7 +1048,7 @@ export default function UserProfilePage() {
               ) : (
                 <div className="flex items-baseline mb-1">
                   <h1
-                    className="text-lg font-normal text-[#292929] mr-2"
+                    className="text-lg font-normal text-ink mr-2"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
                     {loadedProfileUser?.name || "Anonymous User"}
@@ -1057,12 +1057,12 @@ export default function UserProfilePage() {
                     )}
                   </h1>
                   <p
-                    className="text-lg text-gray-600"
+                    className="text-lg text-copy"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
                     {/* @{loadedProfileUser?.username || "N/A"}{" "} */}
                     {typeof userNumber === "number" && (
-                      <span className="ml-0 text-xs text-gray-400">
+                      <span className="ml-0 text-xs text-faint">
                         User #{userNumber}
                       </span>
                     )}
@@ -1077,21 +1077,21 @@ export default function UserProfilePage() {
                     value={newBio}
                     onChange={(e) => setNewBio(e.target.value.slice(0, 200))}
                     maxLength={200}
-                    className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
+                    className="w-full px-2 py-1 border border-hairline-strong rounded-md text-sm focus:outline-none focus:border-ink"
                     placeholder="Add a short bio (max 200 chars)"
                     style={{ fontFamily: "Inter, sans-serif" }}
                     rows={3}
                   />
                 ) : loadedProfileUser?.bio ? (
                   <p
-                    className="text-sm text-gray-700 w-full text-left"
+                    className="text-sm text-copy w-full text-left"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
                     {loadedProfileUser.bio}
                   </p>
                 ) : (
                   <p
-                    className="text-sm text-gray-400 italic w-full text-left"
+                    className="text-sm text-faint italic w-full text-left"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
                     No bio yet.
@@ -1107,7 +1107,7 @@ export default function UserProfilePage() {
                       type="url"
                       value={newWebsite}
                       onChange={(e) => setNewWebsite(e.target.value)}
-                      className="flex-grow sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
+                      className="flex-grow sm:w-auto px-2 py-1 border border-hairline-strong rounded-md text-sm focus:outline-none focus:border-ink"
                       placeholder="Website"
                       style={{ fontFamily: "Inter, sans-serif" }}
                     />
@@ -1115,7 +1115,7 @@ export default function UserProfilePage() {
                       type="url"
                       value={newTwitter}
                       onChange={(e) => setNewTwitter(e.target.value)}
-                      className="flex-grow sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
+                      className="flex-grow sm:w-auto px-2 py-1 border border-hairline-strong rounded-md text-sm focus:outline-none focus:border-ink"
                       placeholder="Twitter"
                       style={{ fontFamily: "Inter, sans-serif" }}
                     />
@@ -1123,7 +1123,7 @@ export default function UserProfilePage() {
                       type="url"
                       value={newBluesky}
                       onChange={(e) => setNewBluesky(e.target.value)}
-                      className="flex-grow sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
+                      className="flex-grow sm:w-auto px-2 py-1 border border-hairline-strong rounded-md text-sm focus:outline-none focus:border-ink"
                       placeholder="Bluesky"
                       style={{ fontFamily: "Inter, sans-serif" }}
                     />
@@ -1131,7 +1131,7 @@ export default function UserProfilePage() {
                       type="url"
                       value={newLinkedin}
                       onChange={(e) => setNewLinkedin(e.target.value)}
-                      className="flex-grow  sm:w-auto px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-black"
+                      className="flex-grow  sm:w-auto px-2 py-1 border border-hairline-strong rounded-md text-sm focus:outline-none focus:border-ink"
                       placeholder="LinkedIn"
                       style={{ fontFamily: "Inter, sans-serif" }}
                     />
@@ -1143,7 +1143,7 @@ export default function UserProfilePage() {
                         href={loadedProfileUser.website}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-gray-500 hover:text-[#292929]"
+                        className="text-xs text-soft hover:text-ink"
                         title="Website"
                       >
                         Website
@@ -1154,7 +1154,7 @@ export default function UserProfilePage() {
                         href={loadedProfileUser.twitter}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-gray-500 hover:text-[#292929]"
+                        className="text-xs text-soft hover:text-ink"
                         title="Twitter"
                       >
                         Twitter
@@ -1165,7 +1165,7 @@ export default function UserProfilePage() {
                         href={loadedProfileUser.bluesky}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-gray-500 hover:text-[#292929]"
+                        className="text-xs text-soft hover:text-ink"
                         title="Bluesky"
                       >
                         Bluesky
@@ -1176,7 +1176,7 @@ export default function UserProfilePage() {
                         href={loadedProfileUser.linkedin}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-gray-500 hover:text-[#292929]"
+                        className="text-xs text-soft hover:text-ink"
                         title="LinkedIn"
                       >
                         LinkedIn
@@ -1196,13 +1196,13 @@ export default function UserProfilePage() {
                     className={`px-6 py-2 rounded-md text-sm font-medium flex items-center justify-center transition-colors w-full sm:w-auto
                     ${
                       isFollowedByCurrentUser
-                        ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                        : "bg-[#292929] text-white hover:bg-gray-700"
+                        ? "bg-surface-hover text-copy hover:bg-surface-hover"
+                        : "bg-cta text-on-cta hover:bg-cta-hover"
                     }`}
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
                     {isLoadingFollowAction ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-surface mr-2"></div>
                     ) : isFollowedByCurrentUser ? (
                       <UserMinus className="w-4 h-4 mr-2" />
                     ) : (
@@ -1227,8 +1227,8 @@ export default function UserProfilePage() {
                     }
                     className={`px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center transition-colors ${
                       recipientInboxEnabled === false
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : "bg-[#292929] text-white hover:bg-gray-700"
+                        ? "bg-surface-hover text-soft cursor-not-allowed"
+                        : "bg-cta text-on-cta hover:bg-cta-hover"
                     }`}
                     style={{ fontFamily: "Inter, sans-serif" }}
                     title={
@@ -1238,7 +1238,7 @@ export default function UserProfilePage() {
                     }
                   >
                     {isSendingMessage ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-surface mr-2"></div>
                     ) : (
                       <Inbox className="w-4 h-4 mr-2" />
                     )}
@@ -1256,10 +1256,10 @@ export default function UserProfilePage() {
                       ownInboxEnabled !== false && navigate("/inbox")
                     }
                     disabled={ownInboxEnabled === false}
-                    className={`px-6 py-2 rounded-md border border-[#D8E1EC] text-sm font-medium flex items-center justify-center transition-colors ${
+                    className={`px-6 py-2 rounded-md border border-hairline text-sm font-medium flex items-center justify-center transition-colors ${
                       ownInboxEnabled === false
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : "bg-[#292929] text-[#ffffff] hover:bg-[#F2F0ED] hover:text-[#292929]"
+                        ? "bg-surface-hover text-soft cursor-not-allowed"
+                        : "bg-cta text-on-cta hover:bg-surface-hover hover:text-ink"
                     }`}
                     style={{ fontFamily: "Inter, sans-serif" }}
                     title={
@@ -1274,7 +1274,7 @@ export default function UserProfilePage() {
 
                   {/* Inbox Toggle Controls */}
                   <div className="flex items-center gap-2 md:flex-shrink-0">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <div className="flex items-center gap-2 text-sm text-copy">
                       <span>Inbox Status:</span>
                     </div>
 
@@ -1284,13 +1284,13 @@ export default function UserProfilePage() {
                       disabled={isTogglingInbox}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                         ownInboxEnabled !== false
-                          ? "bg-[#292929]"
-                          : "bg-gray-300"
+                          ? "bg-cta"
+                          : "bg-surface-hover"
                       }`}
                       aria-label="Toggle inbox"
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        className={`inline-block h-4 w-4 transform rounded-full bg-surface transition-transform ${
                           ownInboxEnabled !== false
                             ? "translate-x-6"
                             : "translate-x-1"
@@ -1298,7 +1298,7 @@ export default function UserProfilePage() {
                       />
                     </button>
 
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-copy">
                       {isTogglingInbox
                         ? "Updating..."
                         : ownInboxEnabled !== false
@@ -1310,7 +1310,7 @@ export default function UserProfilePage() {
                   {/* Edit Profile Button */}
                   <button
                     onClick={handleEditToggle}
-                    className="px-6 py-2 rounded-md bg-[#292929] border border-[#D8E1EC] text-[#ffffff] text-sm font-medium hover:bg-[#F2F0ED] hover:text-[#292929] flex items-center justify-center transition-colors"
+                    className="px-6 py-2 rounded-md bg-cta border border-hairline text-on-cta text-sm font-medium hover:bg-surface-hover hover:text-ink flex items-center justify-center transition-colors"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
                     <Edit3 className="w-4 h-4 mr-2 text-md" /> Edit my profile
@@ -1321,7 +1321,7 @@ export default function UserProfilePage() {
           </div>
 
           {isEditing && (
-            <div className="mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+            <div className="mt-6 pt-4 border-t border-hairline flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
               {editError && (
                 <p
                   className="text-sm text-red-500 w-full sm:w-auto text-center sm:text-left"
@@ -1333,7 +1333,7 @@ export default function UserProfilePage() {
               <button
                 onClick={handleEditToggle} // This is cancel
                 disabled={isSaving}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors flex items-center justify-center"
+                className="px-4 py-2 bg-surface-hover text-copy rounded-md hover:bg-surface-hover transition-colors flex items-center justify-center"
                 style={{ fontFamily: "Inter, sans-serif" }}
               >
                 <XCircle className="w-4 h-4 mr-2" /> Cancel
@@ -1350,7 +1350,7 @@ export default function UserProfilePage() {
                     newBluesky === (loadedProfileUser?.bluesky || "") &&
                     newLinkedin === (loadedProfileUser?.linkedin || ""))
                 }
-                className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition-colors flex items-center justify-center disabled:opacity-50"
+                className="px-4 py-2 bg-cta text-on-cta rounded-md hover:bg-cta-hover transition-colors flex items-center justify-center disabled:opacity-50"
                 style={{ fontFamily: "Inter, sans-serif" }}
               >
                 <Save className="w-4 h-4 mr-2" />{" "}
@@ -1362,13 +1362,13 @@ export default function UserProfilePage() {
 
         {/* Mini Dashboard Section */}
         <section
-          className="mb-4 p-4 rounded-md border bg-[#ffffff] border-gray-200"
+          className="mb-4 p-4 rounded-md border bg-surface border-hairline"
           style={{ fontFamily: "Inter, sans-serif" }}
         >
-          <h2 className="text-lg font-normal text-[#292929] mb-4 pb-2 border-b border-gray-300">
+          <h2 className="text-lg font-normal text-ink mb-4 pb-2 border-b border-hairline-strong">
             My Vibes
             {loadedProfileUser?._creationTime && (
-              <span className="ml-2 text-xs text-gray-400">
+              <span className="ml-2 text-xs text-faint">
                 Joined Vibe Apps{" "}
                 {new Date(loadedProfileUser._creationTime).toLocaleDateString(
                   "en-US",
@@ -1386,14 +1386,14 @@ export default function UserProfilePage() {
             <button
               onClick={() => handleMiniDashboardClick("submissions")}
               aria-label={`View ${loadedProfileUser?.name || "user"}'s submissions`}
-              className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
+              className="flex items-center p-3 bg-surface border border-hairline rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ink md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
             >
-              <BookOpen className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+              <BookOpen className="w-6 h-6 mr-3 text-copy md:w-8 md:h-8 md:mb-2 md:mr-0" />
               <div className="flex flex-col md:items-center">
-                <span className="text-xl font-bold text-[#292929]">
+                <span className="text-xl font-bold text-ink">
                   {stories.length}
                 </span>
-                <span className="text-xs text-gray-500 md:mt-0.5">
+                <span className="text-xs text-soft md:mt-0.5">
                   Submissions
                 </span>
               </div>
@@ -1403,14 +1403,14 @@ export default function UserProfilePage() {
             <button
               onClick={() => handleMiniDashboardClick("votes")}
               aria-label={`View ${loadedProfileUser?.name || "user"}'s votes`}
-              className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
+              className="flex items-center p-3 bg-surface border border-hairline rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ink md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
             >
-              <ThumbsUp className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+              <ThumbsUp className="w-6 h-6 mr-3 text-copy md:w-8 md:h-8 md:mb-2 md:mr-0" />
               <div className="flex flex-col md:items-center">
-                <span className="text-xl font-bold text-[#292929]">
+                <span className="text-xl font-bold text-ink">
                   {votes.length}
                 </span>
-                <span className="text-xs text-gray-500 md:mt-0.5">Votes</span>
+                <span className="text-xs text-soft md:mt-0.5">Votes</span>
               </div>
             </button>
 
@@ -1418,14 +1418,14 @@ export default function UserProfilePage() {
             <button
               onClick={() => handleMiniDashboardClick("ratings")}
               aria-label={`View ratings given by ${loadedProfileUser?.name || "user"}`}
-              className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
+              className="flex items-center p-3 bg-surface border border-hairline rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ink md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
             >
-              <Star className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+              <Star className="w-6 h-6 mr-3 text-copy md:w-8 md:h-8 md:mb-2 md:mr-0" />
               <div className="flex flex-col md:items-center">
-                <span className="text-xl font-bold text-[#292929]">
+                <span className="text-xl font-bold text-ink">
                   {ratings.length}
                 </span>
-                <span className="text-xs text-gray-500 md:mt-0.5">Ratings</span>
+                <span className="text-xs text-soft md:mt-0.5">Ratings</span>
               </div>
             </button>
 
@@ -1433,14 +1433,14 @@ export default function UserProfilePage() {
             <button
               onClick={() => handleMiniDashboardClick("comments")}
               aria-label={`View comments made by ${loadedProfileUser?.name || "user"}`}
-              className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
+              className="flex items-center p-3 bg-surface border border-hairline rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ink md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
             >
-              <MessageCircle className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+              <MessageCircle className="w-6 h-6 mr-3 text-copy md:w-8 md:h-8 md:mb-2 md:mr-0" />
               <div className="flex flex-col md:items-center">
-                <span className="text-xl font-bold text-[#292929]">
+                <span className="text-xl font-bold text-ink">
                   {comments.length}
                 </span>
-                <span className="text-xs text-gray-500 md:mt-0.5">
+                <span className="text-xs text-soft md:mt-0.5">
                   Comments
                 </span>
               </div>
@@ -1451,14 +1451,14 @@ export default function UserProfilePage() {
               <button
                 onClick={() => handleMiniDashboardClick("bookmarks")}
                 aria-label={`View your bookmarks`}
-                className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
+                className="flex items-center p-3 bg-surface border border-hairline rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ink md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
               >
-                <Bookmark className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+                <Bookmark className="w-6 h-6 mr-3 text-copy md:w-8 md:h-8 md:mb-2 md:mr-0" />
                 <div className="flex flex-col md:items-center">
-                  <span className="text-xl font-bold text-[#292929]">
+                  <span className="text-xl font-bold text-ink">
                     {userBookmarksCount ?? 0}
                   </span>
-                  <span className="text-xs text-gray-500 md:mt-0.5">
+                  <span className="text-xs text-soft md:mt-0.5">
                     Bookmarks
                   </span>
                 </div>
@@ -1469,14 +1469,14 @@ export default function UserProfilePage() {
             <button
               onClick={() => handleMiniDashboardClick("followers")}
               aria-label={`View followers of ${loadedProfileUser?.name || "user"}`}
-              className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
+              className="flex items-center p-3 bg-surface border border-hairline rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ink md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
             >
-              <Users className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+              <Users className="w-6 h-6 mr-3 text-copy md:w-8 md:h-8 md:mb-2 md:mr-0" />
               <div className="flex flex-col md:items-center">
-                <span className="text-xl font-bold text-[#292929]">
+                <span className="text-xl font-bold text-ink">
                   {followersCount ?? 0}
                 </span>
-                <span className="text-xs text-gray-500 md:mt-0.5">
+                <span className="text-xs text-soft md:mt-0.5">
                   Followers
                 </span>
               </div>
@@ -1486,14 +1486,14 @@ export default function UserProfilePage() {
             <button
               onClick={() => handleMiniDashboardClick("following")}
               aria-label={`View users followed by ${loadedProfileUser?.name || "user"}`}
-              className="flex items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#292929] md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
+              className="flex items-center p-3 bg-surface border border-hairline rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ink md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
             >
-              <UserPlus className="w-6 h-6 mr-3 text-gray-600 md:w-8 md:h-8 md:mb-2 md:mr-0" />
+              <UserPlus className="w-6 h-6 mr-3 text-copy md:w-8 md:h-8 md:mb-2 md:mr-0" />
               <div className="flex flex-col md:items-center">
-                <span className="text-xl font-bold text-[#292929]">
+                <span className="text-xl font-bold text-ink">
                   {followingCount ?? 0}
                 </span>
-                <span className="text-xs text-gray-500 md:mt-0.5">
+                <span className="text-xs text-soft md:mt-0.5">
                   Following
                 </span>
               </div>
@@ -1501,10 +1501,10 @@ export default function UserProfilePage() {
 
             {/* Achievements (Hidden for later) */}
             {/*
-          <div className="flex flex-col items-center p-3 bg-white border border-gray-200 rounded-lg shadow-sm text-center w-32 md:w-36 flex-shrink-0 h-32 justify-center">
-            <Award className="w-7 h-7 mb-2 text-gray-600" />
-            <span className="text-2xl font-bold text-[#292929]">{0}</span>
-            <span className="text-xs text-gray-500 mt-0.5">Achievements</span>
+          <div className="flex flex-col items-center p-3 bg-surface border border-hairline rounded-lg shadow-sm text-center w-32 md:w-36 flex-shrink-0 h-32 justify-center">
+            <Award className="w-7 h-7 mb-2 text-copy" />
+            <span className="text-2xl font-bold text-ink">{0}</span>
+            <span className="text-xs text-soft mt-0.5">Achievements</span>
           </div>
           */}
           </div>
@@ -1514,32 +1514,32 @@ export default function UserProfilePage() {
         <section
           ref={submissionsSectionRef}
           id="submissions"
-          className="mb-6 p-4 bg-[#ffffff] rounded-md border border-gray-200"
+          className="mb-6 p-4 bg-surface rounded-md border border-hairline"
         >
-          <h2 className="text-lg font-normal text-[#292929] mb-4 pb-2 border-b border-gray-300">
+          <h2 className="text-lg font-normal text-ink mb-4 pb-2 border-b border-hairline-strong">
             Submissions
           </h2>
           {stories.length === 0 && (
-            <p className="text-gray-500 italic">No submissions yet.</p>
+            <p className="text-soft italic">No submissions yet.</p>
           )}
           {stories.length > 0 && (
             <ul className="space-y-4">
               {stories.map((story: StoryInProfile) => (
                 <li
                   key={story._id}
-                  className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
+                  className="p-4 bg-surface-alt border border-hairline rounded-md flex justify-between items-center transition-shadow"
                 >
                   <div className="flex-grow mr-4">
                     <Link
                       to={`/s/${story.slug}`}
-                      className="text-lg font-semibold text-[#292929] hover:underline"
+                      className="text-lg font-semibold text-ink hover:underline"
                     >
                       {story.title}
                     </Link>
-                    <p className="text-sm text-gray-600 whitespace-normal break-words">
+                    <p className="text-sm text-copy whitespace-normal break-words">
                       {story.description}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-soft">
                       Submitted by:{" "}
                       {story.authorName || story.authorUsername || "Anonymous"}
                       {story.authorIsVerified && <VerifiedBadge />}
@@ -1570,13 +1570,13 @@ export default function UserProfilePage() {
         {/* Tab Navigation and Content Area */}
         <div className="mb-20">
           {/* Tab Buttons */}
-          <div className="flex flex-col gap-2 md:flex-row md:flex-wrap border-b border-gray-300 mb-4">
+          <div className="flex flex-col gap-2 md:flex-row md:flex-wrap border-b border-hairline-strong mb-4">
             <button
               onClick={() => setActiveTab("votes")}
               className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none ${
                 activeTab === "votes"
-                  ? "border-b-2 border-[#292929] text-[#292929]"
-                  : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  ? "border-b-2 border-ink text-ink"
+                  : "text-soft hover:text-copy hover:border-hairline-strong"
               }`}
             >
               Votes ({votes?.length ?? 0})
@@ -1585,8 +1585,8 @@ export default function UserProfilePage() {
               onClick={() => setActiveTab("ratings")}
               className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none ${
                 activeTab === "ratings"
-                  ? "border-b-2 border-[#292929] text-[#292929]"
-                  : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  ? "border-b-2 border-ink text-ink"
+                  : "text-soft hover:text-copy hover:border-hairline-strong"
               }`}
             >
               Ratings Given ({ratings?.length ?? 0})
@@ -1595,8 +1595,8 @@ export default function UserProfilePage() {
               onClick={() => setActiveTab("comments")}
               className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none ${
                 activeTab === "comments"
-                  ? "border-b-2 border-[#292929] text-[#292929]"
-                  : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  ? "border-b-2 border-ink text-ink"
+                  : "text-soft hover:text-copy hover:border-hairline-strong"
               }`}
             >
               Comments ({comments?.length ?? 0})
@@ -1606,8 +1606,8 @@ export default function UserProfilePage() {
                 onClick={() => setActiveTab("bookmarks")}
                 className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none flex items-center ${
                   activeTab === "bookmarks"
-                    ? "border-b-2 border-[#292929] text-[#292929]"
-                    : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                    ? "border-b-2 border-ink text-ink"
+                    : "text-soft hover:text-copy hover:border-hairline-strong"
                 }`}
                 title="Bookmarks are private"
               >
@@ -1622,8 +1622,8 @@ export default function UserProfilePage() {
               onClick={() => setActiveTab("followers")}
               className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none flex items-center ${
                 activeTab === "followers"
-                  ? "border-b-2 border-[#292929] text-[#292929]"
-                  : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  ? "border-b-2 border-ink text-ink"
+                  : "text-soft hover:text-copy hover:border-hairline-strong"
               }`}
             >
               <Users className="w-4 h-4 mr-1" /> Followers (
@@ -1634,8 +1634,8 @@ export default function UserProfilePage() {
               onClick={() => setActiveTab("following")}
               className={`w-full text-left md:w-auto py-2 px-4 text-sm font-medium focus:outline-none flex items-center ${
                 activeTab === "following"
-                  ? "border-b-2 border-[#292929] text-[#292929]"
-                  : "text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  ? "border-b-2 border-ink text-ink"
+                  : "text-soft hover:text-copy hover:border-hairline-strong"
               }`}
             >
               <Users className="w-4 h-4 mr-1" /> Following (
@@ -1652,26 +1652,26 @@ export default function UserProfilePage() {
             {activeTab === "votes" && (
               <section
                 id="tab-section-votes"
-                className="p-4 bg-[#ffffff] rounded-md border border-gray-200"
+                className="p-4 bg-surface rounded-md border border-hairline"
               >
                 {votes.length === 0 && (
-                  <p className="text-gray-500 italic">No votes yet.</p>
+                  <p className="text-soft italic">No votes yet.</p>
                 )}
                 {votes.length > 0 && (
                   <ul className="space-y-4">
                     {votes.map((vote: VoteInProfile) => (
                       <li
                         key={vote._id}
-                        className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
+                        className="p-4 bg-surface-alt border border-hairline rounded-md flex justify-between items-center transition-shadow"
                       >
                         <div className="flex-grow mr-4">
                           <Link
                             to={`/s/${vote.storySlug}`}
-                            className="text-lg font-semibold text-[#292929] hover:underline"
+                            className="text-lg font-semibold text-ink hover:underline"
                           >
                             {vote.storyTitle || "View Story"}
                           </Link>
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-faint">
                             Voted on:{" "}
                             {new Date(vote._creationTime).toLocaleDateString()}
                           </p>
@@ -1695,22 +1695,22 @@ export default function UserProfilePage() {
             {activeTab === "ratings" && (
               <section
                 id="tab-section-ratings"
-                className="p-4 bg-[#ffffff] rounded-md border border-gray-200"
+                className="p-4 bg-surface rounded-md border border-hairline"
               >
                 {ratings.length === 0 && (
-                  <p className="text-gray-500 italic">No ratings given yet.</p>
+                  <p className="text-soft italic">No ratings given yet.</p>
                 )}
                 {ratings.length > 0 && (
                   <ul className="space-y-4">
                     {ratings.map((rating: RatingInProfile) => (
                       <li
                         key={rating._id}
-                        className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
+                        className="p-4 bg-surface-alt border border-hairline rounded-md flex justify-between items-center transition-shadow"
                       >
                         <div className="flex-grow mr-4">
                           <Link
                             to={`/s/${rating.storySlug}`}
-                            className="text-lg font-semibold text-[#292929] hover:underline"
+                            className="text-lg font-semibold text-ink hover:underline"
                           >
                             {rating.storyTitle || "View Story"}
                           </Link>
@@ -1729,10 +1729,10 @@ export default function UserProfilePage() {
                               .map((_, i) => (
                                 <Star
                                   key={i + rating.value}
-                                  className="w-4 h-4 text-gray-300 fill-current"
+                                  className="w-4 h-4 text-faint fill-current"
                                 />
                               ))}
-                            <span className="ml-2 text-xs text-gray-400">
+                            <span className="ml-2 text-xs text-faint">
                               (
                               {new Date(
                                 rating._creationTime,
@@ -1759,27 +1759,27 @@ export default function UserProfilePage() {
             {activeTab === "comments" && (
               <section
                 id="tab-section-comments"
-                className="p-4 bg-[#ffffff] rounded-md border border-gray-200"
+                className="p-4 bg-surface rounded-md border border-hairline"
               >
                 {comments.length === 0 && (
-                  <p className="text-gray-500 italic">No comments yet.</p>
+                  <p className="text-soft italic">No comments yet.</p>
                 )}
                 {comments.length > 0 && (
                   <ul className="space-y-4">
                     {comments.map((comment: CommentInProfile) => (
                       <li
                         key={comment._id}
-                        className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
+                        className="p-4 bg-surface-alt border border-hairline rounded-md flex justify-between items-center transition-shadow"
                       >
                         <div className="flex-grow mr-4">
-                          <p className="text-gray-700 mb-1 whitespace-pre-wrap">
+                          <p className="text-copy mb-1 whitespace-pre-wrap">
                             {comment.content}
                           </p>
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-faint">
                             Commented on{" "}
                             <Link
                               to={`/s/${comment.storySlug}#comments`}
-                              className="text-[#292929] hover:underline"
+                              className="text-ink hover:underline"
                             >
                               {comment.storyTitle || "story"}
                             </Link>{" "}
@@ -1807,11 +1807,11 @@ export default function UserProfilePage() {
             {activeTab === "bookmarks" && (
               <section
                 id="tab-section-bookmarks"
-                className="p-4 rounded-md border bg-[#ffffff] border-gray-200"
+                className="p-4 rounded-md border bg-surface border-hairline"
               >
                 {(!userBookmarksWithDetails ||
                   userBookmarksWithDetails.length === 0) && (
-                  <p className="text-gray-500 italic">No bookmarks yet.</p>
+                  <p className="text-soft italic">No bookmarks yet.</p>
                 )}
                 {userBookmarksWithDetails &&
                   userBookmarksWithDetails.length > 0 && (
@@ -1820,21 +1820,21 @@ export default function UserProfilePage() {
                         (bookmark: BookmarkedStoryItem) => (
                           <li
                             key={bookmark._id}
-                            className="p-4 bg-gray-50 border border-gray-200 rounded-md flex justify-between items-center transition-shadow"
+                            className="p-4 bg-surface-alt border border-hairline rounded-md flex justify-between items-center transition-shadow"
                           >
                             <div className="flex-grow mr-4">
                               <Link
                                 to={`/s/${bookmark.storySlug}`}
-                                className="text-lg font-semibold text-[#292929] hover:underline"
+                                className="text-lg font-semibold text-ink hover:underline"
                               >
                                 {bookmark.storyTitle || "View Story"}
                               </Link>
                               {bookmark.storyDescription && (
-                                <p className="text-sm text-gray-600 whitespace-normal break-words mt-1">
+                                <p className="text-sm text-copy whitespace-normal break-words mt-1">
                                   {bookmark.storyDescription}
                                 </p>
                               )}
-                              <p className="text-xs text-gray-400 mt-1">
+                              <p className="text-xs text-faint mt-1">
                                 Bookmarked on:{" "}
                                 {new Date(
                                   bookmark._creationTime,
@@ -1864,13 +1864,13 @@ export default function UserProfilePage() {
             {activeTab === "followers" && (
               <section
                 id="tab-section-followers"
-                className="p-4 bg-[#ffffff] rounded-md border border-gray-200"
+                className="p-4 bg-surface rounded-md border border-hairline"
               >
                 {followersData === undefined && (
                   <p className="text-center p-8">Loading followers...</p>
                 )}
                 {followersData && followersData.length === 0 && (
-                  <p className="text-gray-500 italic">No followers yet.</p>
+                  <p className="text-soft italic">No followers yet.</p>
                 )}
                 {followersData && followersData.length > 0 && (
                   <ul className="space-y-3">
@@ -1878,7 +1878,7 @@ export default function UserProfilePage() {
                       follower ? (
                         <li
                           key={follower._id}
-                          className="p-3 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-between transition-shadow hover:shadow-sm"
+                          className="p-3 bg-surface-alt border border-hairline rounded-md flex items-center justify-between transition-shadow hover:shadow-sm"
                         >
                           <Link
                             to={`/${follower.username}`}
@@ -1888,7 +1888,7 @@ export default function UserProfilePage() {
                               <img
                                 src={follower.imageUrl}
                                 alt={follower.name ?? "User"}
-                                className="w-10 h-10 rounded-full mr-3 object-cover border border-gray-200"
+                                className="w-10 h-10 rounded-full mr-3 object-cover border border-hairline"
                               />
                             ) : (
                               <ProfileImagePlaceholder
@@ -1897,10 +1897,10 @@ export default function UserProfilePage() {
                               />
                             )}
                             <div>
-                              <span className="text-sm font-semibold text-[#292929] hover:underline">
+                              <span className="text-sm font-semibold text-ink hover:underline">
                                 {follower.name || "Anonymous User"}
                               </span>
-                              <p className="text-xs  text-gray-500">
+                              <p className="text-xs  text-soft">
                                 @{follower.username || "N/A"}
                               </p>
                             </div>
@@ -1919,13 +1919,13 @@ export default function UserProfilePage() {
             {activeTab === "following" && (
               <section
                 id="tab-section-following"
-                className="p-4 bg-[#ffffff] rounded-md border border-gray-200"
+                className="p-4 bg-surface rounded-md border border-hairline"
               >
                 {followingData === undefined && (
                   <p className="text-center p-8">Loading following...</p>
                 )}
                 {followingData && followingData.length === 0 && (
-                  <p className="text-gray-500 italic">
+                  <p className="text-soft italic">
                     Not following anyone yet.
                   </p>
                 )}
@@ -1936,7 +1936,7 @@ export default function UserProfilePage() {
                         followedUser ? (
                           <li
                             key={followedUser._id}
-                            className="p-3 bg-gray-50 border border-gray-200 rounded-md flex items-center justify-between transition-shadow hover:shadow-sm"
+                            className="p-3 bg-surface-alt border border-hairline rounded-md flex items-center justify-between transition-shadow hover:shadow-sm"
                           >
                             <Link
                               to={`/${followedUser.username}`}
@@ -1946,7 +1946,7 @@ export default function UserProfilePage() {
                                 <img
                                   src={followedUser.imageUrl}
                                   alt={followedUser.name ?? "User"}
-                                  className="w-10 h-10 rounded-full mr-3 object-cover border border-gray-200"
+                                  className="w-10 h-10 rounded-full mr-3 object-cover border border-hairline"
                                 />
                               ) : (
                                 <ProfileImagePlaceholder
@@ -1955,10 +1955,10 @@ export default function UserProfilePage() {
                                 />
                               )}
                               <div>
-                                <span className="text-sm p-1 font-semibold text-[#292929] hover:underline">
+                                <span className="text-sm p-1 font-semibold text-ink hover:underline">
                                   {followedUser.name || "Anonymous User"}
                                 </span>
-                                <p className="text-xs  p-1 text-gray-500">
+                                <p className="text-xs  p-1 text-soft">
                                   @{followedUser.username || "N/A"}
                                 </p>
                               </div>
@@ -1978,17 +1978,17 @@ export default function UserProfilePage() {
         {isOwnProfile && (
           <section
             id="manage-profile"
-            className="mb-4 p-6 bg-[#ffffff] rounded-lg border border-gray-200"
+            className="mb-4 p-6 bg-surface rounded-lg border border-hairline"
             style={{ fontFamily: "Inter, sans-serif" }}
           >
-            <h2 className="text-lg font-normal text-[#292929] mb-6 pb-3 border-b border-gray-300">
+            <h2 className="text-lg font-normal text-ink mb-6 pb-3 border-b border-hairline-strong">
               Manage Profile & Account
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Column 1: Profile Settings and General Account Management */}
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-base font-normal text-[#292929] mb-2">
+                  <h3 className="text-base font-normal text-ink mb-2">
                     Profile Settings
                   </h3>
                   <button
@@ -1996,7 +1996,7 @@ export default function UserProfilePage() {
                       if (!isEditing) handleEditToggle();
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
-                    className="w-full px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors disabled:opacity-50 flex items-center"
+                    className="w-full px-4 py-2 text-left bg-surface-alt hover:bg-surface-hover border border-hairline-strong rounded-md text-sm text-ink transition-colors disabled:opacity-50 flex items-center"
                   >
                     <Edit3 className="w-4 h-4 inline-block mr-2" /> Edit Profile
                     Details
@@ -2004,49 +2004,49 @@ export default function UserProfilePage() {
                 </div>
 
                 <div>
-                  <h3 className="text-base font-normal text-[#292929] mb-2">
+                  <h3 className="text-base font-normal text-ink mb-2">
                     Account Management
                   </h3>
                   <Link
                     to="/user-settings"
-                    className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors flex items-center"
+                    className="w-full mt-2 px-4 py-2 text-left bg-surface-alt hover:bg-surface-hover border border-hairline-strong rounded-md text-sm text-ink transition-colors flex items-center"
                   >
                     <Settings className="w-4 h-4 inline-block mr-2" /> Account
                     Settings (Change profile photo, Password, Delete account,
                     etc.)
                   </Link>
                   {/* Email Preferences */}
-                  <div className="mt-4 p-4 bg-white border border-gray-200 rounded-md">
+                  <div className="mt-4 p-4 bg-surface border border-hairline rounded-md">
                     <div className="flex items-center justify-between mb-3">
                       <div>
-                        <h4 className="text-sm font-medium text-[#292929]">
+                        <h4 className="text-sm font-medium text-ink">
                           Email Preferences
                         </h4>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-soft mt-1">
                           Manage your email notifications.
                         </p>
                       </div>
-                      <Mail className="w-4 h-4 text-gray-400" />
+                      <Mail className="w-4 h-4 text-faint" />
                     </div>
 
                     {emailSettingsData === undefined ? (
                       <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400"></div>
-                        <span className="text-xs text-gray-500">
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-hairline-strong"></div>
+                        <span className="text-xs text-soft">
                           Loading preferences...
                         </span>
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                        <div className="flex items-center justify-between p-2 bg-surface-alt rounded-md">
                           <div className="flex-1">
-                            <p className="text-sm text-[#292929]">
+                            <p className="text-sm text-ink">
                               {emailSettingsData &&
                               (emailSettingsData as any).unsubscribedAt
                                 ? "Currently unsubscribed from all emails"
                                 : "Receiving email notifications"}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-soft">
                               {emailSettingsData &&
                               (emailSettingsData as any).unsubscribedAt
                                 ? "You won't receive any email notifications"
@@ -2094,8 +2094,8 @@ export default function UserProfilePage() {
                             className={`px-3 py-1 text-xs font-medium rounded-md transition-colors disabled:opacity-50 ${
                               emailSettingsData &&
                               (emailSettingsData as any).unsubscribedAt
-                                ? "bg-[#292929] text-white hover:bg-gray-700"
-                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                ? "bg-cta text-on-cta hover:bg-cta-hover"
+                                : "bg-surface-hover text-copy hover:bg-surface-hover"
                             }`}
                           >
                             {isEmailUpdating ? (
@@ -2120,12 +2120,12 @@ export default function UserProfilePage() {
               {/* Column 2: Account Actions (Sign Out, Delete Account) */}
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-base font-normal text-[#292929] mb-2">
+                  <h3 className="text-base font-normal text-ink mb-2">
                     Account Actions
                   </h3>
                   <button
                     onClick={handleSignOut} // Updated to new handler
-                    className="w-full mt-2 px-4 py-2 text-left bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-md text-sm text-[#292929] transition-colors flex items-center"
+                    className="w-full mt-2 px-4 py-2 text-left bg-surface-alt hover:bg-surface-hover border border-hairline-strong rounded-md text-sm text-ink transition-colors flex items-center"
                   >
                     <LogOut className="w-4 h-4 inline-block mr-2" /> Sign Out
                   </button>
@@ -2137,7 +2137,7 @@ export default function UserProfilePage() {
                 <p className="text-sm text-red-700">{actionError}</p>
               </div>
             )}
-            <p className="mt-6 text-xs text-gray-500">
+            <p className="mt-6 text-xs text-soft">
               For more advanced settings, you can also visit your main account
               page.
             </p>
@@ -2157,10 +2157,10 @@ export default function UserProfilePage() {
 
         {/* Report User Section - Only show for other users' profiles when signed in */}
         {!isOwnProfile && isClerkLoaded && authUser && loadedProfileUser && (
-          <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between text-sm text-gray-600">
+          <div className="mt-8 p-4 bg-surface-alt rounded-lg border border-hairline flex items-center justify-between text-sm text-copy">
             <div className="flex items-center gap-3">
-              <Flag className="w-4 h-4 text-gray-500 flex-shrink-0" />
-              <span className="font-medium text-gray-700">
+              <Flag className="w-4 h-4 text-soft flex-shrink-0" />
+              <span className="font-medium text-copy">
                 Seen something inappropriate?
               </span>
             </div>
@@ -2187,7 +2187,7 @@ export default function UserProfilePage() {
               </DialogTitle>
             </DialogHeader>
             <div className="py-4 space-y-2">
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-soft">
                 Please provide a reason for reporting this user. Your report
                 will be reviewed by an administrator.
               </p>
@@ -2225,7 +2225,7 @@ export default function UserProfilePage() {
                 type="button"
                 onClick={handleReportUserSubmit}
                 disabled={isReportingUser || !reportUserReason.trim()}
-                className="bg-[#292929] text-white hover:bg-[#525252] disabled:opacity-50 sm:ml-[10px]"
+                className="bg-cta text-on-cta hover:bg-cta-hover disabled:opacity-50 sm:ml-[10px]"
                 style={{ fontWeight: "normal" }}
               >
                 {isReportingUser ? "Submitting..." : "Submit Report"}

@@ -189,14 +189,14 @@ export function GroupLinksSection({ group }: { group: GroupDetails }) {
           ))}
         </div>
         {!group.hasCustomSubmissionPage && (
-          <p className="text-xs text-gray-500 mt-3">
+          <p className="text-xs text-soft mt-3">
             Want a shareable submission link for participants? Enable the
             custom submission page in the Submit page section and it will
             appear here.
           </p>
         )}
         {aiJudgeOn && (
-          <p className="text-xs text-gray-500 mt-3">
+          <p className="text-xs text-soft mt-3">
             Score scales differ: human judges score 1 to {group.scoreScale};
             the AI judge always scores 1 to 10.
           </p>
@@ -214,7 +214,7 @@ export function GroupLinksSection({ group }: { group: GroupDetails }) {
             ))}
           </div>
         ) : (
-          <p className="text-[13px] text-gray-500">
+          <p className="text-[13px] text-soft">
             {aiJudgeOn
               ? "The agent API is disabled for this group. Enable it in the AI judge section to share these endpoints."
               : "The AI judge is off, so no AI judge links exist for this group. Enable the AI judge to activate the AI results page and agent API."}
@@ -263,7 +263,7 @@ function LinksExportActions({
       <button
         type="button"
         onClick={() => void handleCopyAll()}
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md border border-hairline text-copy hover:bg-surface-hover transition-colors"
         title="Copy all links as markdown"
       >
         {copiedAll ? (
@@ -276,7 +276,7 @@ function LinksExportActions({
       <button
         type="button"
         onClick={handleDownload}
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md border border-hairline text-copy hover:bg-surface-hover transition-colors"
         title="Download all links as a markdown file"
       >
         <Download className="w-3.5 h-3.5" />
@@ -309,7 +309,7 @@ export function LinkLedgerRow({
   };
 
   return (
-    <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-md border border-gray-200 bg-white">
+    <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-md border border-hairline bg-surface">
       <div className="min-w-0 flex items-start gap-2.5">
         {keyRequired ? (
           <KeyRound className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -319,7 +319,7 @@ export function LinkLedgerRow({
           <Globe className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
         )}
         <div className="min-w-0">
-          <p className="text-[13px] font-medium text-[#292929]">
+          <p className="text-[13px] font-medium text-ink">
             {label}
             {locked && !keyRequired && (
               <span
@@ -336,15 +336,15 @@ export function LinkLedgerRow({
               </span>
             )}
           </p>
-          <p className="text-xs text-gray-500 truncate font-mono">{url}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{note}</p>
+          <p className="text-xs text-soft truncate font-mono">{url}</p>
+          <p className="text-xs text-faint mt-0.5">{note}</p>
         </div>
       </div>
       <div className="flex items-center gap-1 flex-shrink-0">
         <button
           type="button"
           onClick={() => void handleCopy()}
-          className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+          className="p-1.5 text-faint hover:text-copy hover:bg-surface-hover rounded transition-colors"
           title="Copy URL"
           aria-label={`Copy ${label} URL`}
         >
@@ -358,7 +358,7 @@ export function LinkLedgerRow({
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+          className="p-1.5 text-faint hover:text-copy hover:bg-surface-hover rounded transition-colors"
           title="Open in new tab"
           aria-label={`Open ${label} in new tab`}
         >

@@ -236,7 +236,7 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
         description="Search every site submission by title and add it to this group. Added submissions appear in judge queues and are included in AI judge runs."
       >
         <div className="relative">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-faint absolute left-3 top-1/2 -translate-y-1/2" />
           <Input
             value={storySearch}
             onChange={(e) => setStorySearch(e.target.value)}
@@ -246,14 +246,14 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
           />
         </div>
         {trimmedStorySearch.length >= 2 && (
-          <div className="max-h-56 overflow-y-auto rounded-md border border-gray-200 divide-y divide-gray-100">
+          <div className="max-h-56 overflow-y-auto rounded-md border border-hairline divide-y divide-hairline">
             {storyResults === undefined && (
-              <p className="px-3 py-2 text-[13px] text-gray-500">
+              <p className="px-3 py-2 text-[13px] text-soft">
                 Searching...
               </p>
             )}
             {storyResults && storyResults.length === 0 && (
-              <p className="px-3 py-2 text-[13px] text-gray-500">
+              <p className="px-3 py-2 text-[13px] text-soft">
                 No submissions match "{trimmedStorySearch}"
               </p>
             )}
@@ -263,10 +263,10 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
                 className="flex items-center justify-between gap-3 px-3 py-2"
               >
                 <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-[#292929] truncate">
+                  <p className="text-[13px] font-medium text-ink truncate">
                     {story.title}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">
+                  <p className="text-xs text-soft truncate">
                     /s/{story.slug}
                     {story.status !== "approved" && (
                       <span className="ml-1.5 inline-flex px-1.5 py-0 text-[11px] rounded-full bg-amber-50 text-amber-700">
@@ -276,7 +276,7 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
                   </p>
                 </div>
                 {story.inGroup ? (
-                  <span className="inline-flex items-center gap-1 text-xs text-gray-500 shrink-0">
+                  <span className="inline-flex items-center gap-1 text-xs text-soft shrink-0">
                     <Check className="w-3.5 h-3.5" />
                     In group
                   </span>
@@ -285,7 +285,7 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
                     type="button"
                     onClick={() => void handleAddStory(story._id, story.title)}
                     disabled={addingStoryId !== null}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 shrink-0"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border border-hairline text-copy hover:bg-surface-hover transition-colors disabled:opacity-50 shrink-0"
                   >
                     {addingStoryId === story._id ? (
                       <Loader2 className="w-3 h-3 animate-spin" />
@@ -300,12 +300,12 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
           </div>
         )}
         {trimmedStorySearch.length > 0 && trimmedStorySearch.length < 2 && (
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-soft">
             Type at least 2 characters to search.
           </p>
         )}
         {addMessage && (
-          <p className="text-[13px] text-gray-600">{addMessage}</p>
+          <p className="text-[13px] text-copy">{addMessage}</p>
         )}
       </SectionCard>
 
@@ -330,13 +330,13 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
               return (
                 <span
                   key={id}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded-full"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-surface-alt text-copy rounded-full"
                 >
                   {tag.name}
                   <button
                     type="button"
                     onClick={() => toggleTag(id)}
-                    className="text-gray-400 hover:text-gray-700"
+                    className="text-faint hover:text-copy"
                     aria-label={`Remove ${tag.name}`}
                   >
                     <X className="w-3 h-3" />
@@ -347,7 +347,7 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
             <button
               type="button"
               onClick={() => setTagIds([])}
-              className="text-xs text-gray-500 hover:text-gray-700 px-1"
+              className="text-xs text-soft hover:text-copy px-1"
             >
               Clear all
             </button>
@@ -357,7 +357,7 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
         {/* Tag search + picker */}
         <div>
           <div className="relative">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-faint absolute left-3 top-1/2 -translate-y-1/2" />
             <Input
               value={tagSearch}
               onChange={(e) => setTagSearch(e.target.value)}
@@ -365,27 +365,27 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
               className="pl-9"
             />
           </div>
-          <div className="mt-2 max-h-44 overflow-y-auto rounded-md border border-gray-200 divide-y divide-gray-100">
+          <div className="mt-2 max-h-44 overflow-y-auto rounded-md border border-hairline divide-y divide-hairline">
             {allTags === undefined && (
-              <p className="px-3 py-2 text-[13px] text-gray-500">
+              <p className="px-3 py-2 text-[13px] text-soft">
                 Loading tags...
               </p>
             )}
             {allTags && filteredTags.length === 0 && (
-              <p className="px-3 py-2 text-[13px] text-gray-500">
+              <p className="px-3 py-2 text-[13px] text-soft">
                 No tags match "{tagSearch}"
               </p>
             )}
             {filteredTags.map((tag) => (
               <label
                 key={tag._id}
-                className="flex items-center gap-2 px-3 py-1.5 text-[13px] text-gray-700 hover:bg-gray-50 cursor-pointer"
+                className="flex items-center gap-2 px-3 py-1.5 text-[13px] text-copy hover:bg-surface-hover cursor-pointer"
               >
                 <input
                   type="checkbox"
                   checked={selectedTagSet.has(tag._id)}
                   onChange={() => toggleTag(tag._id)}
-                  className="rounded border-gray-300"
+                  className="rounded border-hairline-strong"
                 />
                 {tag.name}
               </label>
@@ -409,8 +409,8 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
                 onClick={() => setMatchMode(option.value)}
                 className={`px-3 py-1.5 text-[13px] font-medium rounded-md border transition-colors ${
                   matchMode === option.value
-                    ? "bg-[#292929] border-[#292929] text-white"
-                    : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+                    ? "bg-cta border-ink text-on-cta"
+                    : "bg-surface border-hairline text-copy hover:border-hairline-strong"
                 }`}
               >
                 {option.label}
@@ -453,7 +453,7 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
             type="button"
             onClick={() => void handleSync()}
             disabled={isSyncing}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-medium rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-medium rounded-md border border-hairline text-copy hover:bg-surface-hover transition-colors disabled:opacity-50"
           >
             {isSyncing ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -463,7 +463,7 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
             {isSyncing ? "Syncing..." : "Sync matching submissions"}
           </button>
           {syncMessage && (
-            <span className="text-[13px] text-gray-600">{syncMessage}</span>
+            <span className="text-[13px] text-copy">{syncMessage}</span>
           )}
         </div>
       </SectionCard>
@@ -477,7 +477,7 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
             type="button"
             onClick={() => void handleExportCsv()}
             disabled={isExporting}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-medium rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-medium rounded-md border border-hairline text-copy hover:bg-surface-hover transition-colors disabled:opacity-50"
           >
             {isExporting ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -487,7 +487,7 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
             {isExporting ? "Exporting..." : "Export CSV"}
           </button>
           {exportMessage && (
-            <span className="text-[13px] text-gray-600">{exportMessage}</span>
+            <span className="text-[13px] text-copy">{exportMessage}</span>
           )}
         </div>
       </SectionCard>

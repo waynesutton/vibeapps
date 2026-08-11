@@ -86,12 +86,12 @@ const CATEGORY_META: Record<
   access: {
     label: "Access",
     icon: KeyRound,
-    className: "text-gray-700 bg-gray-100 border-gray-200",
+    className: "text-copy bg-surface-alt border-hairline",
   },
   settings: {
     label: "Settings",
     icon: Settings2,
-    className: "text-gray-700 bg-gray-100 border-gray-200",
+    className: "text-copy bg-surface-alt border-hairline",
   },
 };
 
@@ -299,7 +299,7 @@ export function ActivityLog() {
       {/* Header + toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-medium text-[#292929]">Activity Log</h2>
+          <h2 className="text-lg font-medium text-ink">Activity Log</h2>
           {status?.paused && (
             <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
               <Pause className="w-3 h-3" />
@@ -374,8 +374,8 @@ export function ActivityLog() {
               onClick={() => changeView({ cat: filter.value })}
               className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors ${
                 categoryFilter === filter.value
-                  ? "bg-[#292929] text-white border-[#292929]"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                  ? "bg-cta text-on-cta border-ink"
+                  : "bg-surface text-copy border-hairline hover:border-hairline-strong"
               }`}
             >
               {filter.label}
@@ -412,8 +412,8 @@ export function ActivityLog() {
 
       {/* Bulk action bar */}
       {canManage && selectedIds.size > 0 && (
-        <div className="flex flex-wrap items-center gap-2 bg-gray-50 border border-gray-200 rounded-md px-3 py-2">
-          <span className="text-[13px] text-gray-600">
+        <div className="flex flex-wrap items-center gap-2 bg-surface-alt border border-hairline rounded-md px-3 py-2">
+          <span className="text-[13px] text-copy">
             {selectedIds.size} selected
           </span>
           <Button variant="outline" size="sm" onClick={() => void handleBulkArchive()}>
@@ -437,7 +437,7 @@ export function ActivityLog() {
           </Button>
           <button
             onClick={() => setSelectedIds(new Set())}
-            className="text-xs text-gray-500 hover:text-gray-700 ml-auto"
+            className="text-xs text-soft hover:text-copy ml-auto"
           >
             Clear selection
           </button>
@@ -445,15 +445,15 @@ export function ActivityLog() {
       )}
 
       {/* Entries */}
-      <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
-        <div className="flex items-center gap-3 px-3 py-2 border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-500">
+      <div className="border border-hairline rounded-lg overflow-hidden bg-surface">
+        <div className="flex items-center gap-3 px-3 py-2 border-b border-hairline bg-surface-alt text-xs font-medium text-soft">
           {canManage && (
             <input
               type="checkbox"
               checked={allSelected}
               onChange={toggleSelectAll}
               aria-label="Select all loaded entries"
-              className="rounded border-gray-300"
+              className="rounded border-hairline-strong"
             />
           )}
           <span className="w-24 shrink-0">Category</span>
@@ -463,11 +463,11 @@ export function ActivityLog() {
         </div>
 
         {pageStatus === "LoadingFirstPage" ? (
-          <div className="flex items-center justify-center gap-2 py-10 text-sm text-gray-500">
+          <div className="flex items-center justify-center gap-2 py-10 text-sm text-soft">
             <Loader2 className="w-4 h-4 animate-spin" /> Loading activity...
           </div>
         ) : results.length === 0 ? (
-          <div className="py-10 text-center text-sm text-gray-500">
+          <div className="py-10 text-center text-sm text-soft">
             {viewMode === "archived"
               ? "No archived entries."
               : "No activity yet. Emails, submissions, spam actions, judging, scoring, access grants, and settings changes will show up here."}
@@ -478,15 +478,15 @@ export function ActivityLog() {
             const Icon = meta.icon;
             const isExpanded = expandedId === row._id;
             return (
-              <div key={row._id} className="border-b border-gray-100 last:border-b-0">
-                <div className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50">
+              <div key={row._id} className="border-b border-hairline last:border-b-0">
+                <div className="flex items-center gap-3 px-3 py-2 hover:bg-surface-hover">
                   {canManage && (
                     <input
                       type="checkbox"
                       checked={selectedIds.has(row._id)}
                       onChange={() => toggleSelect(row._id)}
                       aria-label="Select entry"
-                      className="rounded border-gray-300"
+                      className="rounded border-hairline-strong"
                     />
                   )}
                   <span
@@ -497,16 +497,16 @@ export function ActivityLog() {
                   </span>
                   <button
                     onClick={() => setExpandedId(isExpanded ? null : row._id)}
-                    className="flex-1 text-left text-[13px] text-[#292929] truncate"
+                    className="flex-1 text-left text-[13px] text-ink truncate"
                     title={row.message}
                   >
                     {row.message}
                   </button>
-                  <span className="w-28 shrink-0 hidden sm:block text-xs text-gray-500 truncate">
+                  <span className="w-28 shrink-0 hidden sm:block text-xs text-soft truncate">
                     {row.actorName ?? "System"}
                   </span>
                   <span
-                    className="w-24 shrink-0 text-right text-xs text-gray-400"
+                    className="w-24 shrink-0 text-right text-xs text-faint"
                     title={new Date(row._creationTime).toLocaleString()}
                   >
                     {formatDistanceToNow(row._creationTime, {
@@ -515,7 +515,7 @@ export function ActivityLog() {
                   </span>
                   <button
                     onClick={() => setExpandedId(isExpanded ? null : row._id)}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-faint hover:text-copy"
                     aria-label={isExpanded ? "Collapse" : "Expand"}
                   >
                     {isExpanded ? (
@@ -526,18 +526,18 @@ export function ActivityLog() {
                   </button>
                 </div>
                 {isExpanded && (
-                  <div className="px-3 pb-3 pl-10 text-xs text-gray-600 space-y-1">
+                  <div className="px-3 pb-3 pl-10 text-xs text-copy space-y-1">
                     <div>
-                      <span className="font-medium text-gray-500">Action:</span>{" "}
+                      <span className="font-medium text-soft">Action:</span>{" "}
                       {row.action}
                     </div>
                     <div>
-                      <span className="font-medium text-gray-500">Time:</span>{" "}
+                      <span className="font-medium text-soft">Time:</span>{" "}
                       {new Date(row._creationTime).toLocaleString()}
                     </div>
                     {row.targetLabel && (
                       <div>
-                        <span className="font-medium text-gray-500">
+                        <span className="font-medium text-soft">
                           Target:
                         </span>{" "}
                         {row.targetLabel}
@@ -545,7 +545,7 @@ export function ActivityLog() {
                       </div>
                     )}
                     {row.metadata !== undefined && row.metadata !== null && (
-                      <pre className="bg-gray-50 border border-gray-200 rounded-md p-2 overflow-x-auto text-[11px]">
+                      <pre className="bg-surface-alt border border-hairline rounded-md p-2 overflow-x-auto text-[11px]">
                         {JSON.stringify(row.metadata, null, 2)}
                       </pre>
                     )}
@@ -565,7 +565,7 @@ export function ActivityLog() {
         </div>
       )}
       {pageStatus === "LoadingMore" && (
-        <div className="flex justify-center py-2 text-sm text-gray-500">
+        <div className="flex justify-center py-2 text-sm text-soft">
           <Loader2 className="w-4 h-4 animate-spin" />
         </div>
       )}

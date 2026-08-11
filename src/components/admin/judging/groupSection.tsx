@@ -215,19 +215,19 @@ export function SectionCard({
   headerAction?: ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white">
+    <div className="rounded-lg border border-hairline bg-surface">
       <div className="px-5 pt-4 pb-1 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-[#292929]">{title}</h3>
+          <h3 className="text-sm font-semibold text-ink">{title}</h3>
           {description && (
-            <p className="text-[13px] text-gray-500 mt-0.5">{description}</p>
+            <p className="text-[13px] text-soft mt-0.5">{description}</p>
           )}
         </div>
         {headerAction && <div className="flex-shrink-0">{headerAction}</div>}
       </div>
       <div className="px-5 py-4 space-y-4">{children}</div>
       {footer && (
-        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/60 rounded-b-lg flex items-center justify-between gap-3">
+        <div className="px-5 py-3 border-t border-hairline bg-surface-alt rounded-b-lg flex items-center justify-between gap-3">
           {footer}
         </div>
       )}
@@ -261,14 +261,14 @@ export function SaveFooter({
             <Check className="w-3.5 h-3.5" /> Saved
           </span>
         ) : (
-          <span className="text-gray-400">Changes apply on save</span>
+          <span className="text-faint">Changes apply on save</span>
         )}
       </div>
       <button
         type="button"
         onClick={onSave}
         disabled={saving || disabled}
-        className="px-3.5 py-1.5 text-[13px] font-medium rounded-md bg-[#292929] text-white hover:bg-[#525252] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+        className="px-3.5 py-1.5 text-[13px] font-medium rounded-md bg-cta text-on-cta hover:bg-cta-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
       >
         {saving ? "Saving..." : label}
       </button>
@@ -294,7 +294,7 @@ export function HeaderSaveButton({
       type="button"
       onClick={onSave}
       disabled={saving || disabled}
-      className="px-3 py-1 text-xs font-medium rounded-md bg-[#292929] text-white hover:bg-[#525252] transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1"
+      className="px-3 py-1 text-xs font-medium rounded-md bg-cta text-on-cta hover:bg-cta-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1"
     >
       {saved && <Check className="w-3 h-3" />}
       {saving ? "Saving..." : saved ? "Saved" : "Save"}
@@ -317,17 +317,17 @@ export function UrlRow({ label, path, hint }: { label: string; path: string; hin
   };
 
   return (
-    <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-md border border-gray-200 bg-white">
+    <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-md border border-hairline bg-surface">
       <div className="min-w-0">
-        <p className="text-[13px] font-medium text-[#292929]">{label}</p>
-        <p className="text-xs text-gray-500 truncate font-mono">{path}</p>
-        {hint && <p className="text-xs text-gray-400 mt-0.5">{hint}</p>}
+        <p className="text-[13px] font-medium text-ink">{label}</p>
+        <p className="text-xs text-soft truncate font-mono">{path}</p>
+        {hint && <p className="text-xs text-faint mt-0.5">{hint}</p>}
       </div>
       <div className="flex items-center gap-1 flex-shrink-0">
         <button
           type="button"
           onClick={handleCopy}
-          className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+          className="p-1.5 text-faint hover:text-copy hover:bg-surface-hover rounded transition-colors"
           title="Copy full URL"
           aria-label={`Copy ${label} URL`}
         >
@@ -341,7 +341,7 @@ export function UrlRow({ label, path, hint }: { label: string; path: string; hin
           href={path}
           target="_blank"
           rel="noopener noreferrer"
-          className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+          className="p-1.5 text-faint hover:text-copy hover:bg-surface-hover rounded transition-colors"
           title="Open in new tab"
           aria-label={`Open ${label} in new tab`}
         >
@@ -374,7 +374,7 @@ export function TogglePill({
       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-[13px] font-medium transition-colors flex-shrink-0 disabled:opacity-50 ${
         enabled
           ? "bg-green-50 border-green-200 text-green-700"
-          : "bg-gray-50 border-gray-200 text-gray-600"
+          : "bg-surface-alt border-hairline text-copy"
       }`}
     >
       {enabled ? (

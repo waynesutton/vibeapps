@@ -92,7 +92,7 @@ export function ImageGallery({
         <img
           src={currentImage}
           alt={altText}
-          className="w-full h-auto max-h-[500px] object-contain rounded-lg border border-[#D8E1EC] cursor-pointer hover:opacity-90 transition-opacity"
+          className="w-full h-auto max-h-[500px] object-contain rounded-lg border border-hairline cursor-pointer hover:opacity-90 transition-opacity"
           onClick={handleMainImageClick}
           loading="lazy"
         />
@@ -107,8 +107,8 @@ export function ImageGallery({
               onClick={() => handleThumbnailClick(index)}
               className={`flex-shrink-0 w-20 h-16 rounded-md overflow-hidden border-2 transition-colors ${
                 index === currentIndex
-                  ? "border-[#292929]"
-                  : "border-[#D8E1EC] hover:border-[#A8A29E]"
+                  ? "border-ink"
+                  : "border-hairline hover:border-hairline-strong"
               }`}
               aria-label={`View ${altText} image ${index + 1}`}
             >

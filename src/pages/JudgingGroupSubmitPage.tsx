@@ -169,30 +169,30 @@ export function JudgingGroupSubmitPage() {
 
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-[#F4F2EE] flex items-center justify-center">
-        <div className="text-[#525252]">Loading...</div>
+      <div className="min-h-screen bg-canvas flex items-center justify-center">
+        <div className="text-copy">Loading...</div>
       </div>
     );
   }
 
   if (submissionPage === undefined) {
     return (
-      <div className="min-h-screen bg-[#F4F2EE] flex items-center justify-center">
-        <div className="text-[#525252]">Loading submission page...</div>
+      <div className="min-h-screen bg-canvas flex items-center justify-center">
+        <div className="text-copy">Loading submission page...</div>
       </div>
     );
   }
 
   if (submissionPage === null) {
     return (
-      <div className="min-h-screen bg-[#F4F2EE] flex flex-col items-center justify-center p-4">
-        <h1 className="text-2xl font-medium text-[#292929] mb-4">
+      <div className="min-h-screen bg-canvas flex flex-col items-center justify-center p-4">
+        <h1 className="text-2xl font-medium text-ink mb-4">
           Page Not Found
         </h1>
-        <p className="text-[#525252] mb-6">
+        <p className="text-copy mb-6">
           This submission page doesn't exist or isn't enabled.
         </p>
-        <Link to="/" className="text-[#292929] hover:underline">
+        <Link to="/" className="text-ink hover:underline">
           ← Back to Home
         </Link>
       </div>
@@ -202,15 +202,15 @@ export function JudgingGroupSubmitPage() {
   // Show password form if not authenticated
   if (!isAuthenticated && submissionPage.hasSubmissionPagePassword) {
     return (
-      <div className="min-h-screen bg-[#F4F2EE] flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg p-8 max-w-md w-full border border-gray-200">
-          <div className="flex items-center justify-center w-12 h-12 bg-[#F4F2EE] rounded-full mx-auto mb-4">
-            <Lock className="w-6 h-6 text-[#525252]" />
+      <div className="min-h-screen bg-canvas flex items-center justify-center p-4">
+        <div className="bg-surface rounded-lg p-8 max-w-md w-full border border-hairline">
+          <div className="flex items-center justify-center w-12 h-12 bg-canvas rounded-full mx-auto mb-4">
+            <Lock className="w-6 h-6 text-copy" />
           </div>
-          <h2 className="text-xl font-medium text-[#292929] text-center mb-2">
+          <h2 className="text-xl font-medium text-ink text-center mb-2">
             Password Required
           </h2>
-          <p className="text-sm text-[#525252] text-center mb-6">
+          <p className="text-sm text-copy text-center mb-6">
             This submission page is password-protected
           </p>
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
@@ -229,7 +229,7 @@ export function JudgingGroupSubmitPage() {
             </div>
             <Button
               type="submit"
-              className="w-full bg-[#292929] hover:bg-[#525252]"
+              className="w-full bg-cta hover:bg-cta-hover"
             >
               Submit
             </Button>
@@ -251,7 +251,7 @@ export function JudgingGroupSubmitPage() {
 
   // Shared form card used by every layout variant
   const formCard = (
-    <div className="bg-white rounded-xl p-6 sm:p-8 border border-[#D8E1EC]">
+    <div className="bg-surface rounded-xl p-6 sm:p-8 border border-hairline">
       {showSuccess ? (
         /* Success Message */
         <div className="text-center py-12">
@@ -270,23 +270,23 @@ export function JudgingGroupSubmitPage() {
               />
             </svg>
           </div>
-          <h2 className="text-3xl font-medium text-[#292929] mb-2">
+          <h2 className="text-3xl font-medium text-ink mb-2">
             Thank You!
           </h2>
-          <p className="text-[#525252]">
+          <p className="text-copy">
             Your submission has been received successfully.
           </p>
-          <p className="text-sm text-[#787672] mt-4">
+          <p className="text-sm text-faint mt-4">
             Redirecting you to the homepage...
           </p>
         </div>
       ) : (
         <>
-          <h2 className="text-2xl font-medium text-[#292929] mb-2">
+          <h2 className="text-2xl font-medium text-ink mb-2">
             {submissionPage.submissionFormTitle || "Submit Your App"}
           </h2>
           {submissionPage.submissionFormSubtitle && (
-            <p className="text-sm text-[#525252] mb-4">
+            <p className="text-sm text-copy mb-4">
               {submissionPage.submissionFormSubtitle}
             </p>
           )}
@@ -294,19 +294,19 @@ export function JudgingGroupSubmitPage() {
 
           {/* Notice about authentication */}
           {!isSignedIn && (
-            <div className="mb-6 p-4 bg-[#F4F2EE] border border-[#D8E1EC] rounded-md">
-              <p className="text-sm text-[#525252]">
+            <div className="mb-6 p-4 bg-canvas border border-hairline rounded-md">
+              <p className="text-sm text-copy">
                 You need to{" "}
                 <Link
                   to="/sign-up"
-                  className="underline font-medium text-[#292929] hover:text-[#525252]"
+                  className="underline font-medium text-ink hover:text-copy"
                 >
                   sign up
                 </Link>{" "}
                 or{" "}
                 <Link
                   to="/sign-in"
-                  className="underline font-medium text-[#292929] hover:text-[#525252]"
+                  className="underline font-medium text-ink hover:text-copy"
                 >
                   sign in
                 </Link>{" "}
@@ -337,18 +337,18 @@ export function JudgingGroupSubmitPage() {
             />
           ) : (
             <div className="text-center py-8">
-              <p className="text-[#525252] mb-4">
+              <p className="text-copy mb-4">
                 You need to sign up or sign in to submit your app to the
                 hackathon.
               </p>
               <div className="flex items-center justify-center gap-3">
                 <Link to="/sign-up">
-                  <Button className="bg-[#292929] hover:bg-[#525252]">
+                  <Button className="bg-cta hover:bg-cta-hover">
                     Sign Up
                   </Button>
                 </Link>
                 <Link to="/sign-in">
-                  <Button className="bg-[#292929] hover:bg-[#525252]">
+                  <Button className="bg-cta hover:bg-cta-hover">
                     Sign In
                   </Button>
                 </Link>
@@ -364,7 +364,7 @@ export function JudgingGroupSubmitPage() {
   // stacked above the form card. Built for focused reading and submitting.
   if (isSingleColumn) {
     return (
-      <div className="min-h-screen bg-[#F4F2EE]">
+      <div className="min-h-screen bg-canvas">
         <div className="mx-auto max-w-2xl px-4 py-10 sm:py-16">
           <header className="mb-10 sm:mb-12 text-center">
             {submissionPage.submissionPageImageUrl && (
@@ -377,14 +377,14 @@ export function JudgingGroupSubmitPage() {
                   aspectRatio: "1 / 1",
                   objectFit: "cover",
                 }}
-                className="mx-auto rounded-xl border border-[#D8E1EC] mb-8"
+                className="mx-auto rounded-xl border border-hairline mb-8"
               />
             )}
-            <h1 className="text-3xl sm:text-4xl font-medium tracking-tight text-[#292929]">
+            <h1 className="text-3xl sm:text-4xl font-medium tracking-tight text-ink">
               {submissionPage.submissionPageTitle || submissionPage.name}
             </h1>
             {submissionPage.submissionPageDescription && (
-              <p className="mt-4 text-[#525252] leading-relaxed whitespace-pre-wrap max-w-xl mx-auto">
+              <p className="mt-4 text-copy leading-relaxed whitespace-pre-wrap max-w-xl mx-auto">
                 {submissionPage.submissionPageDescription}
               </p>
             )}
@@ -397,7 +397,7 @@ export function JudgingGroupSubmitPage() {
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white border border-[#D8E1EC] text-sm text-[#292929] hover:border-[#A8A29E] hover:text-[#525252] transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface border border-hairline text-sm text-ink hover:border-hairline-strong hover:text-copy transition-colors"
                     >
                       <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
                       {link.label}
@@ -415,7 +415,7 @@ export function JudgingGroupSubmitPage() {
 
   // Main submission page - Luma-style layout
   return (
-    <div className="min-h-screen bg-[#F4F2EE]">
+    <div className="min-h-screen bg-canvas">
       {/* Main Content - Dynamic Column Layout */}
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className={`grid grid-cols-1 ${layoutClass} gap-8`}>
@@ -440,12 +440,12 @@ export function JudgingGroupSubmitPage() {
             )}
 
             {/* Title & Description */}
-            <div className="bg-white rounded-lg p-6 border border-[#D8E1EC]">
-              <h1 className="text-3xl font-medium text-[#292929] mb-4">
+            <div className="bg-surface rounded-lg p-6 border border-hairline">
+              <h1 className="text-3xl font-medium text-ink mb-4">
                 {submissionPage.submissionPageTitle || submissionPage.name}
               </h1>
               {submissionPage.submissionPageDescription && (
-                <div className="prose prose-sm max-w-none text-[#525252]">
+                <div className="prose prose-sm max-w-none text-copy">
                   <p className="whitespace-pre-wrap">
                     {submissionPage.submissionPageDescription}
                   </p>
@@ -456,7 +456,7 @@ export function JudgingGroupSubmitPage() {
             {/* Links - No Heading, Just Links */}
             {submissionPage.submissionPageLinks &&
               submissionPage.submissionPageLinks.length > 0 && (
-                <div className="bg-white rounded-lg p-6 border border-[#D8E1EC]">
+                <div className="bg-surface rounded-lg p-6 border border-hairline">
                   <div className="space-y-2">
                     {submissionPage.submissionPageLinks.map((link, index) => (
                       <a
@@ -464,7 +464,7 @@ export function JudgingGroupSubmitPage() {
                         href={link.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center text-[#292929] hover:text-[#525252] transition-colors group"
+                        className="flex items-center text-ink hover:text-copy transition-colors group"
                       >
                         <ExternalLink className="w-4 h-4 mr-2 flex-shrink-0" />
                         <span className="group-hover:underline">
@@ -489,10 +489,10 @@ export function JudgingGroupSubmitPage() {
 function SectionHeading({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-3 pt-2">
-      <span className="text-xs font-medium uppercase tracking-wider text-[#787672] whitespace-nowrap">
+      <span className="text-xs font-medium uppercase tracking-wider text-faint whitespace-nowrap">
         {label}
       </span>
-      <div className="h-px flex-1 bg-[#D8E1EC]" aria-hidden="true" />
+      <div className="h-px flex-1 bg-surface-hover" aria-hidden="true" />
     </div>
   );
 }
@@ -835,7 +835,7 @@ function SubmissionFormContent({
 
       {/* App Title */}
       <div>
-        <label className="block text-sm font-medium text-[#525252] mb-1">
+        <label className="block text-sm font-medium text-copy mb-1">
           App Title{req.title ? "*" : " (Optional)"}
         </label>
         <input
@@ -845,7 +845,7 @@ function SubmissionFormContent({
             setFormData((prev) => ({ ...prev, title: e.target.value }))
           }
           placeholder="Site name"
-          className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+          className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
           required={req.title}
           disabled={isSubmitting}
         />
@@ -854,7 +854,7 @@ function SubmissionFormContent({
       {/* Tagline */}
       {vis.tagline && (
       <div>
-        <label className="block text-sm font-medium text-[#525252] mb-1">
+        <label className="block text-sm font-medium text-copy mb-1">
           App/Project Tagline{req.tagline ? "*" : " (Optional)"}
         </label>
         <input
@@ -867,11 +867,11 @@ function SubmissionFormContent({
           }}
           maxLength={MAX_TAGLINE_LENGTH}
           placeholder="One sentence pitch or description"
-          className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+          className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
           required={req.tagline}
           disabled={isSubmitting}
         />
-        <div className="text-xs text-right text-[#545454] mt-1">
+        <div className="text-xs text-right text-soft mt-1">
           {formData.tagline.length}/{MAX_TAGLINE_LENGTH}
         </div>
       </div>
@@ -880,7 +880,7 @@ function SubmissionFormContent({
       {/* Long Description */}
       {vis.longDescription && (
       <div>
-        <label className="block text-sm font-medium text-[#525252] mb-1">
+        <label className="block text-sm font-medium text-copy mb-1">
           Description{req.longDescription ? "*" : ""} (Markdown and fenced `code`
           blocks supported)
         </label>
@@ -894,14 +894,14 @@ function SubmissionFormContent({
           }
           placeholder="- Problem you're solving&#10;- How the app works&#10;- Notable features&#10;- Why did you build this&#10;- Tech stack list&#10;- Challenges we ran into&#10;- Any success stories or metrics&#10;"
           rows={8}
-          className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+          className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
           required={req.longDescription}
           disabled={isSubmitting}
         />
         {formData.longDescription && (
           <div className="mt-2">
-            <div className="text-xs text-[#545454] mb-1">Preview</div>
-            <div className="prose prose-sm max-w-none text-[#525252] bg-gray-50 border border-[#D8E1EC] rounded-md p-3">
+            <div className="text-xs text-soft mb-1">Preview</div>
+            <div className="prose prose-sm max-w-none text-copy bg-surface-alt border border-hairline rounded-md p-3">
               <Markdown>{formData.longDescription}</Markdown>
             </div>
           </div>
@@ -919,10 +919,10 @@ function SubmissionFormContent({
       {/* URL */}
       {vis.url && (
       <div>
-        <label className="block text-sm font-medium text-[#525252] mb-1">
+        <label className="block text-sm font-medium text-copy mb-1">
           App Website Link{req.url ? "*" : " (Optional)"}
         </label>
-        <div className="text-sm text-[#545454] mb-2">
+        <div className="text-sm text-soft mb-2">
           Enter your app url (ex: https://)
         </div>
         <input
@@ -932,7 +932,7 @@ function SubmissionFormContent({
             setFormData((prev) => ({ ...prev, url: e.target.value }))
           }
           placeholder="https://"
-          className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+          className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
           required={req.url}
           disabled={isSubmitting}
         />
@@ -944,11 +944,11 @@ function SubmissionFormContent({
       <div>
         <label
           htmlFor="githubUrl"
-          className="block text-sm font-medium text-[#525252] mb-1"
+          className="block text-sm font-medium text-copy mb-1"
         >
           GitHub Repo URL{req.githubUrl ? "*" : " (Optional)"}
         </label>
-        <div className="text-sm text-[#545454] mb-2">
+        <div className="text-sm text-soft mb-2">
           GitHub repository URL for your project
         </div>
         <input
@@ -965,7 +965,7 @@ function SubmissionFormContent({
           onBlur={(e) => {
             void checkRepoVisibility(e.target.value);
           }}
-          className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+          className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
           required={req.githubUrl}
           disabled={isSubmitting}
         />
@@ -985,12 +985,12 @@ function SubmissionFormContent({
           <div key={field.key}>
             <label
               htmlFor={field.key}
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               {field.label}
             </label>
             {field.description && (
-              <div className="text-sm text-[#545454] mb-2">
+              <div className="text-sm text-soft mb-2">
                 {field.description}
               </div>
             )}
@@ -1005,23 +1005,23 @@ function SubmissionFormContent({
                   [field.key]: e.target.value,
                 }))
               }
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
               required={field.isRequired}
               disabled={isSubmitting}
             />
           </div>
         ))}
       {vis.additionalLinks && formFields === undefined && (
-        <div className="text-sm text-gray-500">Loading form fields...</div>
+        <div className="text-sm text-soft">Loading form fields...</div>
       )}
 
       {/* Video URL */}
       {vis.videoUrl && (
       <div>
-        <label className="block text-sm font-medium text-[#525252] mb-1">
+        <label className="block text-sm font-medium text-copy mb-1">
           Video Demo{req.videoUrl ? "*" : " (Recommended)"}
         </label>
-        <div className="text-sm text-[#545454] mb-2">
+        <div className="text-sm text-soft mb-2">
           Share a video demo of your app (YouTube, Vimeo, etc.)
         </div>
         <input
@@ -1031,7 +1031,7 @@ function SubmissionFormContent({
             setFormData((prev) => ({ ...prev, videoUrl: e.target.value }))
           }
           placeholder="https://youtube.com/..."
-          className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+          className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
           required={req.videoUrl}
           disabled={isSubmitting}
         />
@@ -1041,7 +1041,7 @@ function SubmissionFormContent({
       {/* Screenshot */}
       {vis.screenshot && (
       <div>
-        <label className="block text-sm font-medium text-[#525252] mb-1">
+        <label className="block text-sm font-medium text-copy mb-1">
           Screenshot or Image{req.screenshot ? "*" : " (Optional)"}
         </label>
         <input
@@ -1049,7 +1049,7 @@ function SubmissionFormContent({
           accept="image/*"
           onChange={handleImageChange}
           disabled={isSubmitting}
-          className="w-full text-sm text-[#525252] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-[#F4F2EE] file:text-[#292929] hover:file:bg-[#D8E1EC]"
+          className="w-full text-sm text-copy file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-surface-alt file:text-ink hover:file:bg-surface-hover"
           required={req.screenshot}
         />
       </div>
@@ -1058,7 +1058,7 @@ function SubmissionFormContent({
       {/* Additional Images */}
       {vis.additionalImages && (
       <div>
-        <label className="block text-sm font-medium text-[#525252] mb-1">
+        <label className="block text-sm font-medium text-copy mb-1">
           Additional Images (Optional, max 4)
         </label>
         <input
@@ -1067,14 +1067,14 @@ function SubmissionFormContent({
           multiple
           onChange={handleAdditionalImagesChange}
           disabled={isSubmitting || additionalImages.length >= 5}
-          className="w-full text-sm text-[#525252] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-[#F4F2EE] file:text-[#292929] hover:file:bg-[#D8E1EC]"
+          className="w-full text-sm text-copy file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-surface-alt file:text-ink hover:file:bg-surface-hover"
         />
         {additionalImages.length > 0 && (
           <div className="mt-2 space-y-1">
             {additionalImages.map((file, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between text-sm text-[#525252] bg-gray-50 p-2 rounded"
+                className="flex items-center justify-between text-sm text-copy bg-surface-alt p-2 rounded"
               >
                 <span className="truncate">{file.name}</span>
                 <button
@@ -1099,13 +1099,13 @@ function SubmissionFormContent({
             <div key={question.key}>
               <label
                 htmlFor={`custom-${question.key}`}
-                className="block text-sm font-medium text-[#525252] mb-1"
+                className="block text-sm font-medium text-copy mb-1"
               >
                 {question.label}
                 {question.required ? "*" : " (Optional)"}
               </label>
               {question.description && (
-                <div className="text-sm text-[#545454] mb-2">
+                <div className="text-sm text-soft mb-2">
                   {question.description}
                 </div>
               )}
@@ -1121,7 +1121,7 @@ function SubmissionFormContent({
                   }
                   placeholder={question.placeholder || ""}
                   rows={4}
-                  className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                  className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
                   required={question.required}
                   disabled={isSubmitting}
                 />
@@ -1137,7 +1137,7 @@ function SubmissionFormContent({
                     }))
                   }
                   placeholder={question.placeholder || ""}
-                  className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                  className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
                   required={question.required}
                   disabled={isSubmitting}
                 />
@@ -1152,7 +1152,7 @@ function SubmissionFormContent({
       {/* Submitter Name */}
       {vis.submitterName && (
       <div>
-        <label className="block text-sm font-medium text-[#525252] mb-1">
+        <label className="block text-sm font-medium text-copy mb-1">
           Your Name{req.submitterName ? "*" : " (Optional)"}
         </label>
         <input
@@ -1162,7 +1162,7 @@ function SubmissionFormContent({
             setFormData((prev) => ({ ...prev, submitterName: e.target.value }))
           }
           placeholder="Your name"
-          className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+          className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
           required={req.submitterName}
           disabled={isSubmitting}
         />
@@ -1172,10 +1172,10 @@ function SubmissionFormContent({
       {/* Email */}
       {vis.email && (
       <div>
-        <label className="block text-sm font-medium text-[#525252] mb-1">
+        <label className="block text-sm font-medium text-copy mb-1">
           Email{req.email ? "*" : " (Optional)"}
         </label>
-        <div className="text-sm text-[#545454] mb-2">
+        <div className="text-sm text-soft mb-2">
           Hidden and for hackathon notifications
         </div>
         <input
@@ -1185,7 +1185,7 @@ function SubmissionFormContent({
             setFormData((prev) => ({ ...prev, email: e.target.value }))
           }
           placeholder="your@email.com"
-          className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+          className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
           required={req.email}
           disabled={isSubmitting}
         />
@@ -1194,8 +1194,8 @@ function SubmissionFormContent({
 
       {/* Hackathon Team Info */}
       {vis.teamInfo && (
-      <div className="bg-[#F4F2EE] p-4 rounded-md border border-[#D8E1EC]">
-        <h3 className="text-base font-medium text-[#292929] mb-3">
+      <div className="bg-canvas p-4 rounded-md border border-hairline">
+        <h3 className="text-base font-medium text-ink mb-3">
           Hackathon Team Info (Optional)
         </h3>
 
@@ -1203,7 +1203,7 @@ function SubmissionFormContent({
           {/* Team Name */}
           <div>
             <label
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
               htmlFor="teamName"
             >
               Team Name (Optional)
@@ -1219,7 +1219,7 @@ function SubmissionFormContent({
                   teamName: e.target.value,
                 }))
               }
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
               disabled={isSubmitting}
             />
           </div>
@@ -1228,7 +1228,7 @@ function SubmissionFormContent({
           {teamData.teamName && (
             <div>
               <label
-                className="block text-sm font-medium text-[#525252] mb-1"
+                className="block text-sm font-medium text-copy mb-1"
                 htmlFor="teamSize"
               >
                 Team Size
@@ -1246,7 +1246,7 @@ function SubmissionFormContent({
                     teamSize: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
                 disabled={isSubmitting}
               />
             </div>
@@ -1255,7 +1255,7 @@ function SubmissionFormContent({
           {/* Team Members */}
           {teamData.teamName && (
             <div>
-              <label className="block text-sm font-medium text-[#525252] mb-2">
+              <label className="block text-sm font-medium text-copy mb-2">
                 Team Members (Optional)
               </label>
               <div className="space-y-2">
@@ -1273,7 +1273,7 @@ function SubmissionFormContent({
                           teamMembers: newMembers,
                         }));
                       }}
-                      className="flex-1 px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                      className="flex-1 px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
                       disabled={isSubmitting}
                     />
                     <input
@@ -1288,7 +1288,7 @@ function SubmissionFormContent({
                           teamMembers: newMembers,
                         }));
                       }}
-                      className="flex-1 px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                      className="flex-1 px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
                       disabled={isSubmitting}
                     />
                     {index > 0 && (
@@ -1322,7 +1322,7 @@ function SubmissionFormContent({
                       ],
                     }));
                   }}
-                  className="w-full px-3 py-2 border border-[#D8E1EC] text-[#525252] hover:bg-[#F4F2EE] rounded-md transition-colors flex items-center justify-center gap-2"
+                  className="w-full px-3 py-2 border border-hairline text-copy hover:bg-surface-hover rounded-md transition-colors flex items-center justify-center gap-2"
                   disabled={isSubmitting}
                 >
                   <Plus className="w-4 h-4" />
@@ -1341,17 +1341,17 @@ function SubmissionFormContent({
 
       {/* Tags Section */}
       <div>
-        <label className="block text-sm font-medium text-[#525252] mb-2">
+        <label className="block text-sm font-medium text-copy mb-2">
           Select Tags{req.tags ? " *" : " (Optional)"}
         </label>
-        <span className="ml-2 text-xs text-gray-600">
+        <span className="ml-2 text-xs text-copy">
           Select tags that best describe your app or hackathon participation
         </span>
 
         {/* Quick Select - Header Tags */}
         <div className="flex flex-wrap gap-2 mb-4 mt-3">
           {availableTags === undefined && (
-            <span className="text-sm text-gray-500">Loading tags...</span>
+            <span className="text-sm text-soft">Loading tags...</span>
           )}
           {availableTags?.map((tag) => (
             <button
@@ -1363,20 +1363,20 @@ function SubmissionFormContent({
               }
               className={`px-3 py-1 rounded-md text-sm transition-colors border flex items-center gap-1 ${
                 selectedTagIds.includes(tag._id)
-                  ? "bg-[#F4F0ED] text-[#292929] border-[#D5D3D0]"
-                  : "bg-white text-[#545454] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"
+                  ? "bg-surface-alt text-ink border-hairline-strong"
+                  : "bg-surface text-soft border-hairline-strong hover:border-hairline-strong hover:text-copy"
               }`}
               style={{
                 backgroundColor: selectedTagIds.includes(tag._id)
-                  ? tag.backgroundColor || "#F4F0ED"
+                  ? tag.backgroundColor || "var(--th-surface-alt)"
                   : "white",
                 color: selectedTagIds.includes(tag._id)
-                  ? (tag.textColor ?? "#292929")
-                  : "#545454",
+                  ? (tag.textColor ?? "var(--th-ink)")
+                  : "var(--th-soft)",
                 borderColor: selectedTagIds.includes(tag._id)
                   ? tag.borderColor ||
-                    (tag.backgroundColor ? "transparent" : "#D5D3D0")
-                  : "#D5D3D0",
+                    (tag.backgroundColor ? "transparent" : "var(--th-hairline-strong)")
+                  : "var(--th-hairline-strong)",
               }}
             >
               {tag.emoji && <span className="text-sm">{tag.emoji}</span>}
@@ -1394,10 +1394,10 @@ function SubmissionFormContent({
 
         {/* Search All Tags Dropdown */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-[#525252] mb-2">
+          <label className="block text-sm font-medium text-copy mb-2">
             Search All Available Tags
           </label>
-          <span className="ml-2 text-xs text-gray-600 mb-2 block">
+          <span className="ml-2 text-xs text-copy mb-2 block">
             Find and select from all tags, including those not shown above
           </span>
           <div className="relative" ref={dropdownRef}>
@@ -1411,12 +1411,12 @@ function SubmissionFormContent({
               onFocus={() => setShowDropdown(dropdownSearchValue.length > 0)}
               placeholder="Type to search for tags..."
               disabled={isSubmitting}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline text-sm"
             />
 
             {/* Dropdown Results */}
             {showDropdown && allTags && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-[#D8E1EC] rounded-md shadow-lg max-h-48 overflow-y-auto">
+              <div className="absolute z-10 w-full mt-1 bg-surface border border-hairline rounded-md shadow-lg max-h-48 overflow-y-auto">
                 {(() => {
                   const searchTerm = dropdownSearchValue.toLowerCase();
                   const filteredTags = allTags
@@ -1433,7 +1433,7 @@ function SubmissionFormContent({
 
                   if (filteredTags.length === 0) {
                     return (
-                      <div className="px-3 py-2 text-sm text-gray-500">
+                      <div className="px-3 py-2 text-sm text-soft">
                         No matching tags found
                       </div>
                     );
@@ -1445,7 +1445,7 @@ function SubmissionFormContent({
                       type="button"
                       onClick={() => handleSelectFromDropdown(tag._id)}
                       disabled={isSubmitting}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-[#F4F0ED] focus:bg-[#F4F0ED] focus:outline-none flex items-center gap-2"
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-surface-hover focus:bg-surface-alt focus:outline-none flex items-center gap-2"
                     >
                       {tag.emoji && (
                         <span className="text-sm">{tag.emoji}</span>
@@ -1460,15 +1460,15 @@ function SubmissionFormContent({
                       <span
                         className="inline-block px-2 py-0.5 rounded text-xs font-medium"
                         style={{
-                          backgroundColor: tag.backgroundColor || "#F4F0ED",
-                          color: tag.textColor || "#525252",
-                          border: `1px solid ${tag.backgroundColor ? "transparent" : "#D5D3D0"}`,
+                          backgroundColor: tag.backgroundColor || "var(--th-surface-alt)",
+                          color: tag.textColor || "var(--th-copy)",
+                          border: `1px solid ${tag.backgroundColor ? "transparent" : "var(--th-hairline-strong)"}`,
                         }}
                       >
                         {tag.name}
                       </span>
                       {tag.isHidden && (
-                        <span className="text-xs text-gray-400">(Hidden)</span>
+                        <span className="text-xs text-faint">(Hidden)</span>
                       )}
                     </button>
                   ));
@@ -1479,7 +1479,7 @@ function SubmissionFormContent({
         </div>
 
         {/* Create New Tag */}
-        <label className="block text-sm font-medium text-[#525252] mb-2">
+        <label className="block text-sm font-medium text-copy mb-2">
           Add New Tags (optional)
         </label>
         <div className="flex gap-2 mb-2">
@@ -1500,7 +1500,7 @@ function SubmissionFormContent({
                 : "Enter new tag name..."
             }
             disabled={isSubmitting || countedTags >= maxTags}
-            className="flex-1 px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
+            className="flex-1 px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline text-sm"
           />
           <button
             type="button"
@@ -1510,7 +1510,7 @@ function SubmissionFormContent({
               isSubmitting ||
               countedTags >= maxTags
             }
-            className="px-3 py-1 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            className="px-3 py-1 bg-surface-alt text-copy rounded-md hover:bg-surface-hover transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
           >
             <Plus className="w-4 h-4" /> Add
           </button>
@@ -1532,8 +1532,8 @@ function SubmissionFormContent({
       </div>
 
       {/* Selected Tags - Always Visible */}
-      <div className="p-4 bg-[#F4F2EE] rounded-md border border-[#D8E1EC]">
-        <div className="text-sm font-medium text-[#525252] mb-3">
+      <div className="p-4 bg-canvas rounded-md border border-hairline">
+        <div className="text-sm font-medium text-copy mb-3">
           Selected Tags ({countedTags}/{maxTags})
         </div>
         {selectedTagIds.length > 0 || newTagNames.length > 0 ? (
@@ -1552,11 +1552,11 @@ function SubmissionFormContent({
                     key={tag._id}
                     className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm border transition-colors"
                     style={{
-                      backgroundColor: tag.backgroundColor || "#F4F0ED",
-                      color: tag.textColor || "#292929",
+                      backgroundColor: tag.backgroundColor || "var(--th-surface-alt)",
+                      color: tag.textColor || "var(--th-ink)",
                       borderColor: tag.backgroundColor
                         ? "transparent"
-                        : "#D5D3D0",
+                        : "var(--th-hairline-strong)",
                     }}
                   >
                     {tag.emoji && <span className="text-sm">{tag.emoji}</span>}
@@ -1592,7 +1592,7 @@ function SubmissionFormContent({
             ))}
           </div>
         ) : (
-          <p className="text-sm text-[#787672]">
+          <p className="text-sm text-faint">
             No tags selected yet. Please select tags above.
           </p>
         )}
@@ -1604,7 +1604,7 @@ function SubmissionFormContent({
       <Button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-[#292929] hover:bg-[#525252] h-11 text-[15px]"
+        className="w-full bg-cta hover:bg-cta-hover h-11 text-[15px]"
       >
         {isSubmitting ? "Submitting..." : "Submit App"}
       </Button>

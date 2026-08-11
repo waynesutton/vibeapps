@@ -78,7 +78,7 @@ const BookmarkButton = ({ storyId }: { storyId: Id<"stories"> }) => {
     // Show a loading state or disabled button
     return (
       <button
-        className="flex items-center gap-1 text-[#787672] opacity-50 cursor-not-allowed"
+        className="flex items-center gap-1 text-faint opacity-50 cursor-not-allowed"
         disabled
         title="Loading..."
       >
@@ -90,7 +90,7 @@ const BookmarkButton = ({ storyId }: { storyId: Id<"stories"> }) => {
   if (!isSignedIn) {
     return (
       <button
-        className="flex items-center gap-1 text-[#787672] hover:text-[#525252]"
+        className="flex items-center gap-1 text-faint hover:text-copy"
         onClick={() => {
           toast.info("Please sign in to bookmark stories.");
         }}
@@ -104,11 +104,11 @@ const BookmarkButton = ({ storyId }: { storyId: Id<"stories"> }) => {
   return (
     <button
       onClick={handleBookmarkClick}
-      className="flex items-center gap-1 text-[#787672] hover:text-[#525252]"
+      className="flex items-center gap-1 text-faint hover:text-copy"
       title={isBookmarked ? "Remove bookmark" : "Bookmark story"}
     >
       {isBookmarked ? (
-        <BookmarkCheck className="w-4 h-4 text-black" />
+        <BookmarkCheck className="w-4 h-4 text-ink" />
       ) : (
         <Bookmark className="w-4 h-4" />
       )}
@@ -910,13 +910,13 @@ export function StoryDetail({ story }: StoryDetailProps) {
         <div className="flex gap-8">
           {/* Main Content */}
         <div className="flex-1 min-w-0">
-          <article className="bg-white rounded-lg p-4 sm:p-6 border border-[#D8E1EC]">
+          <article className="bg-surface rounded-lg p-4 sm:p-6 border border-hairline">
             <div className="flex gap-4">
               <div className="flex flex-col items-center gap-1 pt-1 min-w-[40px]">
                 <button
                   onClick={handleVote}
                   disabled={!isClerkLoaded} // Disable while Clerk is loading to prevent premature clicks
-                  className={`text-[#292929] hover:bg-[#F4F0ED] p-1 rounded ${
+                  className={`text-ink hover:bg-surface-hover p-1 rounded ${
                     !isSignedIn && isClerkLoaded ? "opacity-50 cursor-help" : ""
                   }`}
                   title={
@@ -927,15 +927,15 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 >
                   <ChevronUp className="w-5 h-5" />
                 </button>
-                <span className="text-[#525252] font-medium text-sm">
+                <span className="text-copy font-medium text-sm">
                   {story.votes}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <h1 className="text-xl lg:text-1xl font-bold  text-transform: capitalize text-[#000000] mb-2">
+                <h1 className="text-xl lg:text-1xl font-bold  text-transform: capitalize text-ink mb-2">
                   <a
                     href={story.url}
-                    className="hover:text-[#555555] break-words"
+                    className="hover:text-copy break-words"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -943,11 +943,11 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   </a>
                 </h1>
                 {story.customMessage && (
-                  <div className="mb-4 text-sm text-[#ffffff] bg-[#292929] border border-[#D8E1EC] rounded-md p-3 italic">
+                  <div className="mb-4 text-sm text-on-cta bg-cta border border-hairline rounded-md p-3 italic">
                     {story.customMessage}
                   </div>
                 )}
-                <p className="text-[#000000] mb-4 prose prose-base max-w-none">
+                <p className="text-ink mb-4 prose prose-base max-w-none">
                   {story.description}
                 </p>
                 <ImageGallery
@@ -956,16 +956,16 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   altText={`${story.title} screenshot`}
                 />
                 {story.longDescription && (
-                  <div className="text-[#525252] mb-4 prose prose-base max-w-none">
+                  <div className="text-copy mb-4 prose prose-base max-w-none">
                     <Markdown>{story.longDescription}</Markdown>
                   </div>
                 )}
-                <div className="flex items-center gap-2 text-sm text-[#545454] flex-wrap mb-3">
+                <div className="flex items-center gap-2 text-sm text-soft flex-wrap mb-3">
                   {story.authorUsername ? (
                     <ProfileHoverCard username={story.authorUsername}>
                       <Link
                         to={`/${story.authorUsername}`}
-                        className="hover:text-[#525252] hover:underline"
+                        className="hover:text-copy hover:underline"
                       >
                         by{" "}
                         {story.submitterName ||
@@ -984,7 +984,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   <span>{formatDistanceToNow(story._creationTime)} ago</span>
                   <Link
                     to="#comments"
-                    className="flex items-center gap-1 hover:text-[#525252]"
+                    className="flex items-center gap-1 hover:text-copy"
                   >
                     <MessageSquare className="w-4 h-4" />
                     {comments?.length ?? 0} Comments
@@ -1005,19 +1005,19 @@ export function StoryDetail({ story }: StoryDetailProps) {
           ) ||
           story.tags?.length > 0) && (
           <div className="w-80 flex-shrink-0 hidden lg:block self-start">
-            <div className="bg-[#F9F9F9] rounded-lg p-4 border border-[#E5E5E5] sticky top-8">
-              <h2 className="text-base font-medium text-[#525252] mb-3">
+            <div className="bg-surface-alt rounded-lg p-4 border border-hairline sticky top-8">
+              <h2 className="text-base font-medium text-copy mb-3">
                 Project Links & Tags
               </h2>
               <div className="space-y-2">
                 {story.url && (
                   <div className="flex items-center gap-2">
-                    <Link2 className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                    <Link2 className="w-4 h-4 text-soft flex-shrink-0" />
                     <a
                       href={story.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                      className="text-sm text-copy hover:text-ink hover:underline truncate"
                       title={story.url}
                     >
                       {story.url}
@@ -1027,12 +1027,12 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
                 {story.videoUrl && story.videoUrl.trim() && (
                   <div className="flex items-center gap-2">
-                    <Play className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                    <Play className="w-4 h-4 text-soft flex-shrink-0" />
                     <a
                       href={story.videoUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                      className="text-sm text-copy hover:text-ink hover:underline truncate"
                       title={story.videoUrl}
                     >
                       Video Demo
@@ -1043,12 +1043,12 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 {/* GitHub Link - Always shown if available */}
                 {story.githubUrl && story.githubUrl.trim() && (
                   <div className="flex items-center gap-2">
-                    <Github className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                    <Github className="w-4 h-4 text-soft flex-shrink-0" />
                     <a
                       href={story.githubUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                      className="text-sm text-copy hover:text-ink hover:underline truncate"
                       title={story.githubUrl}
                     >
                       GitHub Repository
@@ -1067,38 +1067,38 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     const getIcon = () => {
                       if (field.key.toLowerCase().includes("github")) {
                         return (
-                          <Github className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                          <Github className="w-4 h-4 text-soft flex-shrink-0" />
                         );
                       } else if (field.key.toLowerCase().includes("linkedin")) {
                         return (
-                          <Linkedin className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                          <Linkedin className="w-4 h-4 text-soft flex-shrink-0" />
                         );
                       } else if (
                         field.key.toLowerCase().includes("twitter") ||
                         field.key.toLowerCase().includes("x")
                       ) {
                         return (
-                          <Twitter className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                          <Twitter className="w-4 h-4 text-soft flex-shrink-0" />
                         );
                       } else if (field.key.toLowerCase().includes("chef")) {
                         return (
-                          <span className="w-4 h-4 text-[#545454] flex-shrink-0">
+                          <span className="w-4 h-4 text-soft flex-shrink-0">
                             🍲
                           </span>
                         );
                       } else if (field.fieldType === "url") {
                         return (
-                          <Link2 className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                          <Link2 className="w-4 h-4 text-soft flex-shrink-0" />
                         );
                       } else if (field.fieldType === "email") {
                         return (
-                          <span className="w-4 h-4 text-[#545454] flex-shrink-0">
+                          <span className="w-4 h-4 text-soft flex-shrink-0">
                             ✉️
                           </span>
                         );
                       } else {
                         return (
-                          <span className="w-4 h-4 text-[#545454] flex-shrink-0">
+                          <span className="w-4 h-4 text-soft flex-shrink-0">
                             🔗
                           </span>
                         );
@@ -1121,7 +1121,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                             href={fieldValue}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                            className="text-sm text-copy hover:text-ink hover:underline truncate"
                             title={fieldValue}
                           >
                             {getDisplayLabel()}
@@ -1129,14 +1129,14 @@ export function StoryDetail({ story }: StoryDetailProps) {
                         ) : field.fieldType === "email" ? (
                           <a
                             href={`mailto:${fieldValue}`}
-                            className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                            className="text-sm text-copy hover:text-ink hover:underline truncate"
                             title={fieldValue}
                           >
                             {getDisplayLabel()}
                           </a>
                         ) : (
                           <span
-                            className="text-sm text-[#525252] truncate"
+                            className="text-sm text-copy truncate"
                             title={fieldValue}
                           >
                             {getDisplayLabel()}: {fieldValue}
@@ -1148,7 +1148,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
                 {/* Tags */}
                 {story.tags && story.tags.length > 0 && (
-                  <div className="flex gap-1.5 flex-wrap pt-2 border-t border-[#E5E5E5] mt-3">
+                  <div className="flex gap-1.5 flex-wrap pt-2 border-t border-hairline mt-3">
                     {(story.tags || []).map(
                       (tag: Doc<"tags">) =>
                         !tag.isHidden &&
@@ -1160,9 +1160,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
                             to={`/tag/${tag.slug}`}
                             className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition-opacity hover:opacity-80"
                             style={{
-                              backgroundColor: tag.backgroundColor || "#F4F0ED",
-                              color: tag.textColor || "#525252",
-                              border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "#D5D3D0")}`,
+                              backgroundColor: tag.backgroundColor || "var(--th-surface-alt)",
+                              color: tag.textColor || "var(--th-copy)",
+                              border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "var(--th-hairline-strong)")}`,
                             }}
                             title={`View all apps tagged with ${tag.name}`}
                           >
@@ -1185,10 +1185,10 @@ export function StoryDetail({ story }: StoryDetailProps) {
               </div>
             </div>
             {/* Changelog Link */}
-            <div className="mt-4 pt-3 border-t border-[#E5E5E5]">
+            <div className="mt-4 pt-3 border-t border-hairline">
               <a
                 href="#changelog"
-                className="flex items-center gap-2 text-sm text-[#525252] hover:text-[#292929] hover:underline"
+                className="flex items-center gap-2 text-sm text-copy hover:text-ink hover:underline"
               >
                 <svg
                   className="w-4 h-4"
@@ -1208,7 +1208,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
             </div>
             <Link
               to="/"
-              className="text-[#545454] hover:text-[#525252] inline-block mb-6 text-sm mt-[1.5625rem]"
+              className="text-soft hover:text-copy inline-block mb-6 text-sm mt-[1.5625rem]"
             >
               ← Back to Apps List
             </Link>
@@ -1220,11 +1220,11 @@ export function StoryDetail({ story }: StoryDetailProps) {
       {isEditing && currentUser && story.userId === currentUser._id && (
         <div
           id="edit-submission-form"
-          className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC]"
+          className="mt-8 bg-surface rounded-lg p-6 border border-hairline"
         >
           <form onSubmit={handleEditSubmit} className="space-y-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-medium text-[#525252]">
+              <h2 className="text-xl font-medium text-copy">
                 Edit Submission
               </h2>
               <div className="flex gap-2">
@@ -1247,7 +1247,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     !editFormData.description ||
                     !editFormData.url
                   }
-                  className="text-xs bg-[#292929] text-white hover:bg-[#525252]"
+                  className="text-xs bg-cta text-on-cta hover:bg-cta-hover"
                 >
                   {isSubmitting ? "Saving..." : "Save Changes"}
                 </Button>
@@ -1256,12 +1256,12 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
             <div>
               {/* Additional Images (Gallery) Upload & Manage */}
-              <label className="block text-sm font-medium text-[#525252] mb-1">
+              <label className="block text-sm font-medium text-copy mb-1">
                 Additional Images (max 4)
               </label>
               {(existingAdditionalImages.length > 0 ||
                 newAdditionalImages.length > 0) && (
-                <div className="mb-2 text-sm text-[#545454]">
+                <div className="mb-2 text-sm text-soft">
                   {existingAdditionalImages.length + newAdditionalImages.length}
                   /4 selected
                 </div>
@@ -1273,7 +1273,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                       <img
                         src={img.url}
                         alt={`Additional ${index + 1}`}
-                        className="w-24 h-24 object-cover rounded border border-[#D8E1EC]"
+                        className="w-24 h-24 object-cover rounded border border-hairline"
                       />
                       <button
                         type="button"
@@ -1292,7 +1292,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     <img
                       src={url}
                       alt={`New Additional ${index + 1}`}
-                      className="w-24 h-24 object-cover rounded border border-[#D8E1EC]"
+                      className="w-24 h-24 object-cover rounded border border-hairline"
                     />
                     <button
                       type="button"
@@ -1311,7 +1311,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 accept="image/*"
                 multiple
                 onChange={handleAdditionalImagesChange}
-                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#F4F0ED] file:text-[#525252] hover:file:bg-[#e5e1de]"
+                className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-surface-alt file:text-copy hover:file:bg-surface-hover"
                 disabled={
                   isSubmitting ||
                   existingAdditionalImages.length +
@@ -1323,7 +1323,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
             <div>
               <label
                 htmlFor="edit-title"
-                className="block text-sm font-medium text-[#525252] mb-1"
+                className="block text-sm font-medium text-copy mb-1"
               >
                 App Title *
               </label>
@@ -1338,7 +1338,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     title: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
                 required
                 disabled={isSubmitting}
               />
@@ -1347,7 +1347,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
             <div>
               <label
                 htmlFor="edit-description"
-                className="block text-sm font-medium text-[#525252] mb-1"
+                className="block text-sm font-medium text-copy mb-1"
               >
                 App/Project Tagline *
               </label>
@@ -1362,7 +1362,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     description: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
                 required
                 disabled={isSubmitting}
               />
@@ -1371,7 +1371,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
             <div>
               <label
                 htmlFor="edit-longDescription"
-                className="block text-sm font-medium text-[#525252] mb-1"
+                className="block text-sm font-medium text-copy mb-1"
               >
                 Description (Optional)
               </label>
@@ -1386,7 +1386,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   }))
                 }
                 rows={4}
-                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
                 disabled={isSubmitting}
               />
             </div>
@@ -1394,7 +1394,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
             <div>
               <label
                 htmlFor="edit-url"
-                className="block text-sm font-medium text-[#525252] mb-1"
+                className="block text-sm font-medium text-copy mb-1"
               >
                 App Website Link *
               </label>
@@ -1406,7 +1406,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 onChange={(e) =>
                   setEditFormData((prev) => ({ ...prev, url: e.target.value }))
                 }
-                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
                 required
                 disabled={isSubmitting}
               />
@@ -1415,7 +1415,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
             <div>
               <label
                 htmlFor="edit-videoUrl"
-                className="block text-sm font-medium text-[#525252] mb-1"
+                className="block text-sm font-medium text-copy mb-1"
               >
                 Video Demo (Optional)
               </label>
@@ -1430,28 +1430,28 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     videoUrl: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
                 disabled={isSubmitting}
               />
             </div>
 
             {/* Screenshot Upload Section */}
             <div>
-              <label className="block text-sm font-medium text-[#525252] mb-2">
+              <label className="block text-sm font-medium text-copy mb-2">
                 Screenshot (Optional)
               </label>
 
               {/* Current Screenshot Display */}
               {currentScreenshot && !removeScreenshot && !screenshotPreview && (
                 <div className="mb-3">
-                  <div className="text-sm text-[#545454] mb-2">
+                  <div className="text-sm text-soft mb-2">
                     Current screenshot:
                   </div>
                   <div className="relative inline-block">
                     <img
                       src={currentScreenshot}
                       alt="Current screenshot"
-                      className="max-w-xs max-h-32 rounded-md border border-[#D8E1EC] object-cover"
+                      className="max-w-xs max-h-32 rounded-md border border-hairline object-cover"
                     />
                     <button
                       type="button"
@@ -1469,14 +1469,14 @@ export function StoryDetail({ story }: StoryDetailProps) {
               {/* New Screenshot Preview */}
               {screenshotPreview && (
                 <div className="mb-3">
-                  <div className="text-sm text-[#545454] mb-2">
+                  <div className="text-sm text-soft mb-2">
                     New screenshot:
                   </div>
                   <div className="relative inline-block">
                     <img
                       src={screenshotPreview}
                       alt="New screenshot preview"
-                      className="max-w-xs max-h-32 rounded-md border border-[#D8E1EC] object-cover"
+                      className="max-w-xs max-h-32 rounded-md border border-hairline object-cover"
                     />
                     <button
                       type="button"
@@ -1514,12 +1514,12 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 id="edit-screenshot"
                 accept="image/*"
                 onChange={handleScreenshotFileChange}
-                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#F4F0ED] file:text-[#525252] hover:file:bg-[#e5e1de]"
+                className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-surface-alt file:text-copy hover:file:bg-surface-hover"
                 disabled={isSubmitting}
               />
 
               {newScreenshotFile && (
-                <div className="text-sm text-[#545454] mt-1">
+                <div className="text-sm text-soft mt-1">
                   Selected: {newScreenshotFile.name}
                 </div>
               )}
@@ -1528,7 +1528,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
             <div>
               <label
                 htmlFor="edit-submitterName"
-                className="block text-sm font-medium text-[#525252] mb-1"
+                className="block text-sm font-medium text-copy mb-1"
               >
                 Your Name *
               </label>
@@ -1543,7 +1543,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     submitterName: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
                 required
                 disabled={isSubmitting}
               />
@@ -1553,11 +1553,11 @@ export function StoryDetail({ story }: StoryDetailProps) {
             <div>
               <label
                 htmlFor="edit-githubUrl"
-                className="block text-sm font-medium text-[#525252] mb-1"
+                className="block text-sm font-medium text-copy mb-1"
               >
                 GitHub Repo URL (Optional)
               </label>
-              <div className="text-sm text-[#545454] mb-2">
+              <div className="text-sm text-soft mb-2">
                 GitHub repository URL for your project
               </div>
               <input
@@ -1571,7 +1571,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     githubUrl: e.target.value,
                   }))
                 }
-                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
                 disabled={isSubmitting}
               />
             </div>
@@ -1583,12 +1583,12 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 <div key={field.key}>
                   <label
                     htmlFor={`edit-${field.key}`}
-                    className="block text-sm font-medium text-[#525252] mb-1"
+                    className="block text-sm font-medium text-copy mb-1"
                   >
                     {field.label}
                   </label>
                   {field.description && (
-                    <div className="text-sm text-[#545454] mb-2">
+                    <div className="text-sm text-soft mb-2">
                       {field.description}
                     </div>
                   )}
@@ -1603,7 +1603,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                         [field.key]: e.target.value,
                       }))
                     }
-                    className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                    className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
                     required={field.isRequired}
                     disabled={isSubmitting}
                   />
@@ -1617,7 +1617,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   <button
                     type="button"
                     onClick={() => setShowTeamInfo(!showTeamInfo)}
-                    className="flex items-center gap-2 text-sm font-medium text-[#525252] hover:text-[#292929] transition-colors"
+                    className="flex items-center gap-2 text-sm font-medium text-copy hover:text-ink transition-colors"
                   >
                     <span
                       className={`transform transition-transform ${showTeamInfo ? "rotate-90" : ""}`}
@@ -1627,18 +1627,18 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     Team Info (Optional)
                   </button>
                 </div>
-                <p className="text-xs text-gray-600 mb-4">
+                <p className="text-xs text-copy mb-4">
                   Add your hackathon team information if you're participating as
                   a team
                 </p>
 
                 {showTeamInfo && (
-                  <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+                  <div className="space-y-4 p-4 bg-surface-alt rounded-lg border border-hairline mb-4">
                     {/* Team Name */}
                     <div>
                       <label
                         htmlFor="edit-teamName"
-                        className="block text-sm font-medium text-[#525252] mb-1"
+                        className="block text-sm font-medium text-copy mb-1"
                       >
                         Team Name
                       </label>
@@ -1653,7 +1653,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                             teamName: e.target.value,
                           }))
                         }
-                        className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                        className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
                         disabled={isSubmitting}
                       />
                     </div>
@@ -1662,7 +1662,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     <div>
                       <label
                         htmlFor="edit-teamMemberCount"
-                        className="block text-sm font-medium text-[#525252] mb-1"
+                        className="block text-sm font-medium text-copy mb-1"
                       >
                         Number of Team Members
                       </label>
@@ -1677,17 +1677,17 @@ export function StoryDetail({ story }: StoryDetailProps) {
                             parseInt(e.target.value) || 1,
                           )
                         }
-                        className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] max-w-[120px]"
+                        className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline max-w-[120px]"
                         disabled={isSubmitting}
                       />
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-soft mt-1">
                         Maximum 10 team members
                       </p>
                     </div>
 
                     {/* Team Members */}
                     <div>
-                      <h4 className="text-sm font-medium text-[#525252] mb-3">
+                      <h4 className="text-sm font-medium text-copy mb-3">
                         Team Members
                       </h4>
                       <div className="space-y-3">
@@ -1699,7 +1699,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                             <div>
                               <label
                                 htmlFor={`edit-member-name-${index}`}
-                                className="block text-xs font-medium text-[#525252] mb-1"
+                                className="block text-xs font-medium text-copy mb-1"
                               >
                                 Member {index + 1} Name
                               </label>
@@ -1715,14 +1715,14 @@ export function StoryDetail({ story }: StoryDetailProps) {
                                     e.target.value,
                                   )
                                 }
-                                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
+                                className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline text-sm"
                                 disabled={isSubmitting}
                               />
                             </div>
                             <div>
                               <label
                                 htmlFor={`edit-member-email-${index}`}
-                                className="block text-xs font-medium text-[#525252] mb-1"
+                                className="block text-xs font-medium text-copy mb-1"
                               >
                                 Member {index + 1} Email
                               </label>
@@ -1738,7 +1738,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                                     e.target.value,
                                   )
                                 }
-                                className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
+                                className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline text-sm"
                                 disabled={isSubmitting}
                               />
                             </div>
@@ -1753,15 +1753,15 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
             {/* Tags Selection */}
             <div>
-              <label className="block text-sm font-medium text-[#525252] mb-2">
+              <label className="block text-sm font-medium text-copy mb-2">
                 Select Tags *
               </label>
-              <span className="text-xs text-gray-600 mb-2 block">
+              <span className="text-xs text-copy mb-2 block">
                 Select tags that best describe your app
               </span>
               <div className="flex flex-wrap gap-2 mb-4">
                 {availableTags === undefined && (
-                  <span className="text-sm text-gray-500">Loading tags...</span>
+                  <span className="text-sm text-soft">Loading tags...</span>
                 )}
                 {availableTags
                   ?.filter(
@@ -1777,20 +1777,20 @@ export function StoryDetail({ story }: StoryDetailProps) {
                       disabled={isSubmitting}
                       className={`px-3 py-1 rounded-md text-sm transition-colors border flex items-center gap-1 ${
                         selectedTagIds.includes(tag._id)
-                          ? "bg-[#F4F0ED] text-[#292929] border-[#D5D3D0]"
-                          : "bg-white text-[#545454] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"
+                          ? "bg-surface-alt text-ink border-hairline-strong"
+                          : "bg-surface text-soft border-hairline-strong hover:border-hairline-strong hover:text-copy"
                       }`}
                       style={{
                         backgroundColor: selectedTagIds.includes(tag._id)
-                          ? tag.backgroundColor || "#F4F0ED"
+                          ? tag.backgroundColor || "var(--th-surface-alt)"
                           : "white",
                         color: selectedTagIds.includes(tag._id)
-                          ? tag.textColor || "#292929"
-                          : "#545454",
+                          ? tag.textColor || "var(--th-ink)"
+                          : "var(--th-soft)",
                         borderColor: selectedTagIds.includes(tag._id)
                           ? tag.borderColor ||
-                            (tag.backgroundColor ? "transparent" : "#D5D3D0")
-                          : "#D5D3D0",
+                            (tag.backgroundColor ? "transparent" : "var(--th-hairline-strong)")
+                          : "var(--th-hairline-strong)",
                       }}
                     >
                       {tag.emoji && (
@@ -1810,10 +1810,10 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
               {/* Dropdown Search for All Tags */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-[#525252] mb-2">
+                <label className="block text-sm font-medium text-copy mb-2">
                   Search All Available Tags
                 </label>
-                <span className="text-xs text-gray-600 mb-2 block">
+                <span className="text-xs text-copy mb-2 block">
                   Find and select from all tags, including those not shown above
                 </span>
                 <div className="relative tag-dropdown-container">
@@ -1852,13 +1852,13 @@ export function StoryDetail({ story }: StoryDetailProps) {
                       }
                     }}
                     placeholder="Type to search for tags or create new..."
-                    className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
+                    className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline text-sm"
                     disabled={isSubmitting}
                   />
 
                   {/* Dropdown Results */}
                   {showDropdown && allTags && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-[#D8E1EC] rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    <div className="absolute z-10 w-full mt-1 bg-surface border border-hairline rounded-md shadow-lg max-h-48 overflow-y-auto">
                       {(() => {
                         const searchTerm = dropdownSearchValue.toLowerCase();
                         const filteredTags = allTags
@@ -1877,7 +1877,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                         if (filteredTags.length === 0) {
                           return (
                             <div>
-                              <div className="px-3 py-2 text-sm text-gray-500">
+                              <div className="px-3 py-2 text-sm text-soft">
                                 No matching tags found
                               </div>
                               <button
@@ -1889,7 +1889,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                                   selectedTagIds.length + newTagNames.length >=
                                     10
                                 }
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-[#F4F0ED] focus:bg-[#F4F0ED] focus:outline-none text-blue-600 disabled:opacity-50"
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-surface-hover focus:bg-surface-alt focus:outline-none text-blue-600 disabled:opacity-50"
                               >
                                 + Create new tag "{dropdownSearchValue}"
                               </button>
@@ -1906,7 +1906,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                                 onClick={() =>
                                   handleSelectFromDropdown(tag._id)
                                 }
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-[#F4F0ED] focus:bg-[#F4F0ED] focus:outline-none flex items-center gap-2"
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-surface-hover focus:bg-surface-alt focus:outline-none flex items-center gap-2"
                                 disabled={isSubmitting}
                               >
                                 {tag.emoji && (
@@ -1923,15 +1923,15 @@ export function StoryDetail({ story }: StoryDetailProps) {
                                   className="inline-block px-2 py-0.5 rounded text-xs font-medium"
                                   style={{
                                     backgroundColor:
-                                      tag.backgroundColor || "#F4F0ED",
-                                    color: tag.textColor || "#525252",
-                                    border: `1px solid ${tag.backgroundColor ? "transparent" : "#D5D3D0"}`,
+                                      tag.backgroundColor || "var(--th-surface-alt)",
+                                    color: tag.textColor || "var(--th-copy)",
+                                    border: `1px solid ${tag.backgroundColor ? "transparent" : "var(--th-hairline-strong)"}`,
                                   }}
                                 >
                                   {tag.name}
                                 </span>
                                 {tag.isHidden && (
-                                  <span className="text-xs text-gray-400">
+                                  <span className="text-xs text-faint">
                                     (Hidden)
                                   </span>
                                 )}
@@ -1946,7 +1946,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                                   selectedTagIds.length + newTagNames.length >=
                                     10
                                 }
-                                className="w-full px-3 py-2 text-left text-sm hover:bg-[#F4F0ED] focus:bg-[#F4F0ED] focus:outline-none text-blue-600 border-t border-gray-100 disabled:opacity-50"
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-surface-hover focus:bg-surface-alt focus:outline-none text-blue-600 border-t border-hairline disabled:opacity-50"
                               >
                                 + Create new tag "{dropdownSearchValue}"
                               </button>
@@ -1962,7 +1962,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
               {/* Selected Tags Display */}
               {(selectedTagIds.length > 0 || newTagNames.length > 0) && (
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-[#525252] mb-2">
+                  <label className="block text-sm font-medium text-copy mb-2">
                     Selected Tags ({selectedTagIds.length + newTagNames.length}
                     /10)
                   </label>
@@ -1978,11 +1978,11 @@ export function StoryDetail({ story }: StoryDetailProps) {
                             key={tag._id}
                             className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm border transition-colors"
                             style={{
-                              backgroundColor: tag.backgroundColor || "#F4F0ED",
-                              color: tag.textColor || "#292929",
+                              backgroundColor: tag.backgroundColor || "var(--th-surface-alt)",
+                              color: tag.textColor || "var(--th-ink)",
                               borderColor: tag.backgroundColor
                                 ? "transparent"
-                                : "#D5D3D0",
+                                : "var(--th-hairline-strong)",
                             }}
                           >
                             {tag.emoji && (
@@ -2067,19 +2067,19 @@ export function StoryDetail({ story }: StoryDetailProps) {
             (field) => (story as any)[field.storyPropertyName],
           ) ||
           story.tags?.length > 0) && (
-          <div className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC] lg:hidden">
-            <h2 className="text-lg font-medium text-[#525252] mb-4">
+          <div className="mt-8 bg-surface rounded-lg p-6 border border-hairline lg:hidden">
+            <h2 className="text-lg font-medium text-copy mb-4">
               Project Links & Tags
             </h2>
             <div className="space-y-3">
               {story.url && (
                 <div className="flex items-center gap-2">
-                  <Link2 className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                  <Link2 className="w-4 h-4 text-soft flex-shrink-0" />
                   <a
                     href={story.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                    className="text-sm text-copy hover:text-ink hover:underline truncate"
                     title={story.url}
                   >
                     {story.url}
@@ -2089,12 +2089,12 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
               {story.videoUrl && story.videoUrl.trim() && (
                 <div className="flex items-center gap-2">
-                  <Play className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                  <Play className="w-4 h-4 text-soft flex-shrink-0" />
                   <a
                     href={story.videoUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                    className="text-sm text-copy hover:text-ink hover:underline truncate"
                     title={story.videoUrl}
                   >
                     Video Demo
@@ -2105,12 +2105,12 @@ export function StoryDetail({ story }: StoryDetailProps) {
               {/* GitHub Link - Always shown if available */}
               {story.githubUrl && story.githubUrl.trim() && (
                 <div className="flex items-center gap-2">
-                  <Github className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                  <Github className="w-4 h-4 text-soft flex-shrink-0" />
                   <a
                     href={story.githubUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                    className="text-sm text-copy hover:text-ink hover:underline truncate"
                     title={story.githubUrl}
                   >
                     GitHub Repository
@@ -2129,38 +2129,38 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   const getIcon = () => {
                     if (field.key.toLowerCase().includes("github")) {
                       return (
-                        <Github className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                        <Github className="w-4 h-4 text-soft flex-shrink-0" />
                       );
                     } else if (field.key.toLowerCase().includes("linkedin")) {
                       return (
-                        <Linkedin className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                        <Linkedin className="w-4 h-4 text-soft flex-shrink-0" />
                       );
                     } else if (
                       field.key.toLowerCase().includes("twitter") ||
                       field.key.toLowerCase().includes("x")
                     ) {
                       return (
-                        <Twitter className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                        <Twitter className="w-4 h-4 text-soft flex-shrink-0" />
                       );
                     } else if (field.key.toLowerCase().includes("chef")) {
                       return (
-                        <span className="w-4 h-4 text-[#545454] flex-shrink-0">
+                        <span className="w-4 h-4 text-soft flex-shrink-0">
                           🍲
                         </span>
                       );
                     } else if (field.fieldType === "url") {
                       return (
-                        <Link2 className="w-4 h-4 text-[#545454] flex-shrink-0" />
+                        <Link2 className="w-4 h-4 text-soft flex-shrink-0" />
                       );
                     } else if (field.fieldType === "email") {
                       return (
-                        <span className="w-4 h-4 text-[#545454] flex-shrink-0">
+                        <span className="w-4 h-4 text-soft flex-shrink-0">
                           ✉️
                         </span>
                       );
                     } else {
                       return (
-                        <span className="w-4 h-4 text-[#545454] flex-shrink-0">
+                        <span className="w-4 h-4 text-soft flex-shrink-0">
                           🔗
                         </span>
                       );
@@ -2183,7 +2183,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                           href={fieldValue}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                          className="text-sm text-copy hover:text-ink hover:underline truncate"
                           title={fieldValue}
                         >
                           {getDisplayLabel()}
@@ -2191,14 +2191,14 @@ export function StoryDetail({ story }: StoryDetailProps) {
                       ) : field.fieldType === "email" ? (
                         <a
                           href={`mailto:${fieldValue}`}
-                          className="text-sm text-[#525252] hover:text-[#292929] hover:underline truncate"
+                          className="text-sm text-copy hover:text-ink hover:underline truncate"
                           title={fieldValue}
                         >
                           {getDisplayLabel()}
                         </a>
                       ) : (
                         <span
-                          className="text-sm text-[#525252] truncate"
+                          className="text-sm text-copy truncate"
                           title={fieldValue}
                         >
                           {getDisplayLabel()}: {fieldValue}
@@ -2210,7 +2210,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
               {/* Tags */}
               {story.tags && story.tags.length > 0 && (
-                <div className="flex gap-1.5 flex-wrap pt-3 border-t border-[#E5E5E5] mt-4">
+                <div className="flex gap-1.5 flex-wrap pt-3 border-t border-hairline mt-4">
                   {(story.tags || []).map(
                     (tag: Doc<"tags">) =>
                       !tag.isHidden &&
@@ -2221,9 +2221,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
                           to={`/tag/${tag.slug}`}
                           className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition-opacity hover:opacity-80"
                           style={{
-                            backgroundColor: tag.backgroundColor || "#F4F0ED",
-                            color: tag.textColor || "#525252",
-                            border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "#D5D3D0")}`,
+                            backgroundColor: tag.backgroundColor || "var(--th-surface-alt)",
+                            color: tag.textColor || "var(--th-copy)",
+                            border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "var(--th-hairline-strong)")}`,
                           }}
                           title={`View all apps tagged with ${tag.name}`}
                         >
@@ -2245,10 +2245,10 @@ export function StoryDetail({ story }: StoryDetailProps) {
               )}
 
               {/* Changelog Link */}
-              <div className="pt-3 border-t border-[#E5E5E5] mt-4">
+              <div className="pt-3 border-t border-hairline mt-4">
                 <a
                   href="#changelog"
-                  className="flex items-center gap-2 text-sm text-[#525252] hover:text-[#292929] hover:underline"
+                  className="flex items-center gap-2 text-sm text-copy hover:text-ink hover:underline"
                 >
                   <svg
                     className="w-4 h-4"
@@ -2272,15 +2272,15 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
       {/* Video demo start */}
       {story.videoUrl && story.videoUrl.trim() && (
-        <div className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC]">
+        <div className="mt-8 bg-surface rounded-lg p-6 border border-hairline">
           <div className="flex items-center gap-2 mb-4">
-            <Play className="w-4 h-4 text-[#545454] flex-shrink-0" />
-            <h3 className="text-lg font-medium text-[#525252]">Video Demo</h3>
+            <Play className="w-4 h-4 text-soft flex-shrink-0" />
+            <h3 className="text-lg font-medium text-copy">Video Demo</h3>
             <a
               href={story.videoUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-[#525252] hover:text-[#292929] hover:underline ml-auto"
+              className="text-sm text-copy hover:text-ink hover:underline ml-auto"
               title="Open in new tab"
             >
               ↗
@@ -2376,15 +2376,15 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
               // Fallback for other URLs - show as link in a styled box
               return (
-                <div className="w-full aspect-video rounded-md border-2 border-dashed border-[#D8E1EC] flex items-center justify-center bg-[#F9F9F9]">
+                <div className="w-full aspect-video rounded-md border-2 border-dashed border-hairline flex items-center justify-center bg-surface-alt">
                   <div className="text-center">
-                    <Play className="w-12 h-12 text-[#545454] mx-auto mb-2" />
-                    <p className="text-[#525252] mb-2">Video not embeddable</p>
+                    <Play className="w-12 h-12 text-soft mx-auto mb-2" />
+                    <p className="text-copy mb-2">Video not embeddable</p>
                     <a
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[#292929] hover:text-[#525252] underline"
+                      className="text-ink hover:text-copy underline"
                     >
                       Watch Video ↗
                     </a>
@@ -2399,26 +2399,26 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
       {/* Team Info Section */}
       {!isEditing && story.teamName && (
-        <div className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC]">
+        <div className="mt-8 bg-surface rounded-lg p-6 border border-hairline">
           <div className="flex items-center gap-2 mb-4">
-            <Users className="w-5 h-5 text-[#545454]" />
-            <h2 className="text-lg font-medium text-[#525252]">Team Info</h2>
+            <Users className="w-5 h-5 text-soft" />
+            <h2 className="text-lg font-medium text-copy">Team Info</h2>
           </div>
 
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-medium text-[#525252] mb-1">
+              <h3 className="text-sm font-medium text-copy mb-1">
                 Team Name
               </h3>
-              <p className="text-[#292929]">{story.teamName}</p>
+              <p className="text-ink">{story.teamName}</p>
             </div>
 
             {story.teamMemberCount && (
               <div>
-                <h3 className="text-sm font-medium text-[#525252] mb-1">
+                <h3 className="text-sm font-medium text-copy mb-1">
                   Team Size
                 </h3>
-                <p className="text-[#292929]">
+                <p className="text-ink">
                   {story.teamMemberCount}{" "}
                   {story.teamMemberCount === 1 ? "member" : "members"}
                 </p>
@@ -2427,7 +2427,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
             {story.teamMembers && story.teamMembers.length > 0 && (
               <div>
-                <h3 className="text-sm font-medium text-[#525252] mb-2">
+                <h3 className="text-sm font-medium text-copy mb-2">
                   Team Members
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2438,10 +2438,10 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     ) => (
                       <div
                         key={index}
-                        className="p-3 bg-gray-50 rounded-md border border-gray-200"
+                        className="p-3 bg-surface-alt rounded-md border border-hairline"
                       >
                         {member.name && (
-                          <p className="font-medium text-[#292929] text-sm">
+                          <p className="font-medium text-ink text-sm">
                             {member.name}
                           </p>
                         )}
@@ -2457,9 +2457,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
       {/* Rating Section */}
       {!isEditing && (
-        <div className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC]">
+        <div className="mt-8 bg-surface rounded-lg p-6 border border-hairline">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4">
-            <h2 className="text-lg font-medium text-[#525252]">
+            <h2 className="text-lg font-medium text-copy">
               {hasRated ? "Your Rating" : "Rate this app"}
             </h2>
             <div className="flex items-center gap-1">
@@ -2476,10 +2476,10 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     hasRated
                       ? value <= (currentUserRating || 0)
                         ? "text-yellow-500"
-                        : "text-gray-300"
+                        : "text-faint"
                       : value <= (hoveredRating || 0)
                         ? "text-yellow-400"
-                        : "text-gray-300 hover:text-yellow-400"
+                        : "text-faint hover:text-yellow-400"
                   }`}
                   title={
                     !isSignedIn && isClerkLoaded
@@ -2494,13 +2494,13 @@ export function StoryDetail({ story }: StoryDetailProps) {
               ))}
             </div>
             {story.ratingCount > 0 && (
-              <span className="text-sm text-[#545454]">
+              <span className="text-sm text-soft">
                 {averageRating.toFixed(1)} stars ({story.ratingCount}
                 {story.ratingCount === 1 ? " rating" : " ratings"})
               </span>
             )}
           </div>
-          <p className="text-sm text-[#545454]">
+          <p className="text-sm text-soft">
             Your rating helps others discover great apps.
           </p>
         </div>
@@ -2510,16 +2510,16 @@ export function StoryDetail({ story }: StoryDetailProps) {
       {!isEditing && (
         <div
           id="changelog"
-          className="mt-8 bg-white rounded-lg p-6 border border-[#D8E1EC] scroll-mt-20"
+          className="mt-8 bg-surface rounded-lg p-6 border border-hairline scroll-mt-20"
         >
-          <h2 className="text-lg font-medium text-[#525252] mb-4">
+          <h2 className="text-lg font-medium text-copy mb-4">
             Change Log
           </h2>
 
           {/* Original Submission Date */}
-          <div className="mb-6 pb-4 border-b border-[#E5E5E5]">
-            <div className="flex items-center gap-2 text-sm text-[#545454]">
-              <span className="font-medium text-[#292929]">
+          <div className="mb-6 pb-4 border-b border-hairline">
+            <div className="flex items-center gap-2 text-sm text-soft">
+              <span className="font-medium text-ink">
                 Originally submitted:
               </span>
               <span>
@@ -2587,11 +2587,11 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     return (
                       <div
                         key={index}
-                        className="border border-[#E5E5E5] rounded-md overflow-hidden"
+                        className="border border-hairline rounded-md overflow-hidden"
                       >
                         <button
                           onClick={toggleExpanded}
-                          className="w-full px-4 py-3 bg-[#F9F9F9] hover:bg-[#F4F0ED] transition-colors flex items-center justify-between text-left"
+                          className="w-full px-4 py-3 bg-surface-alt hover:bg-surface-hover transition-colors flex items-center justify-between text-left"
                         >
                           <div className="flex items-center gap-2">
                             <span
@@ -2599,11 +2599,11 @@ export function StoryDetail({ story }: StoryDetailProps) {
                             >
                               ▶
                             </span>
-                            <span className="text-sm font-medium text-[#525252]">
+                            <span className="text-sm font-medium text-copy">
                               {formattedDate} at {formattedTime}
                             </span>
                           </div>
-                          <span className="text-xs text-[#787672]">
+                          <span className="text-xs text-faint">
                             {isExpanded ? "Hide changes" : "Show changes"}
                           </span>
                         </button>
@@ -2614,7 +2614,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                             {entry.textChanges &&
                               entry.textChanges.length > 0 && (
                                 <div>
-                                  <h4 className="text-sm font-medium text-[#525252] mb-2">
+                                  <h4 className="text-sm font-medium text-copy mb-2">
                                     Text Changes
                                   </h4>
                                   <ul className="space-y-2">
@@ -2628,7 +2628,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                                         idx: number,
                                       ) => (
                                         <li key={idx} className="text-sm">
-                                          <span className="font-medium text-[#292929]">
+                                          <span className="font-medium text-ink">
                                             {change.field}:
                                           </span>
                                           <div className="ml-4 mt-1">
@@ -2650,7 +2650,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                             {entry.linkChanges &&
                               entry.linkChanges.length > 0 && (
                                 <div>
-                                  <h4 className="text-sm font-medium text-[#525252] mb-2">
+                                  <h4 className="text-sm font-medium text-copy mb-2">
                                     Link Changes
                                   </h4>
                                   <ul className="space-y-2">
@@ -2664,7 +2664,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                                         idx: number,
                                       ) => (
                                         <li key={idx} className="text-sm">
-                                          <span className="font-medium text-[#292929]">
+                                          <span className="font-medium text-ink">
                                             {change.field}:
                                           </span>
                                           <div className="ml-4 mt-1 break-all">
@@ -2680,7 +2680,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                                             )}
                                             {!change.oldValue &&
                                               !change.newValue && (
-                                                <div className="text-[#787672]">
+                                                <div className="text-faint">
                                                   (removed)
                                                 </div>
                                               )}
@@ -2697,7 +2697,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                               (entry.tagChanges.added.length > 0 ||
                                 entry.tagChanges.removed.length > 0) && (
                                 <div>
-                                  <h4 className="text-sm font-medium text-[#525252] mb-2">
+                                  <h4 className="text-sm font-medium text-copy mb-2">
                                     Tag Changes
                                   </h4>
                                   <div className="space-y-1">
@@ -2723,8 +2723,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
                             {/* Video Changed */}
                             {entry.videoChanged && (
-                              <div className="text-sm text-[#545454]">
-                                <span className="font-medium text-[#292929]">
+                              <div className="text-sm text-soft">
+                                <span className="font-medium text-ink">
                                   Video:
                                 </span>{" "}
                                 Video demo was updated
@@ -2733,8 +2733,8 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
                             {/* Images Changed */}
                             {entry.imagesChanged && (
-                              <div className="text-sm text-[#545454]">
-                                <span className="font-medium text-[#292929]">
+                              <div className="text-sm text-soft">
+                                <span className="font-medium text-ink">
                                   Images:
                                 </span>{" "}
                                 Screenshots or gallery images were updated
@@ -2748,7 +2748,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 )}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-soft">
               <p className="text-sm">
                 No changes have been made to this submission yet. All future
                 edits will be tracked and displayed here.
@@ -2761,12 +2761,12 @@ export function StoryDetail({ story }: StoryDetailProps) {
       {/* Comments Section */}
       {!isEditing && (
         <div id="comments" className="mt-8 scroll-mt-20">
-          <h2 className="text-xl font-medium text-[#525252] mb-4">
+          <h2 className="text-xl font-medium text-copy mb-4">
             {comments?.length ?? 0}{" "}
             {(comments?.length ?? 0) === 1 ? "Comment" : "Comments"}
           </h2>
           <CommentForm onSubmit={handleCommentSubmit} />
-          <div className="mt-8 space-y-6 border-t border-[#F4F0ED] pt-6">
+          <div className="mt-8 space-y-6 border-t border-hairline pt-6">
             {comments === undefined && <div>Loading comments...</div>}
             {comments?.map((commentData) => {
               // Rename variable to avoid conflict
@@ -2790,7 +2790,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
               );
             })}
             {comments && comments.length === 0 && (
-              <div className="text-[#545454]">
+              <div className="text-soft">
                 No comments yet. Be the first!
               </div>
             )}
@@ -2801,14 +2801,14 @@ export function StoryDetail({ story }: StoryDetailProps) {
       {/* Related Apps Section */}
       {!isEditing && relatedStories && relatedStories.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-xl font-medium text-[#525252] mb-6">
+          <h2 className="text-xl font-medium text-copy mb-6">
             Related Apps
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {relatedStories.map((relatedStory: Story) => (
               <div
                 key={relatedStory._id}
-                className="bg-white rounded-lg p-4 border border-[#D8E1EC] flex flex-col group"
+                className="bg-surface rounded-lg p-4 border border-hairline flex flex-col group"
               >
                 {relatedStory.screenshotUrl && (
                   <Link
@@ -2818,33 +2818,33 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     <img
                       src={relatedStory.screenshotUrl}
                       alt={`${relatedStory.title} screenshot`}
-                      className="w-full h-full object-cover bg-gray-100 group-hover:scale-105 transition-transform duration-300 ease-in-out"
+                      className="w-full h-full object-cover bg-surface-alt group-hover:scale-105 transition-transform duration-300 ease-in-out"
                       loading="lazy"
                     />
                   </Link>
                 )}
-                <h3 className="text-lg font-semibold text-[#292929] mb-1 truncate">
+                <h3 className="text-lg font-semibold text-ink mb-1 truncate">
                   <Link
                     to={`/s/${relatedStory.slug}`}
-                    className="hover:text-[#555555] hover:underline"
+                    className="hover:text-copy hover:underline"
                   >
                     {relatedStory.title}
                   </Link>
                 </h3>
                 {relatedStory.description && (
-                  <p className="text-sm text-[#545454] mb-2 line-clamp-2 flex-grow">
+                  <p className="text-sm text-soft mb-2 line-clamp-2 flex-grow">
                     {relatedStory.description}
                   </p>
                 )}
                 <p
-                  className={`text-xs text-[#545454] mb-2 ${relatedStory.description ? "" : "flex-grow"}`}
+                  className={`text-xs text-soft mb-2 ${relatedStory.description ? "" : "flex-grow"}`}
                 >
                   By{" "}
                   {relatedStory.authorName ||
                     relatedStory.authorUsername ||
                     "Anonymous"}
                 </p>
-                <div className="flex items-center text-xs text-[#545454] gap-3 mt-auto pt-2 border-t border-[#F4F0ED]">
+                <div className="flex items-center text-xs text-soft gap-3 mt-auto pt-2 border-t border-hairline">
                   <span>{relatedStory.votes} vibes</span>
                   {/* <span>{relatedStory.commentCount ?? 0} comments</span> */}
                 </div>
@@ -2884,10 +2884,10 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
       {/* Flag/Report Section */}
       {!isEditing && (
-        <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between text-sm text-gray-600">
+        <div className="mt-8 p-4 bg-surface-alt rounded-lg border border-hairline flex items-center justify-between text-sm text-copy">
           <div className="flex items-center gap-3">
-            <Flag className="w-4 h-4 text-gray-500 flex-shrink-0" />
-            <span className="font-medium text-gray-700">
+            <Flag className="w-4 h-4 text-soft flex-shrink-0" />
+            <span className="font-medium text-copy">
               Seen something inappropriate?
             </span>
           </div>
@@ -2928,7 +2928,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
             <DialogTitle>Report: {story.title}</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-2">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-soft">
               Please provide a reason for reporting this submission. Your report
               will be reviewed by an administrator.
             </p>
@@ -2966,7 +2966,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
               type="button"
               onClick={handleReportSubmit}
               disabled={isReporting || !reportReason.trim()}
-              className="bg-[#292929] text-white hover:bg-[#525252] disabled:opacity-50 sm:ml-[10px]"
+              className="bg-cta text-on-cta hover:bg-cta-hover disabled:opacity-50 sm:ml-[10px]"
               style={{ fontWeight: "normal" }}
             >
               {isReporting ? "Submitting..." : "Submit Report"}

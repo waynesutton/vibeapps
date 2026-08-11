@@ -9,6 +9,30 @@ export default {
         "alfa-slab-one": ['"Alfa Slab One"', "cursive"],
       },
       colors: {
+        // Theme tokens driven by CSS variables (light / classic / dark)
+        canvas: "var(--th-canvas)",
+        surface: {
+          DEFAULT: "var(--th-surface)",
+          alt: "var(--th-surface-alt)",
+          hover: "var(--th-surface-hover)",
+        },
+        ink: "var(--th-ink)",
+        copy: "var(--th-copy)",
+        soft: "var(--th-soft)",
+        faint: "var(--th-faint)",
+        hairline: {
+          DEFAULT: "var(--th-hairline)",
+          strong: "var(--th-hairline-strong)",
+        },
+        cta: {
+          DEFAULT: "var(--th-cta)",
+          hover: "var(--th-cta-hover)",
+        },
+        "on-cta": "var(--th-on-cta)",
+        brand: {
+          DEFAULT: "var(--th-brand)",
+          soft: "var(--th-brand-soft)",
+        },
         background: "#F3F4F6",
         text: "#525252",
         header: "#292929",

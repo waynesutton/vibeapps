@@ -22,33 +22,33 @@ function Calendar({
         months: "relative flex flex-col sm:flex-row gap-4",
         month: "space-y-3",
         month_caption: "flex h-8 items-center justify-center",
-        caption_label: "text-sm font-medium text-[#292929]",
+        caption_label: "text-sm font-medium text-ink",
         nav: "absolute inset-x-0 top-0 flex h-8 items-center justify-between",
         button_previous:
-          "inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white text-[#545454] transition-colors hover:bg-gray-50 hover:text-[#292929] disabled:pointer-events-none disabled:opacity-40",
+          "inline-flex h-7 w-7 items-center justify-center rounded-md border border-hairline bg-surface text-soft transition-colors hover:bg-surface-hover hover:text-ink disabled:pointer-events-none disabled:opacity-40",
         button_next:
-          "inline-flex h-7 w-7 items-center justify-center rounded-md border border-gray-200 bg-white text-[#545454] transition-colors hover:bg-gray-50 hover:text-[#292929] disabled:pointer-events-none disabled:opacity-40",
+          "inline-flex h-7 w-7 items-center justify-center rounded-md border border-hairline bg-surface text-soft transition-colors hover:bg-surface-hover hover:text-ink disabled:pointer-events-none disabled:opacity-40",
         month_grid: "w-full border-collapse",
         weekdays: "flex",
-        weekday: "w-8 text-[11px] font-normal text-[#787672]",
+        weekday: "w-8 text-[11px] font-normal text-faint",
         week: "mt-1 flex w-full",
-        day: "relative h-8 w-8 p-0 text-center text-sm text-[#292929]",
+        day: "relative h-8 w-8 p-0 text-center text-sm text-ink",
         day_button: cn(
-          "h-8 w-8 rounded-md text-sm font-normal transition-colors hover:bg-gray-100",
-          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#292929]",
+          "h-8 w-8 rounded-md text-sm font-normal transition-colors hover:bg-surface-hover",
+          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink",
         ),
         // Range endpoints are solid ink; the days between get the warm paper fill
         range_start:
-          "rounded-l-md bg-[#F4F2EE] [&>button]:bg-[#292929] [&>button]:text-white [&>button]:hover:bg-[#292929]",
+          "rounded-l-md bg-canvas [&>button]:bg-cta [&>button]:text-on-cta [&>button]:hover:bg-cta",
         range_end:
-          "rounded-r-md bg-[#F4F2EE] [&>button]:bg-[#292929] [&>button]:text-white [&>button]:hover:bg-[#292929]",
-        range_middle: "bg-[#F4F2EE] [&>button]:hover:bg-[#e8e5df]",
+          "rounded-r-md bg-canvas [&>button]:bg-cta [&>button]:text-on-cta [&>button]:hover:bg-cta",
+        range_middle: "bg-canvas [&>button]:hover:bg-surface-hover",
         selected: "[&>button]:font-medium",
         today:
           "[&>button]:font-semibold [&>button]:underline [&>button]:underline-offset-2",
-        outside: "text-gray-300 [&>button]:text-gray-300",
+        outside: "text-faint [&>button]:text-faint",
         disabled:
-          "text-gray-300 [&>button]:text-gray-300 [&>button]:pointer-events-none",
+          "text-faint [&>button]:text-faint [&>button]:pointer-events-none",
         hidden: "invisible",
         ...classNames,
       }}

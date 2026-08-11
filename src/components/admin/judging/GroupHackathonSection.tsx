@@ -141,10 +141,10 @@ function HackathonSettingsCard({ group }: { group: GroupDetails }) {
     >
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-[13px] font-medium text-[#292929]">
+          <p className="text-[13px] font-medium text-ink">
             Enable hackathon skill API
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-soft">
             {enabled
               ? "Teams with a registration code can use the skill endpoints"
               : "All hackathon skill endpoints return 403 for this group"}
@@ -163,11 +163,11 @@ function HackathonSettingsCard({ group }: { group: GroupDetails }) {
         <>
           {/* Registration codes: shared multi-use codes teams pass to
               /hackathon start. Matched case-insensitively. */}
-          <div className="border-t border-gray-100 pt-4">
-            <p className="text-[13px] font-medium text-[#292929]">
+          <div className="border-t border-hairline pt-4">
+            <p className="text-[13px] font-medium text-ink">
               Registration codes
             </p>
-            <p className="text-xs text-gray-500 mt-0.5 mb-2">
+            <p className="text-xs text-soft mt-0.5 mb-2">
               Shared codes teams use with /hackathon start (e.g. AUG18-GLOBAL).
               Codes are stored uppercase and matched case-insensitively.
             </p>
@@ -189,7 +189,7 @@ function HackathonSettingsCard({ group }: { group: GroupDetails }) {
                 type="button"
                 onClick={addCode}
                 disabled={saving || !newCode.trim()}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-medium rounded-md bg-[#292929] text-white hover:bg-[#525252] transition-colors disabled:opacity-50 flex-shrink-0"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-medium rounded-md bg-cta text-on-cta hover:bg-cta-hover transition-colors disabled:opacity-50 flex-shrink-0"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Add code
@@ -200,15 +200,15 @@ function HackathonSettingsCard({ group }: { group: GroupDetails }) {
                 {codes.map((code) => (
                   <span
                     key={code}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-gray-200 bg-gray-50 text-xs font-mono text-[#292929]"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-hairline bg-surface-alt text-xs font-mono text-ink"
                   >
-                    <Ticket className="w-3 h-3 text-gray-400" />
+                    <Ticket className="w-3 h-3 text-faint" />
                     {code}
                     <button
                       type="button"
                       onClick={() => removeCode(code)}
                       disabled={saving}
-                      className="text-gray-400 hover:text-red-600 transition-colors"
+                      className="text-faint hover:text-red-600 transition-colors"
                       aria-label={`Remove code ${code}`}
                     >
                       <X className="w-3 h-3" />
@@ -217,16 +217,16 @@ function HackathonSettingsCard({ group }: { group: GroupDetails }) {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-gray-400 mt-2">
+              <p className="text-xs text-faint mt-2">
                 No codes yet. The skill cannot register teams without one.
               </p>
             )}
           </div>
 
           {/* Rules markdown the skill writes into each team's rules.md */}
-          <div className="border-t border-gray-100 pt-4">
+          <div className="border-t border-hairline pt-4">
             <Label htmlFor="hackathon-rules">Rules (markdown)</Label>
-            <p className="text-xs text-gray-500 mt-0.5 mb-2">
+            <p className="text-xs text-soft mt-0.5 mb-2">
               The skill saves this into each team's rules.md and refetches when
               it changes. Judging criteria and the AI rubric are included in
               the payload automatically.
@@ -241,7 +241,7 @@ function HackathonSettingsCard({ group }: { group: GroupDetails }) {
               className="font-mono text-xs leading-relaxed"
             />
             {group.hackathonRulesUpdatedAt && (
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-faint mt-1">
                 Rules last updated{" "}
                 {formatDistanceToNow(group.hackathonRulesUpdatedAt)} ago
               </p>
@@ -252,11 +252,11 @@ function HackathonSettingsCard({ group }: { group: GroupDetails }) {
 
       {/* Endpoint links appear after a successful save (server state) */}
       {group.hackathonSkillEnabled && (
-        <div className="border-t border-gray-100 pt-4">
-          <p className="text-[13px] font-medium text-[#292929]">
+        <div className="border-t border-hairline pt-4">
+          <p className="text-[13px] font-medium text-ink">
             Skill endpoints
           </p>
-          <p className="text-xs text-gray-500 mt-0.5 mb-2">
+          <p className="text-xs text-soft mt-0.5 mb-2">
             Copy these into your event docs so participating agents can find
             the API.
           </p>
@@ -283,28 +283,28 @@ function RegistrationsCard({ group }: { group: GroupDetails }) {
       description="Teams that registered through the hackathon skill. Registration is informational; it does not create a submission."
     >
       {registrations === undefined && (
-        <p className="text-[13px] text-gray-500">Loading registrations...</p>
+        <p className="text-[13px] text-soft">Loading registrations...</p>
       )}
       {registrations && registrations.length === 0 && (
-        <p className="text-[13px] text-gray-500">No teams registered yet.</p>
+        <p className="text-[13px] text-soft">No teams registered yet.</p>
       )}
       {registrations && registrations.length > 0 && (
-        <div className="rounded-md border border-gray-200 divide-y divide-gray-100">
+        <div className="rounded-md border border-hairline divide-y divide-hairline">
           {registrations.map((registration) => (
             <div
               key={registration._id}
               className="flex items-center justify-between gap-3 px-3 py-2"
             >
               <div className="min-w-0">
-                <p className="text-[13px] font-medium text-[#292929] truncate">
+                <p className="text-[13px] font-medium text-ink truncate">
                   {registration.teamName}
                 </p>
-                <p className="text-xs text-gray-500 truncate">
+                <p className="text-xs text-soft truncate">
                   {registration.email ? `${registration.email} · ` : ""}
                   code {registration.code}
                 </p>
               </div>
-              <span className="text-xs text-gray-400 flex-shrink-0">
+              <span className="text-xs text-faint flex-shrink-0">
                 {formatDistanceToNow(registration.registeredAt)} ago
               </span>
             </div>

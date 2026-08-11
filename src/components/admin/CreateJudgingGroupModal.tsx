@@ -133,15 +133,15 @@ export function CreateJudgingGroupModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#F4F2EE] rounded-lg border border-gray-200 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-canvas rounded-lg border border-hairline max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-medium text-gray-900">
+        <div className="flex items-center justify-between p-6 border-b border-hairline">
+          <h2 className="text-xl font-medium text-ink">
             Create New Judging Group
           </h2>
           <button
             onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-faint hover:text-copy transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -157,7 +157,7 @@ export function CreateJudgingGroupModal({
 
           {/* Basic Information */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900">
+            <h3 className="text-lg font-medium text-ink">
               Basic Information
             </h3>
 
@@ -174,7 +174,7 @@ export function CreateJudgingGroupModal({
                 required
                 disabled={isSubmitting}
               />
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-soft">
                 This will be displayed to judges and used in the URL
               </p>
             </div>
@@ -199,7 +199,7 @@ export function CreateJudgingGroupModal({
 
           {/* Access Settings */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900">
+            <h3 className="text-lg font-medium text-ink">
               Access Settings
             </h3>
 
@@ -225,7 +225,7 @@ export function CreateJudgingGroupModal({
                   Public Access
                 </Label>
               </div>
-              <p className="text-sm text-gray-500 ml-6">
+              <p className="text-sm text-soft ml-6">
                 {formData.isPublic
                   ? "Anyone with the link can access this judging group"
                   : "Password protection for judge and submission access"}
@@ -255,7 +255,7 @@ export function CreateJudgingGroupModal({
                     placeholder="Password for judges (optional)"
                     disabled={isSubmitting}
                   />
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-soft mt-1">
                     Optional password for judges to access the judging interface
                   </p>
                 </div>
@@ -280,7 +280,7 @@ export function CreateJudgingGroupModal({
                     placeholder="Password for submission form (optional)"
                     disabled={isSubmitting}
                   />
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-soft mt-1">
                     Optional password for users to access the custom submission
                     form
                   </p>
@@ -291,7 +291,7 @@ export function CreateJudgingGroupModal({
 
           {/* Results Page Visibility */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+            <h3 className="text-lg font-medium text-ink flex items-center gap-2">
               <BarChart2 className="w-5 h-5" />
               Results Page Visibility
             </h3>
@@ -317,7 +317,7 @@ export function CreateJudgingGroupModal({
                   Public Results
                 </Label>
               </div>
-              <p className="text-sm text-gray-500 ml-6">
+              <p className="text-sm text-soft ml-6">
                 {formData.resultsIsPublic
                   ? "Anyone with the link can view the judging results"
                   : "Requires a password to view the judging results"}
@@ -353,7 +353,7 @@ export function CreateJudgingGroupModal({
 
           {/* AI Judge (Best Use of Convex) */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+            <h3 className="text-lg font-medium text-ink flex items-center gap-2">
               <Sparkles className="w-5 h-5" />
               AI Judge: Best Use of Convex
             </h3>
@@ -370,7 +370,7 @@ export function CreateJudgingGroupModal({
                 className={`flex items-center gap-2 px-4 py-2 rounded-md border transition-colors ${
                   formData.aiJudgeEnabled
                     ? "bg-green-50 border-green-200 text-green-700"
-                    : "bg-gray-50 border-gray-200 text-gray-600"
+                    : "bg-surface-alt border-hairline text-copy"
                 }`}
               >
                 {formData.aiJudgeEnabled ? (
@@ -380,7 +380,7 @@ export function CreateJudgingGroupModal({
                 )}
                 {formData.aiJudgeEnabled ? "Enabled" : "Disabled"}
               </button>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-soft">
                 {formData.aiJudgeEnabled
                   ? "AI will review submissions for Best Use of Convex, separate from human judging"
                   : "Enable an AI review that scores submissions on Best Use of Convex"}
@@ -413,7 +413,7 @@ export function CreateJudgingGroupModal({
                       Public AI Results Page
                     </Label>
                   </div>
-                  <p className="text-sm text-gray-500 ml-6">
+                  <p className="text-sm text-soft ml-6">
                     {formData.aiResultsIsPublic
                       ? "Anyone with the link can view the AI review results"
                       : "Requires a password to view the AI review results"}
@@ -442,7 +442,7 @@ export function CreateJudgingGroupModal({
                       placeholder="Password for the AI results page (optional)"
                       disabled={isSubmitting}
                     />
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-soft mt-1">
                       Optional password so others can view the AI results page
                     </p>
                   </div>
@@ -453,7 +453,7 @@ export function CreateJudgingGroupModal({
 
           {/* Status Toggle */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900">Group Status</h3>
+            <h3 className="text-lg font-medium text-ink">Group Status</h3>
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -464,7 +464,7 @@ export function CreateJudgingGroupModal({
                 className={`flex items-center gap-2 px-4 py-2 rounded-md border transition-colors ${
                   formData.isActive
                     ? "bg-green-50 border-green-200 text-green-700"
-                    : "bg-gray-50 border-gray-200 text-gray-600"
+                    : "bg-surface-alt border-hairline text-copy"
                 }`}
               >
                 {formData.isActive ? (
@@ -474,7 +474,7 @@ export function CreateJudgingGroupModal({
                 )}
                 {formData.isActive ? "Active" : "Inactive"}
               </button>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-soft">
                 {formData.isActive
                   ? "Judges can immediately start scoring submissions"
                   : "Group will be created but judges cannot access it yet"}
@@ -483,7 +483,7 @@ export function CreateJudgingGroupModal({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-hairline">
             <Button
               type="button"
               variant="outline"
@@ -495,7 +495,7 @@ export function CreateJudgingGroupModal({
             <Button
               type="submit"
               disabled={isSubmitting || !formData.name.trim()}
-              className="bg-[#292929] hover:bg-[#525252]"
+              className="bg-cta hover:bg-cta-hover"
             >
               {isSubmitting ? "Creating..." : "Create Group"}
             </Button>

@@ -874,7 +874,7 @@ export function ContentModeration() {
     return (
       <div
         key={item._id}
-        className={`border-b border-[#F4F0ED] py-4 last:border-b-0 transition-colors ${
+        className={`border-b border-hairline py-4 last:border-b-0 transition-colors ${
           isSelected ? "bg-blue-50" : ""
         }`}
       >
@@ -886,7 +886,7 @@ export function ContentModeration() {
                 type="checkbox"
                 checked={isSelected}
                 onChange={() => toggleStorySelection(item._id as Id<"stories">)}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+                className="w-4 h-4 text-blue-600 bg-surface-alt border-hairline-strong rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
                 aria-label="Select submission"
               />
             </div>
@@ -903,7 +903,7 @@ export function ContentModeration() {
                 <Link
                   to={`/s/${item.slug}`}
                   target="_blank"
-                  className="font-medium text-[#525252] hover:text-[#292929] block truncate"
+                  className="font-medium text-copy hover:text-ink block truncate"
                 >
                   {item.title}
                 </Link>
@@ -920,15 +920,15 @@ export function ContentModeration() {
             </div>
             {/* Comprehensive Inline Edit Form */}
             {item.type === "story" && editingStoryId === item._id ? (
-              <div className="mt-3 space-y-4 p-4 bg-[#F4F2EE] rounded-lg border">
+              <div className="mt-3 space-y-4 p-4 bg-canvas rounded-lg border">
                 {/* Basic Information */}
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-3">
+                  <h4 className="font-medium text-ink mb-3">
                     Basic Information
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-copy mb-1">
                         Title *
                       </label>
                       <Input
@@ -943,7 +943,7 @@ export function ContentModeration() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-copy mb-1">
                         URL *
                       </label>
                       <Input
@@ -958,7 +958,7 @@ export function ContentModeration() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-copy mb-1">
                         Description
                       </label>
                       <Input
@@ -973,7 +973,7 @@ export function ContentModeration() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-copy mb-1">
                         Submitter Name
                       </label>
                       <Input
@@ -988,7 +988,7 @@ export function ContentModeration() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-copy mb-1">
                         Video URL
                       </label>
                       <Input
@@ -1003,7 +1003,7 @@ export function ContentModeration() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-copy mb-1">
                         Email
                       </label>
                       <Input
@@ -1019,7 +1019,7 @@ export function ContentModeration() {
                     </div>
                   </div>
                   <div className="mt-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-copy mb-1">
                       Long Description
                     </label>
                     <Textarea
@@ -1038,12 +1038,12 @@ export function ContentModeration() {
 
                 {/* Social Links */}
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-3">
+                  <h4 className="font-medium text-ink mb-3">
                     Social & Project Links
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-copy mb-1">
                         LinkedIn URL
                       </label>
                       <Input
@@ -1058,7 +1058,7 @@ export function ContentModeration() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-copy mb-1">
                         Twitter/X URL
                       </label>
                       <Input
@@ -1073,7 +1073,7 @@ export function ContentModeration() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-copy mb-1">
                         GitHub URL
                       </label>
                       <Input
@@ -1088,7 +1088,7 @@ export function ContentModeration() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-copy mb-1">
                         Chef Show URL
                       </label>
                       <Input
@@ -1103,7 +1103,7 @@ export function ContentModeration() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-copy mb-1">
                         Chef App URL
                       </label>
                       <Input
@@ -1122,12 +1122,12 @@ export function ContentModeration() {
 
                 {/* Team Info */}
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-3">
+                  <h4 className="font-medium text-ink mb-3">
                     Team Information
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-copy mb-1">
                         Team Name
                       </label>
                       <Input
@@ -1142,7 +1142,7 @@ export function ContentModeration() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-copy mb-1">
                         Team Member Count
                       </label>
                       <Input
@@ -1174,7 +1174,7 @@ export function ContentModeration() {
                   {/* Team Members */}
                   {editFormData.teamName && teamMembers.length > 0 && (
                     <div className="mt-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-copy mb-2">
                         Team Members
                       </label>
                       <div className="space-y-2">
@@ -1217,14 +1217,14 @@ export function ContentModeration() {
 
                 {/* Tags */}
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Tags</h4>
+                  <h4 className="font-medium text-ink mb-3">Tags</h4>
                   <div className="space-y-3">
                     {/* Available Tags */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-copy mb-2">
                         Select Tags
                       </label>
-                      <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto border rounded p-2 bg-white">
+                      <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto border rounded p-2 bg-surface">
                         {availableTags?.map((tag) => (
                           <button
                             key={tag._id}
@@ -1233,7 +1233,7 @@ export function ContentModeration() {
                             className={`px-2 py-1 text-xs rounded transition-colors ${
                               editSelectedTagIds.includes(tag._id)
                                 ? "bg-blue-100 text-blue-700 border border-blue-300"
-                                : "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200"
+                                : "bg-surface-alt text-copy border border-hairline-strong hover:bg-surface-hover"
                             }`}
                           >
                             {tag.name}
@@ -1245,12 +1245,12 @@ export function ContentModeration() {
                     {/* New Tags */}
                     <div>
                       <div className="flex items-center gap-2 mb-2">
-                        <label className="text-sm font-medium text-gray-700">
+                        <label className="text-sm font-medium text-copy">
                           New Tags
                         </label>
                         <button
                           type="button"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                           onClick={handleAddNewTag}
                         >
                           <Plus className="w-3.5 h-3.5" />
@@ -1282,14 +1282,14 @@ export function ContentModeration() {
 
                 {/* Screenshot */}
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Screenshot</h4>
+                  <h4 className="font-medium text-ink mb-3">Screenshot</h4>
                   <div className="space-y-3">
                     {/* Current Screenshot */}
                     {item.screenshotUrl &&
                       !removeScreenshot &&
                       !screenshotPreview && (
                         <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-700">
+                          <label className="block text-sm font-medium text-copy">
                             Current Screenshot
                           </label>
                           <div className="relative inline-block">
@@ -1300,7 +1300,7 @@ export function ContentModeration() {
                             />
                             <button
                               type="button"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium mt-2"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium mt-2"
                               onClick={handleRemoveScreenshot}
                             >
                               <span>Remove Screenshot</span>
@@ -1312,7 +1312,7 @@ export function ContentModeration() {
                     {/* New Screenshot Preview */}
                     {screenshotPreview && (
                       <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">
+                        <label className="block text-sm font-medium text-copy">
                           New Screenshot
                         </label>
                         <div className="relative inline-block">
@@ -1324,7 +1324,7 @@ export function ContentModeration() {
                           <div className="flex gap-2 mt-2">
                             <button
                               type="button"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                               onClick={() => {
                                 setNewScreenshotFile(null);
                                 setScreenshotPreview(null);
@@ -1335,7 +1335,7 @@ export function ContentModeration() {
                             {item.screenshotUrl && (
                               <button
                                 type="button"
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                                 onClick={handleKeepCurrentScreenshot}
                               >
                                 <span>Keep Current</span>
@@ -1348,7 +1348,7 @@ export function ContentModeration() {
 
                     {/* File Upload */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-copy mb-1">
                         {screenshotPreview
                           ? "Replace with Different Image"
                           : "Upload New Screenshot"}
@@ -1357,7 +1357,7 @@ export function ContentModeration() {
                         type="file"
                         accept="image/*"
                         onChange={handleScreenshotFileChange}
-                        className="file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+                        className="file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:bg-surface-alt file:text-copy hover:file:bg-surface-hover"
                       />
                     </div>
 
@@ -1379,7 +1379,7 @@ export function ContentModeration() {
 
                 {/* Additional Images */}
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-3">
+                  <h4 className="font-medium text-ink mb-3">
                     Additional Images ({item.additionalImageUrls?.length || 0})
                   </h4>
                   <div className="space-y-3">
@@ -1387,7 +1387,7 @@ export function ContentModeration() {
                     {item.additionalImageUrls &&
                       item.additionalImageUrls.length > 0 && (
                         <div className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-700">
+                          <label className="block text-sm font-medium text-copy">
                             Current Additional Images
                           </label>
                           <div className="flex flex-wrap gap-2">
@@ -1403,7 +1403,7 @@ export function ContentModeration() {
                           </div>
                           <button
                             type="button"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium mt-2"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium mt-2"
                             onClick={() => {
                               setEditFormData((prev) => ({
                                 ...prev,
@@ -1418,7 +1418,7 @@ export function ContentModeration() {
 
                     {/* File Upload for Additional Images */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-copy mb-1">
                         Upload Additional Images (Max 4)
                       </label>
                       <Input
@@ -1505,7 +1505,7 @@ export function ContentModeration() {
                             );
                           }
                         }}
-                        className="file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+                        className="file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:bg-surface-alt file:text-copy hover:file:bg-surface-hover"
                       />
                     </div>
                   </div>
@@ -1514,13 +1514,13 @@ export function ContentModeration() {
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-2 border-t">
                   <button
-                    className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-white bg-gray-900 hover:bg-gray-800 rounded-lg border border-gray-900 transition-all font-medium"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-on-cta bg-cta hover:bg-cta-hover rounded-lg border border-ink transition-all font-medium"
                     onClick={handleSaveEdit}
                   >
                     <span>Save Changes</span>
                   </button>
                   <button
-                    className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                     onClick={handleCancelEdit}
                   >
                     <span>Cancel</span>
@@ -1529,14 +1529,14 @@ export function ContentModeration() {
               </div>
             ) : (
               <p
-                className={`text-sm ${item.type === "comment" ? "text-[#525252]" : "text-[#545454]"} mt-1 break-words`}
+                className={`text-sm ${item.type === "comment" ? "text-copy" : "text-soft"} mt-1 break-words`}
               >
                 {item.type === "story" ? item.description : item.content}
               </p>
             )}
             {/* Always show custom message if present, as editing is disabled */}
             {item.type === "story" && item.customMessage && (
-              <div className="mt-2 text-sm text-[#ffffff] bg-[#292929] border border-[#D8E1EC] rounded-md p-2 italic">
+              <div className="mt-2 text-sm text-on-cta bg-cta border border-hairline rounded-md p-2 italic">
                 Admin Message: {item.customMessage}
               </div>
             )}
@@ -1554,13 +1554,13 @@ export function ContentModeration() {
                 />
                 <div className="flex gap-2 justify-end">
                   <button
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                     onClick={handleCancelEditMessage}
                   >
                     <span>Cancel</span>
                   </button>
                   <button
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-gray-900 hover:bg-gray-800 rounded-lg border border-gray-900 transition-all font-medium"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-on-cta bg-cta hover:bg-cta-hover rounded-lg border border-ink transition-all font-medium"
                     onClick={() => handleSaveMessage(item._id as Id<"stories">)}
                   >
                     <span>Save Message</span>
@@ -1570,8 +1570,8 @@ export function ContentModeration() {
             )}
             {/* Tag Selector - Show for current story if active */}
             {item.type === "story" && showTagSelector === item._id && (
-              <div className="mt-3 space-y-2 p-3 bg-gray-50 border border-gray-200 rounded-md">
-                <p className="text-sm font-medium text-gray-700">
+              <div className="mt-3 space-y-2 p-3 bg-surface-alt border border-hairline rounded-md">
+                <p className="text-sm font-medium text-copy">
                   Add Tag to Story:
                 </p>
                 <div className="flex gap-2 items-center">
@@ -1611,7 +1611,7 @@ export function ContentModeration() {
                     </SelectContent>
                   </Select>
                   <button
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-gray-900 hover:bg-gray-800 rounded-lg border border-gray-900 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-on-cta bg-cta hover:bg-cta-hover rounded-lg border border-ink transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => handleAddTag(item._id as Id<"stories">)}
                     disabled={!selectedTagId}
                   >
@@ -1619,7 +1619,7 @@ export function ContentModeration() {
                     <span>Add</span>
                   </button>
                   <button
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                     onClick={handleCancelTagSelector}
                   >
                     <span>Cancel</span>
@@ -1629,8 +1629,8 @@ export function ContentModeration() {
             )}
             {/* Judging Group Selector - Show for current story if active */}
             {item.type === "story" && showJudgingGroupSelector === item._id && (
-              <div className="mt-3 space-y-2 p-3 bg-gray-50 border border-gray-200 rounded-md">
-                <p className="text-sm font-medium text-gray-700">
+              <div className="mt-3 space-y-2 p-3 bg-surface-alt border border-hairline rounded-md">
+                <p className="text-sm font-medium text-copy">
                   Add to Judging Group:
                 </p>
                 <div className="flex gap-2 items-center">
@@ -1651,7 +1651,7 @@ export function ContentModeration() {
                             <div className="flex items-center gap-2">
                               <Scale className="w-4 h-4" />
                               <span>{group.name}</span>
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-soft">
                                 ({group.submissionCount} submissions)
                               </span>
                             </div>
@@ -1660,7 +1660,7 @@ export function ContentModeration() {
                     </SelectContent>
                   </Select>
                   <button
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-gray-900 hover:bg-gray-800 rounded-lg border border-gray-900 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-on-cta bg-cta hover:bg-cta-hover rounded-lg border border-ink transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() =>
                       handleAddToJudgingGroup(item._id as Id<"stories">)
                     }
@@ -1670,7 +1670,7 @@ export function ContentModeration() {
                     <span>Add</span>
                   </button>
                   <button
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                     onClick={handleCancelJudgingGroupSelector}
                   >
                     <span>Cancel</span>
@@ -1685,7 +1685,7 @@ export function ContentModeration() {
                 onRemove={handleRemoveFromJudgingGroup}
               />
             )}
-            <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-[#545454]">
+            <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-soft">
               <span>
                 by{" "}
                 {item.type === "story"
@@ -1695,17 +1695,17 @@ export function ContentModeration() {
                   : (item as any).authorName || "Unknown"}
               </span>
               {item.type === "story" && (item as any).authorUsername && (
-                <span className="text-gray-400">
+                <span className="text-faint">
                   (@{(item as any).authorUsername})
                 </span>
               )}
               {item.type === "comment" && (item as any).authorUsername && (
-                <span className="text-gray-400">
+                <span className="text-faint">
                   (@{(item as any).authorUsername})
                 </span>
               )}
               {item.type === "story" && (item as any).email && (
-                <span className="text-gray-400">({(item as any).email})</span>
+                <span className="text-faint">({(item as any).email})</span>
               )}
               <span>
                 {format(item._creationTime, "MMM dd, yyyy 'at' h:mm a")}
@@ -1746,7 +1746,7 @@ export function ContentModeration() {
                 {item.tags.map((tag) => (
                   <span
                     key={tag._id}
-                    className="text-xs text-[#545454] bg-[#F4F0ED] px-2 py-0.5 rounded"
+                    className="text-xs text-soft bg-surface-alt px-2 py-0.5 rounded"
                   >
                     {tag.name}
                   </span>
@@ -1809,7 +1809,7 @@ export function ContentModeration() {
                     </button>
                   ) : (
                     <button
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                       onClick={() => handleAction("archive", item)}
                     >
                       <FileX className="w-3.5 h-3.5" />
@@ -1827,7 +1827,7 @@ export function ContentModeration() {
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-all font-medium ${
                       item.isPinned
                         ? "text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 border-blue-200 hover:border-blue-300"
-                        : "text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300"
+                        : "text-copy hover:text-ink bg-surface hover:bg-surface-hover border-hairline hover:border-hairline-strong"
                     }`}
                     onClick={() => handleAction("togglePin", item)}
                   >
@@ -1837,7 +1837,7 @@ export function ContentModeration() {
                   {/* Add Message Button */}
                   {!isEditing && (
                     <button
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                       onClick={() =>
                         handleEditMessage(item as StoryWithDetails)
                       }
@@ -1848,7 +1848,7 @@ export function ContentModeration() {
                   )}
                   {/* Add Tag Button */}
                   <button
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                     onClick={() =>
                       handleShowTagSelector(item._id as Id<"stories">)
                     }
@@ -1867,7 +1867,7 @@ export function ContentModeration() {
                 <>
                   {/* Add to Judging Button */}
                   <button
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                     onClick={() =>
                       handleShowJudgingGroupSelector(item._id as Id<"stories">)
                     }
@@ -1888,7 +1888,7 @@ export function ContentModeration() {
 
               {/* Delete Action (Common) */}
               <button
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-700 hover:text-red-800 bg-white hover:bg-red-50 rounded-lg border border-red-200 hover:border-red-300 transition-all font-medium"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-700 hover:text-red-800 bg-surface hover:bg-red-50 rounded-lg border border-red-200 hover:border-red-300 transition-all font-medium"
                 onClick={() => handleAction("delete", item)}
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -1929,8 +1929,8 @@ export function ContentModeration() {
     <>
       <DialogComponents />
       <div className="space-y-6">
-        <div className="bg-white rounded-lg p-4 sm:p-6 border border-gray-200">
-          <h2 className="text-xl font-medium text-[#525252] mb-6">
+        <div className="bg-surface rounded-lg p-4 sm:p-6 border border-hairline">
+          <h2 className="text-xl font-medium text-copy mb-6">
             Content Moderation
           </h2>
 
@@ -1967,7 +1967,7 @@ export function ContentModeration() {
             </Select>
 
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-faint" />
               <Input
                 type="search"
                 placeholder={`Search ${activeItemType}...`}
@@ -1977,7 +1977,7 @@ export function ContentModeration() {
                 disabled={activeItemType === "comments"} // Assuming comments search not implemented
               />
               {activeItemType === "comments" && (
-                <span className="text-xs text-gray-500 absolute right-3 top-1/2 transform -translate-y-1/2">
+                <span className="text-xs text-soft absolute right-3 top-1/2 transform -translate-y-1/2">
                   (Search N/A)
                 </span>
               )}
@@ -1989,7 +1989,7 @@ export function ContentModeration() {
             {/* Date Range Filter */}
             <div className="flex gap-2 items-end">
               <div className="flex-1">
-                <label className="text-xs text-gray-600 mb-1 block">
+                <label className="text-xs text-copy mb-1 block">
                   Start Date
                 </label>
                 <Input
@@ -2000,7 +2000,7 @@ export function ContentModeration() {
                 />
               </div>
               <div className="flex-1">
-                <label className="text-xs text-gray-600 mb-1 block">
+                <label className="text-xs text-copy mb-1 block">
                   End Date
                 </label>
                 <Input
@@ -2016,7 +2016,7 @@ export function ContentModeration() {
                     setStartDate("");
                     setEndDate("");
                   }}
-                  className="px-3 py-2 text-xs text-gray-600 hover:text-gray-900 border border-gray-300 rounded-md whitespace-nowrap"
+                  className="px-3 py-2 text-xs text-copy hover:text-ink border border-hairline-strong rounded-md whitespace-nowrap"
                 >
                   Clear
                 </button>
@@ -2026,7 +2026,7 @@ export function ContentModeration() {
             {/* Tag Filter - Only show for submissions */}
             {activeItemType === "submissions" && (
               <div className="relative tag-search-container">
-                <label className="text-xs text-gray-600 mb-1 block">
+                <label className="text-xs text-copy mb-1 block">
                   Filter by Tags
                 </label>
                 <Input
@@ -2043,7 +2043,7 @@ export function ContentModeration() {
 
                 {/* Tag Dropdown */}
                 {showTagDropdown && availableTags && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-[#D8E1EC] rounded-md max-h-48 overflow-y-auto">
+                  <div className="absolute z-10 w-full mt-1 bg-surface border border-hairline rounded-md max-h-48 overflow-y-auto">
                     {(() => {
                       const searchTerm = tagSearchTerm.toLowerCase();
                       const filteredTags = availableTags
@@ -2056,7 +2056,7 @@ export function ContentModeration() {
 
                       if (filteredTags.length === 0) {
                         return (
-                          <div className="px-3 py-2 text-sm text-gray-500">
+                          <div className="px-3 py-2 text-sm text-soft">
                             No matching tags found
                           </div>
                         );
@@ -2071,7 +2071,7 @@ export function ContentModeration() {
                             setTagSearchTerm("");
                             setShowTagDropdown(false);
                           }}
-                          className="w-full px-3 py-2 text-left text-sm hover:bg-[#F4F0ED] focus:bg-[#F4F0ED] focus:outline-none flex items-center gap-2"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-surface-hover focus:bg-surface-alt focus:outline-none flex items-center gap-2"
                         >
                           {tag.emoji && (
                             <span className="text-sm">{tag.emoji}</span>
@@ -2086,9 +2086,9 @@ export function ContentModeration() {
                           <span
                             className="inline-block px-2 py-0.5 rounded text-xs font-medium"
                             style={{
-                              backgroundColor: tag.backgroundColor || "#F4F0ED",
-                              color: tag.textColor || "#525252",
-                              border: `1px solid ${tag.backgroundColor ? "transparent" : "#D5D3D0"}`,
+                              backgroundColor: tag.backgroundColor || "var(--th-surface-alt)",
+                              color: tag.textColor || "var(--th-copy)",
+                              border: `1px solid ${tag.backgroundColor ? "transparent" : "var(--th-hairline-strong)"}`,
                             }}
                           >
                             {tag.name}
@@ -2104,8 +2104,8 @@ export function ContentModeration() {
 
           {/* Advanced Filters Section */}
           {activeItemType === "submissions" && (
-            <div className="mb-6 p-4 bg-[#F4F2EE] rounded-lg border border-gray-200">
-              <label className="text-sm font-medium text-gray-700 block mb-3">
+            <div className="mb-6 p-4 bg-canvas rounded-lg border border-hairline">
+              <label className="text-sm font-medium text-copy block mb-3">
                 Advanced Filters
               </label>
 
@@ -2116,9 +2116,9 @@ export function ContentModeration() {
                     type="checkbox"
                     checked={hasMessage}
                     onChange={(e) => setHasMessage(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                    className="w-4 h-4 text-blue-600 bg-surface-alt border-hairline-strong rounded focus:ring-blue-500 focus:ring-2"
                   />
-                  <span className="text-sm text-gray-700">
+                  <span className="text-sm text-copy">
                     Has Admin Message
                   </span>
                 </label>
@@ -2128,9 +2128,9 @@ export function ContentModeration() {
                     type="checkbox"
                     checked={isPinned}
                     onChange={(e) => setIsPinned(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                    className="w-4 h-4 text-blue-600 bg-surface-alt border-hairline-strong rounded focus:ring-blue-500 focus:ring-2"
                   />
-                  <span className="text-sm text-gray-700">
+                  <span className="text-sm text-copy">
                     Currently Pinned
                   </span>
                 </label>
@@ -2140,9 +2140,9 @@ export function ContentModeration() {
                     type="checkbox"
                     checked={wasPinned}
                     onChange={(e) => setWasPinned(e.target.checked)}
-                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                    className="w-4 h-4 text-blue-600 bg-surface-alt border-hairline-strong rounded focus:ring-blue-500 focus:ring-2"
                   />
-                  <span className="text-sm text-gray-700">
+                  <span className="text-sm text-copy">
                     Was Pinned Before
                   </span>
                 </label>
@@ -2150,7 +2150,7 @@ export function ContentModeration() {
 
               {/* Judging Group Filter */}
               <div>
-                <label className="text-xs text-gray-600 mb-1 block">
+                <label className="text-xs text-copy mb-1 block">
                   In Judging Group
                 </label>
                 <Select
@@ -2226,14 +2226,14 @@ export function ContentModeration() {
                         </SelectContent>
                       </Select>
                       <button
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-gray-900 hover:bg-gray-800 rounded-lg border border-gray-900 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-on-cta bg-cta hover:bg-cta-hover rounded-lg border border-ink transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={handleBulkAddTag}
                         disabled={!bulkSelectedTagId}
                       >
                         <span>Apply</span>
                       </button>
                       <button
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                         onClick={() => {
                           setBulkActionType(null);
                           setBulkSelectedTagId(null);
@@ -2272,14 +2272,14 @@ export function ContentModeration() {
                         </SelectContent>
                       </Select>
                       <button
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-gray-900 hover:bg-gray-800 rounded-lg border border-gray-900 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-on-cta bg-cta hover:bg-cta-hover rounded-lg border border-ink transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={handleBulkRemoveTag}
                         disabled={!bulkRemoveTagId}
                       >
                         <span>Apply</span>
                       </button>
                       <button
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                         onClick={() => {
                           setBulkActionType(null);
                           setBulkRemoveTagId(null);
@@ -2309,7 +2309,7 @@ export function ContentModeration() {
                                 <div className="flex items-center gap-2">
                                   <Scale className="w-4 h-4" />
                                   <span>{group.name}</span>
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-soft">
                                     ({group.submissionCount} submissions)
                                   </span>
                                 </div>
@@ -2318,14 +2318,14 @@ export function ContentModeration() {
                         </SelectContent>
                       </Select>
                       <button
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-white bg-gray-900 hover:bg-gray-800 rounded-lg border border-gray-900 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-on-cta bg-cta hover:bg-cta-hover rounded-lg border border-ink transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={handleBulkAddToJudgingGroup}
                         disabled={!bulkSelectedJudgingGroupId}
                       >
                         <span>Apply</span>
                       </button>
                       <button
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                         onClick={() => {
                           setBulkActionType(null);
                           setBulkSelectedJudgingGroupId(null);
@@ -2337,21 +2337,21 @@ export function ContentModeration() {
                   ) : (
                     <>
                       <button
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                         onClick={() => setBulkActionType("tag")}
                       >
                         <Tag className="w-3.5 h-3.5" />
                         <span>Add Tag</span>
                       </button>
                       <button
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                         onClick={() => setBulkActionType("removeTag")}
                       >
                         <X className="w-3.5 h-3.5" />
                         <span>Remove Tag</span>
                       </button>
                       <button
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                         onClick={() => setBulkActionType("judging")}
                       >
                         <Scale className="w-3.5 h-3.5" />
@@ -2373,14 +2373,14 @@ export function ContentModeration() {
 
           {/* Selected Tags Display */}
           {activeItemType === "submissions" && selectedTagIds.length > 0 && (
-            <div className="mb-6 p-4 bg-[#F4F2EE] rounded-lg border border-gray-200">
+            <div className="mb-6 p-4 bg-canvas rounded-lg border border-hairline">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-medium text-gray-700">
+                <h3 className="text-sm font-medium text-copy">
                   Filtering by Tags ({selectedTagIds.length})
                 </h3>
                 <button
                   onClick={() => setSelectedTagIds([])}
-                  className="text-xs text-gray-500 hover:text-gray-700 underline"
+                  className="text-xs text-soft hover:text-copy underline"
                 >
                   Clear all
                 </button>
@@ -2396,11 +2396,11 @@ export function ContentModeration() {
                         key={tag._id}
                         className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm border transition-colors"
                         style={{
-                          backgroundColor: tag.backgroundColor || "#F4F0ED",
-                          color: tag.textColor || "#292929",
+                          backgroundColor: tag.backgroundColor || "var(--th-surface-alt)",
+                          color: tag.textColor || "var(--th-ink)",
                           borderColor: tag.backgroundColor
                             ? "transparent"
-                            : "#D5D3D0",
+                            : "var(--th-hairline-strong)",
                         }}
                       >
                         {tag.emoji && (
@@ -2434,13 +2434,13 @@ export function ContentModeration() {
           )}
 
           {uiIsLoading && (
-            <div className="text-center py-6 text-lg font-medium text-[#545454]">
+            <div className="text-center py-6 text-lg font-medium text-soft">
               Loading...
             </div>
           )}
 
           {!uiIsLoading && itemsToRender.length === 0 && (
-            <div className="text-center py-10 text-[#545454]">
+            <div className="text-center py-10 text-soft">
               No {activeItemType} found matching the criteria.
             </div>
           )}
@@ -2449,7 +2449,7 @@ export function ContentModeration() {
             <div>
               {/* Select All Checkbox - Only for submissions */}
               {activeItemType === "submissions" && itemsToRender.length > 0 && (
-                <div className="border-b border-[#F4F0ED] py-3 mb-2 bg-gray-50">
+                <div className="border-b border-hairline py-3 mb-2 bg-surface-alt">
                   <label className="flex items-center gap-3 px-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -2458,10 +2458,10 @@ export function ContentModeration() {
                         selectedStoryIds.size === itemsToRender.length
                       }
                       onChange={toggleSelectAll}
-                      className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+                      className="w-4 h-4 text-blue-600 bg-surface-alt border-hairline-strong rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
                       aria-label="Select all submissions"
                     />
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="text-sm font-medium text-copy">
                       {selectedStoryIds.size === itemsToRender.length &&
                       selectedStoryIds.size > 0
                         ? "Deselect All"
@@ -2478,7 +2478,7 @@ export function ContentModeration() {
           {currentStatus === "CanLoadMore" && (
             <div className="text-center mt-6">
               <button
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                 onClick={() => loadMore(10)}
               >
                 <span>Load More {activeItemType}</span>
@@ -2490,20 +2490,20 @@ export function ContentModeration() {
         {/* Delete Comment Confirmation Modal */}
         {confirmDeleteCommentId && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-md w-full p-6 border border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <div className="bg-surface rounded-lg max-w-md w-full p-6 border border-hairline">
+              <h3 className="text-lg font-medium text-ink mb-2">
                 Delete comment
               </h3>
-              <p className="text-sm text-gray-600">This cannot be undone.</p>
+              <p className="text-sm text-copy">This cannot be undone.</p>
               <div className="flex justify-end gap-2 mt-6">
                 <button
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-all font-medium"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
                   onClick={() => setConfirmDeleteCommentId(null)}
                 >
                   <span>Cancel</span>
                 </button>
                 <button
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-white bg-gray-900 hover:bg-gray-800 rounded-lg border border-gray-900 transition-all font-medium"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-on-cta bg-cta hover:bg-cta-hover rounded-lg border border-ink transition-all font-medium"
                   onClick={async () => {
                     await deleteComment({ commentId: confirmDeleteCommentId });
                     setConfirmDeleteCommentId(null);
@@ -2577,7 +2577,7 @@ function StoryJudgingGroups({
             title={`Completed${assignedJudgeName ? ` by ${assignedJudgeName}` : ""}`}
           >
             <CheckCircle className="w-3 h-3 text-green-600" />
-            {assignedJudgeName && <User className="w-3 h-3 text-gray-500" />}
+            {assignedJudgeName && <User className="w-3 h-3 text-soft" />}
           </div>
         );
       case "skip":
@@ -2586,7 +2586,7 @@ function StoryJudgingGroups({
             className="flex items-center gap-1"
             title="Skip - Not being judged"
           >
-            <FileX className="w-3 h-3 text-gray-600" />
+            <FileX className="w-3 h-3 text-copy" />
           </div>
         );
       default:
@@ -2609,7 +2609,7 @@ function StoryJudgingGroups({
           return (
             <div
               key={group._id}
-              className="inline-flex items-center gap-1 px-2 py-1 bg-white border border-blue-200 rounded text-xs"
+              className="inline-flex items-center gap-1 px-2 py-1 bg-surface border border-blue-200 rounded text-xs"
             >
               <span className="font-medium text-blue-900">{group.name}</span>
               <span className="text-blue-600">/{group.slug}</span>
@@ -2624,7 +2624,7 @@ function StoryJudgingGroups({
               {!group.isActive && (
                 <span className="text-orange-600 font-medium">(Inactive)</span>
               )}
-              {!group.isPublic && <Lock className="w-3 h-3 text-gray-500" />}
+              {!group.isPublic && <Lock className="w-3 h-3 text-soft" />}
               <button
                 onClick={() => onRemove(storyId, group._id, group.name)}
                 className="ml-1 text-red-500 hover:text-red-700 hover:bg-red-100 rounded p-0.5 transition-colors"
@@ -2649,7 +2649,7 @@ function StoryJudgingGroups({
             <span>Completed</span>
           </div>
           <div className="flex items-center gap-1">
-            <FileX className="w-3 h-3 text-gray-600" />
+            <FileX className="w-3 h-3 text-copy" />
             <span>Skip</span>
           </div>
         </div>

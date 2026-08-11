@@ -3,6 +3,7 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { CustomForm, FormField } from "../types";
+import { SimpleSelect } from "./ui/SimpleSelect";
 
 interface PublicFormProps {
   form: CustomForm;
@@ -72,7 +73,7 @@ export function PublicForm({ form, fields }: PublicFormProps) {
       onChange: handleChange,
       required: field.required,
       className:
-        "w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]",
+        "w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline",
       disabled: isSubmitting,
       value: formData[field.label.toLowerCase().replace(/\s+/g, "_")] || "",
     };
@@ -100,36 +101,45 @@ export function PublicForm({ form, fields }: PublicFormProps) {
         );
       case "yesNo":
         return (
-          <select
-            {...commonProps}
+          <SimpleSelect
+            id={field._id}
+            name={commonProps.name}
+            required={field.required}
+            disabled={isSubmitting}
             value={
               formData[field.label.toLowerCase().replace(/\s+/g, "_")] || ""
             }
-          >
-            <option value="" disabled>
-              {field.placeholder || "Select..."}
-            </option>
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
-          </select>
+            onChange={(value) =>
+              setFormData((prev) => ({ ...prev, [commonProps.name]: value }))
+            }
+            placeholder={field.placeholder || "Select..."}
+            className="w-full h-auto py-2"
+            options={[
+              { value: "yes", label: "Yes" },
+              { value: "no", label: "No" },
+            ]}
+          />
         );
       case "dropdown":
         return (
-          <select
-            {...commonProps}
+          <SimpleSelect
+            id={field._id}
+            name={commonProps.name}
+            required={field.required}
+            disabled={isSubmitting}
             value={
               formData[field.label.toLowerCase().replace(/\s+/g, "_")] || ""
             }
-          >
-            <option value="" disabled>
-              {field.placeholder || "Select..."}
-            </option>
-            {(field.options || []).map((opt: string) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
+            onChange={(value) =>
+              setFormData((prev) => ({ ...prev, [commonProps.name]: value }))
+            }
+            placeholder={field.placeholder || "Select..."}
+            className="w-full h-auto py-2"
+            options={(field.options || []).map((opt: string) => ({
+              value: opt,
+              label: opt,
+            }))}
+          />
         );
       case "multiSelect":
         return (
@@ -155,8 +165,8 @@ export function PublicForm({ form, fields }: PublicFormProps) {
   };
 
   return (
-    <div className="max-w-2xl mx-auto bg-white p-6 rounded-lg border border-[#D8E1EC]">
-      <h1 className="text-xl font-medium text-[#292929] mb-6">{form.title}</h1>
+    <div className="max-w-2xl mx-auto bg-surface p-6 rounded-lg border border-hairline">
+      <h1 className="text-xl font-medium text-ink mb-6">{form.title}</h1>
       {submitStatus === "success" ? (
         <div className="p-4 bg-green-100 text-green-800 rounded-md">
           Form submitted successfully! Thank you.
@@ -167,7 +177,7 @@ export function PublicForm({ form, fields }: PublicFormProps) {
             <div key={field._id}>
               <label
                 htmlFor={field._id}
-                className="block text-sm font-medium text-[#525252] mb-1"
+                className="block text-sm font-medium text-copy mb-1"
               >
                 {field.label}
                 {field.required && <span className="text-red-500"> *</span>}
@@ -185,7 +195,7 @@ export function PublicForm({ form, fields }: PublicFormProps) {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors disabled:opacity-50"
+            className="px-4 py-2 bg-cta text-on-cta rounded-md hover:bg-cta-hover transition-colors disabled:opacity-50"
           >
             {isSubmitting ? "Submitting..." : "Submit"}
           </button>

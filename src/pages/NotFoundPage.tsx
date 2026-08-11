@@ -18,11 +18,11 @@ export function NotFoundPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen text-center p-4">
       <div className="mb-8">
-        <h1 className="text-9xl font-bold text-gray-800">404</h1>
-        <p className="text-2xl md:text-3xl text-gray-600 mt-4">
+        <h1 className="text-9xl font-bold text-ink">404</h1>
+        <p className="text-2xl md:text-3xl text-copy mt-4">
           Oops! The page you're looking for doesn't exist.
         </p>
-        <p className="text-md text-gray-500 mt-2">
+        <p className="text-md text-soft mt-2">
           It might have been moved, or typed incorrectly.
         </p>
       </div>
@@ -34,13 +34,13 @@ export function NotFoundPage() {
             placeholder="Search for vibes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full py-3 px-4 pr-12 text-lg border-gray-300 focus:border-gray-500 focus:ring-gray-500 rounded-md shadow-sm"
+            className="w-full py-3 px-4 pr-12 text-lg border-hairline-strong focus:border-hairline-strong focus:ring-ink rounded-md shadow-sm"
           />
           <Button
             type="submit"
             variant="ghost"
             size="icon"
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-soft hover:text-copy"
           >
             <Search className="h-6 w-6" />
             <span className="sr-only">Search</span>
@@ -51,7 +51,7 @@ export function NotFoundPage() {
       <div>
         <Link
           to="/"
-          className="px-6 py-3 bg-gray-800 text-white font-semibold rounded-md hover:bg-gray-700 transition-colors text-lg"
+          className="px-6 py-3 bg-cta text-on-cta font-semibold rounded-md hover:bg-cta-hover transition-colors text-lg"
         >
           Go to Homepage
         </Link>

@@ -114,10 +114,10 @@ export function GroupSettingsSection({
         </div>
         <div className="flex items-center justify-between gap-3 pt-1">
           <div>
-            <p className="text-[13px] font-medium text-[#292929]">
+            <p className="text-[13px] font-medium text-ink">
               Group status
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-soft">
               {isActive
                 ? "Judges can score submissions right now"
                 : "Judges cannot access this group until activated"}
@@ -147,7 +147,7 @@ export function GroupSettingsSection({
             disabled={saving}
             className="mt-1 max-w-[120px]"
           />
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-soft mt-1">
             {judgesPerSubmission === 1
               ? "Each submission is judged by a single judge."
               : `Each submission must be scored by ${judgesPerSubmission} different judges before it is marked complete.`}
@@ -166,15 +166,15 @@ export function GroupSettingsSection({
                 disabled={saving}
                 className={`px-3.5 py-1.5 text-[13px] font-medium rounded-md border transition-colors disabled:opacity-50 ${
                   scoreScale === scale
-                    ? "bg-[#292929] border-[#292929] text-white"
-                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                    ? "bg-cta border-ink text-on-cta"
+                    : "bg-surface border-hairline text-copy hover:bg-surface-hover"
                 }`}
               >
                 1 to {scale}
               </button>
             ))}
           </div>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-soft mt-1">
             Judges score every criterion from 1 to {scoreScale}. Changing the
             scale after judging starts keeps existing scores as they were
             entered.
@@ -185,10 +185,10 @@ export function GroupSettingsSection({
       <NotificationEmailsCard group={group} />
 
       {canDelete && (
-        <div className="rounded-lg border border-red-200 bg-white">
+        <div className="rounded-lg border border-red-200 bg-surface">
           <div className="px-5 pt-4 pb-1">
             <h3 className="text-sm font-semibold text-red-700">Danger zone</h3>
-            <p className="text-[13px] text-gray-500 mt-0.5">
+            <p className="text-[13px] text-soft mt-0.5">
               Deleting removes this group, its criteria, scores, and judge
               records. This cannot be undone.
             </p>
@@ -201,7 +201,7 @@ export function GroupSettingsSection({
               className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-medium rounded-md border transition-colors disabled:opacity-50 ${
                 deleteArmed
                   ? "bg-red-600 border-red-600 text-white hover:bg-red-700"
-                  : "bg-white border-red-200 text-red-600 hover:bg-red-50"
+                  : "bg-surface border-red-200 text-red-600 hover:bg-red-50"
               }`}
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -291,7 +291,7 @@ function NotificationEmailsCard({ group }: { group: GroupDetails }) {
           type="button"
           onClick={addEmail}
           disabled={saving || !newEmail.trim()}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-medium rounded-md bg-[#292929] text-white hover:bg-[#525252] transition-colors disabled:opacity-50 flex-shrink-0"
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-medium rounded-md bg-cta text-on-cta hover:bg-cta-hover transition-colors disabled:opacity-50 flex-shrink-0"
         >
           <Plus className="w-3.5 h-3.5" />
           Add
@@ -302,15 +302,15 @@ function NotificationEmailsCard({ group }: { group: GroupDetails }) {
           {emails.map((email) => (
             <span
               key={email}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-gray-200 bg-gray-50 text-xs text-[#292929]"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-hairline bg-surface-alt text-xs text-ink"
             >
-              <Mail className="w-3 h-3 text-gray-400" />
+              <Mail className="w-3 h-3 text-faint" />
               {email}
               <button
                 type="button"
                 onClick={() => removeEmail(email)}
                 disabled={saving}
-                className="text-gray-400 hover:text-red-600 transition-colors"
+                className="text-faint hover:text-red-600 transition-colors"
                 aria-label={`Remove ${email}`}
               >
                 <X className="w-3 h-3" />
@@ -319,7 +319,7 @@ function NotificationEmailsCard({ group }: { group: GroupDetails }) {
           ))}
         </div>
       ) : (
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-faint">
           No recipients. New-submission alerts are skipped for this group.
         </p>
       )}

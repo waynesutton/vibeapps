@@ -48,27 +48,27 @@ export function PublicResultsViewer() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      <h1 className="text-2xl font-medium text-[#292929] mb-4">Results for: {title}</h1>
-      <p className="text-sm text-gray-600">Total Submissions: {submissions.length}</p>
+      <h1 className="text-2xl font-medium text-ink mb-4">Results for: {title}</h1>
+      <p className="text-sm text-copy">Total Submissions: {submissions.length}</p>
 
       {/* Results Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-surface rounded-lg shadow-sm border border-hairline overflow-hidden">
         {submissions.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">No submissions received yet.</div>
+          <div className="p-6 text-center text-soft">No submissions received yet.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b border-gray-200 bg-gray-50">
+              <thead className="border-b border-hairline bg-surface-alt">
                 <tr>
                   {/* Submitted At Column */}
-                  <th className="text-left p-3 px-4 text-gray-600 font-medium whitespace-nowrap">
+                  <th className="text-left p-3 px-4 text-copy font-medium whitespace-nowrap">
                     Submitted At
                   </th>
                   {/* Dynamic Columns based on Form Fields */}
                   {fields.map((field: FormField) => (
                     <th
                       key={field._id}
-                      className="text-left p-3 px-4 text-gray-600 font-medium whitespace-nowrap">
+                      className="text-left p-3 px-4 text-copy font-medium whitespace-nowrap">
                       {field.label}
                     </th>
                   ))}
@@ -78,14 +78,14 @@ export function PublicResultsViewer() {
                 {submissions.map((submission) => (
                   <tr
                     key={submission._id}
-                    className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
+                    className="border-b border-hairline last:border-b-0 hover:bg-surface-hover">
                     {/* Submitted At Data */}
-                    <td className="p-3 px-4 text-gray-500 whitespace-nowrap">
+                    <td className="p-3 px-4 text-soft whitespace-nowrap">
                       {formatDate(submission._creationTime)}
                     </td>
                     {/* Dynamic Data based on Form Fields */}
                     {fields.map((field: FormField) => (
-                      <td key={field._id} className="p-3 px-4 text-gray-700 align-top">
+                      <td key={field._id} className="p-3 px-4 text-copy align-top">
                         {getFieldValue(submission.data, field.label)}
                       </td>
                     ))}

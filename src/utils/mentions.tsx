@@ -20,7 +20,7 @@ export function renderTextWithMentions(text: string): React.ReactNode {
         <ProfileHoverCard key={index} username={username}>
           <Link
             to={`/${username}`}
-            className="text-black hover:underline font-medium"
+            className="text-ink hover:underline font-medium"
             title={`View ${username}'s profile`}
           >
             {part}

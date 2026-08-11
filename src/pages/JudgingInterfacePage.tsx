@@ -28,6 +28,7 @@ import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
 import { Label } from "../components/ui/label";
 import { Input } from "../components/ui/input";
+import { SimpleSelect } from "../components/ui/SimpleSelect";
 import { ImageGallery } from "../components/ImageGallery";
 import { renderTextWithMentions } from "../utils/mentions";
 import { MentionTextarea } from "../components/ui/MentionTextarea";
@@ -475,18 +476,18 @@ export default function JudgingInterfacePage() {
 
   if (isSessionValid === false) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-lg border border-gray-200 p-6 text-center">
-          <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h1 className="text-xl font-medium text-gray-900 mb-4">
+      <div className="min-h-screen bg-surface-alt flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-surface rounded-lg border border-hairline p-6 text-center">
+          <Clock className="w-12 h-12 text-faint mx-auto mb-4" />
+          <h1 className="text-xl font-medium text-ink mb-4">
             Session Expired
           </h1>
-          <p className="text-gray-600 mb-6">
+          <p className="text-copy mb-6">
             Your judging session has expired or the judging period has ended.
           </p>
           <Link
             to={`/judging/${slug}`}
-            className="inline-flex items-center px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 transition-colors"
+            className="inline-flex items-center px-4 py-2 bg-cta text-on-cta rounded-md hover:bg-cta-hover transition-colors"
           >
             Return to Group
           </Link>
@@ -502,10 +503,10 @@ export default function JudgingInterfacePage() {
     judgeProgress === undefined
   ) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-surface-alt flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading judging interface...</p>
+          <div className="w-8 h-8 border-2 border-hairline-strong border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-copy">Loading judging interface...</p>
         </div>
       </div>
     );
@@ -513,17 +514,17 @@ export default function JudgingInterfacePage() {
 
   if (submissions.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-lg border border-gray-200 p-6 text-center">
-          <h1 className="text-xl font-medium text-gray-900 mb-4">
+      <div className="min-h-screen bg-surface-alt flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-surface rounded-lg border border-hairline p-6 text-center">
+          <h1 className="text-xl font-medium text-ink mb-4">
             No Submissions
           </h1>
-          <p className="text-gray-600 mb-6">
+          <p className="text-copy mb-6">
             There are no submissions to judge in this group yet.
           </p>
           <Link
             to="/"
-            className="inline-flex items-center px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 transition-colors"
+            className="inline-flex items-center px-4 py-2 bg-cta text-on-cta rounded-md hover:bg-cta-hover transition-colors"
           >
             <Home className="w-4 h-4 mr-2" />
             Back to Home
@@ -536,15 +537,15 @@ export default function JudgingInterfacePage() {
   // Show filtered message if no submissions match filters
   if (displaySubmissions.length === 0 && hasActiveFilters) {
     return (
-      <div className="min-h-screen bg-[#F4F2EE]">
-        <div className="bg-[#F4F2EE] border-b border-gray-200 sticky top-0 z-10">
+      <div className="min-h-screen bg-canvas">
+        <div className="bg-canvas border-b border-hairline sticky top-0 z-10">
           <div className="max-w-6xl mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-xl font-medium text-gray-900">
+                <h1 className="text-xl font-medium text-ink">
                   {judgeSession.group.name}
                 </h1>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-copy">
                   Judge: {judgeSession.name}
                 </p>
               </div>
@@ -552,11 +553,11 @@ export default function JudgingInterfacePage() {
           </div>
         </div>
         <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="bg-white rounded-lg border border-gray-200 p-6 text-center">
-            <h2 className="text-lg font-medium text-gray-900 mb-2">
+          <div className="bg-surface rounded-lg border border-hairline p-6 text-center">
+            <h2 className="text-lg font-medium text-ink mb-2">
               No Submissions Match Filters
             </h2>
-            <p className="text-gray-600 mb-4">
+            <p className="text-copy mb-4">
               Try adjusting your filters to see more submissions.
             </p>
             <Button
@@ -580,10 +581,10 @@ export default function JudgingInterfacePage() {
   // If no current submission after filters (edge case), show loading
   if (!currentSubmission) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-surface-alt flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading submission...</p>
+          <div className="w-8 h-8 border-2 border-hairline-strong border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-copy">Loading submission...</p>
         </div>
       </div>
     );
@@ -681,14 +682,14 @@ export default function JudgingInterfacePage() {
                   ? "bg-yellow-400 text-white"
                   : displayScore && score <= displayScore
                     ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    : "bg-surface-alt text-copy hover:bg-surface-hover"
               } ${readonly ? "cursor-not-allowed opacity-75" : ""}`}
             >
               {score}
             </button>
           ))}
         </div>
-        <span className="ml-2 text-sm text-gray-600">
+        <span className="ml-2 text-sm text-copy">
           {displayScore ? `${displayScore}/${scoreScale}` : "Not scored"}
         </span>
       </div>
@@ -698,25 +699,25 @@ export default function JudgingInterfacePage() {
   return (
     <>
       <DialogComponents />
-      <div className="min-h-screen bg-[#F4F2EE]">
+      <div className="min-h-screen bg-canvas">
         {/* Header */}
-        <div className="bg-[#F4F2EE] border-gray-200 sticky top-0 z-10">
+        <div className="bg-canvas border-hairline sticky top-0 z-10">
           <div className="max-w-6xl mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-xl font-medium text-gray-900">
+                <h1 className="text-xl font-medium text-ink">
                   {judgeSession.group.name}
                 </h1>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-copy">
                   Judge: {judgeSession.name}
                 </p>
               </div>
               <div className="flex items-center gap-4">
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-copy">
                   Progress: {completedSubmissions}/
                   {judgeProgress?.totalSubmissions || 0} submissions
                 </div>
-                <div className="w-32 bg-gray-200 rounded-full h-2">
+                <div className="w-32 bg-surface-hover rounded-full h-2">
                   <div
                     className="bg-green-500 h-2 rounded-full transition-all duration-300"
                     style={{
@@ -750,7 +751,7 @@ export default function JudgingInterfacePage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <FileX className="w-4 h-4 text-gray-600" />
+                  <FileX className="w-4 h-4 text-copy" />
                   <span className="text-blue-800">
                     <strong>Skip</strong> - Not being judged
                   </span>
@@ -764,12 +765,12 @@ export default function JudgingInterfacePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             {/* Submission Details */}
             <div className="space-y-3 sm:space-y-4">
-              <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
-                <h2 className="text-lg font-medium text-gray-900 mb-3">
+              <div className="bg-surface rounded-lg border border-hairline p-4 sm:p-6">
+                <h2 className="text-lg font-medium text-ink mb-3">
                   Submission {currentSubmissionIndex + 1} of{" "}
                   {displaySubmissions.length}
                   {hasActiveFilters && (
-                    <span className="text-sm text-gray-500 ml-2">
+                    <span className="text-sm text-soft ml-2">
                       (filtered from {submissions.length} total)
                     </span>
                   )}
@@ -780,7 +781,7 @@ export default function JudgingInterfacePage() {
                   <div className="flex flex-wrap items-center gap-2">
                     {/* Search submissions */}
                     <div className="relative w-full sm:w-48">
-                      <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
+                      <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3 h-3 text-faint" />
                       <Input
                         type="text"
                         value={searchQuery}
@@ -798,7 +799,7 @@ export default function JudgingInterfacePage() {
 
                       {/* Search Results Dropdown */}
                       {showSearchResults && filteredSubmissions.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 sm:min-w-[300px] mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+                        <div className="absolute top-full left-0 right-0 sm:min-w-[300px] mt-1 bg-surface border border-hairline rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
                           {filteredSubmissions
                             .slice(0, 10)
                             .map((submission) => {
@@ -817,10 +818,10 @@ export default function JudgingInterfacePage() {
                                   onClick={() =>
                                     handleSearchSubmission(submission._id)
                                   }
-                                  className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                                  className="w-full text-left px-3 py-2 hover:bg-surface-hover border-b border-hairline last:border-b-0"
                                 >
                                   <div className="flex items-center justify-between gap-2">
-                                    <span className="text-sm font-medium text-gray-900 truncate">
+                                    <span className="text-sm font-medium text-ink truncate">
                                       {submission.title}
                                     </span>
                                     <div className="flex items-center gap-1 flex-shrink-0">
@@ -828,11 +829,11 @@ export default function JudgingInterfacePage() {
                                         <CheckCircle className="w-3 h-3 text-green-600" />
                                       )}
                                       {!progressInfo?.canEdit && (
-                                        <span className="text-xs text-gray-500">
+                                        <span className="text-xs text-soft">
                                           (by {progressInfo?.completedBy})
                                         </span>
                                       )}
-                                      <span className="text-xs text-gray-500">
+                                      <span className="text-xs text-soft">
                                         #{submissionIndex + 1}
                                       </span>
                                     </div>
@@ -841,7 +842,7 @@ export default function JudgingInterfacePage() {
                               );
                             })}
                           {filteredSubmissions.length > 10 && (
-                            <div className="px-3 py-2 text-xs text-gray-500 text-center border-t border-gray-100">
+                            <div className="px-3 py-2 text-xs text-soft text-center border-t border-hairline">
                               Showing first 10 of {filteredSubmissions.length}{" "}
                               results
                             </div>
@@ -853,8 +854,8 @@ export default function JudgingInterfacePage() {
                       {showSearchResults &&
                         searchQuery &&
                         filteredSubmissions.length === 0 && (
-                          <div className="absolute top-full left-0 right-0 sm:min-w-[300px] mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50">
-                            <div className="px-3 py-2 text-sm text-gray-500 text-center">
+                          <div className="absolute top-full left-0 right-0 sm:min-w-[300px] mt-1 bg-surface border border-hairline rounded-md shadow-lg z-50">
+                            <div className="px-3 py-2 text-sm text-soft text-center">
                               No submissions found matching "{searchQuery}"
                             </div>
                           </div>
@@ -862,104 +863,52 @@ export default function JudgingInterfacePage() {
                     </div>
 
                     {/* Filter by tag */}
-                    <div className="relative w-full sm:w-auto">
-                      <select
-                        value={selectedTagId || ""}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setSelectedTagId(
-                            value ? (value as Id<"tags">) : null,
-                          );
-                        }}
-                        className="w-full sm:w-44 h-8 text-sm px-2 pr-8 border border-gray-300 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
-                      >
-                        <option value="">All Tags</option>
-                        {availableTags.map((tag) => (
-                          <option key={tag._id} value={tag._id}>
-                            {tag.emoji ? `${tag.emoji} ` : ""}
-                            {tag.name}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                        <svg
-                          className="w-4 h-4 text-gray-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </div>
-                    </div>
+                    <SimpleSelect
+                      value={selectedTagId || ""}
+                      onChange={(value) => {
+                        setSelectedTagId(value ? (value as Id<"tags">) : null);
+                      }}
+                      aria-label="Filter by tag"
+                      className="w-full sm:w-44 h-8 text-sm px-2"
+                      options={[
+                        { value: "", label: "All Tags" },
+                        ...availableTags.map((tag) => ({
+                          value: tag._id as string,
+                          label: `${tag.emoji ? `${tag.emoji} ` : ""}${tag.name}`,
+                        })),
+                      ]}
+                    />
 
                     {/* Filter by judged status */}
-                    <div className="relative w-full sm:w-auto">
-                      <select
-                        value={filterNotJudged ? "notJudged" : "all"}
-                        onChange={(e) => {
-                          setFilterNotJudged(e.target.value === "notJudged");
-                        }}
-                        className="w-full sm:w-44 h-8 text-sm px-2 pr-8 border border-gray-300 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
-                      >
-                        <option value="all">All Submissions</option>
-                        <option value="notJudged">Not Judged</option>
-                      </select>
-                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                        <svg
-                          className="w-4 h-4 text-gray-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </div>
-                    </div>
+                    <SimpleSelect
+                      value={filterNotJudged ? "notJudged" : "all"}
+                      onChange={(value) => {
+                        setFilterNotJudged(value === "notJudged");
+                      }}
+                      aria-label="Filter by judged status"
+                      className="w-full sm:w-44 h-8 text-sm px-2"
+                      options={[
+                        { value: "all", label: "All Submissions" },
+                        { value: "notJudged", label: "Not Judged" },
+                      ]}
+                    />
 
                     {/* Filter by Judge - separate dropdown with all active judges */}
-                    <div className="relative w-full sm:w-auto">
-                      <select
-                        value={selectedJudgeName || ""}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setSelectedJudgeName(value ? value : null);
-                        }}
-                        className="w-full sm:w-44 h-8 text-sm px-2 pr-8 border border-gray-300 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
-                      >
-                        <option value="">All Judges</option>
-                        {activeJudges.map((judgeName) => (
-                          <option key={judgeName} value={judgeName}>
-                            {judgeName}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                        <svg
-                          className="w-4 h-4 text-gray-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </div>
-                    </div>
+                    <SimpleSelect
+                      value={selectedJudgeName || ""}
+                      onChange={(value) => {
+                        setSelectedJudgeName(value ? value : null);
+                      }}
+                      aria-label="Filter by judge"
+                      className="w-full sm:w-44 h-8 text-sm px-2"
+                      options={[
+                        { value: "", label: "All Judges" },
+                        ...activeJudges.map((judgeName) => ({
+                          value: judgeName,
+                          label: judgeName,
+                        })),
+                      ]}
+                    />
                   </div>
 
                   {/* Navigation Row */}
@@ -1016,21 +965,21 @@ export default function JudgingInterfacePage() {
 
                 <div className="space-y-3">
                   <div>
-                    <h3 className="font-medium text-gray-900 mb-2">
+                    <h3 className="font-medium text-ink mb-2">
                       {currentSubmission.title}
                     </h3>
 
                     {/* App/Project Tagline Description */}
-                    <p className="text-gray-600 text-sm leading-relaxed mb-3">
+                    <p className="text-copy text-sm leading-relaxed mb-3">
                       {currentSubmission.description}
                     </p>
 
                     {/* Status Section */}
                     {submissionStatus && (
-                      <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="mb-3 p-3 bg-surface-alt rounded-lg border border-hairline">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-gray-700">
+                            <span className="text-sm font-medium text-copy">
                               Status:
                             </span>
                             <div className="flex items-center gap-1">
@@ -1050,7 +999,7 @@ export default function JudgingInterfacePage() {
                                   </span>
                                   {!isMultiJudge &&
                                     submissionStatus.assignedJudgeName && (
-                                      <span className="text-sm text-gray-600">
+                                      <span className="text-sm text-copy">
                                         by {submissionStatus.assignedJudgeName}
                                       </span>
                                     )}
@@ -1058,8 +1007,8 @@ export default function JudgingInterfacePage() {
                               )}
                               {submissionStatus.status === "skip" && (
                                 <>
-                                  <FileX className="w-4 h-4 text-gray-600" />
-                                  <span className="text-sm text-gray-700 font-medium">
+                                  <FileX className="w-4 h-4 text-copy" />
+                                  <span className="text-sm text-copy font-medium">
                                     Skip
                                   </span>
                                 </>
@@ -1068,7 +1017,7 @@ export default function JudgingInterfacePage() {
 
                             {/* Multi-judge completion counter */}
                             {isMultiJudge && (
-                              <span className="text-xs text-gray-500 ml-2">
+                              <span className="text-xs text-soft ml-2">
                                 ({submissionStatus.completionCount ?? 0} of{" "}
                                 {submissionStatus.judgesPerSubmission ?? judgesPerSubmission}{" "}
                                 judges)
@@ -1091,7 +1040,7 @@ export default function JudgingInterfacePage() {
                                       variant="outline"
                                       size="sm"
                                       onClick={() => handleStatusUpdate("skip")}
-                                      className="text-gray-600 hover:text-gray-800 flex items-center gap-2"
+                                      className="text-copy hover:text-ink flex items-center gap-2"
                                     >
                                       <FileX className="w-3 h-3" />
                                       Skip
@@ -1139,7 +1088,7 @@ export default function JudgingInterfacePage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleStatusUpdate("skip")}
-                                className="text-gray-600 hover:text-gray-800 flex items-center gap-2"
+                                className="text-copy hover:text-ink flex items-center gap-2"
                               >
                                 <FileX className="w-3 h-3" />
                                 Skip
@@ -1152,7 +1101,7 @@ export default function JudgingInterfacePage() {
                           !submissionStatus.canJudge &&
                           submissionStatus.status === "completed" && (
                             <div className="mt-2">
-                              <p className="text-xs text-gray-600">
+                              <p className="text-xs text-copy">
                                 This submission has been completed by{" "}
                                 {submissionStatus.assignedJudgeName ||
                                   "another judge"}
@@ -1166,7 +1115,7 @@ export default function JudgingInterfacePage() {
                           !submissionStatus.canJudge &&
                           submissionStatus.status === "completed" && (
                             <div className="mt-2">
-                              <p className="text-xs text-gray-600">
+                              <p className="text-xs text-copy">
                                 All {submissionStatus.judgesPerSubmission ?? judgesPerSubmission}{" "}
                                 judges have completed this submission. Scores are
                                 locked.
@@ -1179,7 +1128,7 @@ export default function JudgingInterfacePage() {
                           submissionStatus.thisJudgeCompleted &&
                           submissionStatus.status !== "completed" && (
                             <div className="mt-2">
-                              <p className="text-xs text-gray-600">
+                              <p className="text-xs text-copy">
                                 You have submitted your scores. Waiting for{" "}
                                 {(submissionStatus.judgesPerSubmission ?? judgesPerSubmission) -
                                   (submissionStatus.completionCount ?? 0)}{" "}
@@ -1191,7 +1140,7 @@ export default function JudgingInterfacePage() {
                     )}
 
                     {/* Project Info Section - Combined Box */}
-                    <div className="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
+                    <div className="mb-3 p-3 bg-surface-alt rounded-lg border border-hairline space-y-3">
                       {/* Project Links */}
                       {(currentSubmission.url ||
                         (currentSubmission as any).linkedinUrl ||
@@ -1200,18 +1149,18 @@ export default function JudgingInterfacePage() {
                         (currentSubmission as any).chefShowUrl ||
                         (currentSubmission as any).chefAppUrl) && (
                         <div>
-                          <h4 className="font-medium text-gray-900 mb-2">
+                          <h4 className="font-medium text-ink mb-2">
                             Project Links
                           </h4>
                           <div className="flex flex-wrap gap-4">
                             {currentSubmission.url && (
                               <div className="flex items-center gap-2">
-                                <ExternalLink className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                                <ExternalLink className="w-4 h-4 text-copy flex-shrink-0" />
                                 <a
                                   href={currentSubmission.url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-sm text-gray-700 hover:text-gray-900 hover:underline truncate"
+                                  className="text-sm text-copy hover:text-ink hover:underline truncate"
                                   title={currentSubmission.url}
                                 >
                                   Live App
@@ -1220,12 +1169,12 @@ export default function JudgingInterfacePage() {
                             )}
                             {(currentSubmission as any).linkedinUrl && (
                               <div className="flex items-center gap-2">
-                                <Linkedin className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                                <Linkedin className="w-4 h-4 text-copy flex-shrink-0" />
                                 <a
                                   href={(currentSubmission as any).linkedinUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-sm text-gray-700 hover:text-gray-900 hover:underline truncate"
+                                  className="text-sm text-copy hover:text-ink hover:underline truncate"
                                   title={(currentSubmission as any).linkedinUrl}
                                 >
                                   LinkedIn
@@ -1234,12 +1183,12 @@ export default function JudgingInterfacePage() {
                             )}
                             {(currentSubmission as any).twitterUrl && (
                               <div className="flex items-center gap-2">
-                                <Twitter className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                                <Twitter className="w-4 h-4 text-copy flex-shrink-0" />
                                 <a
                                   href={(currentSubmission as any).twitterUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-sm text-gray-700 hover:text-gray-900 hover:underline truncate"
+                                  className="text-sm text-copy hover:text-ink hover:underline truncate"
                                   title={(currentSubmission as any).twitterUrl}
                                 >
                                   Twitter
@@ -1248,12 +1197,12 @@ export default function JudgingInterfacePage() {
                             )}
                             {(currentSubmission as any).githubUrl && (
                               <div className="flex items-center gap-2">
-                                <Github className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                                <Github className="w-4 h-4 text-copy flex-shrink-0" />
                                 <a
                                   href={(currentSubmission as any).githubUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-sm text-gray-700 hover:text-gray-900 hover:underline truncate"
+                                  className="text-sm text-copy hover:text-ink hover:underline truncate"
                                   title={(currentSubmission as any).githubUrl}
                                 >
                                   GitHub
@@ -1262,14 +1211,14 @@ export default function JudgingInterfacePage() {
                             )}
                             {(currentSubmission as any).chefShowUrl && (
                               <div className="flex items-center gap-2">
-                                <span className="w-4 h-4 text-gray-600 flex-shrink-0">
+                                <span className="w-4 h-4 text-copy flex-shrink-0">
                                   🍲
                                 </span>
                                 <a
                                   href={(currentSubmission as any).chefShowUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-sm text-gray-700 hover:text-gray-900 hover:underline truncate"
+                                  className="text-sm text-copy hover:text-ink hover:underline truncate"
                                   title={(currentSubmission as any).chefShowUrl}
                                 >
                                   Chef Show
@@ -1278,14 +1227,14 @@ export default function JudgingInterfacePage() {
                             )}
                             {(currentSubmission as any).chefAppUrl && (
                               <div className="flex items-center gap-2">
-                                <span className="w-4 h-4 text-gray-600 flex-shrink-0">
+                                <span className="w-4 h-4 text-copy flex-shrink-0">
                                   🍲
                                 </span>
                                 <a
                                   href={(currentSubmission as any).chefAppUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-sm text-gray-700 hover:text-gray-900 hover:underline truncate"
+                                  className="text-sm text-copy hover:text-ink hover:underline truncate"
                                   title={(currentSubmission as any).chefAppUrl}
                                 >
                                   Chef App
@@ -1300,7 +1249,7 @@ export default function JudgingInterfacePage() {
                       {(currentSubmission as any).tags &&
                         (currentSubmission as any).tags.length > 0 && (
                           <div>
-                            <h4 className="font-medium text-gray-900 mb-2">
+                            <h4 className="font-medium text-ink mb-2">
                               Tags
                             </h4>
                             <div className="flex gap-1.5 flex-wrap">
@@ -1315,9 +1264,9 @@ export default function JudgingInterfacePage() {
                                       className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition-opacity hover:opacity-80"
                                       style={{
                                         backgroundColor:
-                                          tag.backgroundColor || "#F4F0ED",
-                                        color: tag.textColor || "#525252",
-                                        border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "#D5D3D0")}`,
+                                          tag.backgroundColor || "var(--th-surface-alt)",
+                                        color: tag.textColor || "var(--th-copy)",
+                                        border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "var(--th-hairline-strong)")}`,
                                       }}
                                       title={`View all apps tagged with ${tag.name}`}
                                     >
@@ -1352,7 +1301,7 @@ export default function JudgingInterfacePage() {
                         </Link>
                         <Link
                           to={`/s/${currentSubmission.slug}#changelog`}
-                          className="inline-flex items-center px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm"
+                          className="inline-flex items-center px-4 py-2 bg-surface text-copy border border-hairline-strong rounded-md hover:bg-surface-hover transition-colors text-sm"
                         >
                           <svg
                             className="w-4 h-4 mr-2"
@@ -1372,9 +1321,9 @@ export default function JudgingInterfacePage() {
                       </div>
 
                       {/* Originally submitted date */}
-                      <div className="text-sm text-gray-600 space-y-1 pt-2 border-t border-gray-200">
+                      <div className="text-sm text-copy space-y-1 pt-2 border-t border-hairline">
                         <div>
-                          <span className="font-medium text-gray-700">
+                          <span className="font-medium text-copy">
                             Originally submitted:
                           </span>{" "}
                           {new Date(
@@ -1395,7 +1344,7 @@ export default function JudgingInterfacePage() {
                         {(currentSubmission as any).changeLog &&
                           (currentSubmission as any).changeLog.length > 0 && (
                             <div>
-                              <span className="font-medium text-gray-700">
+                              <span className="font-medium text-copy">
                                 Last modified:
                               </span>{" "}
                               {new Date(
@@ -1426,10 +1375,10 @@ export default function JudgingInterfacePage() {
 
                   {currentSubmission.longDescription && (
                     <div>
-                      <h4 className="font-medium text-gray-900 mb-2">
+                      <h4 className="font-medium text-ink mb-2">
                         Detailed Description
                       </h4>
-                      <div className="prose prose-sm max-w-none text-gray-700">
+                      <div className="prose prose-sm max-w-none text-copy">
                         <Markdown>{currentSubmission.longDescription}</Markdown>
                       </div>
                     </div>
@@ -1440,15 +1389,15 @@ export default function JudgingInterfacePage() {
               {/* Video Demo Section */}
               {currentSubmission.videoUrl &&
                 currentSubmission.videoUrl.trim() && (
-                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                  <div className="bg-surface rounded-lg border border-hairline p-6">
                     <div className="flex items-center gap-2 mb-4">
-                      <Play className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                      <h3 className="font-medium text-gray-900">Video Demo</h3>
+                      <Play className="w-4 h-4 text-copy flex-shrink-0" />
+                      <h3 className="font-medium text-ink">Video Demo</h3>
                       <a
                         href={currentSubmission.videoUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-gray-600 hover:text-gray-900 hover:underline ml-auto"
+                        className="text-sm text-copy hover:text-ink hover:underline ml-auto"
                         title="Open in new tab"
                       >
                         ↗
@@ -1549,17 +1498,17 @@ export default function JudgingInterfacePage() {
 
                         // Fallback for other URLs - show as link in a styled box
                         return (
-                          <div className="w-full aspect-video rounded-md border-2 border-dashed border-gray-200 flex items-center justify-center bg-[#F4F2EE]">
+                          <div className="w-full aspect-video rounded-md border-2 border-dashed border-hairline flex items-center justify-center bg-canvas">
                             <div className="text-center">
-                              <Play className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                              <p className="text-gray-600 mb-2">
+                              <Play className="w-12 h-12 text-faint mx-auto mb-2" />
+                              <p className="text-copy mb-2">
                                 Video not embeddable
                               </p>
                               <a
                                 href={url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-gray-900 hover:text-gray-700 underline"
+                                className="text-ink hover:text-copy underline"
                               >
                                 Watch Video ↗
                               </a>
@@ -1574,8 +1523,8 @@ export default function JudgingInterfacePage() {
               {/* Screenshot/Media */}
               {(currentSubmission.screenshotUrl ||
                 (currentSubmission as any).additionalImageUrls?.length > 0) && (
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                  <h3 className="font-medium text-gray-900 mb-4">
+                <div className="bg-surface rounded-lg border border-hairline p-6">
+                  <h3 className="font-medium text-ink mb-4">
                     {currentSubmission.screenshotUrl &&
                     (currentSubmission as any).additionalImageUrls?.length > 0
                       ? "Images"
@@ -1596,28 +1545,28 @@ export default function JudgingInterfacePage() {
 
               {/* Team Info Section */}
               {(currentSubmission as any).teamName && (
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <div className="bg-surface rounded-lg border border-hairline p-6">
                   <div className="flex items-center gap-2 mb-4">
-                    <Users className="w-4 h-4 text-gray-600" />
-                    <h3 className="font-medium text-gray-900">Team Info</h3>
+                    <Users className="w-4 h-4 text-copy" />
+                    <h3 className="font-medium text-ink">Team Info</h3>
                   </div>
 
                   <div className="space-y-3">
                     <div>
-                      <span className="text-sm font-medium text-gray-700">
+                      <span className="text-sm font-medium text-copy">
                         Team Name:{" "}
                       </span>
-                      <span className="text-sm text-gray-900">
+                      <span className="text-sm text-ink">
                         {(currentSubmission as any).teamName}
                       </span>
                     </div>
 
                     {(currentSubmission as any).teamMemberCount && (
                       <div>
-                        <span className="text-sm font-medium text-gray-700">
+                        <span className="text-sm font-medium text-copy">
                           Team Size:{" "}
                         </span>
-                        <span className="text-sm text-gray-900">
+                        <span className="text-sm text-ink">
                           {(currentSubmission as any).teamMemberCount}{" "}
                           {(currentSubmission as any).teamMemberCount === 1
                             ? "member"
@@ -1629,7 +1578,7 @@ export default function JudgingInterfacePage() {
                     {(currentSubmission as any).teamMembers &&
                       (currentSubmission as any).teamMembers.length > 0 && (
                         <div>
-                          <span className="text-sm font-medium text-gray-700 block mb-2">
+                          <span className="text-sm font-medium text-copy block mb-2">
                             Team Members:
                           </span>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1637,10 +1586,10 @@ export default function JudgingInterfacePage() {
                               (member: any, index: number) => (
                                 <div
                                   key={index}
-                                  className="p-2 bg-gray-50 rounded border border-gray-200"
+                                  className="p-2 bg-surface-alt rounded border border-hairline"
                                 >
                                   {member.name && (
-                                    <p className="font-medium text-gray-900 text-xs">
+                                    <p className="font-medium text-ink text-xs">
                                       {member.name}
                                     </p>
                                   )}
@@ -1657,8 +1606,8 @@ export default function JudgingInterfacePage() {
               {/* Custom Question Answers (per-group submit form questions) */}
               {(currentSubmission as any).customFormAnswers &&
                 (currentSubmission as any).customFormAnswers.length > 0 && (
-                  <div className="bg-white rounded-lg border border-gray-200 p-6">
-                    <h3 className="font-medium text-gray-900 mb-4">
+                  <div className="bg-surface rounded-lg border border-hairline p-6">
+                    <h3 className="font-medium text-ink mb-4">
                       Additional Answers
                     </h3>
                     <div className="space-y-3">
@@ -1669,10 +1618,10 @@ export default function JudgingInterfacePage() {
                           value: string;
                         }) => (
                           <div key={answer.key}>
-                            <span className="text-sm font-medium text-gray-700 block">
+                            <span className="text-sm font-medium text-copy block">
                               {answer.label}
                             </span>
-                            <p className="text-sm text-gray-900 whitespace-pre-wrap break-words">
+                            <p className="text-sm text-ink whitespace-pre-wrap break-words">
                               {answer.value}
                             </p>
                           </div>
@@ -1683,18 +1632,18 @@ export default function JudgingInterfacePage() {
                 )}
 
               {/* Judge Notes Section */}
-              <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
+              <div className="bg-surface rounded-lg border border-hairline p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                  <h3 className="font-medium text-ink flex items-center gap-2">
                     <MessageSquare className="w-4 h-4" />
                     Judge Collaboration Notes
                   </h3>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-soft">
                     {submissionNotes ? submissionNotes.length : 0} notes
                   </span>
                 </div>
 
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-copy mb-4">
                   Share observations and collaborate with other judges. These
                   notes don't affect scoring.
                 </p>
@@ -1725,15 +1674,15 @@ export default function JudgingInterfacePage() {
                     submissionNotes.map((note) => (
                       <div
                         key={note._id}
-                        className="border border-gray-200 rounded-lg p-4"
+                        className="border border-hairline rounded-lg p-4"
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <User className="w-4 h-4 text-gray-400" />
-                            <span className="text-sm font-medium text-gray-900">
+                            <User className="w-4 h-4 text-faint" />
+                            <span className="text-sm font-medium text-ink">
                               {note.judgeName}
                             </span>
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-soft">
                               {new Date(note._creationTime).toLocaleString()}
                             </span>
                           </div>
@@ -1748,30 +1697,30 @@ export default function JudgingInterfacePage() {
                           </Button>
                         </div>
 
-                        <div className="text-sm text-gray-700 whitespace-pre-wrap mb-3">
+                        <div className="text-sm text-copy whitespace-pre-wrap mb-3">
                           {renderTextWithMentions(note.content)}
                         </div>
 
                         {/* Replies */}
                         {note.replies && note.replies.length > 0 && (
-                          <div className="ml-6 space-y-3 border-l-2 border-gray-100 pl-4">
+                          <div className="ml-6 space-y-3 border-l-2 border-hairline pl-4">
                             {note.replies.map((reply) => (
                               <div
                                 key={reply._id}
-                                className="bg-gray-50 rounded p-3"
+                                className="bg-surface-alt rounded p-3"
                               >
                                 <div className="flex items-center gap-2 mb-2">
-                                  <User className="w-3 h-3 text-gray-400" />
-                                  <span className="text-xs font-medium text-gray-900">
+                                  <User className="w-3 h-3 text-faint" />
+                                  <span className="text-xs font-medium text-ink">
                                     {reply.judgeName}
                                   </span>
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-soft">
                                     {new Date(
                                       reply._creationTime,
                                     ).toLocaleString()}
                                   </span>
                                 </div>
-                                <div className="text-xs text-gray-700 whitespace-pre-wrap">
+                                <div className="text-xs text-copy whitespace-pre-wrap">
                                   {renderTextWithMentions(reply.content)}
                                 </div>
                               </div>
@@ -1814,8 +1763,8 @@ export default function JudgingInterfacePage() {
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <MessageSquare className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                    <div className="text-center py-8 text-soft">
+                      <MessageSquare className="w-8 h-8 mx-auto mb-2 text-faint" />
                       <p className="text-sm">
                         No notes yet. Be the first to add one!
                       </p>
@@ -1827,8 +1776,8 @@ export default function JudgingInterfacePage() {
 
             {/* Scoring Section */}
             <div className="space-y-3 sm:space-y-4">
-              <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
+              <div className="bg-surface rounded-lg border border-hairline p-4 sm:p-6">
+                <h3 className="text-lg font-medium text-ink mb-4">
                   Scoring Criteria
                 </h3>
 
@@ -1842,11 +1791,11 @@ export default function JudgingInterfacePage() {
                     <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <CheckCircle className="w-5 h-5 text-blue-600" />
-                        <h4 className="font-medium text-gray-900">
+                        <h4 className="font-medium text-ink">
                           Completed by Another Judge
                         </h4>
                       </div>
-                      <p className="text-sm text-gray-600 mb-2">
+                      <p className="text-sm text-copy mb-2">
                         This submission has been completed by{" "}
                         <strong>{submissionStatus.assignedJudgeName}</strong>.
                         You can view their scores below but cannot edit them.
@@ -1861,13 +1810,13 @@ export default function JudgingInterfacePage() {
                     <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <CheckCircle className="w-5 h-5 text-blue-600" />
-                        <h4 className="font-medium text-gray-900">
+                        <h4 className="font-medium text-ink">
                           {submissionStatus.thisJudgeCompleted
                             ? "Your scores have been submitted"
                             : "Submission locked"}
                         </h4>
                       </div>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-copy">
                         {submissionStatus.thisJudgeCompleted
                           ? "You can view scores below but cannot change them."
                           : `All ${submissionStatus.judgesPerSubmission ?? judgesPerSubmission} judges have completed scoring. This submission is read-only.`}
@@ -1911,7 +1860,7 @@ export default function JudgingInterfacePage() {
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
-                              <h4 className="font-medium text-gray-900">
+                              <h4 className="font-medium text-ink">
                                 {criterion.question}
                               </h4>
                               {(isComplete || completedScore) && (
@@ -1919,7 +1868,7 @@ export default function JudgingInterfacePage() {
                               )}
                             </div>
                             {criterion.description && (
-                              <p className="text-sm text-gray-600 mb-3">
+                              <p className="text-sm text-copy mb-3">
                                 {criterion.description}
                               </p>
                             )}
@@ -1994,25 +1943,25 @@ export default function JudgingInterfacePage() {
               </div>
 
               {/* Progress Summary */}
-              <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-3">
+              <div className="bg-surface rounded-lg border border-hairline p-4 sm:p-6">
+                <h3 className="text-lg font-medium text-ink mb-3">
                   Your Progress
                 </h3>
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Completed Submissions</span>
+                    <span className="text-copy">Completed Submissions</span>
                     <span className="font-medium">
                       {completedSubmissions}/
                       {judgeProgress?.totalSubmissions || 0}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Overall Progress</span>
+                    <span className="text-copy">Overall Progress</span>
                     <span className="font-medium">
                       {Math.round(groupCompletionPercentage)}%
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-surface-hover rounded-full h-2">
                     <div
                       className="bg-green-500 h-2 rounded-full transition-all duration-300"
                       style={{
@@ -2026,7 +1975,7 @@ export default function JudgingInterfacePage() {
                     submissionStatus &&
                     submissionStatus.canJudge &&
                     submissionStatus.status !== "completed" && (
-                      <div className="pt-3 border-t border-gray-100">
+                      <div className="pt-3 border-t border-hairline">
                         <Button
                           onClick={handleMarkCompleted}
                           disabled={isMarkingCompleted}
@@ -2037,7 +1986,7 @@ export default function JudgingInterfacePage() {
                             ? "Marking Complete..."
                             : "Mark Submission Complete"}
                         </Button>
-                        <p className="text-xs text-gray-500 text-center mt-2">
+                        <p className="text-xs text-soft text-center mt-2">
                           All criteria must be scored before marking complete
                         </p>
                       </div>
@@ -2047,7 +1996,7 @@ export default function JudgingInterfacePage() {
                     submissionStatus &&
                     submissionStatus.canJudge &&
                     !submissionStatus.thisJudgeCompleted && (
-                      <div className="pt-3 border-t border-gray-100">
+                      <div className="pt-3 border-t border-hairline">
                         <Button
                           onClick={handleJudgedAndNext}
                           disabled={isMarkingCompleted}
@@ -2058,7 +2007,7 @@ export default function JudgingInterfacePage() {
                             ? "Submitting..."
                             : "Judged & Next"}
                         </Button>
-                        <p className="text-xs text-gray-500 text-center mt-2">
+                        <p className="text-xs text-soft text-center mt-2">
                           All criteria must be scored. Your scores will be
                           submitted and you will advance to the next submission.
                         </p>
@@ -2067,16 +2016,16 @@ export default function JudgingInterfacePage() {
 
                   {/* Multi-judge breakdown: overall + per-judge scores */}
                   {isMultiJudge && judgeBreakdown && (
-                    <div className="pt-3 border-t border-gray-100 space-y-3">
+                    <div className="pt-3 border-t border-hairline space-y-3">
                       <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-medium text-gray-900">
+                        <h4 className="text-sm font-medium text-ink">
                           Overall Score
                         </h4>
-                        <span className="text-lg font-bold text-gray-900">
+                        <span className="text-lg font-bold text-ink">
                           {judgeBreakdown.overallAverage.toFixed(1)}/{scoreScale}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-soft">
                         Based on {judgeBreakdown.completionCount} of{" "}
                         {judgeBreakdown.judgesPerSubmission} judge(s)
                       </p>
@@ -2086,13 +2035,13 @@ export default function JudgingInterfacePage() {
                         {judgeBreakdown.judges.map((judge, idx) => (
                           <div
                             key={idx}
-                            className="p-2 bg-gray-50 rounded border border-gray-200"
+                            className="p-2 bg-surface-alt rounded border border-hairline"
                           >
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm font-medium text-gray-700">
+                              <span className="text-sm font-medium text-copy">
                                 {judge.judgeName}
                               </span>
-                              <span className="text-sm font-semibold text-gray-900">
+                              <span className="text-sm font-semibold text-ink">
                                 Avg: {judge.judgeAverage.toFixed(1)}/{scoreScale}
                               </span>
                             </div>
@@ -2100,7 +2049,7 @@ export default function JudgingInterfacePage() {
                               {judge.scores.map((s) => (
                                 <span
                                   key={s.criteriaId}
-                                  className="text-xs bg-white px-1.5 py-0.5 rounded border border-gray-200"
+                                  className="text-xs bg-surface px-1.5 py-0.5 rounded border border-hairline"
                                   title={s.question}
                                 >
                                   {s.score}/{scoreScale}
@@ -2113,7 +2062,7 @@ export default function JudgingInterfacePage() {
                     </div>
                   )}
 
-                  <div className="pt-3 border-t border-gray-100">
+                  <div className="pt-3 border-t border-hairline">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <Link
                         to={`/judging/${slug}/results`}

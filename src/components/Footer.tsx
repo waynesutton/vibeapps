@@ -9,28 +9,28 @@ export function Footer() {
   return (
     <footer className="mt-12">
       <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col items-start md:flex-row md:items-center gap-2 md:gap-4 text-xs text-[#545454]">
-          <span className="text-[#545454]">
+        <div className="flex flex-col items-start md:flex-row md:items-center gap-2 md:gap-4 text-xs text-soft">
+          <span className="text-soft">
             {" "}
             © {new Date().getFullYear()}{" "}
           </span>
           <button
             onClick={() => setShowAboutModal(true)}
-            className="hover:text-[#525252]"
+            className="hover:text-copy"
           >
             About
           </button>
-          <Link to="/leaderboard" className="hover:text-[#525252]">
+          <Link to="/leaderboard" className="hover:text-copy">
             Leaderboard
           </Link>
-          {/* <a href="#" target="_blank" rel="noopener noreferrer" className="hover:text-[#525252]">
+          {/* <a href="#" target="_blank" rel="noopener noreferrer" className="hover:text-copy">
             Submit
           </a> */}
           <a
             href="https://convex.dev?utm_source=vibeapps-dev"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-[#525252]"
+            className="hover:text-copy"
           >
             Powered by Convex
           </a>
@@ -39,7 +39,7 @@ export function Footer() {
             href="https://github.com/waynesutton/vibeapps"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-[#525252]"
+            className="hover:text-copy"
           >
             Open-Source Project
           </a>
@@ -48,7 +48,7 @@ export function Footer() {
             href="https://www.convex.dev/legal/tos/v2022-03-02"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-[#525252]"
+            className="hover:text-copy"
           >
             Privacy Policy | Terms
           </a>
@@ -58,12 +58,12 @@ export function Footer() {
       <Dialog.Root open={showAboutModal} onOpenChange={setShowAboutModal}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50 z-40" />
-          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-xl w-[90vw] max-w-md z-50">
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface p-6 rounded-lg shadow-xl w-[90vw] max-w-md z-50">
             <div className="flex justify-between items-start mb-4">
-              <Dialog.Title className="text-lg font-medium text-[#292929]">
+              <Dialog.Title className="text-lg font-medium text-ink">
                 About Vibe Apps
               </Dialog.Title>
-              <Dialog.Close className="text-[#545454] hover:text-[#525252]">
+              <Dialog.Close className="text-soft hover:text-copy">
                 <X className="w-5 h-5" />
               </Dialog.Close>
             </div>
@@ -77,7 +77,7 @@ export function Footer() {
                   href="https://convex.dev?utm_source=vibeapps-dev"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-[#525252]"
+                  className="hover:text-copy"
                 >
                   Powered by Convex
                 </a>
@@ -99,7 +99,7 @@ export function Footer() {
                   href="https://github.com/waynesutton/vibeapps"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-[#525252]"
+                  className="hover:text-copy"
                 >
                   Vibe Apps is Open-Source on GitHub.
                 </a>
@@ -110,7 +110,7 @@ export function Footer() {
                   href="https://www.linkedin.com/in/waynesutton/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-[#525252]"
+                  className="hover:text-copy"
                 >
                   Wayne Sutton
                 </a>{" "}
@@ -120,7 +120,7 @@ export function Footer() {
                   href="https://github.com/waynesutton"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-[#525252]"
+                  className="hover:text-copy"
                 >
                   waynesutton
                 </a>{" "}
@@ -129,7 +129,7 @@ export function Footer() {
                   href="https://twitter.com/waynesutton"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-[#525252]"
+                  className="hover:text-copy"
                 >
                   @waynesutton
                 </a>

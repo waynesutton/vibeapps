@@ -48,7 +48,7 @@ export function NotificationsPage() {
 
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-[#F4F2EE]">
+      <div className="min-h-screen bg-canvas">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">Loading...</div>
         </div>
@@ -58,19 +58,19 @@ export function NotificationsPage() {
 
   if (!isSignedIn) {
     return (
-      <div className="min-h-screen bg-[#F4F2EE]">
+      <div className="min-h-screen bg-canvas">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="bg-white rounded-lg p-8 border border-[#D8E1EC] text-center max-w-md">
-              <h2 className="text-xl font-medium text-[#292929] mb-4">
+            <div className="bg-surface rounded-lg p-8 border border-hairline text-center max-w-md">
+              <h2 className="text-xl font-medium text-ink mb-4">
                 Sign in to see notifications
               </h2>
-              <p className="text-[#525252] mb-6">
+              <p className="text-copy mb-6">
                 You need to be signed in to view your notifications.
               </p>
               <Link
                 to="/sign-in"
-                className="inline-block px-6 py-3 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors"
+                className="inline-block px-6 py-3 bg-cta text-on-cta rounded-md hover:bg-cta-hover transition-colors"
               >
                 Sign In
               </Link>
@@ -85,27 +85,27 @@ export function NotificationsPage() {
     <div className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-xl font-medium text-[#292929]">Notifications</h1>
-          <p className="text-[#525252] mt-2">
+          <h1 className="text-xl font-medium text-ink">Notifications</h1>
+          <p className="text-copy mt-2">
             Stay up to date with activity on your apps and profile.
           </p>
         </div>
 
-        <div className="bg-white rounded-lg border border-[#D8E1EC]">
+        <div className="bg-surface rounded-lg border border-hairline">
           {alerts === undefined ? (
-            <div className="p-8 text-center text-[#525252]">
+            <div className="p-8 text-center text-copy">
               Loading notifications...
             </div>
           ) : alerts.length === 0 ? (
             <div className="p-8 text-center">
-              <div className="text-[#525252] mb-4">No notifications yet</div>
-              <p className="text-sm text-[#545454]">
+              <div className="text-copy mb-4">No notifications yet</div>
+              <p className="text-sm text-soft">
                 When people interact with your apps, you'll see notifications
                 here.
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-[#F4F0ED]">
+            <div className="divide-y divide-hairline">
               {alerts.map((alert: AlertType) => (
                 <NotificationItem key={alert._id} alert={alert} />
               ))}
@@ -172,7 +172,7 @@ function NotificationItem({ alert }: NotificationItemProps) {
 
   return (
     <div
-      className={`p-4 hover:bg-[#F4F2EE] transition-colors ${
+      className={`p-4 hover:bg-surface-hover transition-colors ${
         !alert.isRead ? "bg-blue-50" : ""
       }`}
     >
@@ -187,8 +187,8 @@ function NotificationItem({ alert }: NotificationItemProps) {
                 className="w-8 h-8 rounded-full object-cover"
               />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-[#292929] flex items-center justify-center">
-                <span className="text-white text-xs">
+              <div className="w-8 h-8 rounded-full bg-cta flex items-center justify-center">
+                <span className="text-on-cta text-xs">
                   {actorUser.name.charAt(0).toUpperCase()}
                 </span>
               </div>
@@ -199,8 +199,8 @@ function NotificationItem({ alert }: NotificationItemProps) {
           alert.type !== "verified" &&
           alert.type !== "spam" && (
             <div className="flex-shrink-0">
-              <div className="w-8 h-8 rounded-full bg-[#525252] flex items-center justify-center">
-                <span className="text-white text-xs">?</span>
+              <div className="w-8 h-8 rounded-full bg-cta-hover flex items-center justify-center">
+                <span className="text-on-cta text-xs">?</span>
               </div>
             </div>
           )
@@ -227,7 +227,7 @@ function NotificationItem({ alert }: NotificationItemProps) {
 
         {/* Notification Content */}
         <div className="flex-1 min-w-0">
-          <div className="text-sm text-[#292929]">
+          <div className="text-sm text-ink">
             {alert.type === "spam" ? (
               <span>
                 Your post has been marked as spam and has been removed. Check
@@ -236,7 +236,7 @@ function NotificationItem({ alert }: NotificationItemProps) {
                   href="https://github.com/waynesutton/vibeapps/issues"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-medium underline hover:text-[#292929]"
+                  className="font-medium underline hover:text-ink"
                 >
                   file an issue on GitHub
                 </a>
@@ -262,7 +262,7 @@ function NotificationItem({ alert }: NotificationItemProps) {
                     {" "}
                     <Link
                       to={`/s/${story.slug}`}
-                      className="inline-block px-3 py-1 mt-1 bg-[#292929] text-white text-xs rounded hover:bg-[#525252] transition-colors"
+                      className="inline-block px-3 py-1 mt-1 bg-cta text-on-cta text-xs rounded hover:bg-cta-hover transition-colors"
                     >
                       {story.title}
                     </Link>
@@ -274,7 +274,7 @@ function NotificationItem({ alert }: NotificationItemProps) {
             )}
           </div>
 
-          <div className="text-xs text-[#545454] mt-1">
+          <div className="text-xs text-soft mt-1">
             {formatDistanceToNow(alert._creationTime, { addSuffix: true })}
           </div>
         </div>

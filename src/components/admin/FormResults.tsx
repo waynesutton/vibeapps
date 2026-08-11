@@ -162,18 +162,18 @@ export function FormResults() {
         <div>
           <Link
             to="/admin?tab=forms"
-            className="text-sm text-[#545454] hover:text-[#525252] flex items-center gap-1 mb-1"
+            className="text-sm text-soft hover:text-copy flex items-center gap-1 mb-1"
           >
             <ArrowLeft className="w-4 h-4" /> Back to Forms List
           </Link>
-          <h2 className="text-xl font-medium text-[#525252]">
+          <h2 className="text-xl font-medium text-copy">
             Results for: {formData?.title}
           </h2>
         </div>
         <button
           onClick={exportCSV}
           disabled={!submissions || submissions.length === 0}
-          className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 bg-surface-alt text-copy rounded-md hover:bg-surface-hover transition-colors flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Download className="w-4 h-4" />
           Export CSV ({sortedSubmissions.length} rows)
@@ -181,19 +181,19 @@ export function FormResults() {
       </div>
 
       {/* Results Table */}
-      <div className="bg-white rounded-lg border border-gray-200">
+      <div className="bg-surface rounded-lg border border-hairline">
         {sortedSubmissions.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">
+          <div className="p-6 text-center text-soft">
             No submissions received yet.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b border-gray-200 bg-gray-50">
+              <thead className="border-b border-hairline bg-surface-alt">
                 <tr>
                   {/* Submitted At Column (Sortable) */}
                   <th
-                    className="text-left p-3 px-4 text-gray-600 font-medium cursor-pointer hover:bg-gray-100"
+                    className="text-left p-3 px-4 text-copy font-medium cursor-pointer hover:bg-surface-hover"
                     onClick={() => handleSort("_creationTime")}
                   >
                     <div className="flex items-center gap-1">
@@ -210,7 +210,7 @@ export function FormResults() {
                   {formFields.map((field) => (
                     <th
                       key={field._id}
-                      className="text-left p-3 px-4 text-gray-600 font-medium cursor-pointer hover:bg-gray-100 whitespace-nowrap"
+                      className="text-left p-3 px-4 text-copy font-medium cursor-pointer hover:bg-surface-hover whitespace-nowrap"
                       onClick={() => handleSort(field.label)} // Sort by label
                     >
                       <div className="flex items-center gap-1">
@@ -230,17 +230,17 @@ export function FormResults() {
                 {sortedSubmissions.map((submission) => (
                   <tr
                     key={submission._id}
-                    className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50"
+                    className="border-b border-hairline last:border-b-0 hover:bg-surface-hover"
                   >
                     {/* Submitted At Data */}
-                    <td className="p-3 px-4 text-gray-500 whitespace-nowrap">
+                    <td className="p-3 px-4 text-soft whitespace-nowrap">
                       {formatDate(submission._creationTime)}
                     </td>
                     {/* Dynamic Data based on Form Fields */}
                     {formFields.map((field) => (
                       <td
                         key={field._id}
-                        className="p-3 px-4 text-gray-700 align-top"
+                        className="p-3 px-4 text-copy align-top"
                       >
                         {getFieldValue(submission.data, field.label)}
                       </td>

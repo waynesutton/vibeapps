@@ -24,6 +24,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { Checkbox } from "../ui/checkbox";
+import { SimpleSelect } from "../ui/SimpleSelect";
 import { Id } from "../../../convex/_generated/dataModel";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
 
@@ -561,15 +562,15 @@ export function EditJudgingGroupModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#ffffff] rounded-lg border border-gray-200 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-surface rounded-lg border border-hairline max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-medium text-gray-900">
+        <div className="flex items-center justify-between p-6 border-b border-hairline">
+          <h2 className="text-xl font-medium text-ink">
             Edit Judging Group Settings
           </h2>
           <button
             onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-faint hover:text-copy transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -585,7 +586,7 @@ export function EditJudgingGroupModal({
 
           {/* Basic Information */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900">
+            <h3 className="text-lg font-medium text-ink">
               Basic Information
             </h3>
 
@@ -602,7 +603,7 @@ export function EditJudgingGroupModal({
                 required
                 disabled={isSubmitting}
               />
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-soft">
                 This will be displayed to judges and used in the URL
               </p>
             </div>
@@ -627,7 +628,7 @@ export function EditJudgingGroupModal({
 
           {/* Judge Access Settings */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900">
+            <h3 className="text-lg font-medium text-ink">
               Judge Access Settings
             </h3>
 
@@ -650,7 +651,7 @@ export function EditJudgingGroupModal({
                   Public Judge Access
                 </Label>
               </div>
-              <p className="text-sm text-gray-500 ml-6">
+              <p className="text-sm text-soft ml-6">
                 {formData.isPublic
                   ? "Anyone with the link can access the judging interface"
                   : "Password protection for judge access"}
@@ -683,7 +684,7 @@ export function EditJudgingGroupModal({
                   }
                   disabled={isSubmitting}
                 />
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-soft mt-1">
                   {group.judgePassword
                     ? "A password is currently set. Leave blank to keep it, or enter a new password."
                     : "Optional password for judges to access the judging interface"}
@@ -694,7 +695,7 @@ export function EditJudgingGroupModal({
 
           {/* Submission Page Access Settings */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900">
+            <h3 className="text-lg font-medium text-ink">
               Submission Page Access Settings
             </h3>
 
@@ -722,7 +723,7 @@ export function EditJudgingGroupModal({
                   Public Submission Page Access
                 </Label>
               </div>
-              <p className="text-sm text-gray-500 ml-6">
+              <p className="text-sm text-soft ml-6">
                 {formData.submissionPageIsPublic
                   ? "Anyone with the link can access the custom submission form"
                   : "Password protection for custom submission page access"}
@@ -755,7 +756,7 @@ export function EditJudgingGroupModal({
                   }
                   disabled={isSubmitting}
                 />
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-soft mt-1">
                   {group.submissionPagePassword
                     ? "A password is currently set. Leave blank to keep it, or enter a new password."
                     : "Optional password for users to access the custom submission form"}
@@ -766,7 +767,7 @@ export function EditJudgingGroupModal({
 
           {/* Results Page Visibility */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+            <h3 className="text-lg font-medium text-ink flex items-center gap-2">
               <BarChart2 className="w-5 h-5" />
               Results Page Visibility
             </h3>
@@ -792,7 +793,7 @@ export function EditJudgingGroupModal({
                   Public Results
                 </Label>
               </div>
-              <p className="text-sm text-gray-500 ml-6">
+              <p className="text-sm text-soft ml-6">
                 {formData.resultsIsPublic
                   ? "Anyone with the link can view the judging results"
                   : "Requires a password to view the judging results"}
@@ -825,7 +826,7 @@ export function EditJudgingGroupModal({
                   }
                   disabled={isSubmitting}
                 />
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-soft mt-1">
                   {group.resultsPassword
                     ? "A password is currently set. Leave blank to keep it, or enter a new password."
                     : "Required: Set a password to protect results access"}
@@ -838,11 +839,11 @@ export function EditJudgingGroupModal({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+                <h3 className="text-lg font-medium text-ink flex items-center gap-2">
                   <Sparkles className="w-5 h-5" />
                   AI Judge: Best Use of Convex
                 </h3>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-soft mt-1">
                   An AI review that scores submissions on Best Use of Convex,
                   fully separate from human judging
                 </p>
@@ -859,7 +860,7 @@ export function EditJudgingGroupModal({
                 className={`flex items-center gap-2 px-4 py-2 rounded-md border transition-colors ${
                   formData.aiJudgeEnabled
                     ? "bg-green-50 border-green-200 text-green-700"
-                    : "bg-gray-50 border-gray-200 text-gray-600"
+                    : "bg-surface-alt border-hairline text-copy"
                 }`}
               >
                 {formData.aiJudgeEnabled ? (
@@ -872,7 +873,7 @@ export function EditJudgingGroupModal({
             </div>
 
             {formData.aiJudgeEnabled && (
-              <div className="space-y-4 pt-4 border-t border-gray-200">
+              <div className="space-y-4 pt-4 border-t border-hairline">
                 {/* AI Results Page URL */}
                 <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
                   <div className="flex items-center justify-between gap-3">
@@ -931,7 +932,7 @@ export function EditJudgingGroupModal({
                       Public AI Results Page
                     </Label>
                   </div>
-                  <p className="text-sm text-gray-500 ml-6">
+                  <p className="text-sm text-soft ml-6">
                     {formData.aiResultsIsPublic
                       ? "Anyone with the link can view the AI review results"
                       : "Requires a password to view the AI review results"}
@@ -964,7 +965,7 @@ export function EditJudgingGroupModal({
                       }
                       disabled={isSubmitting}
                     />
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-soft mt-1">
                       {group.hasAiResultsPassword
                         ? "A password is currently set. Leave blank to keep it, or enter a new password."
                         : "Optional password so others can view the AI results page"}
@@ -973,12 +974,12 @@ export function EditJudgingGroupModal({
                 )}
 
                 {/* Event window for the build-timeline check (Phase 3) */}
-                <div className="pt-4 border-t border-gray-200">
+                <div className="pt-4 border-t border-hairline">
                   <Label className="flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
                     Hackathon Event Window (Optional)
                   </Label>
-                  <p className="text-xs text-gray-500 mt-1 mb-2">
+                  <p className="text-xs text-soft mt-1 mb-2">
                     Used by the AI review to flag whether each repo's first
                     commit falls inside the event. Leave empty to skip the
                     check.
@@ -1024,9 +1025,9 @@ export function EditJudgingGroupModal({
                 </div>
 
                 {/* AI rubric weights (Phase 5) */}
-                <div className="pt-4 border-t border-gray-200">
+                <div className="pt-4 border-t border-hairline">
                   <Label>AI Rubric Weights</Label>
-                  <p className="text-xs text-gray-500 mt-1 mb-2">
+                  <p className="text-xs text-soft mt-1 mb-2">
                     Multiply each criterion's 1 to 10 score in the ranking.
                     Rankings update immediately on save; no re-run needed.
                     Default weight is 1.
@@ -1035,9 +1036,9 @@ export function EditJudgingGroupModal({
                     {AI_RUBRIC_DEFS.map((def) => (
                       <div
                         key={def.key}
-                        className="flex items-center justify-between gap-2 bg-gray-50 border border-gray-200 rounded-md px-3 py-2"
+                        className="flex items-center justify-between gap-2 bg-surface-alt border border-hairline rounded-md px-3 py-2"
                       >
-                        <span className="text-sm text-gray-700">
+                        <span className="text-sm text-copy">
                           {def.label}
                         </span>
                         <Input
@@ -1067,21 +1068,21 @@ export function EditJudgingGroupModal({
                       setRubricWeights({ ...DEFAULT_RUBRIC_WEIGHTS })
                     }
                     disabled={isSubmitting}
-                    className="text-xs text-gray-500 hover:text-gray-700 underline mt-2"
+                    className="text-xs text-soft hover:text-copy underline mt-2"
                   >
                     Reset all weights to 1
                   </button>
                 </div>
 
                 {/* Agent judging (Phase 6) */}
-                <div className="pt-4 border-t border-gray-200 space-y-3">
+                <div className="pt-4 border-t border-hairline space-y-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <Label className="flex items-center gap-2">
                         <Bot className="w-4 h-4" />
                         Agent Judging
                       </Label>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-soft mt-1">
                         Let external AI agents judge this group through an
                         authenticated API. Each key creates one agent judge
                         identity.
@@ -1113,16 +1114,16 @@ export function EditJudgingGroupModal({
                   </div>
 
                   {/* API base URL */}
-                  <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
-                    <p className="text-xs text-gray-600">
+                  <div className="bg-surface-alt border border-hairline rounded-md p-3">
+                    <p className="text-xs text-copy">
                       <strong>API base:</strong>{" "}
-                      <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs break-all">
+                      <code className="bg-surface-alt px-1.5 py-0.5 rounded text-xs break-all">
                         {agentApiBase}
                       </code>
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-soft mt-1">
                       Agents authenticate with the x-judge-key header. Docs:{" "}
-                      <code className="bg-gray-100 px-1.5 py-0.5 rounded">
+                      <code className="bg-surface-alt px-1.5 py-0.5 rounded">
                         {`${agentApiBase}/openapi.json`}
                       </code>
                     </p>
@@ -1135,7 +1136,7 @@ export function EditJudgingGroupModal({
                         Agent key created. Copy it now: it is shown only once.
                       </p>
                       <div className="flex items-center gap-2">
-                        <code className="flex-1 bg-white border border-green-200 rounded px-2 py-1 text-xs break-all">
+                        <code className="flex-1 bg-surface border border-green-200 rounded px-2 py-1 text-xs break-all">
                           {newAgentKey}
                         </code>
                         <Button
@@ -1192,10 +1193,10 @@ export function EditJudgingGroupModal({
                       {agentKeys.map((key) => (
                         <div
                           key={key._id}
-                          className="flex items-center justify-between gap-3 bg-white border border-gray-200 rounded-md px-3 py-2"
+                          className="flex items-center justify-between gap-3 bg-surface border border-hairline rounded-md px-3 py-2"
                         >
                           <div className="min-w-0">
-                            <p className="text-sm text-gray-800 truncate flex items-center gap-2">
+                            <p className="text-sm text-ink truncate flex items-center gap-2">
                               {key.name}
                               {key.revokedAt && (
                                 <span className="px-1.5 py-0.5 text-xs bg-red-50 text-red-600 border border-red-200 rounded-full">
@@ -1203,7 +1204,7 @@ export function EditJudgingGroupModal({
                                 </span>
                               )}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-soft">
                               {key.scoreCount} score
                               {key.scoreCount === 1 ? "" : "s"} ·{" "}
                               {key.callCount} call
@@ -1229,7 +1230,7 @@ export function EditJudgingGroupModal({
                   )}
                 </div>
 
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-soft">
                   Run the AI review and edit AI scores from the AI Results view
                   on the judging groups list. Submission authors are not
                   notified about AI reviews.
@@ -1240,7 +1241,7 @@ export function EditJudgingGroupModal({
 
           {/* Judging Settings */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+            <h3 className="text-lg font-medium text-ink flex items-center gap-2">
               <Users className="w-5 h-5" />
               Judging Settings
             </h3>
@@ -1261,7 +1262,7 @@ export function EditJudgingGroupModal({
                 disabled={isSubmitting}
                 className="max-w-[120px]"
               />
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-soft mt-1">
                 {formData.judgesPerSubmission === 1
                   ? "Default: each submission is judged by a single judge."
                   : `Each submission must be scored by ${formData.judgesPerSubmission} different judges before it is marked complete.`}
@@ -1272,11 +1273,11 @@ export function EditJudgingGroupModal({
           {/* Auto-populate by Tags & Date Range */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+              <h3 className="text-lg font-medium text-ink flex items-center gap-2">
                 <Tag className="w-5 h-5" />
                 Auto-populate Submissions by Tags & Date Range
               </h3>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-soft mt-1">
                 Build this group from existing or new submissions. Search and
                 select one or more tags, choose how they are matched, and
                 optionally limit by the date the submission was originally
@@ -1287,26 +1288,31 @@ export function EditJudgingGroupModal({
             {/* Match mode */}
             <div>
               <Label htmlFor="autoIncludeMatchMode">Tag match rule</Label>
-              <select
+              <SimpleSelect
                 id="autoIncludeMatchMode"
                 value={formData.autoIncludeMatchMode}
-                onChange={(e) =>
+                onChange={(value) =>
                   setFormData((prev) => ({
                     ...prev,
-                    autoIncludeMatchMode: e.target.value as "any" | "all",
+                    autoIncludeMatchMode: value as "any" | "all",
                   }))
                 }
                 disabled={isSubmitting}
-                className="w-full mt-1 px-3 py-2 bg-white rounded-md text-gray-700 border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-400"
-              >
-                <option value="any">
-                  Match any (a submission needs at least one selected tag)
-                </option>
-                <option value="all">
-                  Match all (a submission must carry every selected tag)
-                </option>
-              </select>
-              <p className="text-xs text-gray-500 mt-1">
+                className="w-full h-auto mt-1 py-2"
+                options={[
+                  {
+                    value: "any",
+                    label:
+                      "Match any (a submission needs at least one selected tag)",
+                  },
+                  {
+                    value: "all",
+                    label:
+                      "Match all (a submission must carry every selected tag)",
+                  },
+                ]}
+              />
+              <p className="text-xs text-soft mt-1">
                 {formData.autoIncludeMatchMode === "all"
                   ? "Example: select tag 1, tag 2 and tag 3 to require all three on a submission."
                   : "Example: select tag 1 and tag 2 to include submissions carrying either one."}
@@ -1325,7 +1331,7 @@ export function EditJudgingGroupModal({
                   {selectedTags.map((tag) => (
                     <span
                       key={tag._id}
-                      className="inline-flex items-center gap-1 rounded-full bg-gray-100 border border-gray-200 px-2.5 py-1 text-xs text-gray-700"
+                      className="inline-flex items-center gap-1 rounded-full bg-surface-alt border border-hairline px-2.5 py-1 text-xs text-copy"
                     >
                       {tag.emoji ? `${tag.emoji} ` : ""}
                       {tag.name}
@@ -1340,7 +1346,7 @@ export function EditJudgingGroupModal({
                           }))
                         }
                         disabled={isSubmitting}
-                        className="text-gray-400 hover:text-gray-700"
+                        className="text-faint hover:text-copy"
                         aria-label={`Remove ${tag.name}`}
                       >
                         <X className="w-3 h-3" />
@@ -1353,7 +1359,7 @@ export function EditJudgingGroupModal({
                       setFormData((prev) => ({ ...prev, autoIncludeTagIds: [] }))
                     }
                     disabled={isSubmitting}
-                    className="text-xs text-gray-500 hover:text-gray-700 underline"
+                    className="text-xs text-soft hover:text-copy underline"
                   >
                     Clear all ({formData.autoIncludeTagIds.length})
                   </button>
@@ -1371,7 +1377,7 @@ export function EditJudgingGroupModal({
               />
 
               {allTags && allTags.length > 0 ? (
-                <div className="mt-2 max-h-48 overflow-y-auto border border-gray-200 rounded-md p-3">
+                <div className="mt-2 max-h-48 overflow-y-auto border border-hairline rounded-md p-3">
                   {shownTags.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {shownTags.map((tag) => {
@@ -1398,7 +1404,7 @@ export function EditJudgingGroupModal({
                             />
                             <Label
                               htmlFor={`auto-tag-${tag._id}`}
-                              className="text-sm font-normal text-gray-700"
+                              className="text-sm font-normal text-copy"
                             >
                               {tag.emoji ? `${tag.emoji} ` : ""}
                               {tag.name}
@@ -1408,16 +1414,16 @@ export function EditJudgingGroupModal({
                       })}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-soft">
                       No tags match "{tagSearch}".
                     </p>
                   )}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 mt-1">No tags available.</p>
+                <p className="text-sm text-soft mt-1">No tags available.</p>
               )}
               {filteredTags.length > shownTags.length && (
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-soft mt-1">
                   Showing first {MAX_TAG_RESULTS} of {filteredTags.length}{" "}
                   matches. Keep typing to narrow the list.
                 </p>
@@ -1471,7 +1477,7 @@ export function EditJudgingGroupModal({
                 />
               </div>
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-soft">
               Leave a date empty for an open-ended range. Set an end date in the
               past to judge only older submissions. Leave the end date empty so
               new matching submissions keep getting added automatically.
@@ -1494,12 +1500,12 @@ export function EditJudgingGroupModal({
                   ? "Syncing..."
                   : "Sync matching submissions"}
               </Button>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-soft mt-1">
                 Save your changes first, then sync to add existing submissions
                 that match these tags and date range.
               </p>
               {autoSyncMessage && (
-                <p className="text-xs text-gray-700 mt-2 p-2 bg-gray-50 border border-gray-200 rounded">
+                <p className="text-xs text-copy mt-2 p-2 bg-surface-alt border border-hairline rounded">
                   {autoSyncMessage}
                 </p>
               )}
@@ -1508,7 +1514,7 @@ export function EditJudgingGroupModal({
 
           {/* Status Toggle */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900">Group Status</h3>
+            <h3 className="text-lg font-medium text-ink">Group Status</h3>
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -1519,7 +1525,7 @@ export function EditJudgingGroupModal({
                 className={`flex items-center gap-2 px-4 py-2 rounded-md border transition-colors ${
                   formData.isActive
                     ? "bg-green-50 border-green-200 text-green-700"
-                    : "bg-gray-50 border-gray-200 text-gray-600"
+                    : "bg-surface-alt border-hairline text-copy"
                 }`}
               >
                 {formData.isActive ? (
@@ -1529,7 +1535,7 @@ export function EditJudgingGroupModal({
                 )}
                 {formData.isActive ? "Active" : "Inactive"}
               </button>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-soft">
                 {formData.isActive
                   ? "Judges can immediately start scoring submissions"
                   : "Judges cannot access this group until activated"}
@@ -1541,10 +1547,10 @@ export function EditJudgingGroupModal({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-medium text-gray-900">
+                <h3 className="text-lg font-medium text-ink">
                   Custom Submission Page
                 </h3>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-soft mt-1">
                   Create a custom page where users can submit directly to this
                   judging group
                 </p>
@@ -1561,7 +1567,7 @@ export function EditJudgingGroupModal({
                 className={`flex items-center gap-2 px-4 py-2 rounded-md border transition-colors ${
                   formData.hasCustomSubmissionPage
                     ? "bg-green-50 border-green-200 text-green-700"
-                    : "bg-gray-50 border-gray-200 text-gray-600"
+                    : "bg-surface-alt border-hairline text-copy"
                 }`}
               >
                 {formData.hasCustomSubmissionPage ? (
@@ -1574,7 +1580,7 @@ export function EditJudgingGroupModal({
             </div>
 
             {formData.hasCustomSubmissionPage && (
-              <div className="space-y-4 mt-4 pt-4 border-t border-gray-200">
+              <div className="space-y-4 mt-4 pt-4 border-t border-hairline">
                 {/* Submission Page URL */}
                 {group && (
                   <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
@@ -1624,10 +1630,10 @@ export function EditJudgingGroupModal({
                       }
                     }}
                     disabled={isSubmitting}
-                    className="w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+                    className="w-full text-sm text-copy file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-surface-alt file:text-copy hover:file:bg-surface-hover"
                   />
                   {existingImageUrl && !submissionPageImage && (
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-soft mt-1">
                       ✓ Image already uploaded
                     </p>
                   )}
@@ -1659,7 +1665,7 @@ export function EditJudgingGroupModal({
                     placeholder="400"
                     disabled={isSubmitting}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-soft mt-1">
                     Default: 400px. Range: 100-1000px
                   </p>
                 </div>
@@ -1667,32 +1673,36 @@ export function EditJudgingGroupModal({
                 {/* Layout Selection */}
                 <div>
                   <Label htmlFor="layoutSelect">Page Layout</Label>
-                  <select
+                  <SimpleSelect
                     id="layoutSelect"
                     value={formData.submissionPageLayout}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setFormData((prev) => ({
                         ...prev,
-                        submissionPageLayout: e.target.value as
+                        submissionPageLayout: value as
                           | "two-column"
                           | "one-third"
                           | "single",
                       }))
                     }
                     disabled={isSubmitting}
-                    className="w-full px-3 py-2 bg-white rounded-md text-gray-700 border border-gray-300 focus:outline-none focus:ring-1 focus:ring-gray-400"
-                  >
-                    <option value="two-column">
-                      Two Column (50/50) - Balanced layout
-                    </option>
-                    <option value="one-third">
-                      One Third (33/67) - Larger submission form
-                    </option>
-                    <option value="single">
-                      Single Column - Hero on top, form below
-                    </option>
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">
+                    className="w-full h-auto py-2"
+                    options={[
+                      {
+                        value: "two-column",
+                        label: "Two Column (50/50) - Balanced layout",
+                      },
+                      {
+                        value: "one-third",
+                        label: "One Third (33/67) - Larger submission form",
+                      },
+                      {
+                        value: "single",
+                        label: "Single Column - Hero on top, form below",
+                      },
+                    ]}
+                  />
+                  <p className="text-xs text-soft mt-1">
                     Choose how content and form are displayed side by side
                   </p>
                 </div>
@@ -1827,7 +1837,7 @@ export function EditJudgingGroupModal({
                     placeholder="Submit Your App"
                     disabled={isSubmitting}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-soft mt-1">
                     Default: "Submit Your App"
                   </p>
                 </div>
@@ -1857,28 +1867,27 @@ export function EditJudgingGroupModal({
                   <Label htmlFor="submissionFormRequiredTagId">
                     Required Tag (Optional)
                   </Label>
-                  <select
+                  <SimpleSelect
                     id="submissionFormRequiredTagId"
                     value={formData.submissionFormRequiredTagId || ""}
-                    onChange={(e) =>
+                    onChange={(value) =>
                       setFormData((prev) => ({
                         ...prev,
-                        submissionFormRequiredTagId: (e.target.value ||
+                        submissionFormRequiredTagId: (value ||
                           null) as Id<"tags"> | null,
                       }))
                     }
                     disabled={isSubmitting}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">None</option>
-                    {allTags?.map((tag) => (
-                      <option key={tag._id} value={tag._id}>
-                        {tag.emoji ? `${tag.emoji} ` : ""}
-                        {tag.name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-gray-500 mt-1">
+                    className="w-full h-auto py-2"
+                    options={[
+                      { value: "", label: "None" },
+                      ...(allTags?.map((tag) => ({
+                        value: tag._id as string,
+                        label: `${tag.emoji ? `${tag.emoji} ` : ""}${tag.name}`,
+                      })) ?? []),
+                    ]}
+                  />
+                  <p className="text-xs text-soft mt-1">
                     This tag will be automatically selected and locked on the
                     submission form. Users cannot unselect it. Any submission
                     carrying this tag is judged and counted, even if it did not
@@ -1902,12 +1911,12 @@ export function EditJudgingGroupModal({
                         ? "Syncing..."
                         : "Sync existing submissions with this tag"}
                     </Button>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-soft mt-1">
                       Save your changes first, then sync to add any existing
                       submissions that already carry the required tag.
                     </p>
                     {syncMessage && (
-                      <p className="text-xs text-gray-700 mt-2 p-2 bg-gray-50 border border-gray-200 rounded">
+                      <p className="text-xs text-copy mt-2 p-2 bg-surface-alt border border-hairline rounded">
                         {syncMessage}
                       </p>
                     )}
@@ -1915,9 +1924,9 @@ export function EditJudgingGroupModal({
                 </div>
 
                 {/* Required Fields */}
-                <div className="pt-4 border-t border-gray-200">
+                <div className="pt-4 border-t border-hairline">
                   <Label>Required Submission Fields</Label>
-                  <p className="text-xs text-gray-500 mt-1 mb-3">
+                  <p className="text-xs text-soft mt-1 mb-3">
                     Choose which fields users must fill out on the submission
                     form. Unchecked fields are optional.
                   </p>
@@ -1945,7 +1954,7 @@ export function EditJudgingGroupModal({
                         />
                         <Label
                           htmlFor={`required-${field.key}`}
-                          className="text-sm font-normal text-gray-700"
+                          className="text-sm font-normal text-copy"
                         >
                           {field.label}
                         </Label>
@@ -1958,7 +1967,7 @@ export function EditJudgingGroupModal({
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-hairline">
             <Button
               type="button"
               variant="outline"
@@ -1970,7 +1979,7 @@ export function EditJudgingGroupModal({
             <Button
               type="submit"
               disabled={isSubmitting || !formData.name.trim()}
-              className="bg-[#292929] hover:bg-[#525252]"
+              className="bg-cta hover:bg-cta-hover"
             >
               {isSubmitting ? "Saving..." : "Save Changes"}
             </Button>

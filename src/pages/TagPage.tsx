@@ -55,15 +55,15 @@ export function TagPage() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <Link
           to="/"
-          className="text-[#545454] hover:text-[#525252] inline-block mb-6"
+          className="text-soft hover:text-copy inline-block mb-6"
         >
           ← Back to Apps
         </Link>
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-[#292929] mb-4">
+          <h1 className="text-2xl font-bold text-ink mb-4">
             Tag Not Found
           </h1>
-          <p className="text-[#545454]">
+          <p className="text-soft">
             The tag "{tagSlug}" doesn't exist or has been removed.
           </p>
         </div>
@@ -73,9 +73,9 @@ export function TagPage() {
 
   const getTagDisplay = () => {
     const baseStyle = {
-      backgroundColor: tag.backgroundColor || "#F4F0ED",
-      color: tag.textColor || "#525252",
-      border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "#D5D3D0")}`,
+      backgroundColor: tag.backgroundColor || "var(--th-surface-alt)",
+      color: tag.textColor || "var(--th-copy)",
+      border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "var(--th-hairline-strong)")}`,
     };
 
     return (
@@ -100,19 +100,19 @@ export function TagPage() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       <Link
         to="/"
-        className="text-[#545454] hover:text-[#525252] inline-block mb-6"
+        className="text-soft hover:text-copy inline-block mb-6"
       >
         ← Back to Apps
       </Link>
 
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-4">
-          <h1 className="text-2xl font-bold text-[#292929]">
+          <h1 className="text-2xl font-bold text-ink">
             Apps tagged with
           </h1>
           {getTagDisplay()}
         </div>
-        <p className="text-[#545454]">
+        <p className="text-soft">
           {totalCount === undefined
             ? "Loading..."
             : `${totalCount || 0} ${totalCount === 1 ? "app" : "apps"} found`}
@@ -121,7 +121,7 @@ export function TagPage() {
 
       {stories === undefined ? (
         <div className="text-center py-12">
-          <div className="text-[#545454]">Loading apps...</div>
+          <div className="text-soft">Loading apps...</div>
         </div>
       ) : stories.length > 0 ? (
         <StoryList
@@ -133,19 +133,19 @@ export function TagPage() {
         />
       ) : totalCount === undefined ? (
         <div className="text-center py-12">
-          <div className="text-[#545454]">Loading apps...</div>
+          <div className="text-soft">Loading apps...</div>
         </div>
       ) : (
         <div className="text-center py-12">
-          <h2 className="text-xl font-medium text-[#292929] mb-2">
+          <h2 className="text-xl font-medium text-ink mb-2">
             No apps found
           </h2>
-          <p className="text-[#545454] mb-6">
+          <p className="text-soft mb-6">
             There are no apps with the tag "{tag.name}" yet.
           </p>
           <Link
             to="/submit"
-            className="inline-flex items-center px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors"
+            className="inline-flex items-center px-4 py-2 bg-cta text-on-cta rounded-md hover:bg-cta-hover transition-colors"
           >
             Submit an App
           </Link>

@@ -12,9 +12,9 @@ const StatCard = ({
   title: string;
   value: number | string | undefined;
 }) => (
-  <div className="bg-white border border-gray-200 rounded-lg p-4 min-h-[100px]">
-    <h3 className="text-sm font-medium text-gray-500 truncate">{title}</h3>
-    <p className="mt-1 text-3xl font-semibold text-gray-900">
+  <div className="bg-surface border border-hairline rounded-lg p-4 min-h-[100px]">
+    <h3 className="text-sm font-medium text-soft truncate">{title}</h3>
+    <p className="mt-1 text-3xl font-semibold text-ink">
       {value === undefined ? "Loading..." : value}
     </p>
   </div>
@@ -114,7 +114,7 @@ export function NumbersView() {
   if (authIsLoading) {
     return (
       <div>
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">
+        <h2 className="text-xl font-semibold text-ink mb-6">
           Key Metrics
         </h2>
         <div className="text-center py-10">Loading authentication...</div>
@@ -124,7 +124,7 @@ export function NumbersView() {
 
   return (
     <div>
-      <h2 className="text-xl font-semibold text-gray-800 mb-6">Key Metrics</h2>
+      <h2 className="text-xl font-semibold text-ink mb-6">Key Metrics</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         <StatCard title="Total Submissions" value={totalSubmissions} />
         <StatCard title="Total Users" value={totalUsers} />
@@ -139,16 +139,16 @@ export function NumbersView() {
 
       {/* User Growth Chart */}
       <div className="mt-10">
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">
+        <h2 className="text-xl font-semibold text-ink mb-6">
           User Growth Over Time
         </h2>
         {chartData.length === 0 && (
-          <div className="bg-white border border-gray-200 rounded-lg p-8 text-center text-gray-500">
+          <div className="bg-surface border border-hairline rounded-lg p-8 text-center text-soft">
             Loading growth data...
           </div>
         )}
         {chartData.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <div className="bg-surface border border-hairline rounded-lg p-6">
             <div className="relative h-64 overflow-hidden">
               {/* Bars */}
               <div className="flex items-end justify-between h-full gap-1">
@@ -162,15 +162,15 @@ export function NumbersView() {
                     >
                       {/* Bar */}
                       <div
-                        className="w-full bg-black hover:bg-gray-700 transition-colors rounded-t relative z-0"
+                        className="w-full bg-black hover:bg-cta-hover transition-colors rounded-t relative z-0"
                         style={{ height: `${height}%` }}
                       />
                       
                       {/* Tooltip */}
-                      <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap z-20">
+                      <div className="absolute bottom-full mb-2 hidden group-hover:block bg-cta text-on-cta text-xs rounded py-1 px-2 whitespace-nowrap z-20">
                         <div className="font-semibold">{item.cumulative} users</div>
-                        <div className="text-gray-300">{item.formattedDate}</div>
-                        <div className="text-gray-400">+{item.count} new</div>
+                        <div className="text-faint">{item.formattedDate}</div>
+                        <div className="text-faint">+{item.count} new</div>
                       </div>
                     </div>
                   );
@@ -201,7 +201,7 @@ export function NumbersView() {
             </div>
             
             {/* X-axis labels - show every few labels to avoid crowding */}
-            <div className="flex justify-between mt-2 text-xs text-gray-500">
+            <div className="flex justify-between mt-2 text-xs text-soft">
               <span>{chartData[0]?.formattedDate}</span>
               {chartData.length > 2 && (
                 <span>{chartData[Math.floor(chartData.length / 2)]?.formattedDate}</span>
@@ -210,10 +210,10 @@ export function NumbersView() {
             </div>
             
             {/* Y-axis label and stats */}
-            <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="mt-4 pt-4 border-t border-hairline">
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">Total Users</span>
-                <span className="text-2xl font-semibold text-gray-900">
+                <span className="text-copy">Total Users</span>
+                <span className="text-2xl font-semibold text-ink">
                   {chartData[chartData.length - 1]?.cumulative || 0}
                 </span>
               </div>
@@ -224,18 +224,18 @@ export function NumbersView() {
 
       {/* Section for Top 100 Most Followed Users */}
       <div className="mt-10">
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">
+        <h2 className="text-xl font-semibold text-ink mb-6">
           Top 100 Most Followed Users
         </h2>
         {topFollowers === undefined && (
-          <p className="text-gray-600">Loading top followers...</p>
+          <p className="text-copy">Loading top followers...</p>
         )}
         {topFollowers && topFollowers.length === 0 && (
-          <p className="text-gray-600 italic">No follower data available.</p>
+          <p className="text-copy italic">No follower data available.</p>
         )}
         {topFollowers && topFollowers.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <ul className="divide-y divide-gray-200">
+          <div className="bg-surface border border-hairline rounded-lg p-4">
+            <ul className="divide-y divide-hairline">
               {topFollowers.map(
                 (user: UserWithFollowerCount | null, index: number) =>
                   user ? (
@@ -247,12 +247,12 @@ export function NumbersView() {
                         {index + 1}.{" "}
                         <Link
                           to={`/${user.username}`}
-                          className="text-black hover:underline"
+                          className="text-ink hover:underline"
                         >
                           {user.name || user.username || "Unnamed User"}
                         </Link>
                       </span>
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm text-copy">
                         {user.followerCount} followers
                       </span>
                     </li>
@@ -265,18 +265,18 @@ export function NumbersView() {
 
       {/* Section for Top 100 Users Following Others Most */}
       <div className="mt-10">
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">
+        <h2 className="text-xl font-semibold text-ink mb-6">
           Top 100 Users Following Others Most
         </h2>
         {topFollowing === undefined && (
-          <p className="text-gray-600">Loading top following...</p>
+          <p className="text-copy">Loading top following...</p>
         )}
         {topFollowing && topFollowing.length === 0 && (
-          <p className="text-gray-600 italic">No following data available.</p>
+          <p className="text-copy italic">No following data available.</p>
         )}
         {topFollowing && topFollowing.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <ul className="divide-y divide-gray-200">
+          <div className="bg-surface border border-hairline rounded-lg p-4">
+            <ul className="divide-y divide-hairline">
               {topFollowing.map(
                 (user: UserWithFollowingCount | null, index: number) =>
                   user ? (
@@ -288,12 +288,12 @@ export function NumbersView() {
                         {index + 1}.{" "}
                         <Link
                           to={`/${user.username}`}
-                          className="text-black hover:underline"
+                          className="text-ink hover:underline"
                         >
                           {user.name || user.username || "Unnamed User"}
                         </Link>
                       </span>
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm text-copy">
                         following {user.followingCount}
                       </span>
                     </li>

@@ -91,12 +91,12 @@ export function DateRangePicker({
           aria-label="Filter by submission date range"
           className={cn(
             "inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-md border border-input bg-transparent px-3 text-sm shadow-sm transition-colors",
-            "hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-ring",
-            hasValue ? "text-[#292929]" : "text-[#545454]",
+            "hover:bg-surface-hover focus:outline-none focus:ring-1 focus:ring-ring",
+            hasValue ? "text-ink" : "text-soft",
             className,
           )}
         >
-          <CalendarIcon className="h-4 w-4 text-[#545454]" />
+          <CalendarIcon className="h-4 w-4 text-soft" />
           {hasValue && value ? formatRangeLabel(value) : placeholder}
           {hasValue && (
             <span
@@ -111,7 +111,7 @@ export function DateRangePicker({
                   onChange(undefined);
                 }
               }}
-              className="ml-1 -mr-1 flex h-5 w-5 items-center justify-center rounded hover:bg-gray-200"
+              className="ml-1 -mr-1 flex h-5 w-5 items-center justify-center rounded hover:bg-surface-hover"
             >
               <X className="h-3.5 w-3.5" />
             </span>
@@ -121,13 +121,13 @@ export function DateRangePicker({
       <PopoverContent align="start" className="w-auto p-0">
         <div className="flex flex-col sm:flex-row">
           {/* Preset windows */}
-          <div className="flex flex-row flex-wrap gap-1 border-b border-gray-100 p-3 sm:flex-col sm:flex-nowrap sm:border-b-0 sm:border-r">
+          <div className="flex flex-row flex-wrap gap-1 border-b border-hairline p-3 sm:flex-col sm:flex-nowrap sm:border-b-0 sm:border-r">
             {presets.map((preset) => (
               <button
                 key={preset.label}
                 type="button"
                 onClick={() => handlePreset(preset.range)}
-                className="rounded-md px-2.5 py-1.5 text-left text-sm text-[#545454] transition-colors hover:bg-gray-100 hover:text-[#292929]"
+                className="rounded-md px-2.5 py-1.5 text-left text-sm text-soft transition-colors hover:bg-surface-hover hover:text-ink"
               >
                 {preset.label}
               </button>

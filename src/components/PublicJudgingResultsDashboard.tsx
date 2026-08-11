@@ -56,8 +56,8 @@ export function PublicJudgingResultsDashboard({
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading results...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-ink mx-auto mb-4"></div>
+          <p className="text-copy">Loading results...</p>
         </div>
       </div>
     );
@@ -68,10 +68,10 @@ export function PublicJudgingResultsDashboard({
     return (
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+          <h2 className="text-xl font-semibold text-ink mb-2">
             Results Not Available
           </h2>
-          <p className="text-gray-600">
+          <p className="text-copy">
             This judging group's results are private or the group doesn't exist.
           </p>
         </div>
@@ -83,50 +83,50 @@ export function PublicJudgingResultsDashboard({
     <div className="space-y-6">
       {/* Overall Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
+        <div className="bg-surface rounded-lg p-4 border border-hairline">
           <div className="flex items-center">
             <Trophy className="w-5 h-5 text-yellow-500 mr-2" />
             <div>
-              <p className="text-sm font-medium text-gray-600">
+              <p className="text-sm font-medium text-copy">
                 Submissions Judged
               </p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-2xl font-bold text-ink">
                 {groupScores.submissionsJudged}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
+        <div className="bg-surface rounded-lg p-4 border border-hairline">
           <div className="flex items-center">
             <Users className="w-5 h-5 text-blue-500 mr-2" />
             <div>
-              <p className="text-sm font-medium text-gray-600">Judges</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm font-medium text-copy">Judges</p>
+              <p className="text-2xl font-bold text-ink">
                 {groupScores.judgeCount}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
+        <div className="bg-surface rounded-lg p-4 border border-hairline">
           <div className="flex items-center">
             <BarChart3 className="w-5 h-5 text-green-500 mr-2" />
             <div>
-              <p className="text-sm font-medium text-gray-600">Submissions</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm font-medium text-copy">Submissions</p>
+              <p className="text-2xl font-bold text-ink">
                 {groupScores.submissionCount}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
+        <div className="bg-surface rounded-lg p-4 border border-hairline">
           <div className="flex items-center">
             <TrendingUp className="w-5 h-5 text-purple-500 mr-2" />
             <div>
-              <p className="text-sm font-medium text-gray-600">Progress</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm font-medium text-copy">Progress</p>
+              <p className="text-2xl font-bold text-ink">
                 {Math.round(groupScores.completionPercentage)}%
               </p>
             </div>
@@ -135,16 +135,16 @@ export function PublicJudgingResultsDashboard({
       </div>
 
       {/* Rankings */}
-      <div className="bg-white rounded-lg border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+      <div className="bg-surface rounded-lg border border-hairline">
+        <div className="px-6 py-4 border-b border-hairline">
+          <h3 className="text-lg font-semibold text-ink flex items-center gap-2">
             <Trophy className="w-5 h-5" />
             Rankings
           </h3>
         </div>
-        <div className="divide-y divide-gray-200">
+        <div className="divide-y divide-hairline">
           {groupScores.rankings.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">
+            <div className="p-6 text-center text-soft">
               No scores submitted yet
             </div>
           ) : (
@@ -156,7 +156,7 @@ export function PublicJudgingResultsDashboard({
 
               return (
                 <div key={submission.storyId}>
-                  <div className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
+                  <div className="px-6 py-4 flex items-center justify-between hover:bg-surface-hover">
                     <div className="flex items-center space-x-4">
                       <div className="flex-shrink-0">
                         {index === 0 && (
@@ -165,8 +165,8 @@ export function PublicJudgingResultsDashboard({
                           </div>
                         )}
                         {index === 1 && (
-                          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                            <Award className="w-4 h-4 text-gray-600" />
+                          <div className="w-8 h-8 bg-surface-alt rounded-full flex items-center justify-center">
+                            <Award className="w-4 h-4 text-copy" />
                           </div>
                         )}
                         {index === 2 && (
@@ -175,8 +175,8 @@ export function PublicJudgingResultsDashboard({
                           </div>
                         )}
                         {index > 2 && (
-                          <div className="w-8 h-8 bg-gray-50 rounded-full flex items-center justify-center">
-                            <span className="text-sm font-medium text-gray-600">
+                          <div className="w-8 h-8 bg-surface-alt rounded-full flex items-center justify-center">
+                            <span className="text-sm font-medium text-copy">
                               {index + 1}
                             </span>
                           </div>
@@ -186,7 +186,7 @@ export function PublicJudgingResultsDashboard({
                         <div className="flex items-center gap-2">
                           <Link
                             to={`/s/${submission.storySlug}`}
-                            className="font-medium text-gray-900 hover:text-blue-600 hover:underline"
+                            className="font-medium text-ink hover:text-blue-600 hover:underline"
                           >
                             {submission.storyTitle}
                           </Link>
@@ -195,14 +195,14 @@ export function PublicJudgingResultsDashboard({
                               href={submission.storyUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-gray-500 hover:text-gray-700"
+                              className="text-soft hover:text-copy"
                               title="Visit live app"
                             >
                               <ExternalLink className="w-4 h-4" />
                             </a>
                           )}
                         </div>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-soft">
                           {(() => {
                             const expectedScores =
                               submission.judgesCompleted *
@@ -221,10 +221,10 @@ export function PublicJudgingResultsDashboard({
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-lg font-semibold text-gray-900">
+                      <div className="text-lg font-semibold text-ink">
                         {submission.averageScore.toFixed(1)}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-soft">
                         Total: {submission.totalScore}
                       </div>
                     </div>
@@ -237,7 +237,7 @@ export function PublicJudgingResultsDashboard({
                         onClick={() =>
                           toggleRankingExpanded(submission.storyId)
                         }
-                        className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                        className="flex items-center gap-1 text-sm text-soft hover:text-copy transition-colors"
                       >
                         {isExpanded ? (
                           <ChevronDown className="w-4 h-4" />
@@ -254,12 +254,12 @@ export function PublicJudgingResultsDashboard({
                           {submission.judgeBreakdown!.map((judge) => (
                             <div
                               key={judge.judgeName}
-                              className="flex items-center justify-between text-sm py-1 px-3 bg-gray-50 rounded"
+                              className="flex items-center justify-between text-sm py-1 px-3 bg-surface-alt rounded"
                             >
-                              <span className="text-gray-700">
+                              <span className="text-copy">
                                 {judge.judgeName}
                               </span>
-                              <span className="font-medium text-gray-900">
+                              <span className="font-medium text-ink">
                                 Avg: {judge.averageScore.toFixed(1)}/
                                 {groupScores.scoreScale}
                               </span>
@@ -277,16 +277,16 @@ export function PublicJudgingResultsDashboard({
       </div>
 
       {/* Criteria Performance */}
-      <div className="bg-white rounded-lg border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+      <div className="bg-surface rounded-lg border border-hairline">
+        <div className="px-6 py-4 border-b border-hairline">
+          <h3 className="text-lg font-semibold text-ink flex items-center gap-2">
             <Star className="w-5 h-5" />
             Criteria Performance
           </h3>
         </div>
-        <div className="divide-y divide-gray-200">
+        <div className="divide-y divide-hairline">
           {groupScores.criteriaBreakdown.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">
+            <div className="p-6 text-center text-soft">
               No criteria defined yet
             </div>
           ) : (
@@ -296,20 +296,20 @@ export function PublicJudgingResultsDashboard({
                 className="px-6 py-4 flex items-center justify-between"
               >
                 <div>
-                  <h4 className="font-medium text-gray-900">
+                  <h4 className="font-medium text-ink">
                     {criteria.criteriaName}
                   </h4>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-soft">
                     {criteria.scoreCount} score
                     {criteria.scoreCount !== 1 ? "s" : ""} submitted
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-lg font-semibold text-gray-900">
+                  <div className="text-lg font-semibold text-ink">
                     {criteria.averageScore.toFixed(1)}
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-20 bg-gray-200 rounded-full h-2">
+                    <div className="w-20 bg-surface-hover rounded-full h-2">
                       <div
                         className="bg-yellow-400 h-2 rounded-full"
                         style={{
@@ -317,7 +317,7 @@ export function PublicJudgingResultsDashboard({
                         }}
                       ></div>
                     </div>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-soft">
                       /{groupScores.scoreScale}
                     </span>
                   </div>

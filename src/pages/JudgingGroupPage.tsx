@@ -71,10 +71,10 @@ export default function JudgingGroupPage() {
 
   if (group === undefined) {
     return (
-      <div className="min-h-screen bg-[#F4F2EE]] flex items-center justify-center">
+      <div className="min-h-screen bg-canvas] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading judging group...</p>
+          <div className="w-8 h-8 border-2 border-hairline-strong border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-copy">Loading judging group...</p>
         </div>
       </div>
     );
@@ -82,17 +82,17 @@ export default function JudgingGroupPage() {
 
   if (group === null) {
     return (
-      <div className="min-h-screen bg-[#F4F2EE]] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-lg border border-gray-200 p-6 shadow-sm text-center">
-          <h1 className="text-xl font-medium text-gray-900 mb-4">
+      <div className="min-h-screen bg-canvas] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-surface rounded-lg border border-hairline p-6 shadow-sm text-center">
+          <h1 className="text-xl font-medium text-ink mb-4">
             Group Not Found
           </h1>
-          <p className="text-gray-600 mb-6">
+          <p className="text-copy mb-6">
             This judging group does not exist or is not currently available.
           </p>
           <Link
             to="/"
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-cta text-on-cta rounded-lg hover:bg-cta-hover transition-colors font-medium"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Home
@@ -105,14 +105,14 @@ export default function JudgingGroupPage() {
   // Show password form for private groups
   if (!group.isPublic && !isRegistering) {
     return (
-      <div className="min-h-screen bg-[#F4F2EE]] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+      <div className="min-h-screen bg-canvas] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-surface rounded-lg border border-hairline p-6 shadow-sm">
           <div className="text-center mb-6">
-            <Lock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h1 className="text-xl font-medium text-gray-900 mb-2">
+            <Lock className="w-12 h-12 text-faint mx-auto mb-4" />
+            <h1 className="text-xl font-medium text-ink mb-2">
               {group.name}
             </h1>
-            <p className="text-gray-600">
+            <p className="text-copy">
               This judging group is private. Please enter the access code to
               continue.
             </p>
@@ -137,7 +137,7 @@ export default function JudgingGroupPage() {
 
             <Button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white hover:bg-gray-800 font-medium rounded-lg h-11"
+              className="w-full flex items-center justify-center gap-2 bg-cta text-on-cta hover:bg-cta-hover font-medium rounded-lg h-11"
               disabled={!password.trim()}
             >
               <Lock className="w-4 h-4" />
@@ -146,7 +146,7 @@ export default function JudgingGroupPage() {
           </form>
 
           <div className="mt-6 text-center">
-            <Link to="/" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors">
+            <Link to="/" className="inline-flex items-center gap-2 text-sm text-copy hover:text-ink transition-colors">
               <ArrowLeft className="w-3.5 h-3.5" />
               Back to Home
             </Link>
@@ -160,17 +160,17 @@ export default function JudgingGroupPage() {
   return (
     <>
       <DialogComponents />
-      <div className="min-h-screen bg-[#F4F2EE]] flex items-center justify-center p-4">
-        <div className="max-w-lg w-full bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+      <div className="min-h-screen bg-canvas] flex items-center justify-center p-4">
+        <div className="max-w-lg w-full bg-surface rounded-lg border border-hairline p-6 shadow-sm">
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-medium text-gray-900 mb-2">
+            <h1 className="text-2xl font-medium text-ink mb-2">
               {group.name}
             </h1>
             {group.description && (
-              <p className="text-gray-600 mb-4">{group.description}</p>
+              <p className="text-copy mb-4">{group.description}</p>
             )}
 
-            <div className="flex items-center justify-center gap-4 text-sm text-gray-500 mb-6">
+            <div className="flex items-center justify-center gap-4 text-sm text-soft mb-6">
               {group.startDate && (
                 <div className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
@@ -214,7 +214,7 @@ export default function JudgingGroupPage() {
                 required
                 minLength={2}
               />
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-soft">
                 This will identify your scores in the system.
               </p>
             </div>
@@ -228,14 +228,14 @@ export default function JudgingGroupPage() {
                 onChange={(e) => setJudgeEmail(e.target.value)}
                 placeholder="your.email@example.com"
               />
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-soft">
                 For communication about the judging process.
               </p>
             </div>
 
             <Button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white hover:bg-gray-800 font-medium rounded-lg h-11"
+              className="w-full flex items-center justify-center gap-2 bg-cta text-on-cta hover:bg-cta-hover font-medium rounded-lg h-11"
               disabled={!judgeName.trim()}
             >
               <LogIn className="w-4 h-4" />
@@ -246,7 +246,7 @@ export default function JudgingGroupPage() {
           <div className="mt-6 text-center">
             <Link
               to="/"
-              className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              className="inline-flex items-center gap-2 text-sm text-copy hover:text-ink transition-colors"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               Back to Home

@@ -77,6 +77,7 @@ import type * as testWelcomeEmail from "../testWelcomeEmail.js";
 import type * as users from "../users.js";
 import type * as utils from "../utils.js";
 import type * as validators from "../validators.js";
+import type * as videoTranscripts from "../videoTranscripts.js";
 
 import type {
   ApiFromModules,
@@ -154,6 +155,7 @@ declare const fullApi: ApiFromModules<{
   users: typeof users;
   utils: typeof utils;
   validators: typeof validators;
+  videoTranscripts: typeof videoTranscripts;
 }>;
 
 /**
@@ -190,4 +192,5 @@ export declare const components: {
   agentReady: import("@waynesutton/agent-ready/_generated/component.js").ComponentApi<"agentReady">;
   rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
   firecrawl: import("@firecrawl/firecrawl-convex/_generated/component.js").ComponentApi<"firecrawl">;
+  contextDev: import("@context-dot-dev/convex/_generated/component.js").ComponentApi<"contextDev">;
 };

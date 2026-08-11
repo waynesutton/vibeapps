@@ -69,7 +69,7 @@ const BookmarkButton = ({
   if (!isSignedIn) {
     return (
       <button
-        className="flex items-center gap-2 text-[#787672] hover:text-[#525252] cursor-not-allowed"
+        className="flex items-center gap-2 text-faint hover:text-copy cursor-not-allowed"
         title="Sign in to bookmark"
       >
         <Bookmark className="w-4 h-4" />
@@ -80,17 +80,67 @@ const BookmarkButton = ({
   return (
     <button
       onClick={handleBookmarkClick}
-      className="flex items-center gap-2 text-[#787672] hover:text-[#525252]"
+      className="flex items-center gap-2 text-faint hover:text-copy"
       title={isBookmarked ? "Remove bookmark" : "Bookmark story"}
     >
       {isBookmarked ? (
-        <BookmarkCheck className="w-4 h-4 text-black" />
+        <BookmarkCheck className="w-4 h-4 text-ink" />
       ) : (
         <Bookmark className="w-4 h-4" />
       )}
     </button>
   );
 };
+
+// Filters out hidden/legacy tags, then renders themed tag pills.
+// DB-set tag colors are respected; fallbacks adapt to the current theme.
+const visibleTags = (tags: Array<Doc<"tags">>) =>
+  tags.filter(
+    (tag) =>
+      !tag.isHidden &&
+      !tag.hideInStoryList &&
+      tag.name !== "resendhackathon" &&
+      tag.name !== "ychackathon",
+  );
+
+const TagPills = ({
+  tags,
+  size = "sm",
+}: {
+  tags: Array<Doc<"tags">>;
+  size?: "sm" | "md";
+}) => (
+  <>
+    {visibleTags(tags).map((tag) => (
+      <Link
+        key={tag._id}
+        to={`/tag/${tag.slug}`}
+        className={`inline-flex items-center ${
+          size === "sm" ? "px-1.5 py-0.5 text-[11px]" : "px-2 py-0.5 text-xs"
+        } rounded font-medium transition-colors hover:opacity-80`}
+        style={{
+          backgroundColor: tag.backgroundColor || "var(--th-surface-alt)",
+          color: tag.textColor || "var(--th-copy)",
+          border: `1px solid ${
+            tag.borderColor ||
+            (tag.backgroundColor ? "transparent" : "var(--th-hairline-strong)")
+          }`,
+        }}
+        title={`View all apps tagged with ${tag.name}`}
+      >
+        {tag.emoji && <span className="mr-1">{tag.emoji}</span>}
+        {tag.iconUrl && !tag.emoji && (
+          <img
+            src={tag.iconUrl}
+            alt=""
+            className={`${size === "sm" ? "w-2.5 h-2.5" : "w-3 h-3"} mr-1 rounded-sm object-cover`}
+          />
+        )}
+        {tag.name}
+      </Link>
+    ))}
+  </>
+);
 
 export function StoryList({
   stories,
@@ -119,13 +169,6 @@ export function StoryList({
     voteStory({ storyId });
   };
 
-  const containerClass =
-    viewMode === "grid"
-      ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-      : viewMode === "vibe"
-        ? "flex flex-col space-y-6"
-        : "space-y-4";
-
   const formatDate = (creationTime: number) => {
     try {
       return formatDistanceToNow(creationTime) + " ago";
@@ -135,269 +178,315 @@ export function StoryList({
     }
   };
 
-  const mainContentContainerClass =
-    viewMode === "vibe" ? "flex-grow" : "w-full";
+  // Shared byline + comments + bookmark + repo meta row
+  const MetaRow = ({
+    story,
+    className = "",
+    size = "sm",
+  }: {
+    story: Story;
+    className?: string;
+    size?: "sm" | "md";
+  }) => (
+    <div
+      className={`flex items-center gap-x-2.5 gap-y-1 ${size === "sm" ? "text-xs" : "text-sm"} text-soft flex-wrap ${className}`}
+    >
+      {story.authorUsername ? (
+        <ProfileHoverCard username={story.authorUsername}>
+          <Link
+            to={`/${story.authorUsername}`}
+            className="hover:text-copy hover:underline"
+          >
+            by {story.submitterName || story.authorName || story.authorUsername}
+          </Link>
+        </ProfileHoverCard>
+      ) : (
+        <span>
+          by {story.submitterName || story.authorName || "Anonymous User"}
+        </span>
+      )}
+      <span aria-hidden="true" className="text-faint">
+        &middot;
+      </span>
+      <span>{formatDate(story._creationTime)}</span>
+      <span aria-hidden="true" className="text-faint">
+        &middot;
+      </span>
+      <Link
+        to={`/s/${story.slug}#comments`}
+        className="flex items-center gap-1 hover:text-copy"
+      >
+        <MessageSquare className="w-3.5 h-3.5" />
+        {story.commentCount}
+      </Link>
+      <BookmarkButton
+        storyId={story._id}
+        showMessage={showMessage}
+        onAuthRequired={() => {
+          setAuthDialogAction("bookmark");
+          setShowAuthDialog(true);
+        }}
+      />
+      {story.githubUrl && (
+        <a
+          href={story.githubUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 text-soft hover:text-copy"
+          title="View GitHub Repo"
+        >
+          <Github className="w-3.5 h-3.5" />
+          <span>Repo</span>
+        </a>
+      )}
+    </div>
+  );
+
+  // LIST VIEW: ranked rows (number, app thumbnail, copy, upvote box on the right)
+  const renderListRow = (story: Story, index: number) => (
+    <article
+      key={story._id}
+      className="group flex items-start gap-3 sm:gap-4 py-4 first:pt-1"
+    >
+      {/* Rank */}
+      <span className="w-6 pt-2 text-right text-sm text-faint tabular-nums flex-shrink-0 select-none">
+        {index + 1}
+      </span>
+
+      {/* App thumbnail (falls back to an initial block) */}
+      <Link
+        to={`/s/${story.slug}`}
+        className="flex-shrink-0 mt-0.5"
+        tabIndex={-1}
+        aria-hidden="true"
+      >
+        {story.screenshotUrl ? (
+          <img
+            src={story.screenshotUrl}
+            alt=""
+            className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl object-cover border border-hairline bg-surface-alt"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border border-hairline bg-surface-alt flex items-center justify-center text-lg font-semibold text-soft">
+            {story.title.charAt(0).toUpperCase()}
+          </div>
+        )}
+      </Link>
+
+      {/* Copy */}
+      <div className="flex-1 min-w-0">
+        {story.customMessage && (
+          <div className="mb-1.5 text-xs text-on-cta bg-cta border border-hairline rounded-md px-2 py-1 italic inline-block">
+            {story.customMessage}
+          </div>
+        )}
+        <h2 className="text-[15px] leading-snug text-ink font-semibold flex items-center gap-1.5 min-w-0">
+          {story.isPinned && (
+            <Pin
+              className="w-3.5 h-3.5 text-faint flex-shrink-0"
+              aria-label="Pinned Story"
+            />
+          )}
+          <Link
+            to={`/s/${story.slug}`}
+            className="truncate hover:underline underline-offset-2"
+          >
+            {story.title}
+          </Link>
+        </h2>
+        {story.description && (
+          <p className="text-[13px] leading-[19px] text-copy line-clamp-2 mt-0.5">
+            {story.description}
+          </p>
+        )}
+        <div className="flex items-center gap-x-2.5 gap-y-1 flex-wrap mt-1.5">
+          {story.tags && story.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              <TagPills tags={story.tags} size="sm" />
+            </div>
+          )}
+        </div>
+        <MetaRow story={story} className="mt-1.5" />
+      </div>
+
+      {/* Upvote box */}
+      <button
+        onClick={() => handleVote(story._id)}
+        className="flex-shrink-0 flex flex-col items-center justify-center w-11 min-h-[52px] rounded-lg border border-hairline bg-surface text-ink hover:border-hairline-strong hover:bg-surface-hover transition-colors"
+        title="Vibe it"
+        aria-label={`Upvote ${story.title}`}
+      >
+        <ChevronUp className="w-4 h-4" />
+        <span className="text-sm font-semibold tabular-nums leading-none mt-0.5">
+          {story.votes}
+        </span>
+      </button>
+    </article>
+  );
+
+  // VIBE VIEW: modern card row (vibes block + thumbnail + copy)
+  const renderVibeRow = (story: Story) => (
+    <article
+      key={story._id}
+      className="flex flex-col md:flex-row items-stretch gap-4 bg-surface rounded-xl border border-hairline p-4"
+    >
+      {/* Vibes block */}
+      <div className="flex md:flex-col items-center md:items-stretch gap-0 w-full md:w-[76px] flex-shrink-0 order-2 md:order-1">
+        <div className="bg-brand-soft rounded-l-lg md:rounded-l-none md:rounded-t-lg flex-1 md:flex-none md:h-[64px] flex flex-col items-center justify-center border border-hairline py-1.5">
+          <span className="font-alfa-slab-one text-lg text-ink leading-none">
+            {story.votes}
+          </span>
+          <span className="text-[11px] text-copy mt-0.5">Vibes</span>
+        </div>
+        <button
+          onClick={() => handleVote(story._id)}
+          className="bg-surface border border-l-0 md:border-l md:border-t-0 border-hairline text-ink hover:bg-brand-soft rounded-r-lg md:rounded-r-none md:rounded-b-lg py-1.5 px-3 md:px-2 flex items-center justify-center gap-1 text-sm font-medium transition-colors"
+        >
+          Vibe it
+        </button>
+      </div>
+
+      {/* Thumbnail */}
+      {story.screenshotUrl && (
+        <Link
+          to={`/s/${story.slug}`}
+          className="w-full md:w-[195px] md:flex-shrink-0 aspect-video block overflow-hidden rounded-lg border border-hairline order-1 md:order-2"
+        >
+          <img
+            src={story.screenshotUrl}
+            alt={`${story.title} thumbnail`}
+            className="w-full h-full object-cover transition-transform duration-200 hover:scale-[1.02]"
+            loading="lazy"
+          />
+        </Link>
+      )}
+
+      {/* Copy */}
+      <div className="flex-1 min-w-0 order-3">
+        {story.customMessage && (
+          <div className="mb-2 text-xs text-on-cta bg-cta border border-hairline rounded-md px-2 py-1 italic inline-block">
+            {story.customMessage}
+          </div>
+        )}
+        <h2 className="text-[15px] leading-snug text-ink font-semibold flex items-center gap-1.5 min-w-0 mb-1">
+          {story.isPinned && (
+            <Pin
+              className="w-3.5 h-3.5 text-faint flex-shrink-0"
+              aria-label="Pinned Story"
+            />
+          )}
+          <Link
+            to={`/s/${story.slug}`}
+            className="truncate hover:underline underline-offset-2"
+          >
+            {story.title}
+          </Link>
+        </h2>
+        <p className="text-[13px] leading-[19px] text-copy mb-2 line-clamp-2">
+          {story.description}
+        </p>
+        {story.tags && story.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            <TagPills tags={story.tags} size="sm" />
+          </div>
+        )}
+        <MetaRow story={story} />
+      </div>
+    </article>
+  );
+
+  // GRID VIEW: unchanged layout
+  const renderGridCard = (story: Story) => (
+    <article
+      key={story._id}
+      className="flex flex-col bg-surface rounded-lg p-4 border border-hairline gap-4"
+    >
+      <div className="flex-1 min-w-0">
+        {story.customMessage && (
+          <div className="mb-2 text-xs text-on-cta bg-cta border border-hairline rounded-md p-2 italic">
+            {story.customMessage}
+          </div>
+        )}
+        <div className="flex items-center gap-2 mb-1">
+          {story.isPinned && (
+            <Pin
+              className="w-3.5 h-3.5 text-faint flex-shrink-0"
+              aria-label="Pinned Story"
+            />
+          )}
+          <button
+            onClick={() => handleVote(story._id)}
+            className="text-ink hover:bg-brand-soft p-1 rounded"
+          >
+            <ChevronUp className="w-5 h-5" />
+          </button>
+          <span className="text-ink font-medium text-sm">{story.votes}</span>
+          <h2 className="text-base text-ink font-bold truncate">
+            <Link to={`/s/${story.slug}`} className="hover:text-ink break-words">
+              {story.title}
+            </Link>
+          </h2>
+        </div>
+        {story.screenshotUrl && (
+          <Link
+            to={`/s/${story.slug}`}
+            className="block mb-4 rounded-md overflow-hidden hover:opacity-90 transition-opacity"
+          >
+            <img
+              src={story.screenshotUrl}
+              alt={story.title}
+              className="w-full h-48 object-cover"
+              loading="lazy"
+            />
+          </Link>
+        )}
+        <p className="text-ink text-[14px] leading-[20px] mb-2 line-clamp-3">
+          {story.description}
+        </p>
+        {story.tags && story.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            <TagPills tags={story.tags} size="md" />
+          </div>
+        )}
+        <MetaRow story={story} size="md" />
+      </div>
+    </article>
+  );
+
+  const containerClass =
+    viewMode === "grid"
+      ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+      : viewMode === "vibe"
+        ? "flex flex-col space-y-4"
+        : "flex flex-col divide-y divide-hairline";
 
   return (
     <>
       <DialogComponents />
-      <div
-        className={`flex ${viewMode === "vibe" ? "flex-row gap-6" : "flex-col"}`}
-      >
-        <div className={mainContentContainerClass}>
+      <div className="flex flex-col">
+        <div className="w-full">
           <div className="space-y-8">
             <div className={containerClass}>
-              {stories.map((story) => (
-                <article
-                  key={story._id}
-                  className={`flex ${viewMode === "grid" ? "flex-col bg-white rounded-lg p-4 border border-[#D8E1EC]" : viewMode === "vibe" ? "flex-col md:flex-row items-start" : "flex-row bg-white rounded-lg p-[4px] border border-[#D8E1EC]"} gap-4`}
-                >
-                  {viewMode !== "grid" && (
-                    <div
-                      className={`flex ${
-                        viewMode === "vibe"
-                          ? "flex-col items-center w-[70px] flex-shrink-0"
-                          : "flex-col items-center min-w-[40px] pt-1"
-                      }`}
-                    >
-                      {viewMode === "vibe" ? (
-                        <div className="flex flex-col items-center w-full">
-                          <div className="bg-[#F3ECE1] rounded-t-md w-full h-[62px] flex flex-col items-center justify-center text-lg border border border-[#D8E1EC] font-normal text-[#292929] mb-[0px]">
-                            <span className="font-alfa-slab-one">
-                              {story.votes}
-                            </span>
-                            <div className="text-xs">Vibes</div>
-                          </div>
-                          <button
-                            onClick={() => handleVote(story._id)}
-                            className="bg-white border border-t-0 border-[#D5D3D0] text-[#292929] hover:bg-[#F3ECE1] w-full rounded-b-md py-1 px-2 flex items-center justify-center gap-1 text-sm font-normal h-[24px]"
-                          >
-                            Vibe it
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => handleVote(story._id)}
-                            className="text-[#292929] hover:bg-[#F3ECE1] p-1 rounded"
-                          >
-                            <ChevronUp className="w-5 h-5" />
-                          </button>
-                          <span className="text-[#292929] font-medium text-sm">
-                            {story.votes}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {/* THUMBNAIL - Vibe view only */}
-                  {viewMode === "vibe" && story.screenshotUrl && (
-                    <Link
-                      to={`/s/${story.slug}`}
-                      className="w-full md:w-[195px] md:flex-shrink-0 aspect-video block overflow-hidden rounded-md"
-                    >
-                      <img
-                        src={story.screenshotUrl}
-                        alt={`${story.title} thumbnail`}
-                        className="w-full h-full object-cover border border-[#D8E1EC]"
-                        loading="lazy"
-                      />
-                    </Link>
-                  )}
-
-                  {/* STORY CONTENT - Apply bg/border for vibe mode, padding in inner div */}
-                  <div
-                    className={`flex-1 min-w-0 ${viewMode === "vibe" ? "bg-white rounded-md border border-[#D8E1EC]" : ""}`}
-                  >
-                    <div
-                      className={
-                        viewMode === "vibe" || viewMode === "list"
-                          ? "p-[4px]"
-                          : ""
-                      }
-                    >
-                      {story.customMessage && (
-                        <div
-                          className={`${viewMode === "list" ? "mb-2 text-xs" : "mb-2 text-xs"} text-[#ffffff] bg-[#292929] border border-[#D8E1EC] rounded-md p-2 italic`}
-                        >
-                          {story.customMessage}
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2 mb-1">
-                        {story.isPinned && (
-                          <Pin
-                            className={`${viewMode === "list" ? "w-3.5 h-3.5" : "w-3.5 h-3.5"} text-[#787671] flex-shrink-0`}
-                            aria-label="Pinned Story"
-                          />
-                        )}
-                        {viewMode === "grid" && (
-                          <>
-                            <button
-                              onClick={() => handleVote(story._id)}
-                              className="text-[#292929] hover:bg-[#F3ECE1] p-1 rounded"
-                            >
-                              <ChevronUp className="w-5 h-5" />
-                            </button>
-                            <span className="text-[#292929] font-medium text-sm">
-                              {story.votes}
-                            </span>
-                          </>
-                        )}
-                        <h2
-                          className={`${viewMode === "vibe" || viewMode === "list" ? "text-[15px]" : "text-base"} text-[#292929] font-bold truncate`}
-                        >
-                          <Link
-                            to={`/s/${story.slug}`}
-                            className="hover:text-[#292929] break-words"
-                          >
-                            {story.title}
-                          </Link>
-                        </h2>
-                      </div>
-                      {viewMode === "vibe" && (
-                        <p className="text-[#000000] text-[13px] leading-[18px] mb-1.5 line-clamp-2">
-                          {story.description}
-                        </p>
-                      )}
-                      {viewMode === "grid" && story.screenshotUrl && (
-                        <Link
-                          to={`/s/${story.slug}`}
-                          className="block mb-4 rounded-md overflow-hidden hover:opacity-90 transition-opacity"
-                        >
-                          <img
-                            src={story.screenshotUrl}
-                            alt={story.title}
-                            className="w-full h-48 object-cover"
-                            loading="lazy"
-                          />
-                        </Link>
-                      )}
-                      {viewMode === "list" && (
-                        <p className="text-[#000000] text-[13px] leading-[18px] mb-1.5 line-clamp-2">
-                          {story.description}
-                        </p>
-                      )}
-                      {viewMode === "grid" && (
-                        <p className="text-[#000000] text-[14px] leading-[20px] mb-2 line-clamp-3">
-                          {story.description}
-                        </p>
-                      )}
-
-                      {/* Tags */}
-                      {story.tags && story.tags.length > 0 && (
-                        <div
-                          className={`flex flex-wrap gap-1 ${viewMode === "vibe" || viewMode === "list" ? "mb-1.5" : "mb-2"}`}
-                        >
-                          {story.tags
-                            .filter(
-                              (tag: Doc<"tags">) =>
-                                !tag.isHidden &&
-                                !tag.hideInStoryList &&
-                                tag.name !== "resendhackathon" &&
-                                tag.name !== "ychackathon",
-                            )
-                            .map((tag: Doc<"tags">) => (
-                              <Link
-                                key={tag._id}
-                                to={`/tag/${tag.slug}`}
-                                className={`inline-flex items-center ${viewMode === "vibe" || viewMode === "list" ? "px-1.5 py-0.5 text-[11px]" : "px-2 py-0.5 text-xs"} rounded font-medium transition-colors hover:opacity-80`}
-                                style={{
-                                  backgroundColor:
-                                    tag.backgroundColor || "#F4F0ED",
-                                  color: tag.textColor || "#525252",
-                                  border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "#D5D3D0")}`,
-                                }}
-                                title={`View all apps tagged with ${tag.name}`}
-                              >
-                                {tag.emoji && (
-                                  <span className="mr-1">{tag.emoji}</span>
-                                )}
-                                {tag.iconUrl && !tag.emoji && (
-                                  <img
-                                    src={tag.iconUrl}
-                                    alt=""
-                                    className={`${viewMode === "vibe" || viewMode === "list" ? "w-2.5 h-2.5" : "w-3 h-3"} mr-1 rounded-sm object-cover`}
-                                  />
-                                )}
-                                {tag.name}
-                              </Link>
-                            ))}
-                        </div>
-                      )}
-
-                      <div
-                        className={`flex items-center gap-2 ${viewMode === "vibe" || viewMode === "list" ? "text-xs" : "text-sm"} text-[#545454] flex-wrap`}
-                      >
-                        {story.authorUsername ? (
-                          <ProfileHoverCard username={story.authorUsername}>
-                            <Link
-                              to={`/${story.authorUsername}`}
-                              className="hover:text-[#525252] hover:underline"
-                            >
-                              by{" "}
-                              {story.submitterName ||
-                                story.authorName ||
-                                story.authorUsername}
-                            </Link>
-                          </ProfileHoverCard>
-                        ) : (
-                          <span>
-                            by{" "}
-                            {story.submitterName ||
-                              story.authorName ||
-                              "Anonymous User"}
-                          </span>
-                        )}
-                        <span>{formatDate(story._creationTime)}</span>
-                        <Link
-                          to={`/s/${story.slug}#comments`}
-                          className="flex items-center gap-2 hover:text-[#525252]"
-                        >
-                          <MessageSquare
-                            className={`${viewMode === "vibe" || viewMode === "list" ? "w-3.5 h-3.5" : "w-4 h-4"}`}
-                          />
-                          {story.commentCount}
-                        </Link>
-                        <BookmarkButton
-                          storyId={story._id}
-                          showMessage={showMessage}
-                          onAuthRequired={() => {
-                            setAuthDialogAction("bookmark");
-                            setShowAuthDialog(true);
-                          }}
-                        />
-                        {story.githubUrl && (
-                          <a
-                            href={story.githubUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 text-[#545454] hover:text-[#525252]"
-                            title="View GitHub Repo"
-                          >
-                            <Github
-                              className={`${viewMode === "vibe" || viewMode === "list" ? "w-3.5 h-3.5" : "w-4 h-4"}`}
-                            />
-                            <span>Repo</span>
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              ))}
+              {stories.map((story, index) =>
+                viewMode === "grid"
+                  ? renderGridCard(story)
+                  : viewMode === "vibe"
+                    ? renderVibeRow(story)
+                    : renderListRow(story, index),
+              )}
             </div>
 
             {(status === "CanLoadMore" || status === "LoadingMore") && (
               <div className="text-center mt-8">
                 <button
                   onClick={() => loadMore(itemsPerPage)}
-                  className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 mx-auto disabled:opacity-75 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-surface-alt text-copy rounded-md hover:bg-surface-hover transition-colors flex items-center gap-2 mx-auto disabled:opacity-75 disabled:cursor-not-allowed"
                   disabled={status === "LoadingMore"}
                 >
                   {status === "LoadingMore" ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-[#525252] border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-4 h-4 border-2 border-ink border-t-transparent rounded-full animate-spin"></div>
                       Loading...
                     </>
                   ) : (
@@ -410,17 +499,10 @@ export function StoryList({
               </div>
             )}
             {status === "Exhausted" && stories.length > 0 && (
-              <div className="text-center mt-8 text-[#545454]"></div>
+              <div className="text-center mt-8 text-soft"></div>
             )}
           </div>
         </div>
-
-        {/* {viewMode === "vibe" && (
-        <aside className="w-80 flex-shrink-0 space-y-6 hidden lg:block">
-          <WeeklyLeaderboard />
-          <TopCategoriesOfWeek />
-        </aside>
-      )} */}
 
         {/* Auth Required Dialog */}
         <AuthRequiredDialog

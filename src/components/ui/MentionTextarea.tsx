@@ -160,20 +160,20 @@ export function MentionTextarea({
         rows={rows}
         disabled={disabled}
         required={required}
-        className={`w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] disabled:opacity-50 disabled:bg-gray-100 ${className}`}
+        className={`w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline disabled:opacity-50 disabled:bg-surface-alt ${className}`}
       />
 
       {/* Suggestions dropdown */}
       {showSuggestions && suggestions.length > 0 && (
         <div
           ref={suggestionsRef}
-          className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md max-h-48 overflow-y-auto"
+          className="absolute z-50 w-full mt-1 bg-surface border border-hairline-strong rounded-md max-h-48 overflow-y-auto"
         >
           {suggestions.map((user, index) => (
             <div
               key={user._id}
               onClick={() => handleSuggestionClick(user)}
-              className={`px-3 py-2 cursor-pointer flex items-center gap-2 hover:bg-gray-100 ${
+              className={`px-3 py-2 cursor-pointer flex items-center gap-2 hover:bg-surface-hover ${
                 index === selectedIndex
                   ? "bg-blue-50 border-l-2 border-blue-500"
                   : ""
@@ -186,15 +186,15 @@ export function MentionTextarea({
                   className="w-6 h-6 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
-                  <User className="w-3 h-3 text-gray-600" />
+                <div className="w-6 h-6 rounded-full bg-surface-hover flex items-center justify-center">
+                  <User className="w-3 h-3 text-copy" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-900 truncate">
+                <div className="text-sm font-medium text-ink truncate">
                   @{user.username}
                 </div>
-                <div className="text-xs text-gray-500 truncate">
+                <div className="text-xs text-soft truncate">
                   {user.name}
                 </div>
               </div>
@@ -207,8 +207,8 @@ export function MentionTextarea({
       {showSuggestions &&
         searchQuery.length > 0 &&
         suggestions.length === 0 && (
-          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md p-3">
-            <div className="text-sm text-gray-500">
+          <div className="absolute z-50 w-full mt-1 bg-surface border border-hairline-strong rounded-md p-3">
+            <div className="text-sm text-soft">
               No users found matching "{searchQuery}"
             </div>
           </div>

@@ -7,6 +7,7 @@ import { api } from "../../../convex/_generated/api";
 import { useAdminAccessQuery } from "./useAdminAccess";
 import { Id } from "../../../convex/_generated/dataModel";
 import type { CustomForm, FormField } from "../../types";
+import { SimpleSelect } from "../ui/SimpleSelect";
 
 // Define field types allowed by Convex schema
 const FIELD_TYPES: FormField["fieldType"][] = [
@@ -207,7 +208,7 @@ export function FormBuilder() {
   const renderFieldEditor = (field: EditableFormField) => (
     <div
       key={field.localId}
-      className="border border-gray-200 rounded-lg p-4 space-y-3 bg-white"
+      className="border border-hairline rounded-lg p-4 space-y-3 bg-surface"
     >
       <div className="flex justify-between items-start gap-2">
         {/* Field Label Input */}
@@ -218,28 +219,24 @@ export function FormBuilder() {
             updateField(field.localId, { label: e.target.value })
           }
           placeholder="Field Label (e.g., Your Name)"
-          className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
+          className="flex-1 px-3 py-2 bg-surface border border-hairline-strong rounded-md text-sm text-copy focus:outline-none focus:ring-1 focus:ring-ink"
         />
         {/* Field Type Selector */}
-        <select
+        <SimpleSelect
           value={field.fieldType}
-          onChange={(e) =>
+          onChange={(value) =>
             updateField(field.localId, {
-              fieldType: e.target.value as FormField["fieldType"],
+              fieldType: value as FormField["fieldType"],
             })
           }
-          className="px-2 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
-        >
-          {FIELD_TYPES.map((ft) => (
-            <option key={ft} value={ft}>
-              {ft}
-            </option>
-          ))}
-        </select>
+          aria-label="Field type"
+          className="w-auto h-auto px-2 py-2 text-sm gap-1"
+          options={FIELD_TYPES.map((ft) => ({ value: ft, label: ft }))}
+        />
         {/* Delete Field Button */}
         <button
           onClick={() => removeField(field.localId)}
-          className="p-2 text-gray-400 hover:text-red-600"
+          className="p-2 text-faint hover:text-red-600"
           title="Delete Field"
         >
           <Trash2 className="w-4 h-4" />
@@ -258,15 +255,15 @@ export function FormBuilder() {
             updateField(field.localId, { placeholder: e.target.value })
           }
           placeholder="Placeholder Text (Optional)"
-          className="w-full px-3 py-1 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-500 focus:outline-none focus:ring-1 focus:ring-[#292929]"
+          className="w-full px-3 py-1 bg-surface-alt border border-hairline rounded-md text-xs text-soft focus:outline-none focus:ring-1 focus:ring-ink"
         />
       )}
 
       {/* Options Editor (for dropdown/multiSelect) */}
       {(field.fieldType === "dropdown" ||
         field.fieldType === "multiSelect") && (
-        <div className="space-y-2 pl-4 border-l-2 border-gray-100">
-          <label className="block text-xs font-medium text-gray-500">
+        <div className="space-y-2 pl-4 border-l-2 border-hairline">
+          <label className="block text-xs font-medium text-soft">
             Options
           </label>
           {(field.options || []).map((option, index) => (
@@ -280,7 +277,7 @@ export function FormBuilder() {
                   updateField(field.localId, { options: newOptions });
                 }}
                 placeholder={`Option ${index + 1}`}
-                className="flex-1 px-2 py-1 bg-white border border-gray-300 rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929]"
+                className="flex-1 px-2 py-1 bg-surface border border-hairline-strong rounded-md text-sm text-copy focus:outline-none focus:ring-1 focus:ring-ink"
               />
               <button
                 onClick={() => {
@@ -289,7 +286,7 @@ export function FormBuilder() {
                   );
                   updateField(field.localId, { options: newOptions });
                 }}
-                className="p-1 text-gray-400 hover:text-red-600"
+                className="p-1 text-faint hover:text-red-600"
                 title="Delete Option"
               >
                 <Trash2 className="w-3 h-3" />
@@ -317,9 +314,9 @@ export function FormBuilder() {
             onChange={(e) =>
               updateField(field.localId, { required: e.target.checked })
             }
-            className="rounded border-gray-300 text-[#292929] focus:ring-[#292929] focus:ring-offset-0 h-4 w-4"
+            className="rounded border-hairline-strong text-ink focus:ring-ink focus:ring-offset-0 h-4 w-4"
           />
-          <span className="text-xs text-[#525252]">Required</span>
+          <span className="text-xs text-copy">Required</span>
         </label>
       </div>
     </div>
@@ -327,17 +324,17 @@ export function FormBuilder() {
 
   // --- Render Helper for Form Preview ---
   const renderPreview = () => (
-    <div className="bg-white rounded-lg p-6 border border-gray-200">
-      <h1 className="text-xl font-medium text-[#292929] mb-6">
+    <div className="bg-surface rounded-lg p-6 border border-hairline">
+      <h1 className="text-xl font-medium text-ink mb-6">
         {title || "Untitled Form"}
       </h1>
       {fields.length === 0 && (
-        <p className="text-gray-500">Add some fields to see the preview.</p>
+        <p className="text-soft">Add some fields to see the preview.</p>
       )}
       <form className="space-y-6">
         {fields.map((field) => (
           <div key={field.localId}>
-            <label className="block text-sm font-medium text-[#525252] mb-1">
+            <label className="block text-sm font-medium text-copy mb-1">
               {field.label || "Untitled Field"}
               {field.required && <span className="text-red-500 ml-1">*</span>}
             </label>
@@ -345,7 +342,7 @@ export function FormBuilder() {
             <input
               type="text"
               placeholder={field.placeholder || ""}
-              className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700 text-sm cursor-not-allowed"
+              className="w-full px-3 py-2 bg-surface-alt border border-hairline-strong rounded-md text-copy text-sm cursor-not-allowed"
               disabled
             />
             {/* Add more sophisticated preview rendering based on fieldType if needed */}
@@ -361,20 +358,20 @@ export function FormBuilder() {
       {/* Back Link */}
       <Link
         to="/admin?tab=forms"
-        className="text-sm text-[#545454] hover:text-[#525252] flex items-center gap-1 mb-6"
+        className="text-sm text-soft hover:text-copy flex items-center gap-1 mb-6"
       >
         <ArrowLeft className="w-4 h-4" /> Back to Forms List
       </Link>
 
       {/* Header: Title, Preview/Save Buttons */}
       <div className="flex flex-wrap justify-between items-center gap-4">
-        <h2 className="text-xl font-medium text-[#525252]">
+        <h2 className="text-xl font-medium text-copy">
           {currentFormId ? "Edit Form" : "Create New Form"}
         </h2>
         <div className="flex gap-2">
           <button
             onClick={() => setPreviewMode(!previewMode)}
-            className="px-3 py-1.5 bg-white border border-gray-300 text-[#525252] rounded-md hover:bg-gray-50 transition-colors flex items-center gap-1.5 text-sm"
+            className="px-3 py-1.5 bg-surface border border-hairline-strong text-copy rounded-md hover:bg-surface-hover transition-colors flex items-center gap-1.5 text-sm"
           >
             <Eye className="w-4 h-4" />
             {previewMode ? "Edit Fields" : "Preview"}
@@ -382,7 +379,7 @@ export function FormBuilder() {
           <button
             onClick={handleSave}
             disabled={isSaving || !title.trim()}
-            className="px-4 py-1.5 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors flex items-center gap-2 disabled:opacity-50 text-sm font-medium"
+            className="px-4 py-1.5 bg-cta text-on-cta rounded-md hover:bg-cta-hover transition-colors flex items-center gap-2 disabled:opacity-50 text-sm font-medium"
           >
             <Save className="w-4 h-4" />
             {isSaving
@@ -405,15 +402,15 @@ export function FormBuilder() {
       {!previewMode ? (
         <div className="space-y-6">
           {/* Form Settings (Title, Slug, Public, Results Public) */}
-          <div className="bg-white p-4 rounded-lg border border-gray-200 space-y-4">
-            <h3 className="text-sm font-medium text-gray-500 mb-2">
+          <div className="bg-surface p-4 rounded-lg border border-hairline space-y-4">
+            <h3 className="text-sm font-medium text-soft mb-2">
               Form Settings
             </h3>
             {/* Form Title */}
             <div>
               <label
                 htmlFor="formTitle"
-                className="block text-xs text-gray-500 mb-1"
+                className="block text-xs text-soft mb-1"
               >
                 Form Title
               </label>
@@ -423,13 +420,13 @@ export function FormBuilder() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Enter form title (e.g., Contact Us)"
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] text-sm"
+                className="w-full px-3 py-2 bg-surface border border-hairline-strong rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink text-sm"
                 required
               />
             </div>
             {/* Display Slug (read-only from state) */}
             {slug && (
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-faint">
                 Public URL: /f/{slug} (Auto-generated from title on save)
               </div>
             )}
@@ -440,9 +437,9 @@ export function FormBuilder() {
                   type="checkbox"
                   checked={isPublic}
                   onChange={(e) => setIsPublic(e.target.checked)}
-                  className="rounded border-gray-300 text-[#292929] focus:ring-[#292929] focus:ring-offset-0 h-4 w-4"
+                  className="rounded border-hairline-strong text-ink focus:ring-ink focus:ring-offset-0 h-4 w-4"
                 />
-                <span className="text-sm text-[#525252]">
+                <span className="text-sm text-copy">
                   Make Form Publicly Accessible
                 </span>
               </label>
@@ -454,9 +451,9 @@ export function FormBuilder() {
                   type="checkbox"
                   checked={resultsArePublic}
                   onChange={(e) => setResultsArePublic(e.target.checked)}
-                  className="rounded border-gray-300 text-[#292929] focus:ring-[#292929] focus:ring-offset-0 h-4 w-4"
+                  className="rounded border-hairline-strong text-ink focus:ring-ink focus:ring-offset-0 h-4 w-4"
                 />
-                <span className="text-sm text-[#525252]">
+                <span className="text-sm text-copy">
                   Make Results Publicly Accessible (at /results/{slug})
                 </span>
               </label>
@@ -465,9 +462,9 @@ export function FormBuilder() {
 
           {/* Field Editor Area */}
           <div className="space-y-4">
-            <h3 className="text-sm font-medium text-gray-500">Form Fields</h3>
+            <h3 className="text-sm font-medium text-soft">Form Fields</h3>
             {fields.length === 0 && (
-              <p className="text-sm text-gray-400 italic">
+              <p className="text-sm text-faint italic">
                 No fields added yet.
               </p>
             )}
@@ -475,13 +472,13 @@ export function FormBuilder() {
           </div>
 
           {/* Add Field Buttons */}
-          <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200">
+          <div className="flex flex-wrap gap-2 pt-4 border-t border-hairline">
             {FIELD_TYPES.map((type) => (
               <button
                 key={type}
                 type="button"
                 onClick={() => addField(type)}
-                className="px-3 py-1 bg-gray-100 text-gray-600 rounded-md hover:bg-gray-200 transition-colors flex items-center gap-1 text-xs"
+                className="px-3 py-1 bg-surface-alt text-copy rounded-md hover:bg-surface-hover transition-colors flex items-center gap-1 text-xs"
               >
                 <Plus className="w-3 h-3" />
                 {type}

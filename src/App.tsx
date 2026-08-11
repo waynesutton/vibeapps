@@ -43,6 +43,8 @@ import AdminJudgingGroupPage from "./pages/AdminJudgingGroupPage";
 import { JudgingGroupSubmitPage } from "./pages/JudgingGroupSubmitPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { LeaderboardPage } from "./pages/LeaderboardPage";
+import { Toaster } from "sonner";
+import { useTheme } from "./lib/ThemeContext";
 import InboxPage from "./pages/InboxPage";
 
 function HomePage() {
@@ -143,8 +145,21 @@ function PublicFormPage() {
 }
 
 function App() {
+  const { theme } = useTheme();
   return (
     <BrowserRouter>
+      {/* Global toast outlet; follows the active site theme */}
+      <Toaster
+        theme={theme === "dark" ? "dark" : "light"}
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: "var(--th-surface)",
+            color: "var(--th-ink)",
+            border: "1px solid var(--th-hairline)",
+          },
+        }}
+      />
       <Routes>
         <Route path="/ychack" element={<YCHackForm />} />
         <Route path="/" element={<Layout />}>

@@ -7,6 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Changed] - 2026-08-11
+
+**New default Light theme with a soft grey and white mono palette**
+
+- Replaced the warm cream Light theme with a flat monochrome design: soft grey canvas (`#f7f7f7`) with white cards, black text and CTAs, gray inset fills (`#f3f3f3`), and hairline borders (`#e2e2e2`). No accent hue and no shadows in light mode (2026-08-11).
+- Selected controls flip polarity so they stay visible on the white canvas: active view mode buttons (list, grid, vibe) and the "All" category pill render black with white icons or text, and sidebar category selection uses a gray fill with a ring.
+- Contrast audit for the white canvas: hover states now shift to a visible gray, cards that relied on shadows alone (Recent Vibers, user profile, dynamic submit form) gained hairline borders, and the faintest text tone was set to `#6b6b6b` for 4.9:1 contrast on white. Classic and Dark themes are unchanged.
+- **Frontend**: `src/index.css`, `src/components/Layout.tsx`, `src/components/TopCategoriesOfWeek.tsx`, `src/components/RecentVibers.tsx`, `src/pages/UserProfilePage.tsx`, `src/components/DynamicSubmitForm.tsx`.
+- **Docs**: `.interface-design/system.md` (palette table and component patterns updated).
+
+### [Changed] - 2026-08-11
+
+**Themed dropdown menus and keyboard-friendly confirm dialogs**
+
+- Every dropdown menu in the app (header category and sort filters, admin settings, judging filters, form builders, email template pickers, and public custom forms) now opens a site-styled panel that follows the active theme in Light, Classic, and Dark, replacing the OS default popup (2026-08-11).
+- Built on a new `SimpleSelect` component wrapping the rethemed Radix select primitives with the site's semantic tokens. Dropdowns support full keyboard interaction: open with Enter or Space, arrow keys to move, type-ahead search, Enter to select, Escape to close. The multi-select listbox on public custom forms stays native since it renders inline, not as a popup.
+- Confirmation dialogs like "Mark as spam?" are now fully keyboard operable: focus lands on Cancel when the dialog opens, Tab and Shift+Tab move between Cancel and the confirm button, Enter activates the focused button, and Escape still closes. Dialogs also announce themselves correctly to screen readers via `aria-modal`.
+- **Frontend**: `src/components/ui/select.tsx`, `src/components/ui/SimpleSelect.tsx` (new), `src/components/ui/AlertDialog.tsx`, `MessageDialog.tsx`, `PromptDialog.tsx`, `src/components/Layout.tsx`, `src/pages/NavTestPage.tsx`, `src/pages/JudgingInterfacePage.tsx`, `src/components/PublicForm.tsx`, and 8 admin components.
+- **Docs**: `prds/themed-dropdowns-and-dialog-keyboard.md` (new).
+
+### [Added] - 2026-08-11
+
+**Admin option to hide the /submit sidebar and widen the form**
+
+- New checkbox in Admin Settings ("Submit Page Layout"): when enabled, the default `/submit` page hides the right sidebar (Weekly Leaderboard, Recent Vibers, Top Categories) and the submission form widens from `max-w-2xl` to `max-w-4xl` for every user (2026-08-11).
+- Backed by a new `hideSubmitPageSidebar` boolean on the settings singleton, default off so existing sites are unchanged. Only the exact `/submit` path is affected; dynamic `/submit/:slug` pages already hid the sidebar.
+- **Backend**: `convex/schema.ts`, `convex/settings.ts`.
+- **Frontend**: `src/components/Layout.tsx`, `src/components/StoryForm.tsx`, `src/components/admin/Settings.tsx`.
+- **Docs**: `prds/submit-page-sidebar-setting.md` (new).
+
+### [Fixed] - 2026-08-11
+
+**User profiles crashed for accounts with spam-marked submissions**
+
+- Profile pages threw a Convex ReturnsValidationError when the profile owner had a submission an admin confirmed as spam. The `stories` table gained `isSpam`, `spamReason`, `spamMarkedAt`, and `spamMarkedBy` when AI spam moderation shipped, but the shared story return validator was never updated, so any query spreading a spam-marked story doc failed validation (2026-08-11).
+- Added the four optional spam fields to `baseStoryValidator` and the matching `StoryWithDetailsPublic` type, fixing `getUserProfileByUsername`, `listUserStories`, and every other query built on `storyWithDetailsValidator`.
+- **Backend**: `convex/validators.ts`.
+
+### [Added] - 2026-08-11
+
+**Three-theme system with switcher, plus list and vibe view redesign**
+
+- The app now ships three themes: a new warm Light theme as the default, Classic (the previous look, preserved exactly), and a new Dark theme with a deep black canvas, charcoal surfaces, and hairline borders (2026-08-11).
+- A theme switcher with Phosphor icons sits in the header next to the profile icon on desktop and mobile, cycling light, classic, and dark. The choice persists in localStorage and a pre-paint script in `index.html` applies it before first render so there is no flash.
+- Every color in the UI (admin dashboard included) now flows through semantic tokens (`canvas`, `surface`, `ink`, `copy`, `hairline`, `cta`, `brand`, and friends) defined as CSS variables per theme and exposed as Tailwind color names. Roughly 1,700 hardcoded hex classes across 79 files were converted.
+- Clerk sign-in modals follow the active theme (dark baseTheme in dark mode) and toast notifications are themed through a global sonner Toaster.
+- List view redesigned as ranked rows in the style of Product Hunt and the new Digg: rank number, app thumbnail, title, tagline, tag pills, meta row, and an upvote box on the right. Vibe view got a modern refresh in the same language; grid view is unchanged.
+- Contrast and border audit across all three themes: tag chip fallback colors adapt per theme (custom tag colors from the database are untouched), CTA text uses an on-cta token so buttons stay readable in dark mode, and dark mode card borders were tuned for visibility.
+- **Frontend**: `src/index.css`, `tailwind.config.js`, `index.html`, `src/lib/ThemeContext.tsx` (new), `src/components/ThemeToggle.tsx` (new), `src/main.tsx`, `src/App.tsx`, `src/components/Layout.tsx`, `src/components/StoryList.tsx`, plus 70+ token-converted files under `src/`.
+- **Docs**: `prds/theme-system-and-view-refresh.md` (new).
+
+### [Added] - 2026-08-10
+
+**Video transcript enrichment for AI judging**
+
+- The AI judge now reads the submission's demo video, not just its URL. When a review runs, the video is fetched as markdown through the new Context.dev Convex component: YouTube links (`/watch`, `youtu.be`, Shorts, embeds, live) return the title, description, and the caption transcript when the video has captions; other video host pages (Vimeo, Loom, Drive) get a best effort page scrape with a Firecrawl fallback; direct media files and caption-less videos are recorded as having no transcript (2026-08-10).
+- Transcripts are persisted in a new `videoTranscripts` table (one row per submission, reused for 7 days per URL) and included in the judge prompt as a clearly labeled unverified builder narrative section. Prompt guardrails: the transcript may support scores for existing criteria but never overrides verified Convex facts, git history, or the live URL check, instructions inside it are ignored, and a missing video never lowers a score since videos are optional.
+- The admin AI results dashboard shows a new video source badge next to the repo and site badges, plus an expandable Video Transcript viewer (lazy loaded, gated by the `judging.ai` permission) so organizers can see exactly what the judge read. `sourcesUsed.videoTranscript` is stored on each result.
+- New optional `CONTEXT_DEV_API_KEY` deployment env var powers the transcript scraping; reviews run unchanged without it. Documented in the admin docs alongside `FIRECRAWL_API_KEY`.
+- **Backend**: `convex/videoTranscripts.ts` (new), `convex/aiJudgeAnalysis.ts`, `convex/aiJudge.ts`, `convex/schema.ts` (new `videoTranscripts` table, `sourcesUsed.videoTranscript`), `convex/convex.config.ts` (Context.dev component).
+- **Frontend**: `src/components/admin/AIJudgeResults.tsx`, `src/components/admin/AdminDocs.tsx`.
+
+### [Added] - 2026-08-10
+
+**Web Interface Guidelines UI audit**
+
+- Audited all 103 frontend files against the Vercel Web Interface Guidelines and recorded every violation with file and line references in `prds/web-interface-guidelines-audit.md` (2026-08-10).
+- Top findings: the shared Button removes focus outlines with no focus-visible replacement, the custom dialog is missing `role="dialog"`, `aria-modal`, focus trapping, and `overscroll-behavior: contain`, no form field in the app sets `autocomplete`, there is no `prefers-reduced-motion` handling, `...` appears instead of `…` in about 40 files, images never set `width`/`height`, and `transition-all` is used in about 10 files.
+- Passing checks: site design system dialogs everywhere (no browser `confirm`/`alert`), zoom not disabled, paste not blocked, correct `type="email"`/`type="url"` on existing fields, and the newer `ui/input.tsx` and `ui/checkbox.tsx` primitives already use the correct `focus-visible` ring pattern.
+- Review only, no UI changes shipped; the PRD includes a six step fix order starting with the shared primitives.
+- **Docs**: `prds/web-interface-guidelines-audit.md` (new), `task.md`, `files.md`.
+
 ### [Fixed] - 2026-08-10
 
 **Resend email system audit fixes**

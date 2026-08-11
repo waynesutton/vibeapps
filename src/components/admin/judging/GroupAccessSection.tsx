@@ -69,7 +69,7 @@ function PasswordField({
         disabled={disabled}
         className="mt-1"
       />
-      <p className="text-xs text-gray-500 mt-1">
+      <p className="text-xs text-soft mt-1">
         {hasExisting
           ? "A password is currently set. Leave blank to keep it, or enter a new one."
           : requiredHint
@@ -122,10 +122,10 @@ function JudgeAccessCard({
     >
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-[13px] font-medium text-[#292929]">
+          <p className="text-[13px] font-medium text-ink">
             Public judge access
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-soft">
             {isPublic
               ? "Anyone with the link can access the judging interface"
               : "Judges need a password to access the interface"}
@@ -194,10 +194,10 @@ function SubmitPageAccessCard({
     >
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-[13px] font-medium text-[#292929]">
+          <p className="text-[13px] font-medium text-ink">
             Public submission page
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-soft">
             {isPublic
               ? "Anyone with the link can access the custom submission form"
               : "The submission form asks for a password"}
@@ -273,10 +273,10 @@ function ResultsAccessCard({
     >
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-[13px] font-medium text-[#292929]">
+          <p className="text-[13px] font-medium text-ink">
             Public results
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-soft">
             {isPublic
               ? "Anyone with the link can view the judging results"
               : "The results page asks for a password"}
@@ -349,11 +349,11 @@ function ResultsLiveEmailBlock({ group }: { group: GroupDetails }) {
   };
 
   return (
-    <div className="border-t border-gray-100 pt-4">
-      <p className="text-[13px] font-medium text-[#292929]">
+    <div className="border-t border-hairline pt-4">
+      <p className="text-[13px] font-medium text-ink">
         Email submitters that results are live
       </p>
-      <p className="text-xs text-gray-500 mt-0.5 mb-2">
+      <p className="text-xs text-soft mt-0.5 mb-2">
         Sends the public results link once to every submitter email in this
         group
         {status !== undefined
@@ -381,8 +381,8 @@ function ResultsLiveEmailBlock({ group }: { group: GroupDetails }) {
           }
           className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-medium rounded-md border transition-colors disabled:opacity-50 ${
             armed
-              ? "bg-[#292929] border-[#292929] text-white"
-              : "bg-white border-gray-200 text-[#292929] hover:bg-gray-50"
+              ? "bg-cta border-ink text-on-cta"
+              : "bg-surface border-hairline text-ink hover:bg-surface-hover"
           }`}
         >
           <Send className="w-3.5 h-3.5" />
@@ -400,7 +400,7 @@ function ResultsLiveEmailBlock({ group }: { group: GroupDetails }) {
         {error && <span className="text-xs text-red-600">{error}</span>}
       </div>
       {status !== undefined && status.recipientCount === 0 && !blocked && (
-        <p className="text-xs text-gray-400 mt-2">
+        <p className="text-xs text-faint mt-2">
           No submissions in this group have an email address.
         </p>
       )}

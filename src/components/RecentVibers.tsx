@@ -19,8 +19,8 @@ export function RecentVibers() {
 
   if (recentVibers === undefined) {
     return (
-      <div className="p-4 bg-white rounded-lg">
-        <h3 className="text-md font-normal text-[#292929] mb-3">
+      <div className="p-4 bg-surface rounded-lg border border-hairline">
+        <h3 className="text-md font-normal text-ink mb-3">
           Recent Vibers
         </h3>
         <div className="grid grid-cols-6 gap-1.5">
@@ -28,7 +28,7 @@ export function RecentVibers() {
           {Array.from({ length: 36 }).map((_, index) => (
             <div
               key={index}
-              className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"
+              className="w-8 h-8 bg-surface-hover rounded-full animate-pulse"
             />
           ))}
         </div>
@@ -38,18 +38,18 @@ export function RecentVibers() {
 
   if (!recentVibers || recentVibers.length === 0) {
     return (
-      <div className="p-4 bg-white rounded-lg">
-        <h3 className="text-md font-normal text-[#292929] mb-3">
+      <div className="p-4 bg-surface rounded-lg border border-hairline">
+        <h3 className="text-md font-normal text-ink mb-3">
           Recent Vibers
         </h3>
-        <p className="text-sm text-[#545454]">No recent activity yet.</p>
+        <p className="text-sm text-soft">No recent activity yet.</p>
       </div>
     );
   }
 
   return (
-    <div className="p-4 bg-white rounded-lg">
-      <h3 className="text-md font-normal text-[#292929] mb-3">Recent Vibers</h3>
+    <div className="p-4 bg-surface rounded-lg border border-hairline">
+      <h3 className="text-md font-normal text-ink mb-3">Recent Vibers</h3>
       <div className="grid grid-cols-6 gap-1.5">
         {recentVibers.map((user: RecentViberUser) => {
           // Skip users without usernames (shouldn't happen due to backend filter)
@@ -72,8 +72,8 @@ export function RecentVibers() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full bg-[#F5F0EE] flex items-center justify-center">
-                      <span className="text-[#DFDFE1] text-sm font-medium">
+                    <div className="w-full h-full bg-surface-alt flex items-center justify-center">
+                      <span className="text-faint text-sm font-medium">
                         {user.name.charAt(0).toUpperCase()}
                       </span>
                     </div>

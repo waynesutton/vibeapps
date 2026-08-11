@@ -37,6 +37,8 @@ const DEFAULT_SETTINGS = {
   submissionLimitCount: 10,
   // Hackathon team info settings
   showHackathonTeamInfo: false,
+  // Default /submit page layout: hide right sidebar and widen the form
+  hideSubmitPageSidebar: false,
   // Tag limit settings (managed from Tags admin section)
   maxTagsPerSubmission: 6,
   maxTagLength: 20,
@@ -83,6 +85,9 @@ export const get = query({
       showHackathonTeamInfo:
         settingsDoc.showHackathonTeamInfo ??
         DEFAULT_SETTINGS.showHackathonTeamInfo,
+      hideSubmitPageSidebar:
+        settingsDoc.hideSubmitPageSidebar ??
+        DEFAULT_SETTINGS.hideSubmitPageSidebar,
       maxTagsPerSubmission:
         settingsDoc.maxTagsPerSubmission ??
         DEFAULT_SETTINGS.maxTagsPerSubmission,
@@ -194,6 +199,8 @@ export const update = mutation({
     submissionLimitCount: v.optional(v.number()),
     // Hackathon team info settings
     showHackathonTeamInfo: v.optional(v.boolean()),
+    // Default /submit page layout: hide right sidebar and widen the form
+    hideSubmitPageSidebar: v.optional(v.boolean()),
     // Tag limit settings
     maxTagsPerSubmission: v.optional(v.number()),
     maxTagLength: v.optional(v.number()),

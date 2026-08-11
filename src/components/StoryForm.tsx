@@ -399,26 +399,29 @@ export function StoryForm() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    // Wider form when the admin setting hides the /submit right sidebar
+    <div
+      className={`${settings?.hideSubmitPageSidebar ? "max-w-4xl" : "max-w-2xl"} mx-auto`}
+    >
       <Link
         to="/"
-        className="text-[#545454] hover:text-[#525252] inline-block mb-6"
+        className="text-soft hover:text-copy inline-block mb-6"
       >
         ← Back to Apps
       </Link>
 
-      <div className="bg-white p-6 rounded-lg border border-[#D8E1EC]">
+      <div className="bg-surface p-6 rounded-lg border border-hairline">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <h2 className="text-xl font-medium text-[#292929]">
+          <h2 className="text-xl font-medium text-ink">
             Submit your app
           </h2>{" "}
-          <span className="ml-2 text-sm text-gray-600">
+          <span className="ml-2 text-sm text-copy">
             What did you build?
           </span>
           <div>
             <label
               htmlFor="title"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               App Title *
             </label>
@@ -430,7 +433,7 @@ export function StoryForm() {
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, title: e.target.value }))
               }
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
               required
               disabled={isSubmitting}
             />
@@ -438,7 +441,7 @@ export function StoryForm() {
           <div>
             <label
               htmlFor="tagline"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               App/Project Tagline*
             </label>
@@ -453,18 +456,18 @@ export function StoryForm() {
                 }
               }}
               maxLength={MAX_TAGLINE_LENGTH}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
               required
               disabled={isSubmitting}
             />
-            <div className="text-xs text-right text-[#545454] mt-1">
+            <div className="text-xs text-right text-soft mt-1">
               {formData.tagline.length}/{MAX_TAGLINE_LENGTH}
             </div>
           </div>
           <div>
             <label
               htmlFor="longDescription"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               Description (Markdown and fenced `code` blocks supported)
             </label>
@@ -479,13 +482,13 @@ export function StoryForm() {
                 }))
               }
               rows={8}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
               disabled={isSubmitting}
             />
             {formData.longDescription && (
               <div className="mt-2">
-                <div className="text-xs text-[#545454] mb-1">Preview</div>
-                <div className="prose prose-sm max-w-none text-[#525252] bg-gray-50 border border-[#D8E1EC] rounded-md p-3">
+                <div className="text-xs text-soft mb-1">Preview</div>
+                <div className="prose prose-sm max-w-none text-copy bg-surface-alt border border-hairline rounded-md p-3">
                   <Markdown>{formData.longDescription}</Markdown>
                 </div>
               </div>
@@ -494,11 +497,11 @@ export function StoryForm() {
           <div>
             <label
               htmlFor="url"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               App Website Link *
             </label>
-            <div className="text-sm text-[#545454] mb-2">
+            <div className="text-sm text-soft mb-2">
               Enter your app url (ex: https://)
             </div>
             <input
@@ -509,7 +512,7 @@ export function StoryForm() {
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, url: e.target.value }))
               }
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
               required
               disabled={isSubmitting}
             />
@@ -517,11 +520,11 @@ export function StoryForm() {
           <div>
             <label
               htmlFor="videoUrl"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               Video Demo (Recommended)
             </label>
-            <div className="text-sm text-[#545454] mb-2">
+            <div className="text-sm text-soft mb-2">
               Share a video demo of your app (YouTube, Vimeo, etc.)
             </div>
             <input
@@ -532,14 +535,14 @@ export function StoryForm() {
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, videoUrl: e.target.value }))
               }
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
               disabled={isSubmitting}
             />
           </div>
           <div>
             <label
               htmlFor="submitterName"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               Your Name *
             </label>
@@ -554,7 +557,7 @@ export function StoryForm() {
                   submitterName: e.target.value,
                 }))
               }
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
               required
               disabled={isSubmitting}
             />
@@ -562,11 +565,11 @@ export function StoryForm() {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               Email (Optional)
             </label>
-            <div className="text-sm text-[#545454] mb-2">
+            <div className="text-sm text-soft mb-2">
               Hidden and for hackathon notifications
             </div>
             <input
@@ -577,14 +580,14 @@ export function StoryForm() {
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, email: e.target.value }))
               }
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
               disabled={isSubmitting}
             />
           </div>
           <div>
             <label
               htmlFor="image"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               Upload Screenshot (Recommended)
             </label>
@@ -593,11 +596,11 @@ export function StoryForm() {
               id="image"
               accept="image/*"
               onChange={handleImageChange}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#F4F0ED] file:text-[#525252] hover:file:bg-[#e5e1de]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-surface-alt file:text-copy hover:file:bg-surface-hover"
               disabled={isSubmitting}
             />
             {formData.image && (
-              <div className="text-sm text-[#545454] mt-1">
+              <div className="text-sm text-soft mt-1">
                 Selected: {formData.image.name}
               </div>
             )}
@@ -605,11 +608,11 @@ export function StoryForm() {
           <div>
             <label
               htmlFor="additionalImages"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               Additional Images (Optional)
             </label>
-            <div className="text-sm text-[#545454] mb-2">
+            <div className="text-sm text-soft mb-2">
               Upload up to 4 additional images to showcase your app
             </div>
             <input
@@ -618,12 +621,12 @@ export function StoryForm() {
               accept="image/*"
               multiple
               onChange={handleAdditionalImagesChange}
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#F4F0ED] file:text-[#525252] hover:file:bg-[#e5e1de]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-surface-alt file:text-copy hover:file:bg-surface-hover"
               disabled={isSubmitting || additionalImages.length >= 4}
             />
             {additionalImages.length > 0 && (
               <div className="mt-3">
-                <div className="text-sm text-[#545454] mb-2">
+                <div className="text-sm text-soft mb-2">
                   Selected images ({additionalImages.length}/4):
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -632,7 +635,7 @@ export function StoryForm() {
                       <img
                         src={URL.createObjectURL(file)}
                         alt={`Preview ${index + 1}`}
-                        className="w-16 h-16 object-cover rounded border border-[#D8E1EC] cursor-pointer hover:opacity-80 transition-opacity"
+                        className="w-16 h-16 object-cover rounded border border-hairline cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={() => {
                           const allImages = [
                             ...(formData.image
@@ -668,11 +671,11 @@ export function StoryForm() {
           <div>
             <label
               htmlFor="githubUrl"
-              className="block text-sm font-medium text-[#525252] mb-1"
+              className="block text-sm font-medium text-copy mb-1"
             >
               GitHub Repo URL (Optional)
             </label>
-            <div className="text-sm text-[#545454] mb-2">
+            <div className="text-sm text-soft mb-2">
               GitHub repository URL for your project
             </div>
             <input
@@ -686,7 +689,7 @@ export function StoryForm() {
                   githubUrl: e.target.value,
                 }))
               }
-              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
               disabled={isSubmitting}
             />
           </div>
@@ -697,12 +700,12 @@ export function StoryForm() {
               <div key={field.key}>
                 <label
                   htmlFor={field.key}
-                  className="block text-sm font-medium text-[#525252] mb-1"
+                  className="block text-sm font-medium text-copy mb-1"
                 >
                   {field.label}
                 </label>
                 {field.description && (
-                  <div className="text-sm text-[#545454] mb-2">
+                  <div className="text-sm text-soft mb-2">
                     {field.description}
                   </div>
                 )}
@@ -717,14 +720,14 @@ export function StoryForm() {
                       [field.key]: e.target.value,
                     }))
                   }
-                  className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                  className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
                   required={field.isRequired}
                   disabled={isSubmitting}
                 />
               </div>
             ))}
           {formFields === undefined && (
-            <div className="text-sm text-gray-500">Loading form fields...</div>
+            <div className="text-sm text-soft">Loading form fields...</div>
           )}
           {/* Hackathon Team Info Section */}
           {settings?.showHackathonTeamInfo && (
@@ -733,7 +736,7 @@ export function StoryForm() {
                 <button
                   type="button"
                   onClick={() => setShowTeamInfo(!showTeamInfo)}
-                  className="flex items-center gap-2 text-sm font-medium text-[#525252] hover:text-[#292929] transition-colors"
+                  className="flex items-center gap-2 text-sm font-medium text-copy hover:text-ink transition-colors"
                 >
                   <span
                     className={`transform transition-transform ${showTeamInfo ? "rotate-90" : ""}`}
@@ -743,18 +746,18 @@ export function StoryForm() {
                   Team Info (Optional)
                 </button>
               </div>
-              <p className="text-xs text-gray-600 mb-4">
+              <p className="text-xs text-copy mb-4">
                 Add your hackathon team information if you're participating as a
                 team
               </p>
 
               {showTeamInfo && (
-                <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200 mb-4">
+                <div className="space-y-4 p-4 bg-surface-alt rounded-lg border border-hairline mb-4">
                   {/* Team Name */}
                   <div>
                     <label
                       htmlFor="teamName"
-                      className="block text-sm font-medium text-[#525252] mb-1"
+                      className="block text-sm font-medium text-copy mb-1"
                     >
                       Team Name
                     </label>
@@ -769,7 +772,7 @@ export function StoryForm() {
                           teamName: e.target.value,
                         }))
                       }
-                      className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC]"
+                      className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
                       disabled={isSubmitting}
                     />
                   </div>
@@ -778,7 +781,7 @@ export function StoryForm() {
                   <div>
                     <label
                       htmlFor="teamMemberCount"
-                      className="block text-sm font-medium text-[#525252] mb-1"
+                      className="block text-sm font-medium text-copy mb-1"
                     >
                       Number of Team Members
                     </label>
@@ -793,17 +796,17 @@ export function StoryForm() {
                           parseInt(e.target.value) || 1,
                         )
                       }
-                      className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] max-w-[120px]"
+                      className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline max-w-[120px]"
                       disabled={isSubmitting}
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-soft mt-1">
                       Maximum 10 team members
                     </p>
                   </div>
 
                   {/* Team Members */}
                   <div>
-                    <h4 className="text-sm font-medium text-[#525252] mb-3">
+                    <h4 className="text-sm font-medium text-copy mb-3">
                       Team Members
                     </h4>
                     <div className="space-y-3">
@@ -815,7 +818,7 @@ export function StoryForm() {
                           <div>
                             <label
                               htmlFor={`member-name-${index}`}
-                              className="block text-xs font-medium text-[#525252] mb-1"
+                              className="block text-xs font-medium text-copy mb-1"
                             >
                               Member {index + 1} Name
                             </label>
@@ -831,14 +834,14 @@ export function StoryForm() {
                                   e.target.value,
                                 )
                               }
-                              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
+                              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline text-sm"
                               disabled={isSubmitting}
                             />
                           </div>
                           <div>
                             <label
                               htmlFor={`member-email-${index}`}
-                              className="block text-xs font-medium text-[#525252] mb-1"
+                              className="block text-xs font-medium text-copy mb-1"
                             >
                               Member {index + 1} Email
                             </label>
@@ -854,7 +857,7 @@ export function StoryForm() {
                                   e.target.value,
                                 )
                               }
-                              className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
+                              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline text-sm"
                               disabled={isSubmitting}
                             />
                           </div>
@@ -867,16 +870,16 @@ export function StoryForm() {
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-[#525252] mb-2">
+            <label className="block text-sm font-medium text-copy mb-2">
               Select Tags *
             </label>{" "}
-            <span className="ml-2 text-xs text-gray-600">
+            <span className="ml-2 text-xs text-copy">
               Select tags that best describe your app or hackathon
               participation?
             </span>
             <div className="flex flex-wrap gap-2 mb-4">
               {availableTags === undefined && (
-                <span className="text-sm text-gray-500">Loading tags...</span>
+                <span className="text-sm text-soft">Loading tags...</span>
               )}
               {availableTags
                 ?.filter(
@@ -889,18 +892,18 @@ export function StoryForm() {
                     key={tag._id}
                     type="button"
                     onClick={() => toggleTag(tag._id)}
-                    className={`px-3 py-1 rounded-md text-sm transition-colors border flex items-center gap-1 ${selectedTagIds.includes(tag._id) ? "bg-[#F4F0ED] text-[#292929] border-[#D5D3D0]" : "bg-white text-[#545454] border-[#D5D3D0] hover:border-[#A8A29E] hover:text-[#525252]"}`}
+                    className={`px-3 py-1 rounded-md text-sm transition-colors border flex items-center gap-1 ${selectedTagIds.includes(tag._id) ? "bg-surface-alt text-ink border-hairline-strong" : "bg-surface text-soft border-hairline-strong hover:border-hairline-strong hover:text-copy"}`}
                     style={{
                       backgroundColor: selectedTagIds.includes(tag._id)
-                        ? tag.backgroundColor || "#F4F0ED"
+                        ? tag.backgroundColor || "var(--th-surface-alt)"
                         : "white",
                       color: selectedTagIds.includes(tag._id)
-                        ? tag.textColor || "#292929"
-                        : "#545454",
+                        ? tag.textColor || "var(--th-ink)"
+                        : "var(--th-soft)",
                       borderColor: selectedTagIds.includes(tag._id)
                         ? tag.borderColor ||
-                          (tag.backgroundColor ? "transparent" : "#D5D3D0")
-                        : "#D5D3D0",
+                          (tag.backgroundColor ? "transparent" : "var(--th-hairline-strong)")
+                        : "var(--th-hairline-strong)",
                     }}
                   >
                     {tag.emoji && <span className="text-sm">{tag.emoji}</span>}
@@ -917,10 +920,10 @@ export function StoryForm() {
             </div>
             {/* Dropdown Search for All Tags */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-[#525252] mb-2">
+              <label className="block text-sm font-medium text-copy mb-2">
                 Search All Available Tags
               </label>
-              <span className="ml-2 text-xs text-gray-600 mb-2 block">
+              <span className="ml-2 text-xs text-copy mb-2 block">
                 Find and select from all tags, including those not shown above
               </span>
               <div className="relative tag-dropdown-container">
@@ -935,13 +938,13 @@ export function StoryForm() {
                     setShowDropdown(dropdownSearchValue.length > 0)
                   }
                   placeholder="Type to search for tags..."
-                  className="w-full px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
+                  className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline text-sm"
                   disabled={isSubmitting}
                 />
 
                 {/* Dropdown Results */}
                 {showDropdown && allTags && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border border-[#D8E1EC] rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  <div className="absolute z-10 w-full mt-1 bg-surface border border-hairline rounded-md shadow-lg max-h-48 overflow-y-auto">
                     {(() => {
                       const searchTerm = dropdownSearchValue.toLowerCase();
                       const filteredTags = allTags
@@ -958,7 +961,7 @@ export function StoryForm() {
 
                       if (filteredTags.length === 0) {
                         return (
-                          <div className="px-3 py-2 text-sm text-gray-500">
+                          <div className="px-3 py-2 text-sm text-soft">
                             No matching tags found
                           </div>
                         );
@@ -969,7 +972,7 @@ export function StoryForm() {
                           key={tag._id}
                           type="button"
                           onClick={() => handleSelectFromDropdown(tag._id)}
-                          className="w-full px-3 py-2 text-left text-sm hover:bg-[#F4F0ED] focus:bg-[#F4F0ED] focus:outline-none flex items-center gap-2"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-surface-hover focus:bg-surface-alt focus:outline-none flex items-center gap-2"
                           disabled={isSubmitting}
                         >
                           {tag.emoji && (
@@ -985,15 +988,15 @@ export function StoryForm() {
                           <span
                             className="inline-block px-2 py-0.5 rounded text-xs font-medium"
                             style={{
-                              backgroundColor: tag.backgroundColor || "#F4F0ED",
-                              color: tag.textColor || "#525252",
-                              border: `1px solid ${tag.backgroundColor ? "transparent" : "#D5D3D0"}`,
+                              backgroundColor: tag.backgroundColor || "var(--th-surface-alt)",
+                              color: tag.textColor || "var(--th-copy)",
+                              border: `1px solid ${tag.backgroundColor ? "transparent" : "var(--th-hairline-strong)"}`,
                             }}
                           >
                             {tag.name}
                           </span>
                           {tag.isHidden && (
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-faint">
                               (Hidden)
                             </span>
                           )}
@@ -1007,7 +1010,7 @@ export function StoryForm() {
             {/* Selected Tags Display */}
             {(selectedTagIds.length > 0 || newTagNames.length > 0) && (
               <div className="mb-4">
-                <label className="block text-sm font-medium text-[#525252] mb-2">
+                <label className="block text-sm font-medium text-copy mb-2">
                   Selected Tags ({countedTags}/{maxTags})
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -1022,11 +1025,11 @@ export function StoryForm() {
                           key={tag._id}
                           className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm border transition-colors"
                           style={{
-                            backgroundColor: tag.backgroundColor || "#F4F0ED",
-                            color: tag.textColor || "#292929",
+                            backgroundColor: tag.backgroundColor || "var(--th-surface-alt)",
+                            color: tag.textColor || "var(--th-ink)",
                             borderColor: tag.backgroundColor
                               ? "transparent"
-                              : "#D5D3D0",
+                              : "var(--th-hairline-strong)",
                           }}
                         >
                           {tag.emoji && (
@@ -1078,7 +1081,7 @@ export function StoryForm() {
                 </div>
               </div>
             )}
-            <label className="block text-sm font-medium text-[#525252] mb-2">
+            <label className="block text-sm font-medium text-copy mb-2">
               Add New Tags (optional)
             </label>
             <div className="flex gap-2 mb-2">
@@ -1092,7 +1095,7 @@ export function StoryForm() {
                     ? `Maximum ${maxTags} tags reached`
                     : "Enter new tag name..."
                 }
-                className="flex-1 px-3 py-2 bg-white rounded-md text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] border border-[#D8E1EC] text-sm"
+                className="flex-1 px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline text-sm"
                 disabled={isSubmitting || countedTags >= maxTags}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -1109,7 +1112,7 @@ export function StoryForm() {
                   isSubmitting ||
                   countedTags >= maxTags
                 }
-                className="px-3 py-1 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                className="px-3 py-1 bg-surface-alt text-copy rounded-md hover:bg-surface-hover transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 <Plus className="w-4 h-4" /> Add
               </button>
@@ -1143,7 +1146,7 @@ export function StoryForm() {
               </p>
             )}
           </div>
-          <div className="flex gap-4 items-center pt-4 border-t border-[#F4F0ED]">
+          <div className="flex gap-4 items-center pt-4 border-t border-hairline">
             <button
               type="submit"
               disabled={
@@ -1155,19 +1158,19 @@ export function StoryForm() {
                 !formData.url ||
                 !formData.submitterName
               }
-              className="px-4 py-2 bg-[#292929] text-white rounded-md hover:bg-[#525252] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-cta text-on-cta rounded-md hover:bg-cta-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "Submitting..." : "Submit App"}
             </button>
             <Link
               to="/"
-              className="px-4 py-2 text-[#545454] hover:text-[#525252] rounded-md text-sm"
+              className="px-4 py-2 text-soft hover:text-copy rounded-md text-sm"
             >
               Cancel
             </Link>
           </div>
           {settings?.showSubmissionLimit && (
-            <div className="text-sm text-[#545454]">
+            <div className="text-sm text-soft">
               To maintain quality and prevent spam, you can submit up to{" "}
               {settings.submissionLimitCount || 10} projects per day.
             </div>

@@ -103,7 +103,7 @@ export function SubmitFormManagement() {
   if (authIsLoading) {
     return (
       <div className="space-y-6">
-        <div className="bg-[#F4F2EE] rounded-lg p-6 border border-gray-200 text-center">
+        <div className="bg-canvas rounded-lg p-6 border border-hairline text-center">
           Loading authentication...
         </div>
       </div>
@@ -113,7 +113,7 @@ export function SubmitFormManagement() {
   if (!isAuthenticated) {
     return (
       <div className="space-y-6">
-        <div className="bg-[#F4F2EE] rounded-lg p-6 border border-gray-200 text-center">
+        <div className="bg-canvas rounded-lg p-6 border border-hairline text-center">
           Please log in to access submit form management.
         </div>
       </div>
@@ -134,14 +134,14 @@ export function SubmitFormManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Submit Forms</h2>
-          <p className="text-sm text-gray-600 mt-1">
+          <h2 className="text-xl font-semibold text-ink">Submit Forms</h2>
+          <p className="text-sm text-copy mt-1">
             Manage custom submission forms and their settings
           </p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-cta text-on-cta rounded-lg hover:bg-cta-hover transition-colors"
         >
           <Plus className="w-4 h-4" />
           Create Submit Form
@@ -149,21 +149,21 @@ export function SubmitFormManagement() {
       </div>
 
       {submitForms === undefined ? (
-        <div className="bg-[#F4F2EE] rounded-lg p-6 border border-gray-200 text-center">
+        <div className="bg-canvas rounded-lg p-6 border border-hairline text-center">
           Loading submit forms...
         </div>
       ) : submitForms.length === 0 ? (
-        <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
-          <FileText className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-          <h2 className="text-xl font-semibold text-gray-800">
+        <div className="text-center p-8 border-2 border-dashed border-hairline-strong rounded-lg">
+          <FileText className="w-12 h-12 mx-auto text-faint mb-4" />
+          <h2 className="text-xl font-semibold text-ink">
             No Submit Forms Found
           </h2>
-          <p className="text-gray-500 mt-2 mb-6">
+          <p className="text-soft mt-2 mb-6">
             Get started by creating your first custom submission form.
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-cta text-on-cta rounded-lg hover:bg-cta-hover transition-colors"
           >
             <Plus className="w-4 h-4" />
             Create Submit Form
@@ -174,12 +174,12 @@ export function SubmitFormManagement() {
           {submitForms.map((form) => (
             <div
               key={form._id}
-              className="bg-[#F4F2EE] rounded-lg p-6 border border-gray-200"
+              className="bg-canvas rounded-lg p-6 border border-hairline"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-lg font-medium text-gray-900">
+                    <h3 className="text-lg font-medium text-ink">
                       {form.title}
                     </h3>
                     {form.isBuiltIn && (
@@ -191,7 +191,7 @@ export function SubmitFormManagement() {
                       className={`px-2 py-1 text-xs rounded-full ${
                         form.isEnabled
                           ? "bg-green-100 text-green-700"
-                          : "bg-gray-100 text-gray-600"
+                          : "bg-surface-alt text-copy"
                       }`}
                     >
                       {form.isEnabled ? "Enabled" : "Disabled"}
@@ -199,12 +199,12 @@ export function SubmitFormManagement() {
                   </div>
 
                   {form.description && (
-                    <p className="text-gray-600 text-sm mb-2">
+                    <p className="text-copy text-sm mb-2">
                       {form.description}
                     </p>
                   )}
 
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                  <div className="flex items-center gap-4 text-sm text-soft">
                     <span>/{form.slug}</span>
                     <span>•</span>
                     <span>{form.submissionCount || 0} submissions</span>
@@ -220,7 +220,7 @@ export function SubmitFormManagement() {
                     className={`p-2 rounded-lg transition-colors ${
                       form.isEnabled
                         ? "bg-green-100 text-green-700 hover:bg-green-200"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        : "bg-surface-alt text-copy hover:bg-surface-hover"
                     }`}
                     title={form.isEnabled ? "Disable form" : "Enable form"}
                   >
@@ -234,7 +234,7 @@ export function SubmitFormManagement() {
                   {/* Copy URL */}
                   <button
                     onClick={() => copyFormUrl(form)}
-                    className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                    className="p-2 bg-surface-alt text-copy rounded-lg hover:bg-surface-hover transition-colors"
                     title="Copy form URL"
                   >
                     {copiedId === form._id ? (
@@ -251,7 +251,7 @@ export function SubmitFormManagement() {
                     to={`/submit/${form.slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                    className="p-2 bg-surface-alt text-copy rounded-lg hover:bg-surface-hover transition-colors"
                     title="View form"
                   >
                     <ExternalLink className="w-4 h-4" />

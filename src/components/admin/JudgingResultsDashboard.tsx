@@ -104,8 +104,8 @@ export function JudgingResultsDashboard({
   if (!groupScores || !judgeDetails) {
     return (
       <div className="text-center py-8">
-        <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-600">Loading results...</p>
+        <div className="w-8 h-8 border-2 border-hairline-strong border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-copy">Loading results...</p>
       </div>
     );
   }
@@ -159,13 +159,13 @@ export function JudgingResultsDashboard({
           ).map((stat) => (
             <div
               key={stat.label}
-              className="bg-white rounded-lg border border-gray-200 p-4"
+              className="bg-surface rounded-lg border border-hairline p-4"
             >
-              <div className="flex items-center gap-1.5 text-gray-500">
+              <div className="flex items-center gap-1.5 text-soft">
                 <stat.icon className="w-3.5 h-3.5" />
                 <p className="text-xs">{stat.label}</p>
               </div>
-              <p className="text-2xl font-semibold text-gray-900 mt-1">
+              <p className="text-2xl font-semibold text-ink mt-1">
                 {stat.value}
               </p>
             </div>
@@ -173,48 +173,48 @@ export function JudgingResultsDashboard({
         </div>
 
         {submissionsJudged === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-            <Award className="w-10 h-10 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <div className="text-center py-12 bg-surface rounded-lg border border-hairline">
+            <Award className="w-10 h-10 text-faint mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-ink mb-2">
               No Scores Yet
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-copy mb-4">
               Judges haven't started scoring submissions in this group yet.
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-soft">
               Share the judging link with judges to get started!
             </p>
           </div>
         ) : (
           <>
             {/* Submission Rankings */}
-            <div className="bg-white rounded-lg border border-gray-200">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+            <div className="bg-surface rounded-lg border border-hairline">
+              <div className="p-6 border-b border-hairline">
+                <h3 className="text-lg font-medium text-ink flex items-center gap-2">
                   <Trophy className="w-4 h-4 text-yellow-500" />
                   Submission Rankings
                 </h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-gray-200 bg-gray-50">
+                  <thead className="border-b border-hairline bg-surface-alt">
                     <tr>
-                      <th className="text-left p-4 font-medium text-gray-700">
+                      <th className="text-left p-4 font-medium text-copy">
                         Rank
                       </th>
-                      <th className="text-left p-4 font-medium text-gray-700">
+                      <th className="text-left p-4 font-medium text-copy">
                         Submission
                       </th>
-                      <th className="text-left p-4 font-medium text-gray-700">
+                      <th className="text-left p-4 font-medium text-copy">
                         Total Score
                       </th>
-                      <th className="text-left p-4 font-medium text-gray-700">
+                      <th className="text-left p-4 font-medium text-copy">
                         Average Score
                       </th>
-                      <th className="text-left p-4 font-medium text-gray-700">
+                      <th className="text-left p-4 font-medium text-copy">
                         Progress
                       </th>
-                      <th className="text-left p-4 font-medium text-gray-700">
+                      <th className="text-left p-4 font-medium text-copy">
                         Actions
                       </th>
                     </tr>
@@ -223,7 +223,7 @@ export function JudgingResultsDashboard({
                     {submissionRankings.map((submission, index) => (
                       <tr
                         key={submission.storyId}
-                        className="border-b border-gray-100 hover:bg-gray-50"
+                        className="border-b border-hairline hover:bg-surface-hover"
                       >
                         <td className="p-4">
                           <div className="flex items-center gap-2">
@@ -231,7 +231,7 @@ export function JudgingResultsDashboard({
                               <Trophy className="w-4 h-4 text-yellow-500" />
                             )}
                             {index === 1 && (
-                              <Trophy className="w-4 h-4 text-gray-400" />
+                              <Trophy className="w-4 h-4 text-faint" />
                             )}
                             {index === 2 && (
                               <Trophy className="w-4 h-4 text-orange-500" />
@@ -241,19 +241,19 @@ export function JudgingResultsDashboard({
                         </td>
                         <td className="p-4">
                           <div>
-                            <p className="font-medium text-gray-900">
+                            <p className="font-medium text-ink">
                               {submission.storyTitle}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-soft">
                               /{submission.storySlug}
                             </p>
                           </div>
                         </td>
                         <td className="p-4">
-                          <span className="text-lg font-semibold text-gray-900">
+                          <span className="text-lg font-semibold text-ink">
                             {submission.totalScore}
                           </span>
-                          <span className="text-sm text-gray-500">
+                          <span className="text-sm text-soft">
                             /{submission.maxPossibleScore}
                           </span>
                         </td>
@@ -267,7 +267,7 @@ export function JudgingResultsDashboard({
                         </td>
                         <td className="p-4">
                           <div className="flex items-center gap-2">
-                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                            <div className="w-16 bg-surface-hover rounded-full h-2">
                               <div
                                 className="bg-green-500 h-2 rounded-full"
                                 style={{
@@ -275,7 +275,7 @@ export function JudgingResultsDashboard({
                                 }}
                               ></div>
                             </div>
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-soft">
                               {Math.round(submission.completionPercentage)}%
                             </span>
                           </div>
@@ -299,9 +299,9 @@ export function JudgingResultsDashboard({
             </div>
 
             {/* Criteria Breakdown */}
-            <div className="bg-white rounded-lg border border-gray-200">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">
+            <div className="bg-surface rounded-lg border border-hairline">
+              <div className="p-6 border-b border-hairline">
+                <h3 className="text-lg font-medium text-ink">
                   Criteria Performance
                 </h3>
               </div>
@@ -313,10 +313,10 @@ export function JudgingResultsDashboard({
                       className="flex items-center justify-between"
                     >
                       <div className="flex-1">
-                        <p className="font-medium text-gray-900">
+                        <p className="font-medium text-ink">
                           {criterion.question}
                         </p>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-copy">
                           {criterion.scoreCount} scores
                         </p>
                       </div>
@@ -327,7 +327,7 @@ export function JudgingResultsDashboard({
                             {criterion.averageScore.toFixed(1)}
                           </span>
                         </div>
-                        <div className="w-24 bg-gray-200 rounded-full h-2">
+                        <div className="w-24 bg-surface-hover rounded-full h-2">
                           <div
                             className="bg-blue-500 h-2 rounded-full"
                             style={{
@@ -343,9 +343,9 @@ export function JudgingResultsDashboard({
             </div>
 
             {/* Judge Details Section */}
-            <div className="bg-white rounded-lg border border-gray-200">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">
+            <div className="bg-surface rounded-lg border border-hairline">
+              <div className="p-6 border-b border-hairline">
+                <h3 className="text-lg font-medium text-ink">
                   Judge Scores & Comments
                 </h3>
               </div>
@@ -353,7 +353,7 @@ export function JudgingResultsDashboard({
               {judgeDetails.length > 0 && (
                 <>
                   {/* Judge Tabs */}
-                  <div className="border-b border-gray-200">
+                  <div className="border-b border-hairline">
                     <div className="flex flex-wrap gap-1 p-4">
                       {judgeDetails.map((judge, index) => (
                         <button
@@ -362,7 +362,7 @@ export function JudgingResultsDashboard({
                           className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                             selectedJudgeIndex === index
                               ? "bg-blue-100 text-blue-700 border border-blue-200"
-                              : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 border border-transparent"
+                              : "text-copy hover:text-ink hover:bg-surface-hover border border-transparent"
                           }`}
                         >
                           {judge.judgeName}
@@ -371,7 +371,7 @@ export function JudgingResultsDashboard({
                               Agent
                             </span>
                           )}
-                          <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                          <span className="ml-2 text-xs bg-surface-alt text-copy px-2 py-1 rounded-full">
                             {judge.totalScores}
                           </span>
                         </button>
@@ -386,11 +386,11 @@ export function JudgingResultsDashboard({
                       return (
                         <div
                           key={judge.judgeId}
-                          className="border-b border-gray-100 last:border-b-0 pb-6 last:pb-0"
+                          className="border-b border-hairline last:border-b-0 pb-6 last:pb-0"
                         >
                           <div className="flex items-center justify-between mb-4">
                             <div>
-                              <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                              <h4 className="font-medium text-ink flex items-center gap-2">
                                 {judge.judgeName}
                                 {judge.judgeType === "agent" && (
                                   <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-normal">
@@ -399,7 +399,7 @@ export function JudgingResultsDashboard({
                                 )}
                               </h4>
                               {judge.judgeEmail && (
-                                <p className="text-sm text-gray-600">
+                                <p className="text-sm text-copy">
                                   {judge.judgeEmail}
                                 </p>
                               )}
@@ -413,7 +413,7 @@ export function JudgingResultsDashboard({
                                     : "No scores"}
                                 </span>
                               </div>
-                              <p className="text-sm text-gray-600">
+                              <p className="text-sm text-copy">
                                 {judge.totalScores} scores submitted
                               </p>
                             </div>
@@ -453,22 +453,22 @@ export function JudgingResultsDashboard({
                                 ) => (
                                   <div
                                     key={storyId}
-                                    className={`rounded-lg p-4 border border-gray-200 ${
+                                    className={`rounded-lg p-4 border border-hairline ${
                                       submissionIndex % 2 === 0
-                                        ? "bg-white"
-                                        : "bg-gray-50"
+                                        ? "bg-surface"
+                                        : "bg-surface-alt"
                                     }`}
                                   >
                                     {/* Submission Header */}
-                                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200">
-                                      <h5 className="font-semibold text-gray-900">
+                                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-hairline">
+                                      <h5 className="font-semibold text-ink">
                                         {submissionData.storyTitle}
                                       </h5>
                                       <div className="text-right">
-                                        <div className="text-lg font-bold text-gray-900">
+                                        <div className="text-lg font-bold text-ink">
                                           {submissionData.totalScore}
                                         </div>
-                                        <div className="text-sm text-gray-500">
+                                        <div className="text-sm text-soft">
                                           Total Score
                                         </div>
                                       </div>
@@ -479,11 +479,11 @@ export function JudgingResultsDashboard({
                                       {submissionData.scores.map((score) => (
                                         <div
                                           key={`${score.storyId}-${score.criteriaId}`}
-                                          className="bg-white bg-opacity-50 rounded p-3 border border-gray-100"
+                                          className="bg-surface bg-opacity-50 rounded p-3 border border-hairline"
                                         >
                                           <div className="flex items-center justify-between mb-2">
                                             <div className="flex-1">
-                                              <p className="text-sm font-medium text-gray-700">
+                                              <p className="text-sm font-medium text-copy">
                                                 {score.criteriaQuestion}
                                               </p>
                                             </div>
@@ -496,7 +496,7 @@ export function JudgingResultsDashboard({
                                             </div>
                                           </div>
                                           {score.comments && (
-                                            <p className="text-sm text-gray-600 italic bg-white rounded p-2 border bg-[#F4F2EE] mt-2">
+                                            <p className="text-sm text-copy italic bg-surface rounded p-2 border bg-canvas mt-2">
                                               "{score.comments}"
                                             </p>
                                           )}
@@ -517,7 +517,7 @@ export function JudgingResultsDashboard({
 
               {judgeDetails.length === 0 && (
                 <div className="p-6">
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-soft">
                     No judges have submitted scores yet.
                   </div>
                 </div>

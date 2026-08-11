@@ -11,6 +11,7 @@ import {
   templateEmailShell,
 } from "../../../../convex/emails/render";
 import AlertDialog from "../../ui/AlertDialog";
+import { SimpleSelect } from "../../ui/SimpleSelect";
 import { GroupDetails, SectionCard } from "./groupSection";
 
 // Emails section of the judging group workspace: pick a template, edit the
@@ -254,25 +255,25 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
         <div>
           <label
             htmlFor="group-email-template"
-            className="block text-[13px] font-medium text-gray-700 mb-1"
+            className="block text-[13px] font-medium text-copy mb-1"
           >
             Template
           </label>
-          <select
+          <SimpleSelect
             id="group-email-template"
             value={templateId}
-            onChange={(e) => applyTemplate(e.target.value)}
+            onChange={(value) => applyTemplate(value)}
             disabled={isSending}
-            className="w-full max-w-md px-3 py-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
-          >
-            <option value="">Write from scratch</option>
-            {(templates ?? []).map((template) => (
-              <option key={template._id} value={template._id}>
-                {template.name}
-              </option>
-            ))}
-          </select>
-          <p className="text-xs text-gray-500 mt-1">
+            className="w-full max-w-md h-auto py-2 text-sm"
+            options={[
+              { value: "", label: "Write from scratch" },
+              ...(templates ?? []).map((template) => ({
+                value: template._id as string,
+                label: template.name,
+              })),
+            ]}
+          />
+          <p className="text-xs text-soft mt-1">
             Picking a template fills the fields below; edits here only affect
             this send. Templates are managed in Admin, Email Management,
             Templates.
@@ -283,7 +284,7 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
         <div>
           <label
             htmlFor="group-email-subject"
-            className="block text-[13px] font-medium text-gray-700 mb-1"
+            className="block text-[13px] font-medium text-copy mb-1"
           >
             Subject
           </label>
@@ -294,7 +295,7 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
             onChange={(e) => setSubject(e.target.value)}
             placeholder="e.g. {{groupname}} judging starts today"
             disabled={isSending}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
+            className="w-full px-3 py-2 text-sm border border-hairline rounded-md bg-surface focus:outline-none focus:ring-2 focus:ring-hairline-strong focus:border-transparent"
           />
         </div>
 
@@ -302,7 +303,7 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
         <div>
           <label
             htmlFor="group-email-body"
-            className="block text-[13px] font-medium text-gray-700 mb-1"
+            className="block text-[13px] font-medium text-copy mb-1"
           >
             Body (markdown)
           </label>
@@ -313,15 +314,15 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
             rows={8}
             placeholder={`Hi {{firstname}},\n\nJudging for **{{groupname}}** is open.\n\n- Review your assigned submissions\n- Score each criteria`}
             disabled={isSending}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent font-mono"
+            className="w-full px-3 py-2 text-sm border border-hairline rounded-md bg-surface focus:outline-none focus:ring-2 focus:ring-hairline-strong focus:border-transparent font-mono"
           />
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <span className="text-xs text-gray-500 mr-1">Variables:</span>
+            <span className="text-xs text-soft mr-1">Variables:</span>
             {TEMPLATE_VARIABLES.map((variable) => (
               <code
                 key={variable.key}
                 title={variable.description}
-                className="text-xs text-gray-700 bg-gray-100 border border-gray-200 rounded px-1.5 py-0.5 font-mono"
+                className="text-xs text-copy bg-surface-alt border border-hairline rounded px-1.5 py-0.5 font-mono"
               >
                 {`{{${variable.key}}}`}
               </code>
@@ -333,7 +334,7 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
         <div>
           <label
             htmlFor="group-email-signature"
-            className="block text-[13px] font-medium text-gray-700 mb-1"
+            className="block text-[13px] font-medium text-copy mb-1"
           >
             Signature (optional)
           </label>
@@ -344,7 +345,7 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
             rows={3}
             placeholder={`**The organizing team**\n[vibeapps.dev](https://vibeapps.dev)`}
             disabled={isSending}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent font-mono"
+            className="w-full px-3 py-2 text-sm border border-hairline rounded-md bg-surface focus:outline-none focus:ring-2 focus:ring-hairline-strong focus:border-transparent font-mono"
           />
         </div>
 
@@ -352,7 +353,7 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
         <div>
           <label
             htmlFor="group-email-replyto"
-            className="block text-[13px] font-medium text-gray-700 mb-1"
+            className="block text-[13px] font-medium text-copy mb-1"
           >
             Reply-to address (optional)
           </label>
@@ -364,14 +365,14 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
             list="group-email-replyto-options"
             placeholder="organizer@example.com"
             disabled={isSending}
-            className="w-full max-w-md px-3 py-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
+            className="w-full max-w-md px-3 py-2 text-sm border border-hairline rounded-md bg-surface focus:outline-none focus:ring-2 focus:ring-hairline-strong focus:border-transparent"
           />
           <datalist id="group-email-replyto-options">
             {(group.notificationEmails ?? []).map((email) => (
               <option key={email} value={email} />
             ))}
           </datalist>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-soft mt-1">
             Judge replies go to this address. Blank means replies go to the
             default from address. Group notification emails are suggested.
           </p>
@@ -380,7 +381,7 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
         {/* Recipients */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <span className="block text-[13px] font-medium text-gray-700">
+            <span className="block text-[13px] font-medium text-copy">
               Recipients ({selectedRecipients.length} of{" "}
               {recipients?.length ?? 0} judges with an email)
             </span>
@@ -388,37 +389,37 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
               <button
                 type="button"
                 onClick={toggleAll}
-                className="text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                className="text-xs font-medium text-copy hover:text-ink transition-colors"
               >
                 {excluded.size === 0 ? "Deselect all" : "Select all"}
               </button>
             )}
           </div>
           {recipients === undefined ? (
-            <p className="text-xs text-gray-500">Loading judges...</p>
+            <p className="text-xs text-soft">Loading judges...</p>
           ) : recipients.length === 0 ? (
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-soft">
               No judges in this group registered with an email address, so there
               is nobody to send to yet.
             </p>
           ) : (
-            <div className="max-h-48 overflow-y-auto rounded-md border border-gray-200 divide-y divide-gray-100">
+            <div className="max-h-48 overflow-y-auto rounded-md border border-hairline divide-y divide-hairline">
               {recipients.map((recipient) => (
                 <label
                   key={recipient.judgeId}
-                  className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50"
+                  className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-surface-hover"
                 >
                   <input
                     type="checkbox"
                     checked={!excluded.has(recipient.judgeId)}
                     onChange={() => toggleRecipient(recipient.judgeId)}
                     disabled={isSending}
-                    className="h-4 w-4 rounded border-gray-300 text-black focus:ring-gray-400"
+                    className="h-4 w-4 rounded border-hairline-strong text-ink focus:ring-hairline-strong"
                   />
-                  <span className="text-[13px] text-[#292929]">
+                  <span className="text-[13px] text-ink">
                     {recipient.name}
                   </span>
-                  <span className="text-xs text-gray-500 truncate">
+                  <span className="text-xs text-soft truncate">
                     {recipient.email}
                   </span>
                 </label>
@@ -427,7 +428,7 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
           )}
           {status !== undefined && (
             <p
-              className={`text-xs mt-1 ${overCap ? "text-red-600" : "text-gray-500"}`}
+              className={`text-xs mt-1 ${overCap ? "text-red-600" : "text-soft"}`}
             >
               Daily limit: {status.usedLast24h} of {status.dailyCap} recipient
               emails used in the last 24 hours
@@ -442,7 +443,7 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
         <div>
           <label
             htmlFor="group-email-schedule"
-            className="block text-[13px] font-medium text-gray-700 mb-1"
+            className="block text-[13px] font-medium text-copy mb-1"
           >
             Send time (optional)
           </label>
@@ -453,9 +454,9 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
             onChange={(e) => setScheduleAt(e.target.value)}
             min={toLocalInputValue(Date.now() + 5 * 60 * 1000)}
             disabled={isSending}
-            className="w-full max-w-md px-3 py-2 text-sm border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-transparent"
+            className="w-full max-w-md px-3 py-2 text-sm border border-hairline rounded-md bg-surface focus:outline-none focus:ring-2 focus:ring-hairline-strong focus:border-transparent"
           />
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-soft mt-1">
             Blank sends immediately. Scheduled sends appear below and can be
             cancelled any time before they fire.
           </p>
@@ -486,7 +487,7 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
               overCap ||
               selectedRecipients.length === 0
             }
-            className="flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-md bg-[#292929] text-white hover:bg-[#525252] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-md bg-cta text-on-cta hover:bg-cta-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Send className="w-4 h-4" />
             {isSending
@@ -497,7 +498,7 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
             type="button"
             onClick={() => void handleSendTest()}
             disabled={isSending || blocked || !canCompose}
-            className="flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-md text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-md text-copy bg-surface-alt hover:bg-surface-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Mail className="w-4 h-4" />
             Send test to me
@@ -506,7 +507,7 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
             type="button"
             onClick={() => setShowPreview((prev) => !prev)}
             disabled={!canCompose}
-            className="flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-md text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 text-[13px] font-medium rounded-md text-copy hover:bg-surface-hover transition-colors disabled:opacity-50"
           >
             <Eye className="w-4 h-4" />
             {showPreview ? "Hide preview" : "Preview"}
@@ -514,22 +515,20 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
         </div>
 
         {showPreview && canCompose && (
-          <div className="border border-gray-200 rounded-md overflow-hidden">
-            <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs text-gray-600 flex items-center gap-2 flex-wrap">
+          <div className="border border-hairline rounded-md overflow-hidden">
+            <div className="px-4 py-2 bg-surface-alt border-b border-hairline text-xs text-copy flex items-center gap-2 flex-wrap">
               <span>Preview as</span>
               {selectedRecipients.length > 1 ? (
-                <select
+                <SimpleSelect
                   value={previewRecipient?.judgeId ?? ""}
-                  onChange={(e) => setPreviewJudgeId(e.target.value)}
+                  onChange={(value) => setPreviewJudgeId(value)}
                   aria-label="Preview as judge"
-                  className="px-2 py-1 text-xs border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gray-400"
-                >
-                  {selectedRecipients.map((recipient) => (
-                    <option key={recipient.judgeId} value={recipient.judgeId}>
-                      {recipient.name}
-                    </option>
-                  ))}
-                </select>
+                  className="w-auto h-auto px-2 py-1 text-xs gap-1"
+                  options={selectedRecipients.map((recipient) => ({
+                    value: recipient.judgeId as string,
+                    label: recipient.name,
+                  }))}
+                />
               ) : (
                 <span className="font-medium">{previewVars.name}</span>
               )}
@@ -538,7 +537,7 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
             <iframe
               title="Email preview"
               srcDoc={previewHtml}
-              className="w-full h-96 bg-white"
+              className="w-full h-96 bg-surface"
               sandbox=""
             />
           </div>
@@ -551,17 +550,17 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
           title="Scheduled sends"
           description="Queued emails that have not fired yet. Cancel any of them before the send time."
         >
-          <div className="rounded-md border border-gray-200 divide-y divide-gray-100">
+          <div className="rounded-md border border-hairline divide-y divide-hairline">
             {scheduledSends.map((row) => (
               <div
                 key={row._id}
                 className="flex items-center justify-between gap-3 px-3 py-2"
               >
                 <div className="min-w-0">
-                  <p className="text-[13px] text-[#292929] truncate">
+                  <p className="text-[13px] text-ink truncate">
                     {row.subject}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-soft">
                     {new Date(row.scheduledFor).toLocaleString("en-US", {
                       month: "short",
                       day: "numeric",
@@ -591,11 +590,11 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
         description="Delivery stats per send. Opens and bounces come from the Resend webhook, so counts fill in as events arrive."
       >
         {recentSends === undefined ? (
-          <p className="text-xs text-gray-500">Loading...</p>
+          <p className="text-xs text-soft">Loading...</p>
         ) : recentSends.length === 0 ? (
-          <p className="text-xs text-gray-500">No emails sent yet.</p>
+          <p className="text-xs text-soft">No emails sent yet.</p>
         ) : (
-          <div className="rounded-md border border-gray-200 divide-y divide-gray-100">
+          <div className="rounded-md border border-hairline divide-y divide-hairline">
             {recentSends.map((send) => {
               const problems = send.bounced + send.failed + send.complained;
               return (
@@ -604,15 +603,15 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
                   className="flex items-center justify-between gap-3 px-3 py-2"
                 >
                   <div className="min-w-0">
-                    <p className="text-[13px] text-[#292929] truncate">
+                    <p className="text-[13px] text-ink truncate">
                       {send.subject ?? "(no subject recorded)"}
                       {send.isTest && (
-                        <span className="ml-2 text-[10px] uppercase tracking-wide text-gray-400">
+                        <span className="ml-2 text-[10px] uppercase tracking-wide text-faint">
                           test
                         </span>
                       )}
                     </p>
-                    <p className="text-xs text-gray-500 truncate">
+                    <p className="text-xs text-soft truncate">
                       to {send.total} recipient{send.total === 1 ? "" : "s"} ·{" "}
                       {new Date(send.sentAt).toLocaleString("en-US", {
                         month: "short",
@@ -627,7 +626,7 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
                       {send.delivered}/{send.total} delivered
                     </span>
                     {send.opened > 0 && (
-                      <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                      <span className="px-2 py-0.5 text-xs rounded-full bg-surface-alt text-copy">
                         {send.opened} opened
                       </span>
                     )}

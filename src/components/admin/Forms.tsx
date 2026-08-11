@@ -74,10 +74,10 @@ export function Forms() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap justify-between items-center gap-4">
-        <h2 className="text-xl font-medium text-[#525252]">Custom Forms</h2>
+        <h2 className="text-xl font-medium text-copy">Custom Forms</h2>
         <Link
           to="/admin/forms/new"
-          className="px-4 py-2 bg-[#F4F0ED] text-[#525252] rounded-md hover:bg-[#e5e1de] transition-colors flex items-center gap-2 text-sm">
+          className="px-4 py-2 bg-surface-alt text-copy rounded-md hover:bg-surface-hover transition-colors flex items-center gap-2 text-sm">
           <Plus className="w-4 h-4" />
           Create New Form
         </Link>
@@ -85,33 +85,33 @@ export function Forms() {
 
       {forms === undefined && <div>Loading forms...</div>}
       {forms && forms.length === 0 && (
-        <div className="text-center py-8 text-gray-500">You haven't created any forms yet.</div>
+        <div className="text-center py-8 text-soft">You haven't created any forms yet.</div>
       )}
 
       {forms && forms.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200">
+        <div className="bg-surface rounded-lg border border-hairline">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="border-b border-gray-200 bg-gray-50">
+              <thead className="border-b border-hairline bg-surface-alt">
                 <tr>
-                  <th className="text-left p-3 px-4 text-[#525252] font-medium">Form Title</th>
-                  <th className="text-left p-3 px-4 text-[#525252] font-medium">Form Status</th>
-                  <th className="text-left p-3 px-4 text-[#525252] font-medium">Results Status</th>
-                  <th className="text-left p-3 px-4 text-[#525252] font-medium">Actions</th>
+                  <th className="text-left p-3 px-4 text-copy font-medium">Form Title</th>
+                  <th className="text-left p-3 px-4 text-copy font-medium">Form Status</th>
+                  <th className="text-left p-3 px-4 text-copy font-medium">Results Status</th>
+                  <th className="text-left p-3 px-4 text-copy font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {forms.map((form) => (
                   <tr
                     key={form._id}
-                    className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
+                    className="border-b border-hairline last:border-b-0 hover:bg-surface-hover">
                     <td className="p-3 px-4">
                       <Link
                         to={`/admin/forms/${form._id}`}
-                        className="text-[#525252] hover:text-[#292929] font-medium">
+                        className="text-copy hover:text-ink font-medium">
                         {form.title}
                       </Link>
-                      <span className="text-xs text-gray-400 ml-2">/f/{form.slug}</span>
+                      <span className="text-xs text-faint ml-2">/f/{form.slug}</span>
                     </td>
                     <td className="p-3 px-4">
                       <span
@@ -131,19 +131,19 @@ export function Forms() {
                       <div className="flex items-center gap-3 flex-wrap">
                         <Link
                           to={`/admin/forms/${form._id}`}
-                          className="text-gray-500 hover:text-blue-600"
+                          className="text-soft hover:text-blue-600"
                           title="Edit Form">
                           <FileText className="w-4 h-4" />
                         </Link>
                         <Link
                           to={`/admin/forms/${form._id}/results`}
-                          className="text-gray-500 hover:text-purple-600"
+                          className="text-soft hover:text-purple-600"
                           title="View Admin Results">
                           <BarChart2 className="w-4 h-4" />
                         </Link>
                         <button
                           onClick={() => toggleFormVisibility(form)}
-                          className="text-gray-500 hover:text-gray-800"
+                          className="text-soft hover:text-ink"
                           title={form.isPublic ? "Make Form Private" : "Make Form Public"}>
                           {form.isPublic ? (
                             <EyeOff className="w-4 h-4" />
@@ -153,7 +153,7 @@ export function Forms() {
                         </button>
                         <button
                           onClick={() => toggleResultsVisibility(form)}
-                          className="text-gray-500 hover:text-gray-800"
+                          className="text-soft hover:text-ink"
                           title={
                             form.resultsArePublic ? "Make Results Private" : "Make Results Public"
                           }>
@@ -165,7 +165,7 @@ export function Forms() {
                         </button>
                         <button
                           onClick={() => copyFormUrl(form)}
-                          className={`text-gray-500 ${copiedId === form._id + "-form" ? "text-green-600" : "hover:text-gray-800"} ${!form.isPublic ? "opacity-50 cursor-not-allowed" : ""}`}
+                          className={`text-soft ${copiedId === form._id + "-form" ? "text-green-600" : "hover:text-ink"} ${!form.isPublic ? "opacity-50 cursor-not-allowed" : ""}`}
                           title={
                             copiedId === form._id + "-form" ? "Copied!" : "Copy Public Form URL"
                           }
@@ -175,14 +175,14 @@ export function Forms() {
                         <Link
                           to={`/f/${form.slug}`}
                           target="_blank"
-                          className={`text-gray-500 ${!form.isPublic ? "opacity-50 cursor-not-allowed" : "hover:text-blue-600"}`}
+                          className={`text-soft ${!form.isPublic ? "opacity-50 cursor-not-allowed" : "hover:text-blue-600"}`}
                           title={form.isPublic ? "Visit Public Form" : "Form is private"}
                           onClick={(e) => !form.isPublic && e.preventDefault()}>
                           <ExternalLink className="w-4 h-4" />
                         </Link>
                         <button
                           onClick={() => copyResultsUrl(form)}
-                          className={`text-gray-500 ${copiedId === form._id + "-results" ? "text-green-600" : "hover:text-gray-800"} ${!form.resultsArePublic ? "opacity-50 cursor-not-allowed" : ""}`}
+                          className={`text-soft ${copiedId === form._id + "-results" ? "text-green-600" : "hover:text-ink"} ${!form.resultsArePublic ? "opacity-50 cursor-not-allowed" : ""}`}
                           title={
                             copiedId === form._id + "-results"
                               ? "Copied!"
@@ -194,7 +194,7 @@ export function Forms() {
                         <Link
                           to={`/results/${form.slug}`}
                           target="_blank"
-                          className={`text-gray-500 ${!form.resultsArePublic ? "opacity-50 cursor-not-allowed" : "hover:text-blue-600"}`}
+                          className={`text-soft ${!form.resultsArePublic ? "opacity-50 cursor-not-allowed" : "hover:text-blue-600"}`}
                           title={
                             form.resultsArePublic ? "Visit Public Results" : "Results are private"
                           }
@@ -203,7 +203,7 @@ export function Forms() {
                         </Link>
                         <button
                           onClick={() => handleDelete(form._id)}
-                          className={`text-gray-500 ${deleteConfirmId === form._id ? "text-red-600 font-bold" : "hover:text-red-600"}`}
+                          className={`text-soft ${deleteConfirmId === form._id ? "text-red-600 font-bold" : "hover:text-red-600"}`}
                           title={deleteConfirmId === form._id ? "Confirm Delete?" : "Delete Form"}>
                           <Trash2 className="w-4 h-4" />
                         </button>

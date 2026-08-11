@@ -25,6 +25,7 @@ import type { DataModel } from "./dataModel.js";
  * Typesafe environment variables declared in `convex.config.ts`.
  */
 type Env = {
+  readonly CONTEXT_DEV_API_KEY: string;
   readonly FIRECRAWL_API_KEY: string;
 };
 

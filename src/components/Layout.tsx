@@ -12,7 +12,6 @@ import {
   PlusCircle,
   Search,
   ThumbsUp,
-  ChevronDown,
   Menu,
   User,
   Bell,
@@ -32,10 +31,12 @@ import {
   SignUpButton,
 } from "@clerk/clerk-react";
 import { UserSyncer } from "./UserSyncer";
+import { ThemeToggle } from "./ThemeToggle";
 import { WeeklyLeaderboard } from "./WeeklyLeaderboard";
 import { TopCategoriesOfWeek } from "./TopCategoriesOfWeek";
 import { RecentVibers } from "./RecentVibers";
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
+import { SimpleSelect } from "./ui/SimpleSelect";
 import { formatDistanceToNow } from "date-fns";
 
 interface LayoutContextType {
@@ -359,8 +360,13 @@ export function Layout({ children }: { children?: ReactNode }) {
   const isCustomFormPage = location.pathname.startsWith("/f/");
   const isPublicResultsPage = location.pathname.startsWith("/results/");
   const isAdminFormPage = location.pathname.startsWith("/admin/forms/");
+  // Admin setting: hide the right sidebar on the default /submit page for everyone
+  const isDefaultSubmitPage = location.pathname === "/submit";
+  const hideSubmitSidebar =
+    isDefaultSubmitPage && (settings?.hideSubmitPageSidebar ?? false);
   const showSidebar =
     settings &&
+    !hideSubmitSidebar &&
     !isStoryDetailPage &&
     !isJudgingPage &&
     !isYCHackFormPage &&
@@ -373,10 +379,10 @@ export function Layout({ children }: { children?: ReactNode }) {
 
   return (
     <>
-      {/* <div className="absolute top-0 z-[-2] h-screen w-screen bg-white bg-[radial-gradient(100%_50%_at_50%_0%,rgba(0,163,255,0.13)_0,rgba(0,163,255,0)_50%,rgba(0,163,255,0)_100%)]"></div> */}
+      {/* <div className="absolute top-0 z-[-2] h-screen w-screen bg-surface bg-[radial-gradient(100%_50%_at_50%_0%,rgba(0,163,255,0.13)_0,rgba(0,163,255,0)_50%,rgba(0,163,255,0)_100%)]"></div> */}
 
-      <div className="flex flex-col min-h-screen bg-[#F4F2EE]">
-        <header className="pt-5 pb-0 bg-[#F4F2EE] sticky top-0 z-50">
+      <div className="flex flex-col min-h-screen bg-canvas">
+        <header className="pt-5 pb-0 bg-canvas sticky top-0 z-50">
           <div className="container mx-auto px-4">
             {/* Responsive header layout */}
             <div className="flex flex-col gap-y-2 md:flex-row md:justify-between md:items-center">
@@ -385,16 +391,18 @@ export function Layout({ children }: { children?: ReactNode }) {
                 {/* Left: Site Title */}
                 <Link
                   to="/"
-                  className="inline-block text-[#292929] hover:text-[#525252] md:order-1"
+                  className="inline-block text-ink hover:text-copy md:order-1"
                 >
                   <h1 className="title-font text-xl">{siteTitle}</h1>
                 </Link>
                 {/* Right: User/Sign-in */}
                 <div className="flex items-center gap-2 md:order-3">
+                  {/* Theme switcher (always visible, desktop + mobile) */}
+                  <ThemeToggle />
                   <SignedOut>
                     <SignUpButton mode="modal">
                       <button
-                        className="px-4 py-2 bg-[#292929] border border-[#D8E1EC] text-[#ffffff] rounded-md text-xs font-normal hover:bg-[#F2F0ED] hover:text-[#292929] transition-colors"
+                        className="px-4 py-2 bg-cta border border-hairline text-on-cta rounded-md text-xs font-normal hover:bg-surface-hover hover:text-ink transition-colors"
                         type="button"
                       >
                         Sign up
@@ -402,7 +410,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                     </SignUpButton>
                     <SignInButton mode="modal">
                       <button
-                        className="px-4 py-2 bg-[#292929] border border-[#D8E1EC] text-[#ffffff] rounded-md text-xs font-normal hover:bg-[#F2F0ED] hover:text-[#292929] transition-colors"
+                        className="px-4 py-2 bg-cta border border-hairline text-on-cta rounded-md text-xs font-normal hover:bg-surface-hover hover:text-ink transition-colors"
                         type="button"
                       >
                         Sign in
@@ -417,19 +425,19 @@ export function Layout({ children }: { children?: ReactNode }) {
                         onClick={() =>
                           setShowAlertsDropdown(!showAlertsDropdown)
                         }
-                        className="flex items-center justify-center w-8 h-8 rounded-full border border-[#D8E1EC] bg-white hover:bg-[#F4F2EE] transition-colors mr-2"
+                        className="flex items-center justify-center w-8 h-8 rounded-full border border-hairline bg-surface hover:bg-surface-hover transition-colors mr-2"
                         aria-label="Notifications"
                       >
-                        <Bell className="w-4 h-4 text-[#525252]" />
+                        <Bell className="w-4 h-4 text-copy" />
                         {hasUnreadAlerts && (
-                          <div className="alerts-notification-dot absolute top-0 right-2 w-2 h-2 bg-black rounded-full"></div>
+                          <div className="alerts-notification-dot absolute top-0 right-2 w-2 h-2 bg-brand rounded-full"></div>
                         )}
                       </button>
 
                       {showAlertsDropdown && (
-                        <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg border border-[#D8E1EC] py-2 z-50">
-                          <div className="px-3 py-2 border-b border-[#F4F0ED]">
-                            <h3 className="text-sm font-medium text-[#292929]">
+                        <div className="absolute right-0 mt-2 w-80 bg-surface rounded-md shadow-lg border border-hairline py-2 z-50">
+                          <div className="px-3 py-2 border-b border-hairline">
+                            <h3 className="text-sm font-medium text-ink">
                               Notifications
                             </h3>
                           </div>
@@ -444,20 +452,20 @@ export function Layout({ children }: { children?: ReactNode }) {
                                 />
                               ))
                             ) : (
-                              <div className="px-3 py-4 text-center text-xs text-[#545454]">
+                              <div className="px-3 py-4 text-center text-xs text-soft">
                                 No notifications yet
                               </div>
                             )}
                           </div>
 
-                          <div className="border-t border-[#F4F0ED] pt-2">
+                          <div className="border-t border-hairline pt-2">
                             <Link
                               to="/notifications"
                               onClick={() => {
                                 setShowAlertsDropdown(false);
                                 // Mark all as read will be handled by the notifications page
                               }}
-                              className="block w-full px-3 py-2 text-center text-xs text-[#292929] hover:bg-[#F4F2EE] transition-colors"
+                              className="block w-full px-3 py-2 text-center text-xs text-ink hover:bg-surface-hover transition-colors"
                             >
                               View all
                             </Link>
@@ -474,13 +482,13 @@ export function Layout({ children }: { children?: ReactNode }) {
                       >
                         <Link
                           to="/inbox"
-                          className="flex items-center justify-center w-8 h-8 rounded-full border border-[#D8E1EC] bg-white hover:bg-[#F4F2EE] transition-colors"
+                          className="flex items-center justify-center w-8 h-8 rounded-full border border-hairline bg-surface hover:bg-surface-hover transition-colors"
                           aria-label="Inbox"
                         >
-                          <Inbox className="w-4 h-4 text-[#525252]" />
+                          <Inbox className="w-4 h-4 text-copy" />
                         </Link>
                         {hasUnreadMessages && (
-                          <div className="absolute top-0 right-0 w-2 h-2 bg-black rounded-full"></div>
+                          <div className="absolute top-0 right-0 w-2 h-2 bg-brand rounded-full"></div>
                         )}
                       </div>
                     )}
@@ -491,7 +499,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                         onClick={() =>
                           setShowProfileDropdown(!showProfileDropdown)
                         }
-                        className="flex items-center justify-center w-8 h-8 rounded-full bg-[#292929] hover:bg-[#525252] transition-colors"
+                        className="flex items-center justify-center w-8 h-8 rounded-full bg-cta hover:bg-cta-hover transition-colors"
                         aria-label="Profile menu"
                       >
                         {clerkUser?.imageUrl ? (
@@ -501,15 +509,15 @@ export function Layout({ children }: { children?: ReactNode }) {
                             className="w-full h-full rounded-full object-cover"
                           />
                         ) : (
-                          <User className="w-4 h-4 text-white" />
+                          <User className="w-4 h-4 text-on-cta" />
                         )}
                       </button>
 
                       {showProfileDropdown && (
-                        <div className="absolute right-0 mt-2 w-36 bg-white rounded-md shadow-lg border border-[#D8E1EC] py-0.5 z-50">
+                        <div className="absolute right-0 mt-2 w-36 bg-surface rounded-md shadow-lg border border-hairline py-0.5 z-50">
                           <Link
                             to={profileUrl}
-                            className="block px-3 py-1.5 text-xs text-[#292929] hover:bg-[#F4F2EE] transition-colors"
+                            className="block px-3 py-1.5 text-xs text-ink hover:bg-surface-hover transition-colors"
                             onClick={() => setShowProfileDropdown(false)}
                           >
                             My Profile
@@ -519,7 +527,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                               clerk.openUserProfile();
                               setShowProfileDropdown(false);
                             }}
-                            className="block w-full px-3 py-1.5 text-xs text-[#292929] hover:bg-[#F4F2EE] transition-colors text-left"
+                            className="block w-full px-3 py-1.5 text-xs text-ink hover:bg-surface-hover transition-colors text-left"
                           >
                             Manage Account
                           </button>
@@ -528,7 +536,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                               clerk.signOut({ redirectUrl: "/" });
                               setShowProfileDropdown(false);
                             }}
-                            className="block w-full px-3 py-1.5 text-xs text-[#292929] hover:bg-[#F4F2EE] transition-colors text-left"
+                            className="block w-full px-3 py-1.5 text-xs text-ink hover:bg-surface-hover transition-colors text-left"
                           >
                             Sign Out
                           </button>
@@ -552,7 +560,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                         setShowAuthDialog(true);
                       }
                     }}
-                    className="flex items-center gap-2 bg-[#292929] text-white px-3 py-1 rounded-md text-sm hover:bg-[#525252] transition-colors"
+                    className="flex items-center gap-2 bg-cta text-on-cta px-3 py-1 rounded-md text-sm hover:bg-cta-hover transition-colors"
                     title="Submit your app to the community"
                   >
                     <PlusCircle className="w-4 h-4" />
@@ -565,11 +573,13 @@ export function Layout({ children }: { children?: ReactNode }) {
                         setUserChangedViewMode(true);
                         navigate("/"); // Navigate to homepage
                       }}
-                      className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "list" ? "bg-[#ffffff]" : "hover:bg-gray-100"}`}
+                      className={`p-2 rounded-md border ${viewMode === "list" ? "bg-cta border-cta" : "border-hairline hover:bg-surface-hover"}`}
                       aria-label="List View"
                       title="List View"
                     >
-                      <List className="w-5 h-5 text-[#545454]" />
+                      <List
+                        className={`w-5 h-5 ${viewMode === "list" ? "text-on-cta" : "text-soft"}`}
+                      />
                     </button>
                   )}
                   {settings?.showGridView && (
@@ -579,11 +589,13 @@ export function Layout({ children }: { children?: ReactNode }) {
                         setUserChangedViewMode(true);
                         navigate("/"); // Navigate to homepage
                       }}
-                      className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "grid" ? "bg-[#ffffff]" : "hover:bg-gray-100"}`}
+                      className={`p-2 rounded-md border ${viewMode === "grid" ? "bg-cta border-cta" : "border-hairline hover:bg-surface-hover"}`}
                       aria-label="Grid View"
                       title="Grid View"
                     >
-                      <LayoutGrid className="w-5 h-5 text-[#545454]" />
+                      <LayoutGrid
+                        className={`w-5 h-5 ${viewMode === "grid" ? "text-on-cta" : "text-soft"}`}
+                      />
                     </button>
                   )}
                   {settings?.showVibeView && (
@@ -593,11 +605,13 @@ export function Layout({ children }: { children?: ReactNode }) {
                         setUserChangedViewMode(true);
                         navigate("/"); // Navigate to homepage
                       }}
-                      className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "vibe" ? "bg-[#ffffff]" : "hover:bg-gray-100"}`}
+                      className={`p-2 rounded-md border ${viewMode === "vibe" ? "bg-cta border-cta" : "border-hairline hover:bg-surface-hover"}`}
                       aria-label="Vibe View"
                       title="Vibe View"
                     >
-                      <ThumbsUp className="w-5 h-5 text-[#545454]" />
+                      <ThumbsUp
+                        className={`w-5 h-5 ${viewMode === "vibe" ? "text-on-cta" : "text-soft"}`}
+                      />
                     </button>
                   )}
 
@@ -605,7 +619,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                   <button
                     type="button"
                     onClick={handleSearchIconClick}
-                    className="md:hidden p-2 text-[#525252] hover:text-[#292929]"
+                    className="md:hidden p-2 text-copy hover:text-ink"
                     aria-label="Search"
                   >
                     <Search className="w-5 h-5" />
@@ -622,7 +636,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search..."
-                        className="w-full h-9 px-3 text-sm focus:outline-none bg-white text-[#525252] rounded-md border border-[#D5D3D0]"
+                        className="w-full h-9 px-3 text-sm focus:outline-none bg-surface text-copy rounded-md border border-hairline-strong"
                       />
                     </form>
                   </div>
@@ -630,70 +644,61 @@ export function Layout({ children }: { children?: ReactNode }) {
 
                 {/* Row 3 content: Dropdowns & Desktop Search */}
                 <div className="flex w-full md:w-auto items-center gap-1 md:gap-3">
-                  {/* Categories Dropdown */}
-                  <div className="relative inline-block text-left">
-                    <select
-                      value={selectedTagId || ""}
-                      onChange={(e) =>
-                        setSelectedTagId(
-                          e.target.value
-                            ? (e.target.value as Id<"tags">)
-                            : undefined,
-                        )
-                      }
-                      className="appearance-none cursor-pointer pl-2 md:pl-3 pr-6 md:pr-8 py-1.5 md:py-2 bg-white border border-[#D8E1EC] rounded-md text-xs md:text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] hover:border-[#A8A29E]"
-                    >
-                      <option value="">All Categories</option>
-                      {headerTags
+                  {/* Categories Dropdown (themed, replaces native select) */}
+                  <SimpleSelect
+                    value={selectedTagId || ""}
+                    onChange={(value) =>
+                      setSelectedTagId(
+                        value ? (value as Id<"tags">) : undefined,
+                      )
+                    }
+                    aria-label="Filter by category"
+                    className="w-auto h-auto py-1.5 md:py-2 pl-2 md:pl-3 pr-2 text-xs md:text-sm gap-1"
+                    options={[
+                      { value: "", label: "All Categories" },
+                      ...(headerTags
                         ?.filter(
                           (tag) =>
                             !tag.isHidden &&
                             tag.name !== "resendhackathon" &&
                             tag.name !== "ychackathon",
                         ) // Filter hidden tags and hackathon tracking tags
-                        .map((tag) => (
-                          <option key={tag._id} value={tag._id}>
-                            {tag.name}
-                          </option>
-                        ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1 md:px-2 text-[#545454]">
-                      <ChevronDown className="h-3 w-3 md:h-4 md:w-4" />
-                    </div>
-                  </div>
+                        .map((tag) => ({
+                          value: tag._id as string,
+                          label: tag.name,
+                        })) ?? []),
+                    ]}
+                  />
 
-                  {/* Sort Dropdown */}
-                  <div className="relative inline-block text-left">
-                    <select
-                      value={sortPeriod}
-                      onChange={(e) => {
-                        setSortPeriod(e.target.value as SortPeriod);
-                        setUserChangedSortPeriod(true); // User has made a selection
-                      }}
-                      className="appearance-none cursor-pointer pl-2 md:pl-3 pr-6 md:pr-8 py-1.5 md:py-2 bg-white border border-[#D8E1EC] rounded-md text-xs md:text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] hover:border-[#A8A29E]"
-                    >
-                      <option value="today">Today</option>
-                      <option value="week">This Week</option>
-                      <option value="month">This Month</option>
-                      <option value="year">This Year</option>
-                      <option value="all">Most Recent</option>
-                      <option value="votes_today">Most Vibes (Today)</option>
-                      <option value="votes_week">Most Vibes (Week)</option>
-                      <option value="votes_month">Most Vibes (Month)</option>
-                      <option value="votes_year">Most Vibes (Year)</option>
-                      <option value="votes_all">Most Vibes (All Time)</option>
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1 md:px-2 text-[#545454]">
-                      <ChevronDown className="h-3 w-3 md:h-4 md:w-4" />
-                    </div>
-                  </div>
+                  {/* Sort Dropdown (themed, replaces native select) */}
+                  <SimpleSelect
+                    value={sortPeriod ?? ""}
+                    onChange={(value) => {
+                      setSortPeriod(value as SortPeriod);
+                      setUserChangedSortPeriod(true); // User has made a selection
+                    }}
+                    aria-label="Sort submissions"
+                    className="w-auto h-auto py-1.5 md:py-2 pl-2 md:pl-3 pr-2 text-xs md:text-sm gap-1"
+                    options={[
+                      { value: "today", label: "Today" },
+                      { value: "week", label: "This Week" },
+                      { value: "month", label: "This Month" },
+                      { value: "year", label: "This Year" },
+                      { value: "all", label: "Most Recent" },
+                      { value: "votes_today", label: "Most Vibes (Today)" },
+                      { value: "votes_week", label: "Most Vibes (Week)" },
+                      { value: "votes_month", label: "Most Vibes (Month)" },
+                      { value: "votes_year", label: "Most Vibes (Year)" },
+                      { value: "votes_all", label: "Most Vibes (All Time)" },
+                    ]}
+                  />
 
                   {/* Desktop Search - Hidden on mobile */}
                   <div className="hidden md:flex items-center gap-0">
                     <button
                       type="button"
                       onClick={handleSearchIconClick}
-                      className="p-2 text-[#525252] hover:text-[#292929]"
+                      className="p-2 text-copy hover:text-ink"
                       aria-label="Search"
                     >
                       <Search className="w-5 h-5" />
@@ -705,10 +710,10 @@ export function Layout({ children }: { children?: ReactNode }) {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search..."
-                        className={`transition-all duration-300 ease-in-out h-9 text-sm focus:outline-none bg-white text-[#525252] rounded-md border ${isSearchExpanded ? "w-48 opacity-100 px-3 border-[#D5D3D0]" : "w-0 opacity-0 p-0 border-none"}`}
+                        className={`transition-all duration-300 ease-in-out h-9 text-sm focus:outline-none bg-surface text-copy rounded-md border ${isSearchExpanded ? "w-48 opacity-100 px-3 border-hairline-strong" : "w-0 opacity-0 p-0 border-none"}`}
                         style={{
                           borderColor: isSearchExpanded
-                            ? "#D5D3D0"
+                            ? "var(--th-hairline-strong)"
                             : "transparent",
                         }}
                         tabIndex={isSearchExpanded ? 0 : -1}
@@ -724,13 +729,13 @@ export function Layout({ children }: { children?: ReactNode }) {
             {headerTags &&
               headerTags.filter((tag) => !tag.isHidden && tag.showInHeader)
                 .length > 0 && (
-                <div className="py-3 mt-1 border-t border-[#F4F2EE]">
+                <div className="py-3 mt-1 border-t border-hairline">
                   {" "}
                   {/* Mobile: Hamburger menu button - Hidden on screens 450px and smaller */}
                   <div className="hidden sm:block md:hidden mb-2">
                     <button
                       onClick={() => setIsTagsMenuOpen(!isTagsMenuOpen)}
-                      className="flex items-center gap-2 px-3 py-1 bg-[#F3F4F6] text-gray-700 border border-[#D8E1EC] rounded-md text-xs font-medium hover:bg-white transition-colors"
+                      className="flex items-center gap-2 px-3 py-1 bg-surface-alt text-copy border border-hairline rounded-md text-xs font-medium hover:bg-surface-hover transition-colors"
                     >
                       <Menu className="w-4 h-4" />
                       Categories
@@ -750,8 +755,8 @@ export function Layout({ children }: { children?: ReactNode }) {
                         className={`px-3 py-1 rounded-full text-xs font-medium transition-colors  focus:outline-none
                                 ${
                                   selectedTagId === undefined
-                                    ? "text-slate-700 ring-1 ring-gray-400 ring-offset-1"
-                                    : "bg-[#F3F4F6] text-gray-700 border-[#D8E1EC] hover:bg-[white]"
+                                    ? "bg-cta text-on-cta"
+                                    : "bg-surface-alt text-copy border-hairline hover:bg-surface-hover"
                                 }`}
                         title="Show All Categories"
                       >
@@ -773,9 +778,9 @@ export function Layout({ children }: { children?: ReactNode }) {
                             to={`/tag/${tag.slug}`}
                             className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-colors hover:opacity-80 focus:outline-none"
                             style={{
-                              backgroundColor: tag.backgroundColor || "#F9FAFB", // Default to gray-50
-                              color: tag.textColor || "#374151", // Default to gray-700
-                              border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "#D1D5DB")}`, // Use borderColor or fallback
+                              backgroundColor: tag.backgroundColor || "var(--th-surface-alt)", // Default to gray-50
+                              color: tag.textColor || "var(--th-copy)", // Default to gray-700
+                              border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "var(--th-hairline-strong)")}`, // Use borderColor or fallback
                             }}
                             title={`View all apps tagged with ${tag.name}`}
                           >
@@ -878,7 +883,7 @@ function DropdownNotificationItem({
 
   return (
     <div
-      className={`px-3 py-2 border-b border-[#F4F0ED] last:border-b-0 hover:bg-[#F4F2EE] transition-colors ${
+      className={`px-3 py-2 border-b border-hairline last:border-b-0 hover:bg-surface-hover transition-colors ${
         !alert.isRead ? "bg-blue-50" : ""
       }`}
     >
@@ -893,8 +898,8 @@ function DropdownNotificationItem({
                 className="w-6 h-6 rounded-full object-cover"
               />
             ) : (
-              <div className="w-6 h-6 rounded-full bg-[#292929] flex items-center justify-center">
-                <span className="text-white text-xs">
+              <div className="w-6 h-6 rounded-full bg-cta flex items-center justify-center">
+                <span className="text-on-cta text-xs">
                   {actorUser.name.charAt(0).toUpperCase()}
                 </span>
               </div>
@@ -903,7 +908,7 @@ function DropdownNotificationItem({
         )}
 
         <div className="flex-1 min-w-0">
-          <div className="text-xs text-[#525252]">
+          <div className="text-xs text-copy">
             {alert.type === "judged" || alert.type === "spam" ? (
               <span>{getNotificationText()}</span>
             ) : actorUser ? (
@@ -911,7 +916,7 @@ function DropdownNotificationItem({
                 {actorUser.username ? (
                   <Link
                     to={`/${actorUser.username}`}
-                    className="font-medium hover:underline cursor-pointer text-[#525252] hover:text-[#292929]"
+                    className="font-medium hover:underline cursor-pointer text-copy hover:text-ink"
                     onClick={onClose}
                   >
                     {actorUser.name}
@@ -925,7 +930,7 @@ function DropdownNotificationItem({
               <span>Someone {getNotificationText()}</span>
             )}
           </div>
-          <div className="text-xs text-[#545454] mt-1">
+          <div className="text-xs text-soft mt-1">
             {formatDistanceToNow(alert._creationTime, { addSuffix: true })}
           </div>
         </div>

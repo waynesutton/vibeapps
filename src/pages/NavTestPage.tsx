@@ -6,7 +6,6 @@ import {
   PlusCircle,
   Search,
   ThumbsUp,
-  ChevronDown,
 } from "lucide-react";
 import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react"; // Assuming UserButton is not directly in header, but UserSyncer might be
 // import { useQuery } from "convex/react"; // Mocking data, so not fetching live
@@ -14,6 +13,7 @@ import { SignedIn, SignedOut, useUser } from "@clerk/clerk-react"; // Assuming U
 import type { Id } from "../../convex/_generated/dataModel"; // For Tag type
 import { UserSyncer } from "../components/UserSyncer"; // UserSyncer is in the header
 import { useDialog } from "../hooks/useDialog";
+import { SimpleSelect } from "../components/ui/SimpleSelect";
 
 // Define SortPeriod type locally or import if it's in a shared types file
 type SortPeriod =
@@ -103,15 +103,15 @@ const NavTestPage: React.FC = () => {
   return (
     <>
       <DialogComponents />
-      <div className="flex flex-col min-h-screen bg-gray-100">
+      <div className="flex flex-col min-h-screen bg-surface-alt">
         {/* Copied Header from Layout.tsx */}
-        <header className="pt-5 pb-0 bg-[#F4F2EE] sticky top-0 z-50">
+        <header className="pt-5 pb-0 bg-canvas sticky top-0 z-50">
           <div className="container mx-auto px-4">
             <div className="flex flex-col gap-y-2 md:flex-row md:justify-between md:items-center">
               <div className="flex w-full justify-between items-center md:contents">
                 <Link
                   to="/"
-                  className="inline-block text-[#292929] hover:text-[#525252] md:order-1"
+                  className="inline-block text-ink hover:text-copy md:order-1"
                 >
                   <h1 className="title-font text-xl">{siteTitle}</h1>
                 </Link>
@@ -119,7 +119,7 @@ const NavTestPage: React.FC = () => {
                   <SignedOut>
                     <button
                       onClick={() => navigate("/sign-in")}
-                      className="px-4 py-2 bg-[#292929] border border-[#D8E1EC] text-[#ffffff] rounded-md text-xs font-normal hover:bg-[#F2F0ED] hover:text-[#292929] transition-colors"
+                      className="px-4 py-2 bg-cta border border-hairline text-on-cta rounded-md text-xs font-normal hover:bg-surface-hover hover:text-ink transition-colors"
                     >
                       Sign in
                     </button>
@@ -134,14 +134,14 @@ const NavTestPage: React.FC = () => {
                           setShowProfileMenu(false);
                           navigate(profileUrl);
                         }}
-                        className="block px-4 py-2 text-sm text-[#292929] hover:bg-[#F3F4F6]"
+                        className="block px-4 py-2 text-sm text-ink hover:bg-surface-hover"
                       >
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setShowProfileMenu((v) => !v);
                           }}
-                          className="rounded-full border border-[#D8E1EC] w-9 h-9 overflow-hidden focus:outline-none"
+                          className="rounded-full border border-hairline w-9 h-9 overflow-hidden focus:outline-none"
                           aria-label="Open profile menu"
                           type="button"
                         >
@@ -154,10 +154,10 @@ const NavTestPage: React.FC = () => {
                       </a>
                       {/* Basic dropdown for testing - can be expanded if needed */}
                       {showProfileMenu && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                        <div className="absolute right-0 mt-2 w-48 bg-surface rounded-md shadow-lg py-1 z-50">
                           <Link
                             to={profileUrl}
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            className="block px-4 py-2 text-sm text-copy hover:bg-surface-hover"
                             onClick={() => setShowProfileMenu(false)}
                           >
                             Profile
@@ -167,7 +167,7 @@ const NavTestPage: React.FC = () => {
                               showMessage("Sign Out", "Signing out...", "info");
                               setShowProfileMenu(false);
                             }}
-                            className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            className="w-full text-left block px-4 py-2 text-sm text-copy hover:bg-surface-hover"
                           >
                             Sign Out
                           </button>
@@ -182,88 +182,79 @@ const NavTestPage: React.FC = () => {
                 <div className="flex w-full md:w-auto items-center gap-3">
                   <Link
                     to="/submit"
-                    className="flex items-center gap-2 text-[#545454] hover:text-[#525252] px-3 py-1 rounded-md text-sm"
+                    className="flex items-center gap-2 text-soft hover:text-copy px-3 py-1 rounded-md text-sm"
                   >
                     <PlusCircle className="w-4 h-4" />
                     Submit
                   </Link>
                   <button
                     onClick={() => setViewMode("list")}
-                    className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "list" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
+                    className={`p-2 rounded-md border border-hairline ${viewMode === "list" ? "bg-brand-soft" : "hover:bg-surface-hover"}`}
                     aria-label="List View"
                   >
-                    <List className="w-5 h-5 text-[#545454]" />
+                    <List className="w-5 h-5 text-soft" />
                   </button>
                   <button
                     onClick={() => setViewMode("grid")}
-                    className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "grid" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
+                    className={`p-2 rounded-md border border-hairline ${viewMode === "grid" ? "bg-brand-soft" : "hover:bg-surface-hover"}`}
                     aria-label="Grid View"
                   >
-                    <LayoutGrid className="w-5 h-5 text-[#545454]" />
+                    <LayoutGrid className="w-5 h-5 text-soft" />
                   </button>
                   <button
                     onClick={() => setViewMode("vibe")}
-                    className={`p-2 rounded-md border border-[#D8E1EC] ${viewMode === "vibe" ? "bg-[#FBF5DB]" : "hover:bg-gray-100"}`}
+                    className={`p-2 rounded-md border border-hairline ${viewMode === "vibe" ? "bg-brand-soft" : "hover:bg-surface-hover"}`}
                     aria-label="Vibe View"
                   >
-                    <ThumbsUp className="w-5 h-5 text-[#545454]" />
+                    <ThumbsUp className="w-5 h-5 text-soft" />
                   </button>
                 </div>
 
                 <div className="flex w-full md:w-auto items-center gap-3">
-                  <div className="relative inline-block text-left">
-                    <select
-                      value={selectedTagId || ""}
-                      onChange={(e) =>
-                        setSelectedTagId(
-                          e.target.value
-                            ? (e.target.value as Id<"tags">)
-                            : undefined,
-                        )
-                      }
-                      className="appearance-none cursor-pointer pl-3 pr-8 py-2 bg-white border border-[#D8E1EC] rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] hover:border-[#A8A29E]"
-                    >
-                      <option value="">All Categories</option>
-                      {headerTags
+                  {/* Themed category dropdown */}
+                  <SimpleSelect
+                    value={selectedTagId || ""}
+                    onChange={(value) =>
+                      setSelectedTagId(
+                        value ? (value as Id<"tags">) : undefined,
+                      )
+                    }
+                    aria-label="Filter by category"
+                    className="w-auto h-auto py-2 pl-3 pr-2 text-sm gap-1"
+                    options={[
+                      { value: "", label: "All Categories" },
+                      ...(headerTags
                         ?.filter((tag) => !tag.isHidden)
-                        .map((tag) => (
-                          <option key={tag._id} value={tag._id}>
-                            {tag.name}
-                          </option>
-                        ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#545454]">
-                      <ChevronDown className="h-4 w-4" />
-                    </div>
-                  </div>
+                        .map((tag) => ({
+                          value: tag._id as string,
+                          label: tag.name,
+                        })) ?? []),
+                    ]}
+                  />
 
-                  <div className="relative inline-block text-left">
-                    <select
-                      value={sortPeriod}
-                      onChange={(e) =>
-                        setSortPeriod(e.target.value as SortPeriod)
-                      }
-                      className="appearance-none cursor-pointer pl-3 pr-8 py-2 bg-white border border-[#D8E1EC] rounded-md text-sm text-[#525252] focus:outline-none focus:ring-1 focus:ring-[#292929] hover:border-[#A8A29E]"
-                    >
-                      <option value="today">Today</option>
-                      <option value="week">This Week</option>
-                      <option value="month">This Month</option>
-                      <option value="year">This Year</option>
-                      <option value="all">All Time</option>
-                      <option value="votes_today">Most Vibes (Today)</option>
-                      <option value="votes_week">Most Vibes (Week)</option>
-                      <option value="votes_month">Most Vibes (Month)</option>
-                      <option value="votes_year">Most Vibes (Year)</option>
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#545454]">
-                      <ChevronDown className="h-4 w-4" />
-                    </div>
-                  </div>
+                  {/* Themed sort dropdown */}
+                  <SimpleSelect
+                    value={sortPeriod}
+                    onChange={(value) => setSortPeriod(value as SortPeriod)}
+                    aria-label="Sort submissions"
+                    className="w-auto h-auto py-2 pl-3 pr-2 text-sm gap-1"
+                    options={[
+                      { value: "today", label: "Today" },
+                      { value: "week", label: "This Week" },
+                      { value: "month", label: "This Month" },
+                      { value: "year", label: "This Year" },
+                      { value: "all", label: "All Time" },
+                      { value: "votes_today", label: "Most Vibes (Today)" },
+                      { value: "votes_week", label: "Most Vibes (Week)" },
+                      { value: "votes_month", label: "Most Vibes (Month)" },
+                      { value: "votes_year", label: "Most Vibes (Year)" },
+                    ]}
+                  />
 
                   <button
                     type="button"
                     onClick={handleSearchIconClick}
-                    className="p-2 text-[#525252] hover:text-[#292929]"
+                    className="p-2 text-copy hover:text-ink"
                     aria-label="Search"
                   >
                     <Search className="w-5 h-5" />
@@ -275,10 +266,10 @@ const NavTestPage: React.FC = () => {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search..."
-                      className={`transition-all duration-300 ease-in-out h-9 text-sm focus:outline-none bg-white text-[#525252] rounded-md border ${isSearchExpanded ? "w-48 opacity-100 px-3 border-[#D5D3D0]" : "w-0 opacity-0 p-0 border-none"}`}
+                      className={`transition-all duration-300 ease-in-out h-9 text-sm focus:outline-none bg-surface text-copy rounded-md border ${isSearchExpanded ? "w-48 opacity-100 px-3 border-hairline-strong" : "w-0 opacity-0 p-0 border-none"}`}
                       style={{
                         borderColor: isSearchExpanded
-                          ? "#D5D3D0"
+                          ? "var(--th-hairline-strong)"
                           : "transparent",
                       }}
                       tabIndex={isSearchExpanded ? 0 : -1}
@@ -300,7 +291,7 @@ const NavTestPage: React.FC = () => {
               The header above is a copy from Layout.tsx for testing. Modify its
               JSX here and then copy it back to Layout.tsx.
             </p>
-            <p className="text-center mt-2 text-sm text-gray-600">
+            <p className="text-center mt-2 text-sm text-copy">
               (Note: Advanced dynamic functionalities like live data fetching
               are simplified or mocked here.)
             </p>
@@ -308,8 +299,8 @@ const NavTestPage: React.FC = () => {
         </main>
 
         {/* Optional: Add a simplified footer for completeness if needed */}
-        <footer className="bg-gray-200 text-center p-4 mt-auto">
-          <p className="text-sm text-gray-600">
+        <footer className="bg-surface-hover text-center p-4 mt-auto">
+          <p className="text-sm text-copy">
             Simplified Footer for Test Page
           </p>
         </footer>

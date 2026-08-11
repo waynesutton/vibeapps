@@ -353,7 +353,7 @@ export default function InboxPage() {
   if (!isLoaded) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-ink"></div>
       </div>
     );
   }
@@ -379,14 +379,14 @@ export default function InboxPage() {
           <div
             className={`${
               selectedConversationId ? "hidden lg:flex" : "flex"
-            } w-full lg:w-80 flex-shrink-0 bg-white rounded-lg border border-[#D8E1EC] flex-col overflow-hidden`}
+            } w-full lg:w-80 flex-shrink-0 bg-surface rounded-lg border border-hairline flex-col overflow-hidden`}
           >
             {/* Header */}
-            <div className="p-4 border-b border-[#D8E1EC] flex-shrink-0 bg-white">
+            <div className="p-4 border-b border-hairline flex-shrink-0 bg-surface">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Inbox className="w-5 h-5 text-[#292929]" />
-                  <h1 className="text-lg font-semibold text-[#292929]">
+                  <Inbox className="w-5 h-5 text-ink" />
+                  <h1 className="text-lg font-semibold text-ink">
                     Chats
                   </h1>
                 </div>
@@ -403,10 +403,10 @@ export default function InboxPage() {
             </div>
 
             {/* Conversations */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden bg-white">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden bg-surface">
               {!conversations || conversations.length === 0 ? (
-                <div className="p-8 text-center text-[#787672]">
-                  <MessageCircle className="w-12 h-12 mx-auto mb-4 text-[#D8E1EC]" />
+                <div className="p-8 text-center text-faint">
+                  <MessageCircle className="w-12 h-12 mx-auto mb-4 text-faint" />
                   <p className="font-medium">No conversations yet</p>
                   <p className="text-sm mt-2">
                     Start a conversation by visiting a user's profile
@@ -419,10 +419,10 @@ export default function InboxPage() {
                     onClick={() =>
                       navigate(`/inbox?conversation=${conversation._id}`)
                     }
-                    className={`w-full p-3 border-b border-[#D8E1EC] hover:bg-[#F4F2EE] text-left transition-colors ${
+                    className={`w-full p-3 border-b border-hairline hover:bg-surface-hover text-left transition-colors ${
                       selectedConversationId === conversation._id
-                        ? "bg-[#F4F2EE]"
-                        : "bg-white"
+                        ? "bg-canvas"
+                        : "bg-surface"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-3">
@@ -431,13 +431,13 @@ export default function InboxPage() {
                           {conversation.otherUser.username ? (
                             <a
                               href={`/${conversation.otherUser.username}`}
-                              className="font-semibold text-[#292929] text-sm truncate hover:underline"
+                              className="font-semibold text-ink text-sm truncate hover:underline"
                               onClick={(e) => e.stopPropagation()}
                             >
                               {conversation.otherUser.name}
                             </a>
                           ) : (
-                            <p className="font-semibold text-[#292929] text-sm truncate">
+                            <p className="font-semibold text-ink text-sm truncate">
                               {conversation.otherUser.name}
                             </p>
                           )}
@@ -448,14 +448,14 @@ export default function InboxPage() {
                           )}
                         </div>
                         {conversation.lastMessage && (
-                          <p className="text-xs text-[#787672] truncate">
+                          <p className="text-xs text-faint truncate">
                             {conversation.lastMessage.content}
                           </p>
                         )}
                       </div>
                       {conversation.unreadCount > 0 && (
                         <div className="flex-shrink-0">
-                          <div className="bg-[#292929] text-white text-xs font-medium rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center">
+                          <div className="bg-cta text-on-cta text-xs font-medium rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center">
                             {conversation.unreadCount}
                           </div>
                         </div>
@@ -471,12 +471,12 @@ export default function InboxPage() {
           <div
             className={`${
               selectedConversationId ? "flex" : "hidden lg:flex"
-            } flex-1 flex-col overflow-hidden bg-white rounded-lg border border-[#D8E1EC]`}
+            } flex-1 flex-col overflow-hidden bg-surface rounded-lg border border-hairline`}
           >
             {!selectedConversationId ? (
-              <div className="flex-1 flex items-center justify-center text-[#787672]">
+              <div className="flex-1 flex items-center justify-center text-faint">
                 <div className="text-center">
-                  <MessageCircle className="w-16 h-16 mx-auto mb-4 text-[#D8E1EC]" />
+                  <MessageCircle className="w-16 h-16 mx-auto mb-4 text-faint" />
                   <p className="font-medium">
                     Select a conversation to view messages
                   </p>
@@ -485,29 +485,29 @@ export default function InboxPage() {
             ) : (
               <>
                 {/* Conversation Header */}
-                <div className="p-4 border-b border-[#D8E1EC] flex items-center justify-between flex-shrink-0 bg-white">
+                <div className="p-4 border-b border-hairline flex items-center justify-between flex-shrink-0 bg-surface">
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => navigate("/inbox")}
-                      className="lg:hidden p-2 hover:bg-[#F4F2EE] rounded-md transition-colors"
+                      className="lg:hidden p-2 hover:bg-surface-hover rounded-md transition-colors"
                     >
-                      <ArrowLeft className="w-5 h-5 text-[#292929]" />
+                      <ArrowLeft className="w-5 h-5 text-ink" />
                     </button>
                     {selectedConversation?.otherUser.username ? (
                       <a
                         href={`/${selectedConversation.otherUser.username}`}
                         className="hover:opacity-80 transition-opacity"
                       >
-                        <p className="font-semibold text-[#292929]">
+                        <p className="font-semibold text-ink">
                           {selectedConversation.otherUser.name}
                         </p>
-                        <p className="text-xs text-[#787672]">
+                        <p className="text-xs text-faint">
                           @{selectedConversation.otherUser.username}
                         </p>
                       </a>
                     ) : (
                       <div>
-                        <p className="font-semibold text-[#292929]">
+                        <p className="font-semibold text-ink">
                           {selectedConversation?.otherUser.name}
                         </p>
                       </div>
@@ -517,7 +517,7 @@ export default function InboxPage() {
                     <button
                       onClick={handleBlockUser}
                       disabled={isBlocking}
-                      className="p-2 hover:bg-[#F4F2EE] rounded-md transition-colors text-[#787672] hover:text-[#292929]"
+                      className="p-2 hover:bg-surface-hover rounded-md transition-colors text-faint hover:text-ink"
                       title={isUserBlockedQuery ? "Unblock user" : "Block user"}
                     >
                       <Ban className="w-5 h-5" />
@@ -525,7 +525,7 @@ export default function InboxPage() {
                     <button
                       onClick={handleReportUser}
                       disabled={isReporting}
-                      className="p-2 hover:bg-[#F4F2EE] rounded-md transition-colors text-[#787672] hover:text-[#292929]"
+                      className="p-2 hover:bg-surface-hover rounded-md transition-colors text-faint hover:text-ink"
                       title="Report user"
                     >
                       <Flag className="w-5 h-5" />
@@ -533,7 +533,7 @@ export default function InboxPage() {
                     <button
                       onClick={handleDeleteConversation}
                       disabled={isDeleting}
-                      className="p-2 hover:bg-[#F4F2EE] rounded-md transition-colors text-red-600"
+                      className="p-2 hover:bg-surface-hover rounded-md transition-colors text-red-600"
                       title="Delete conversation"
                     >
                       <Trash2 className="w-5 h-5" />
@@ -542,9 +542,9 @@ export default function InboxPage() {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 bg-[#ffffff]">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 bg-surface">
                   {messages && messages.length === 0 ? (
-                    <div className="text-center text-[#787672] py-8">
+                    <div className="text-center text-faint py-8">
                       <p className="font-medium">
                         No messages yet. Start the conversation!
                       </p>
@@ -571,8 +571,8 @@ export default function InboxPage() {
                             <div
                               className={`rounded-lg p-3 ${
                                 isOwnMessage
-                                  ? "bg-[#292929] text-white"
-                                  : "bg-gray-100 text-gray-900"
+                                  ? "bg-cta text-on-cta"
+                                  : "bg-surface-alt text-ink"
                               }`}
                             >
                               <p className="text-sm break-words">
@@ -592,10 +592,10 @@ export default function InboxPage() {
                                   }
                                   className={`absolute -bottom-2 ${
                                     isOwnMessage ? "left-0" : "right-0"
-                                  } bg-white border border-[#D8E1EC] rounded-full p-1 hover:bg-[#F4F2EE] transition-colors`}
+                                  } bg-surface border border-hairline rounded-full p-1 hover:bg-surface-hover transition-colors`}
                                   title="Add reaction"
                                 >
-                                  <Smile className="w-4 h-4 text-[#787672]" />
+                                  <Smile className="w-4 h-4 text-faint" />
                                 </button>
                               )}
 
@@ -604,7 +604,7 @@ export default function InboxPage() {
                               <div
                                 className={`absolute top-full mt-2 ${
                                   isOwnMessage ? "right-0" : "left-0"
-                                } bg-white border border-[#D8E1EC] rounded-lg p-2 flex gap-1 z-10`}
+                                } bg-surface border border-hairline rounded-lg p-2 flex gap-1 z-10`}
                                 onMouseLeave={() => setShowReactionPicker(null)}
                               >
                                 {REACTION_EMOJIS.map((emoji) => (
@@ -638,8 +638,8 @@ export default function InboxPage() {
                                       }}
                                       className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm ${
                                         isUserReaction
-                                          ? "bg-[#292929] text-white border-2 border-[#292929]"
-                                          : "bg-[#F4F2EE] text-[#292929] border border-[#D8E1EC]"
+                                          ? "bg-cta text-on-cta border-2 border-ink"
+                                          : "bg-canvas text-ink border border-hairline"
                                       } hover:scale-105 transition-transform`}
                                       title={reaction.users
                                         .map((u) => u.name)
@@ -656,7 +656,7 @@ export default function InboxPage() {
                             )}
                           </div>
 
-                          <p className="text-xs text-gray-500 mt-1 px-1">
+                          <p className="text-xs text-soft mt-1 px-1">
                             {new Date(message._creationTime).toLocaleString(
                               [],
                               {
@@ -676,8 +676,8 @@ export default function InboxPage() {
 
                 {/* Message Input */}
                 {selectedConversation?.otherUser.inboxEnabled === false ? (
-                  <div className="p-4 border-t border-[#D8E1EC] bg-[#F4F2EE] flex-shrink-0">
-                    <div className="flex items-center gap-2 text-sm text-[#787672]">
+                  <div className="p-4 border-t border-hairline bg-canvas flex-shrink-0">
+                    <div className="flex items-center gap-2 text-sm text-faint">
                       <Inbox className="w-5 h-5" />
                       <p>
                         This user has disabled their inbox and cannot receive
@@ -688,7 +688,7 @@ export default function InboxPage() {
                 ) : (
                   <form
                     onSubmit={handleSendMessage}
-                    className="p-4 border-t border-[#D8E1EC] flex-shrink-0 bg-white"
+                    className="p-4 border-t border-hairline flex-shrink-0 bg-surface"
                   >
                     <div className="flex gap-2">
                       <textarea
@@ -696,7 +696,7 @@ export default function InboxPage() {
                         onChange={(e) => setMessageInput(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder="Type a message... (Shift+Enter to send)"
-                        className="flex-1 px-4 py-2.5 border border-[#D8E1EC] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#292929] focus:border-transparent text-sm resize-none"
+                        className="flex-1 px-4 py-2.5 border border-hairline rounded-lg focus:outline-none focus:ring-2 focus:ring-ink focus:border-transparent text-sm resize-none"
                         maxLength={2000}
                         disabled={isSending}
                         rows={3}
@@ -707,17 +707,17 @@ export default function InboxPage() {
                       <button
                         type="submit"
                         disabled={isSending || !messageInput.trim()}
-                        className="px-5 py-2.5 bg-[#292929] text-white rounded-lg hover:bg-[#3d3d3d] transition-colors disabled:bg-[#D8E1EC] disabled:cursor-not-allowed flex items-center gap-2 font-medium text-sm self-end"
+                        className="px-5 py-2.5 bg-cta text-on-cta rounded-lg hover:bg-cta-hover transition-colors disabled:bg-surface-hover disabled:cursor-not-allowed flex items-center gap-2 font-medium text-sm self-end"
                       >
                         {isSending ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-surface"></div>
                         ) : (
                           <Send className="w-4 h-4" />
                         )}
                         Send
                       </button>
                     </div>
-                    <p className="text-xs text-[#787672] mt-2">
+                    <p className="text-xs text-faint mt-2">
                       {messageInput.length}/2000 characters
                     </p>
                   </form>
@@ -731,12 +731,12 @@ export default function InboxPage() {
 
         {/* Error Message Banner */}
         {errorMessage && (
-          <div className="fixed bottom-4 right-4 max-w-md bg-white border-2 border-red-600 rounded-lg p-4 z-50">
+          <div className="fixed bottom-4 right-4 max-w-md bg-surface border-2 border-red-600 rounded-lg p-4 z-50">
             <div className="flex items-start justify-between gap-3">
-              <p className="text-sm text-[#292929]">{errorMessage}</p>
+              <p className="text-sm text-ink">{errorMessage}</p>
               <button
                 onClick={() => setErrorMessage(null)}
-                className="text-[#787672] hover:text-[#292929] text-lg font-bold"
+                className="text-faint hover:text-ink text-lg font-bold"
               >
                 ×
               </button>
@@ -747,11 +747,11 @@ export default function InboxPage() {
         {/* Block Confirmation Modal */}
         {showBlockModal && selectedConversation && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 border border-[#D8E1EC]">
-              <h3 className="text-lg font-semibold text-[#292929] mb-4">
+            <div className="bg-surface rounded-lg p-6 max-w-md w-full mx-4 border border-hairline">
+              <h3 className="text-lg font-semibold text-ink mb-4">
                 {isUserBlockedQuery ? "Unblock User" : "Block User"}
               </h3>
-              <p className="text-sm text-[#787672] mb-6">
+              <p className="text-sm text-faint mb-6">
                 {isUserBlockedQuery
                   ? `Unblock ${selectedConversation.otherUser.name}? They will be able to send you messages again.`
                   : `Block ${selectedConversation.otherUser.name}? They will no longer be able to send you messages.`}
@@ -760,14 +760,14 @@ export default function InboxPage() {
                 <button
                   onClick={() => setShowBlockModal(false)}
                   disabled={isBlocking}
-                  className="px-4 py-2 text-sm font-medium text-[#787672] hover:text-[#292929] transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-faint hover:text-ink transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmBlockAction}
                   disabled={isBlocking}
-                  className="px-4 py-2 text-sm font-medium bg-[#292929] text-white rounded-md hover:bg-[#3d3d3d] transition-colors disabled:bg-[#D8E1EC] disabled:cursor-not-allowed"
+                  className="px-4 py-2 text-sm font-medium bg-cta text-on-cta rounded-md hover:bg-cta-hover transition-colors disabled:bg-surface-hover disabled:cursor-not-allowed"
                 >
                   {isBlocking
                     ? "Processing..."
@@ -783,23 +783,23 @@ export default function InboxPage() {
         {/* Report User Modal */}
         {showReportModal && selectedConversation && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 border border-[#D8E1EC]">
-              <h3 className="text-lg font-semibold text-[#292929] mb-4">
+            <div className="bg-surface rounded-lg p-6 max-w-md w-full mx-4 border border-hairline">
+              <h3 className="text-lg font-semibold text-ink mb-4">
                 Report User
               </h3>
-              <p className="text-sm text-[#787672] mb-4">
+              <p className="text-sm text-faint mb-4">
                 Why are you reporting {selectedConversation.otherUser.name}?
               </p>
               <textarea
                 value={reportReason}
                 onChange={(e) => setReportReason(e.target.value)}
                 placeholder="Please provide a detailed reason..."
-                className="w-full px-3 py-2 border border-[#D8E1EC] rounded-md focus:outline-none focus:ring-2 focus:ring-[#292929] focus:border-transparent text-sm resize-none"
+                className="w-full px-3 py-2 border border-hairline rounded-md focus:outline-none focus:ring-2 focus:ring-ink focus:border-transparent text-sm resize-none"
                 rows={4}
                 maxLength={500}
                 disabled={isReporting}
               />
-              <p className="text-xs text-[#787672] mt-2 mb-4">
+              <p className="text-xs text-faint mt-2 mb-4">
                 {reportReason.length}/500 characters
               </p>
               <div className="flex gap-3 justify-end">
@@ -809,14 +809,14 @@ export default function InboxPage() {
                     setReportReason("");
                   }}
                   disabled={isReporting}
-                  className="px-4 py-2 text-sm font-medium text-[#787672] hover:text-[#292929] transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-faint hover:text-ink transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={submitReport}
                   disabled={isReporting || !reportReason.trim()}
-                  className="px-4 py-2 text-sm font-medium bg-[#292929] text-white rounded-md hover:bg-[#3d3d3d] transition-colors disabled:bg-[#D8E1EC] disabled:cursor-not-allowed"
+                  className="px-4 py-2 text-sm font-medium bg-cta text-on-cta rounded-md hover:bg-cta-hover transition-colors disabled:bg-surface-hover disabled:cursor-not-allowed"
                 >
                   {isReporting ? "Submitting..." : "Submit Report"}
                 </button>

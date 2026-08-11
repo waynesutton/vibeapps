@@ -237,6 +237,7 @@ For each submission the AI judge collects:
 
 - the submission's title, tagline, description, and links,
 - the app website (fetched with Firecrawl when \`FIRECRAWL_API_KEY\` is set) plus a direct liveness check,
+- the **demo video transcript** (fetched with Context.dev when \`CONTEXT_DEV_API_KEY\` is set): YouTube videos return their caption transcript; other video host pages get a best effort page scrape with a Firecrawl fallback. Transcripts are treated as unverified builder narrative and a missing video never lowers a score,
 - the **GitHub repository**, when a GitHub URL is on the submission,
 - **project log files** at the repo root: \`hackathon.md\`, \`changelog.md\`, \`task.md\`, and \`files.md\` (self-reported build context, cross-checked against verified facts),
 - **agent skills** in the repo (\`.agents/skills/*/SKILL.md\` and the \`.claude\`, \`.codex\`, \`.cursor\` variants) as workflow evidence,
@@ -280,6 +281,7 @@ Set these in the Convex deployment environment:
 | \`OPENAI_API_KEY\` | Fallback | Used when Anthropic is unavailable |
 | \`OPENROUTER_API_KEY\` | Fallback | Second fallback provider |
 | \`FIRECRAWL_API_KEY\` | Optional | Website content fetching |
+| \`CONTEXT_DEV_API_KEY\` | Optional | Video transcript fetching (YouTube captions and video host pages) |
 
 ## Running and reviewing
 
@@ -474,6 +476,7 @@ Set these on the Convex deployment (Dashboard, Settings, Environment Variables),
 | \`OPENAI_API_KEY\` | AI judge, spam check | First fallback provider. |
 | \`OPENROUTER_API_KEY\` | AI judge, spam check | Second fallback provider. |
 | \`FIRECRAWL_API_KEY\` | AI judge, spam check | Website content fetching. Optional for the AI judge; the spam check scans still complete without it. |
+| \`CONTEXT_DEV_API_KEY\` | AI judge | Video demo transcript fetching via Context.dev (YouTube captions plus video host pages). Optional; reviews run without it. |
 | \`ADMIN_EMAIL\` | Spam check | Optional. Reply-to address on spam notification emails so submitters can reach the admins. |
 
 The spam check falls back to a deterministic heuristic when no model key is set. Everything else in the judging system (groups, criteria, human judges, agent keys, results) works without any environment variables.`,
@@ -492,7 +495,7 @@ export function AdminDocs() {
         className="md:w-56 flex-shrink-0"
         aria-label="Documentation sections"
       >
-        <div className="bg-white rounded-lg border border-gray-200 p-2 md:sticky md:top-4">
+        <div className="bg-surface rounded-lg border border-hairline p-2 md:sticky md:top-4">
           {DOC_SECTIONS.map((section) => {
             const Icon = section.icon;
             const isActive = section.id === activeId;
@@ -503,13 +506,13 @@ export function AdminDocs() {
                 onClick={() => setActiveId(section.id)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-left transition-colors ${
                   isActive
-                    ? "bg-gray-100 text-[#292929] font-medium"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-800"
+                    ? "bg-surface-alt text-ink font-medium"
+                    : "text-copy hover:bg-surface-hover hover:text-ink"
                 }`}
               >
                 <Icon
                   className={`w-4 h-4 flex-shrink-0 ${
-                    isActive ? "text-[#292929]" : "text-gray-400"
+                    isActive ? "text-ink" : "text-faint"
                   }`}
                 />
                 {section.title}
@@ -521,8 +524,8 @@ export function AdminDocs() {
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="bg-white rounded-lg border border-gray-200 p-6 md:p-8">
-          <article className="prose prose-sm max-w-none prose-headings:text-[#292929] prose-h1:text-xl prose-h1:font-medium prose-h2:text-base prose-h2:font-medium prose-p:text-gray-600 prose-li:text-gray-600 prose-strong:text-[#292929] prose-a:text-[#292929] prose-code:text-[#292929] prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-table:text-xs">
+        <div className="bg-surface rounded-lg border border-hairline p-6 md:p-8">
+          <article className="prose prose-sm max-w-none prose-headings:text-ink prose-h1:text-xl prose-h1:font-medium prose-h2:text-base prose-h2:font-medium prose-p:text-copy prose-li:text-copy prose-strong:text-ink prose-a:text-ink prose-code:text-ink prose-code:bg-surface-alt prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-table:text-xs">
             <Markdown>{active.content}</Markdown>
           </article>
         </div>

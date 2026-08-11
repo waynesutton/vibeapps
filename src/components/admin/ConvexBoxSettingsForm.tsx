@@ -121,7 +121,7 @@ export function ConvexBoxSettingsForm() {
 
   if (authIsLoading) {
     return (
-      <div className="space-y-6 bg-white p-6 rounded-lg border border-gray-200 text-center">
+      <div className="space-y-6 bg-surface p-6 rounded-lg border border-hairline text-center">
         Loading authentication...
       </div>
     );
@@ -132,8 +132,8 @@ export function ConvexBoxSettingsForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-lg border border-gray-200">
-      <h3 className="text-lg font-medium text-gray-800 mb-4">Popup Box Configuration</h3>
+    <form onSubmit={handleSubmit} className="space-y-6 bg-surface p-6 rounded-lg border border-hairline">
+      <h3 className="text-lg font-medium text-ink mb-4">Popup Box Configuration</h3>
 
       <div className="flex items-center space-x-2">
         <Checkbox
@@ -141,7 +141,7 @@ export function ConvexBoxSettingsForm() {
           checked={isEnabled}
           onCheckedChange={(checked) => setIsEnabled(Boolean(checked))}
         />
-        <Label htmlFor="isEnabled" className="text-sm font-medium text-gray-700">
+        <Label htmlFor="isEnabled" className="text-sm font-medium text-copy">
           Show Popup Box
         </Label>
       </div>
@@ -152,13 +152,13 @@ export function ConvexBoxSettingsForm() {
           checked={textAboveLogo}
           onCheckedChange={(checked) => setTextAboveLogo(Boolean(checked))}
         />
-        <Label htmlFor="textAboveLogo" className="text-sm font-medium text-gray-700">
+        <Label htmlFor="textAboveLogo" className="text-sm font-medium text-copy">
           Display Text Above Logo
         </Label>
       </div>
 
       <div>
-        <Label htmlFor="boxSize" className="block text-sm font-medium text-gray-700 mb-1">
+        <Label htmlFor="boxSize" className="block text-sm font-medium text-copy mb-1">
           Box Size
         </Label>
         <Select value={boxSize} onValueChange={(value: "standard" | "square") => setBoxSize(value)}>
@@ -173,7 +173,7 @@ export function ConvexBoxSettingsForm() {
       </div>
 
       <div>
-        <Label htmlFor="displayText" className="block text-sm font-medium text-gray-700 mb-1">
+        <Label htmlFor="displayText" className="block text-sm font-medium text-copy mb-1">
           Display Text
         </Label>
         <Input
@@ -187,7 +187,7 @@ export function ConvexBoxSettingsForm() {
       </div>
 
       <div>
-        <Label htmlFor="linkUrl" className="block text-sm font-medium text-gray-700 mb-1">
+        <Label htmlFor="linkUrl" className="block text-sm font-medium text-copy mb-1">
           Link URL
         </Label>
         <Input
@@ -202,7 +202,7 @@ export function ConvexBoxSettingsForm() {
       </div>
 
       <div>
-        <Label htmlFor="logoFile" className="block text-sm font-medium text-gray-700 mb-1">
+        <Label htmlFor="logoFile" className="block text-sm font-medium text-copy mb-1">
           Upload Logo (Optional)
         </Label>
         <Input
@@ -214,7 +214,7 @@ export function ConvexBoxSettingsForm() {
         />
         {currentLogoUrl && !selectedFile && (
           <div className="mt-2">
-            <p className="text-xs text-gray-600 mb-1">Current logo:</p>
+            <p className="text-xs text-copy mb-1">Current logo:</p>
             {linkUrl && linkUrl.trim() !== "" ? (
               <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="inline-block">
                 <img src={currentLogoUrl} alt="Current logo" className="max-h-20 border rounded" />
@@ -239,7 +239,7 @@ export function ConvexBoxSettingsForm() {
         )}
         {selectedFile && selectedFileUrl && (
           <div className="mt-2">
-            <p className="text-xs text-gray-600 mb-1">New logo preview:</p>
+            <p className="text-xs text-copy mb-1">New logo preview:</p>
             {linkUrl && linkUrl.trim() !== "" ? (
               <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="inline-block">
                 <img
@@ -255,10 +255,10 @@ export function ConvexBoxSettingsForm() {
                 className="max-h-20 border rounded inline-block"
               />
             )}
-            <p className="text-xs text-gray-600 mt-1">File: {selectedFile.name}</p>
+            <p className="text-xs text-copy mt-1">File: {selectedFile.name}</p>
           </div>
         )}
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="text-xs text-soft mt-1">
           Recommended: Small, transparent background PNG.
         </p>
       </div>
