@@ -122,6 +122,28 @@ export const DEFAULT_RUBRIC_WEIGHTS: Record<string, number> =
     {} as Record<string, number>,
   );
 
+// Frontend checker hosting platforms and their default sub-weights. Keys must
+// match AI_FRONTEND_PLATFORMS in convex/aiJudge.ts; the mutation validates
+// against the server list. The detected platform's weight multiplies the
+// frontend-checker criterion weight in the weighted ranking.
+export const FRONTEND_CHECKER_KEY = "frontend-checker";
+export const AI_FRONTEND_PLATFORM_DEFS = [
+  { key: "codex-sites", label: "Codex Sites" },
+  { key: "convex-hosting", label: "Convex static hosting" },
+  { key: "vercel", label: "Vercel" },
+  { key: "netlify", label: "Netlify" },
+  { key: "other", label: "Other" },
+] as const;
+
+export const DEFAULT_FRONTEND_PLATFORM_WEIGHTS: Record<string, number> =
+  AI_FRONTEND_PLATFORM_DEFS.reduce(
+    (acc, def) => {
+      acc[def.key] = 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+
 export const DEFAULT_FIELD_REQUIREMENTS: SubmissionFieldRequirements =
   SUBMISSION_FIELD_DEFS.reduce((acc, field) => {
     acc[field.key] = field.default;

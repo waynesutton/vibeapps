@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import {
   DEFAULT_AI_JUDGE_PROMPT_BODY,
+  FRONTEND_CHECKER_KEY,
   getRubricForGroup,
   type RubricCriterion,
 } from "./aiJudge";
@@ -324,6 +325,18 @@ type UrlCheck = {
   isLive: boolean;
   statusCode?: number;
   note: string;
+};
+
+// Liveness result plus selected response headers used only for hosting
+// platform detection (headers are never stored)
+type LivenessResult = {
+  check: UrlCheck;
+  headers: Record<string, string>;
+};
+
+type FrontendHosting = {
+  platform: string; // codex-sites | convex-hosting | vercel | netlify | other
+  evidence: string;
 };
 
 // Parse "https://github.com/owner/repo(/...)" into { owner, repo }
@@ -887,19 +900,23 @@ function buildFeaturesFromFacts(
 }
 
 // Deterministic liveness check of the submission's live app URL (never social
-// links). GET with redirects followed; any 2xx/3xx counts as live.
-async function checkUrlLiveness(url: string | undefined): Promise<UrlCheck> {
+// links). GET with redirects followed; any 2xx/3xx counts as live. Also
+// captures the response headers used by the hosting platform detection.
+async function checkUrlLiveness(url: string | undefined): Promise<LivenessResult> {
   if (!url) {
-    return { isLive: false, note: "no URL provided" };
+    return { check: { isLive: false, note: "no URL provided" }, headers: {} };
   }
   let parsed: URL;
   try {
     parsed = new URL(url);
   } catch {
-    return { checkedUrl: url, isLive: false, note: "invalid URL" };
+    return { check: { checkedUrl: url, isLive: false, note: "invalid URL" }, headers: {} };
   }
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    return { checkedUrl: url, isLive: false, note: "not an http(s) URL" };
+    return {
+      check: { checkedUrl: url, isLive: false, note: "not an http(s) URL" },
+      headers: {},
+    };
   }
 
   try {
@@ -912,25 +929,119 @@ async function checkUrlLiveness(url: string | undefined): Promise<UrlCheck> {
       signal: controller.signal,
     });
     clearTimeout(timeout);
+    // Hosting fingerprint headers (available on error responses too)
+    const headers: Record<string, string> = {};
+    for (const name of ["server", "x-vercel-id", "x-nf-request-id"]) {
+      const value = res.headers.get(name);
+      if (value !== null) headers[name] = value;
+    }
     if (res.ok) {
-      return { checkedUrl: url, isLive: true, statusCode: res.status, note: "OK" };
+      return {
+        check: { checkedUrl: url, isLive: true, statusCode: res.status, note: "OK" },
+        headers,
+      };
     }
     return {
-      checkedUrl: url,
-      isLive: false,
-      statusCode: res.status,
-      note:
-        res.status === 404
-          ? "404 Not Found"
-          : `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`,
+      check: {
+        checkedUrl: url,
+        isLive: false,
+        statusCode: res.status,
+        note:
+          res.status === 404
+            ? "404 Not Found"
+            : `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`,
+      },
+      headers,
     };
   } catch {
     return {
-      checkedUrl: url,
-      isLive: false,
-      note: "network error (unreachable or timed out)",
+      check: {
+        checkedUrl: url,
+        isLive: false,
+        note: "network error (unreachable or timed out)",
+      },
+      headers: {},
     };
   }
+}
+
+// Deterministic frontend hosting platform detection. Order of signals:
+// URL host suffix, then response headers from the liveness check, then repo
+// files (so custom domains still classify). Returns undefined when there is
+// no live URL and no repo signal; "other" when a URL exists but nothing
+// matched. Keys must match AI_FRONTEND_PLATFORMS in aiJudge.ts.
+function detectFrontendHosting(
+  url: string | undefined,
+  headers: Record<string, string>,
+  repo: RepoContext,
+): FrontendHosting | undefined {
+  // 1. Host suffix signals
+  if (url) {
+    try {
+      const host = new URL(url).hostname.toLowerCase();
+      if (host.endsWith(".chatgpt.site")) {
+        return { platform: "codex-sites", evidence: `host ${host}` };
+      }
+      if (host.endsWith(".convex.site") || host.endsWith(".convex.app")) {
+        return { platform: "convex-hosting", evidence: `host ${host}` };
+      }
+      if (host.endsWith(".vercel.app")) {
+        return { platform: "vercel", evidence: `host ${host}` };
+      }
+      if (host.endsWith(".netlify.app")) {
+        return { platform: "netlify", evidence: `host ${host}` };
+      }
+    } catch {
+      // Invalid URL: fall through to header and repo signals
+    }
+  }
+
+  // 2. Response header signals (cover custom domains on known hosts)
+  const server = (headers["server"] ?? "").toLowerCase();
+  if (headers["x-vercel-id"] !== undefined || server.includes("vercel")) {
+    return {
+      platform: "vercel",
+      evidence:
+        headers["x-vercel-id"] !== undefined
+          ? "x-vercel-id response header"
+          : "server: vercel response header",
+    };
+  }
+  if (headers["x-nf-request-id"] !== undefined || server.includes("netlify")) {
+    return {
+      platform: "netlify",
+      evidence:
+        headers["x-nf-request-id"] !== undefined
+          ? "x-nf-request-id response header"
+          : "server: netlify response header",
+    };
+  }
+
+  // 3. Repo file signals
+  if (repo.fetched) {
+    const paths = repo.filePaths;
+    if (paths.some((p) => p === ".openai/hosting.json")) {
+      return { platform: "codex-sites", evidence: ".openai/hosting.json in repo" };
+    }
+    if (repo.componentsInstalled.includes("self-static-hosting")) {
+      return {
+        platform: "convex-hosting",
+        evidence: "@convex-dev/self-static-hosting installed",
+      };
+    }
+    if (paths.some((p) => p === "vercel.json" || p.startsWith(".vercel/"))) {
+      return { platform: "vercel", evidence: "vercel config in repo" };
+    }
+    if (paths.some((p) => p === "netlify.toml")) {
+      return { platform: "netlify", evidence: "netlify.toml in repo" };
+    }
+  }
+
+  // A live URL exists but no signal matched
+  if (url) {
+    return { platform: "other", evidence: "no platform signals matched" };
+  }
+  return undefined;
 }
 
 // Scrape the live URL to markdown via Firecrawl (skipped if key is not set)
@@ -1108,6 +1219,7 @@ function buildUserMessage(
   gitFacts: GitFacts | undefined,
   manifest: ManifestContext,
   video: VideoContext,
+  frontendHosting: FrontendHosting | undefined,
 ): string {
   const sections: Array<string> = [
     `SUBMISSION: ${data.title}`,
@@ -1125,6 +1237,14 @@ function buildUserMessage(
       urlCheck.isLive ? "LIVE" : "NOT LIVE"
     }${urlCheck.statusCode ? ` (HTTP ${urlCheck.statusCode})` : ""}\nDetail: ${urlCheck.note}`,
   );
+
+  // Deterministic frontend hosting detection (URL host, headers, repo files).
+  // Only informs the frontend-checker criterion; never shifts other scores.
+  if (frontendHosting) {
+    sections.push(
+      `\n=== FRONTEND HOSTING CHECK (deterministic) ===\nPlatform: ${frontendHosting.platform}\nEvidence: ${frontendHosting.evidence}\nIf the rubric includes a "${FRONTEND_CHECKER_KEY}" criterion, name this platform in its reasoning and judge how well the deployed frontend works. Never raise or lower any other criterion score because of the hosting platform.`,
+    );
+  }
 
   // Deterministic Convex facts: authoritative counts the model must not contradict
   if (repo.fetched && repo.repoFacts) {
@@ -1431,7 +1551,7 @@ export const analyzeSubmission = internalAction({
       // scrape (secondary), a deterministic liveness check, and the video
       // demo transcript (unverified narrative, cached per story)
       const parsedRepoUrl = data.githubUrl ? parseGithubUrl(data.githubUrl) : null;
-      const [repo, commitHistory, scrape, urlCheckRaw, manifest, video] =
+      const [repo, commitHistory, scrape, liveness, manifest, video] =
         await Promise.all([
           fetchGithubContext(data.githubUrl),
           fetchCommitHistory(parsedRepoUrl),
@@ -1440,6 +1560,7 @@ export const analyzeSubmission = internalAction({
           fetchHackathonManifest(data.url),
           fetchVideoContext(ctx, data.storyId, data.videoUrl),
         ]);
+      const urlCheckRaw = liveness.check;
 
       // Some hosts block plain fetch but serve crawlers: a successful
       // Firecrawl scrape proves the site is up even if the direct GET failed
@@ -1451,6 +1572,14 @@ export const analyzeSubmission = internalAction({
               note: "reachable via crawler (direct request blocked)",
             }
           : urlCheckRaw;
+
+      // Deterministic hosting platform detection for the frontend checker.
+      // Stored as metadata even when the criterion is not in the rubric.
+      const frontendHosting = detectFrontendHosting(
+        data.url,
+        liveness.headers,
+        repo,
+      );
 
       // Build timeline + harness metadata (harness never feeds scoring)
       const gitFacts = repo.fetched
@@ -1476,6 +1605,7 @@ export const analyzeSubmission = internalAction({
         gitFacts,
         manifest,
         video,
+        frontendHosting,
       );
 
       // One retry on parse failure: re-ask the same provider chain
@@ -1506,6 +1636,18 @@ export const analyzeSubmission = internalAction({
           reasoning: `Live URL check: ${urlCheck.note}. ${cs.reasoning}`.trim(),
         };
       });
+
+      // 1b. Dead/missing URL also caps the frontend checker: a frontend that
+      //     is not reachable cannot score well (no-op when the criterion is
+      //     absent from this group's rubric)
+      if (!urlCheck.isLive) {
+        criteriaScores = clampCriterion(
+          criteriaScores,
+          FRONTEND_CHECKER_KEY,
+          3,
+          `Live URL check failed (${urlCheck.note}), so the frontend score is capped at 3.`,
+        );
+      }
 
       if (!repo.fetched) {
         // 2. Repo not fetched: all repo-based criteria capped at 4
@@ -1568,6 +1710,7 @@ export const analyzeSubmission = internalAction({
             videoTranscript: video.included,
           },
           urlCheck,
+          frontendHosting,
         },
       });
     } catch (error) {

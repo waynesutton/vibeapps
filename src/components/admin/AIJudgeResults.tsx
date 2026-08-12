@@ -46,6 +46,16 @@ type CriteriaScore = {
 const ADVANCED_FEATURE_REGEX =
   /schedul|cron|file storage|storage|full.?text|search|vector|http action|component|agent|workflow|workpool|aggregate/i;
 
+// Display labels for detected frontend hosting platforms (keys match
+// AI_FRONTEND_PLATFORMS in convex/aiJudge.ts)
+const FRONTEND_PLATFORM_LABELS: Record<string, string> = {
+  "codex-sites": "Codex Sites",
+  "convex-hosting": "Convex hosting",
+  vercel: "Vercel",
+  netlify: "Netlify",
+  other: "Other host",
+};
+
 type StatsResult = {
   status: string;
   averageScore?: number;
@@ -925,6 +935,16 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                     : result.urlCheck.checkedUrl
                                       ? "URL down"
                                       : "no URL"}
+                              </span>
+                            )}
+                            {result.frontendHosting && (
+                              <span
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-surface-alt text-soft border-hairline"
+                                title={`Frontend hosting detected: ${result.frontendHosting.evidence}. The platform's weight multiplies the frontend checker score in the weighted ranking.`}
+                              >
+                                {FRONTEND_PLATFORM_LABELS[
+                                  result.frontendHosting.platform
+                                ] ?? result.frontendHosting.platform}
                               </span>
                             )}
                             {result.repoAccess === "private_or_missing" && (

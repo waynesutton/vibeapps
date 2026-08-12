@@ -83,12 +83,16 @@ export const ensureUser = mutation({
 
     if (existingUser) {
       let nameToStore = existingUser.name;
-      if (identity.givenName && identity.familyName) {
-        nameToStore = `${identity.givenName} ${identity.familyName}`;
-      } else if (identity.name) {
-        nameToStore = identity.name;
-      } else if (identity.nickname) {
-        nameToStore = identity.nickname;
+      // Skip Clerk name sync once the user has customized their name in-app,
+      // otherwise Clerk data (e.g. a stale last name) reverts their edit on every load
+      if (!existingUser.nameCustomized) {
+        if (identity.givenName && identity.familyName) {
+          nameToStore = `${identity.givenName} ${identity.familyName}`;
+        } else if (identity.name) {
+          nameToStore = identity.name;
+        } else if (identity.nickname) {
+          nameToStore = identity.nickname;
+        }
       }
 
       const updates: Partial<Doc<"users">> = {};
@@ -629,7 +633,13 @@ export const getUserProfileByUsername = query({
       .order("desc")
       .take(100);
 
-    const storyDetailsPromises = storiesFromDb.map(
+    // Only show publicly visible stories. Older rejected stories may still have
+    // isApproved: true, so status is the source of truth here.
+    const visibleStories = storiesFromDb.filter(
+      (story) => story.status === "approved" && !story.isHidden,
+    );
+
+    const storyDetailsPromises = visibleStories.map(
       async (storyDoc: Doc<"stories">) => {
         const author: Doc<"users"> | null = storyDoc.userId
           ? await ctx.db.get(storyDoc.userId)
@@ -708,9 +718,24 @@ export const getUserProfileByUsername = query({
           }[],
         );
 
+        // Strip moderation and PII fields before returning. This is a public
+        // query, so rejection reasons, submitter emails, spam flags, team
+        // member emails, and edit history must never reach clients.
+        const {
+          rejectionReason: _rejectionReason,
+          email: _email,
+          customMessage: _customMessage,
+          spamReason: _spamReason,
+          spamMarkedAt: _spamMarkedAt,
+          spamMarkedBy: _spamMarkedBy,
+          changeLog: _changeLog,
+          teamMembers: _teamMembers,
+          ...publicStoryFields
+        } = storyDoc;
+
         // Constructing the object for StoryWithDetailsPublic
         return {
-          ...storyDoc, // Base story fields
+          ...publicStoryFields, // Base story fields minus sensitive data
           authorName: author?.name,
           authorUsername: author?.username,
           authorImageUrl: author?.imageUrl,
@@ -918,7 +943,8 @@ export const syncUserFromClerkWebhook = internalMutation({
       const updates: Partial<Doc<"users">> = {};
       let changed = false;
 
-      if (nameToStore !== existingUser.name) {
+      // Skip Clerk name sync once the user has customized their name in-app
+      if (!existingUser.nameCustomized && nameToStore !== existingUser.name) {
         updates.name = nameToStore;
         changed = true;
       }
@@ -1117,6 +1143,10 @@ export const updateProfileDetails = mutation({
 
     if (args.name !== undefined) {
       updates.name = args.name.trim();
+      // Mark the name as user-managed so Clerk sync stops overwriting it
+      if (args.name.trim() !== user.name) {
+        updates.nameCustomized = true;
+      }
     }
     if (args.bio !== undefined) {
       if (args.bio && args.bio.length > 200) {

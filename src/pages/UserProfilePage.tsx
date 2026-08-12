@@ -566,16 +566,14 @@ export default function UserProfilePage() {
           const firstName = nameParts[0] || "";
           const lastName = nameParts.slice(1).join(" ");
 
-          // Build update object - only include lastName if it's not empty
-          // This prevents Clerk errors when user wants only a first name
-          const clerkUpdateData: { firstName: string; lastName?: string } = {
+          // Always send lastName, including an empty string, so Clerk clears
+          // a removed last name when the instance allows optional last names.
+          // If Clerk rejects it, the Convex name still wins: it is marked as
+          // user-managed and Clerk sync no longer overwrites it.
+          await authUser.update({
             firstName: firstName,
-          };
-          if (lastName) {
-            clerkUpdateData.lastName = lastName;
-          }
-
-          await authUser.update(clerkUpdateData);
+            lastName: lastName,
+          });
         } catch (clerkError) {
           console.warn("Clerk name update failed:", clerkError);
           // Don't fail the whole operation if Clerk update fails

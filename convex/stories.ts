@@ -1158,6 +1158,9 @@ export const updateStatus = mutation({
     }
 
     const updatePayload: Partial<Doc<"stories">> = { status: args.status };
+    // Keep the denormalized isApproved flag in sync with status so indexed
+    // queries (e.g. by_userId_isApproved) stay truthful after moderation
+    updatePayload.isApproved = args.status === "approved";
     if (args.status === "rejected") {
       updatePayload.rejectionReason =
         args.rejectionReason || "No reason provided.";

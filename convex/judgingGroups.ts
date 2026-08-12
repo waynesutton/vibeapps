@@ -716,6 +716,9 @@ export const getGroupWithDetails = query({
       aiRubricWeights: v.optional(
         v.array(v.object({ key: v.string(), weight: v.number() })),
       ),
+      aiFrontendWeights: v.optional(
+        v.array(v.object({ key: v.string(), weight: v.number() })),
+      ),
       aiCustomCriteria: v.optional(
         v.array(
           v.object({
@@ -836,6 +839,7 @@ export const getGroupWithDetails = query({
       hasAiResultsPassword: !!group.aiResultsPassword,
       aiResultsPassword: group.aiResultsPassword,
       aiRubricWeights: group.aiRubricWeights,
+      aiFrontendWeights: group.aiFrontendWeights,
       aiCustomCriteria: group.aiCustomCriteria,
       aiDisabledCriteria: group.aiDisabledCriteria,
       hasCustomAiPrompt: !!group.aiJudgeSystemPrompt,

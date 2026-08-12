@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [Added] - 2026-08-12
 
+**AI judge frontend checker with per-platform hosting weights**
+
+- New Frontend checker preset criterion in the Rubric weights card of the AI judging block, added with an explicit Add button like the components check. The AI judge scores the deployed frontend 1-10 (2026-08-12).
+- Below the frontend checker row, five hosting platform sub-weights: Codex Sites, Convex static hosting, Vercel, Netlify, and Other, each defaulting to 1 and adjustable 0-10. The detected platform's weight multiplies the frontend checker weight in the weighted ranking, so for example Codex Sites can count 5x while Convex static hosting counts 7x.
+- Hosting is detected deterministically during analysis from the live URL host (.chatgpt.site, .convex.site, .vercel.app, .netlify.app), response headers (x-vercel-id, x-nf-request-id, server), and repo signals (.openai/hosting.json, @convex-dev/self-static-hosting, vercel.json, netlify.toml) so custom domains still classify. The result stores platform plus evidence, and weight edits re-rank instantly without re-running reviews.
+- The AI prompt gets a FRONTEND HOSTING CHECK facts section, a dead live URL caps the frontend checker score at 3, and the admin results list shows a hosting platform badge per submission.
+- **Backend**: `convex/schema.ts`, `convex/aiJudge.ts`, `convex/aiJudgeAnalysis.ts`, `convex/judgingGroups.ts`.
+- **Frontend**: `src/components/admin/judging/GroupAiSection.tsx`, `src/components/admin/judging/groupSection.tsx`, `src/components/admin/AIJudgeResults.tsx`.
+- **Docs**: `prds/ai-judge-frontend-checker-hosting-weights.md` (new).
+
+### [Fixed] - 2026-08-12
+
+**Public profiles no longer expose moderation data or rejected stories (GitHub issue 15)**
+
+- `getUserProfileByUsername` spread the raw story document into its public response, sending the submitter's email, rejection reason, spam moderation fields, team member emails, and edit history to any client. Those fields are now stripped before the response is returned (2026-08-12).
+- Stories that were approved and later rejected still appeared on public profiles because moderation never cleared the denormalized `isApproved` flag. The profile query now filters to approved, non-hidden stories by `status`, and `updateStatus` keeps `isApproved` in sync going forward.
+- **Backend**: `convex/users.ts`, `convex/stories.ts`.
+
+### [Fixed] - 2026-08-12
+
+**Removing your last name no longer reverts on refresh (GitHub issue 11)**
+
+- Editing your profile name to a single name appeared to save but reverted on reload: Clerk kept the old last name and the sign-in sync overwrote the Convex name with Clerk's first and last name on every page load (2026-08-12).
+- A new `nameCustomized` flag marks the name as user-managed once edited in-app; `ensureUser` and the Clerk webhook sync skip name overwrites when it is set. The profile page also sends an empty last name to Clerk so it clears when the Clerk instance allows optional last names.
+- **Backend**: `convex/schema.ts`, `convex/users.ts`.
+- **Frontend**: `src/pages/UserProfilePage.tsx`.
+- **Docs**: `prds/fix-github-issues-15-and-11.md` (new).
+
+### [Added] - 2026-08-12
+
 **Judging group emails to submission owners**
 
 - The judging group Emails section now has a Send to selector: Judges or Submission owners. Same compose flow (templates, markdown, variables, preview, test send, schedule, daily cap) for both audiences (2026-08-12).

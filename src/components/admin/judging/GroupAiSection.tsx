@@ -16,8 +16,11 @@ import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
 import { Textarea } from "../../ui/textarea";
 import {
+  AI_FRONTEND_PLATFORM_DEFS,
   AI_RUBRIC_DEFS,
+  DEFAULT_FRONTEND_PLATFORM_WEIGHTS,
   DEFAULT_RUBRIC_WEIGHTS,
+  FRONTEND_CHECKER_KEY,
   GroupDetails,
   HeaderSaveButton,
   SectionCard,
@@ -290,6 +293,17 @@ const COMPONENTS_CHECK_PRESET = {
     "Check the GitHub repository for Convex components: which are installed (package.json, convex.config.ts) and which are actually referenced in code via components.<name>. Score how many components are genuinely integrated and how well they are used.",
 };
 
+// Preset custom criterion: deployed frontend check with per-platform hosting
+// sub-weights (Codex Sites, Convex static hosting, Vercel, Netlify, Other).
+// The detected platform's weight multiplies this criterion's weight in the
+// weighted ranking.
+const FRONTEND_CHECKER_PRESET = {
+  key: FRONTEND_CHECKER_KEY,
+  label: "Frontend checker",
+  description:
+    "Evaluate the deployed frontend using the FRONTEND HOSTING CHECK facts: is the live app reachable and working, how complete and polished is the UI, and does the deployment serve the app correctly. Name the detected hosting platform (Codex Sites, Convex static hosting, Vercel, Netlify, or other) in your reasoning. Score 1-10 on frontend quality and deployment; never change other criterion scores because of the hosting platform.",
+};
+
 // Rubric weights with a per-criterion on/off toggle. Disabled criteria are
 // excluded from the AI prompt, scoring, and rankings on the next run. The
 // components check preset appears here with an Add button until it is added.
@@ -297,7 +311,7 @@ function RubricWeightsCard({ group }: { group: GroupDetails }) {
   const updateAiRubricWeights = useMutation(api.aiJudge.updateAiRubricWeights);
   const updateAiCustomCriteria = useMutation(api.aiJudge.updateAiCustomCriteria);
   const { saving, saved, error, setError, run } = useSaveState();
-  const [addingPreset, setAddingPreset] = useState(false);
+  const [addingPreset, setAddingPreset] = useState<string | null>(null);
   const [presetError, setPresetError] = useState("");
 
   // Effective rubric: built-in criteria plus this group's custom criteria
@@ -312,6 +326,9 @@ function RubricWeightsCard({ group }: { group: GroupDetails }) {
   const hasComponentsCheck = rubricDefs.some(
     (d) => d.key === COMPONENTS_CHECK_PRESET.key,
   );
+  const hasFrontendChecker = rubricDefs.some(
+    (d) => d.key === FRONTEND_CHECKER_KEY,
+  );
 
   const [weights, setWeights] = useState<Record<string, number>>(() => {
     const map = { ...DEFAULT_RUBRIC_WEIGHTS };
@@ -322,6 +339,17 @@ function RubricWeightsCard({ group }: { group: GroupDetails }) {
     return map;
   });
 
+  // Per-platform sub-weights for the frontend checker (default 1 everywhere)
+  const [platformWeights, setPlatformWeights] = useState<Record<string, number>>(
+    () => {
+      const map = { ...DEFAULT_FRONTEND_PLATFORM_WEIGHTS };
+      for (const w of group.aiFrontendWeights || []) {
+        if (w.key in map) map[w.key] = w.weight;
+      }
+      return map;
+    },
+  );
+
   // Absent from the map = enabled. Initialized from the stored disabled list.
   const [disabled, setDisabled] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {};
@@ -331,21 +359,25 @@ function RubricWeightsCard({ group }: { group: GroupDetails }) {
 
   const enabledCount = rubricDefs.filter((d) => !disabled[d.key]).length;
 
-  // Explicit add for the components check preset: saves immediately as a
-  // custom criterion, then behaves like any other rubric row
-  const handleAddComponentsCheck = () => {
+  // Explicit add for a preset criterion: saves immediately as a custom
+  // criterion, then behaves like any other rubric row
+  const handleAddPreset = (preset: {
+    key: string;
+    label: string;
+    description: string;
+  }) => {
     setPresetError("");
-    setAddingPreset(true);
+    setAddingPreset(preset.key);
     updateAiCustomCriteria({
       groupId: group._id,
-      criteria: [...(group.aiCustomCriteria || []), { ...COMPONENTS_CHECK_PRESET }],
+      criteria: [...(group.aiCustomCriteria || []), { ...preset }],
     })
       .catch((err) => {
         setPresetError(
-          err instanceof Error ? err.message : "Failed to add components check",
+          err instanceof Error ? err.message : `Failed to add ${preset.label}`,
         );
       })
-      .finally(() => setAddingPreset(false));
+      .finally(() => setAddingPreset(null));
   };
 
   const handleSave = () => {
@@ -364,10 +396,19 @@ function RubricWeightsCard({ group }: { group: GroupDetails }) {
       const disabledKeys = rubricDefs
         .filter((def) => disabled[def.key])
         .map((def) => def.key);
+      // Platform weights only travel when the frontend checker is in the
+      // rubric; the mutation clears storage when everything is default 1
+      const frontendWeightsArray = AI_FRONTEND_PLATFORM_DEFS.map((def) => ({
+        key: def.key,
+        weight: platformWeights[def.key] ?? 1,
+      }));
       await updateAiRubricWeights({
         groupId: group._id,
         weights: allDefault ? undefined : weightsArray,
         disabledKeys,
+        ...(hasFrontendChecker
+          ? { frontendWeights: frontendWeightsArray }
+          : {}),
       });
     });
   };
@@ -389,86 +430,161 @@ function RubricWeightsCard({ group }: { group: GroupDetails }) {
       <div className="rounded-md border border-hairline divide-y divide-hairline">
         {rubricDefs.map((def) => {
           const isOff = !!disabled[def.key];
+          const isFrontendChecker = def.key === FRONTEND_CHECKER_KEY;
           return (
-            <div
-              key={def.key}
-              className="flex items-center justify-between gap-3 px-3 py-2"
-            >
-              <span
-                className={`text-[13px] ${isOff ? "text-faint" : "text-copy"}`}
-              >
-                {def.label}
-                {!def.builtIn && (
-                  <span className="ml-2 text-xs text-faint">custom</span>
-                )}
-              </span>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <Input
-                  type="number"
-                  min={0}
-                  max={10}
-                  step={0.5}
-                  value={weights[def.key] ?? 1}
-                  onChange={(e) =>
-                    setWeights((prev) => ({
-                      ...prev,
-                      [def.key]: Math.max(0, parseFloat(e.target.value) || 0),
-                    }))
-                  }
-                  disabled={saving || isOff}
-                  className={`w-20 text-right tabular-nums ${isOff ? "opacity-50" : ""}`}
-                  aria-label={`Weight for ${def.label}`}
-                />
-                <TogglePill
-                  enabled={!isOff}
-                  onToggle={() =>
-                    setDisabled((prev) => ({ ...prev, [def.key]: !prev[def.key] }))
-                  }
-                  onLabel="On"
-                  offLabel="Off"
-                  disabled={saving}
-                />
+            <div key={def.key}>
+              <div className="flex items-center justify-between gap-3 px-3 py-2">
+                <span
+                  className={`text-[13px] ${isOff ? "text-faint" : "text-copy"}`}
+                >
+                  {def.label}
+                  {!def.builtIn && (
+                    <span className="ml-2 text-xs text-faint">custom</span>
+                  )}
+                </span>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={10}
+                    step={0.5}
+                    value={weights[def.key] ?? 1}
+                    onChange={(e) =>
+                      setWeights((prev) => ({
+                        ...prev,
+                        [def.key]: Math.max(0, parseFloat(e.target.value) || 0),
+                      }))
+                    }
+                    disabled={saving || isOff}
+                    className={`w-20 text-right tabular-nums ${isOff ? "opacity-50" : ""}`}
+                    aria-label={`Weight for ${def.label}`}
+                  />
+                  <TogglePill
+                    enabled={!isOff}
+                    onToggle={() =>
+                      setDisabled((prev) => ({ ...prev, [def.key]: !prev[def.key] }))
+                    }
+                    onLabel="On"
+                    offLabel="Off"
+                    disabled={saving}
+                  />
+                </div>
               </div>
+
+              {/* Frontend checker platform sub-weights. The detected hosting
+                  platform's weight multiplies the criterion weight above. */}
+              {isFrontendChecker && (
+                <div className="pb-2 pl-7 pr-3 space-y-1">
+                  <p className="text-xs text-faint pb-1">
+                    Hosting platform weights: the detected platform multiplies
+                    the frontend checker weight. 1 is neutral.
+                  </p>
+                  {AI_FRONTEND_PLATFORM_DEFS.map((platform) => (
+                    <div
+                      key={platform.key}
+                      className="flex items-center justify-between gap-3"
+                    >
+                      <span
+                        className={`text-[13px] ${isOff ? "text-faint" : "text-soft"}`}
+                      >
+                        {platform.label}
+                      </span>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={10}
+                        step={0.5}
+                        value={platformWeights[platform.key] ?? 1}
+                        onChange={(e) =>
+                          setPlatformWeights((prev) => ({
+                            ...prev,
+                            [platform.key]: Math.max(
+                              0,
+                              parseFloat(e.target.value) || 0,
+                            ),
+                          }))
+                        }
+                        disabled={saving || isOff}
+                        className={`w-20 text-right tabular-nums ${isOff ? "opacity-50" : ""}`}
+                        aria-label={`Weight for ${platform.label} hosting`}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
 
-        {/* Components check preset: explicit Add button so a deleted
-            criterion never silently returns */}
+        {/* Preset criteria: explicit Add buttons so a deleted criterion
+            never silently returns */}
         {!hasComponentsCheck && (
-          <div className="flex items-center justify-between gap-3 px-3 py-2 bg-surface-alt">
-            <div className="min-w-0">
-              <span className="text-[13px] text-soft">
-                {COMPONENTS_CHECK_PRESET.label}
-                <span className="ml-2 text-xs text-faint">
-                  preset, not in rubric
-                </span>
-              </span>
-              <p className="text-xs text-faint">
-                Scores repo-verified Convex component usage. Not added until
-                you click Add.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleAddComponentsCheck}
-              disabled={
-                addingPreset || rubricDefs.length - AI_RUBRIC_DEFS.length >= 10
-              }
-              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border border-hairline text-copy hover:bg-surface-hover transition-colors disabled:opacity-50 shrink-0"
-            >
-              {addingPreset ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
-              ) : (
-                <Plus className="w-3 h-3" />
-              )}
-              Add to rubric
-            </button>
-          </div>
+          <PresetRow
+            preset={COMPONENTS_CHECK_PRESET}
+            note="Scores repo-verified Convex component usage. Not added until you click Add."
+            adding={addingPreset === COMPONENTS_CHECK_PRESET.key}
+            disabled={
+              addingPreset !== null ||
+              rubricDefs.length - AI_RUBRIC_DEFS.length >= 10
+            }
+            onAdd={() => handleAddPreset(COMPONENTS_CHECK_PRESET)}
+          />
+        )}
+        {!hasFrontendChecker && (
+          <PresetRow
+            preset={FRONTEND_CHECKER_PRESET}
+            note="Scores the deployed frontend with per-platform weights for Codex Sites, Convex static hosting, Vercel, Netlify, and other. Not added until you click Add."
+            adding={addingPreset === FRONTEND_CHECKER_PRESET.key}
+            disabled={
+              addingPreset !== null ||
+              rubricDefs.length - AI_RUBRIC_DEFS.length >= 10
+            }
+            onAdd={() => handleAddPreset(FRONTEND_CHECKER_PRESET)}
+          />
         )}
       </div>
       {presetError && <p className="text-[13px] text-red-600">{presetError}</p>}
     </SectionCard>
+  );
+}
+
+// One preset criterion offer row in the Rubric weights card
+function PresetRow({
+  preset,
+  note,
+  adding,
+  disabled,
+  onAdd,
+}: {
+  preset: { key: string; label: string };
+  note: string;
+  adding: boolean;
+  disabled: boolean;
+  onAdd: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 px-3 py-2 bg-surface-alt">
+      <div className="min-w-0">
+        <span className="text-[13px] text-soft">
+          {preset.label}
+          <span className="ml-2 text-xs text-faint">preset, not in rubric</span>
+        </span>
+        <p className="text-xs text-faint">{note}</p>
+      </div>
+      <button
+        type="button"
+        onClick={onAdd}
+        disabled={disabled}
+        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border border-hairline text-copy hover:bg-surface-hover transition-colors disabled:opacity-50 shrink-0"
+      >
+        {adding ? (
+          <Loader2 className="w-3 h-3 animate-spin" />
+        ) : (
+          <Plus className="w-3 h-3" />
+        )}
+        Add to rubric
+      </button>
+    </div>
   );
 }
 
@@ -523,7 +639,7 @@ function CustomCriteriaCard({ group }: { group: GroupDetails }) {
   return (
     <SectionCard
       title="Custom AI criteria"
-      description="Extra rubric criteria the AI judge scores alongside the built-in six. The agent reads the repo, live site, and project logs to score them. The components check preset is added from the Rubric weights card above."
+      description="Extra rubric criteria the AI judge scores alongside the built-in six. The agent reads the repo, live site, and project logs to score them. The components check and frontend checker presets are added from the Rubric weights card above."
       footer={
         <SaveFooter
           saving={saving}

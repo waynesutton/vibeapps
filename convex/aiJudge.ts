@@ -61,6 +61,18 @@ export const AI_JUDGE_RUBRIC: Array<{ key: string; label: string; description: s
 
 export type RubricCriterion = { key: string; label: string; description: string };
 
+// Frontend checker: preset custom criterion key plus the fixed hosting
+// platform list for per-platform sub-weights. The detected platform's weight
+// multiplies the frontend-checker criterion weight in the weighted ranking.
+export const FRONTEND_CHECKER_KEY = "frontend-checker";
+export const AI_FRONTEND_PLATFORMS: Array<{ key: string; label: string }> = [
+  { key: "codex-sites", label: "Codex Sites" },
+  { key: "convex-hosting", label: "Convex static hosting" },
+  { key: "vercel", label: "Vercel" },
+  { key: "netlify", label: "Netlify" },
+  { key: "other", label: "Other" },
+];
+
 // Effective rubric for a group: the built-in six plus any admin-defined
 // custom criteria, minus any criteria the admin switched off. Used by the
 // analysis action, weight validation, and the prompt editor so every
@@ -123,6 +135,12 @@ const urlCheckValidator = v.object({
   isLive: v.boolean(),
   statusCode: v.optional(v.number()),
   note: v.string(),
+});
+
+// Shared validator for the deterministic frontend hosting detection
+export const frontendHostingValidator = v.object({
+  platform: v.string(),
+  evidence: v.string(),
 });
 
 // Shared validator for deterministic repo facts (mirrors schema.ts)
@@ -188,13 +206,27 @@ export function computeWeightedScore(
     | Array<{ key: string; score: number }>
     | undefined,
   weights: Array<{ key: string; weight: number }> | undefined,
+  // Detected hosting platform for this result plus the group's per-platform
+  // weights. The platform weight multiplies the frontend-checker criterion
+  // weight only (default 1 keeps behavior unchanged).
+  frontend?: {
+    platform?: string;
+    platformWeights?: Array<{ key: string; weight: number }>;
+  },
 ): number | undefined {
   if (!criteriaScores || criteriaScores.length === 0) return undefined;
   const weightByKey = new Map((weights ?? []).map((w) => [w.key, w.weight]));
-  const total = criteriaScores.reduce(
-    (sum, cs) => sum + cs.score * (weightByKey.get(cs.key) ?? 1),
-    0,
-  );
+  const platformWeight = frontend?.platform
+    ? (frontend.platformWeights ?? []).find(
+        (w) => w.key === frontend.platform,
+      )?.weight ?? 1
+    : 1;
+  const total = criteriaScores.reduce((sum, cs) => {
+    const base = weightByKey.get(cs.key) ?? 1;
+    const multiplier =
+      cs.key === FRONTEND_CHECKER_KEY ? base * platformWeight : base;
+    return sum + cs.score * multiplier;
+  }, 0);
   return Math.round(total * 100) / 100;
 }
 
@@ -239,6 +271,7 @@ const aiResultValidator = v.object({
     }),
   ),
   urlCheck: v.optional(urlCheckValidator),
+  frontendHosting: v.optional(frontendHostingValidator),
   editedAt: v.optional(v.number()),
 });
 
@@ -257,6 +290,7 @@ async function enrichResults(
   ctx: QueryCtx,
   results: Array<Doc<"aiJudgeResults">>,
   weights: Array<{ key: string; weight: number }> | undefined,
+  frontendWeights?: Array<{ key: string; weight: number }>,
 ) {
   const enriched: Array<{
     _id: Id<"aiJudgeResults">;
@@ -291,6 +325,7 @@ async function enrichResults(
       statusCode?: number;
       note: string;
     };
+    frontendHosting?: { platform: string; evidence: string };
     editedAt?: number;
   }> = [];
 
@@ -309,7 +344,10 @@ async function enrichResults(
       criteriaScores: result.criteriaScores,
       totalScore: result.totalScore,
       averageScore: result.averageScore,
-      weightedScore: computeWeightedScore(result.criteriaScores, weights),
+      weightedScore: computeWeightedScore(result.criteriaScores, weights, {
+        platform: result.frontendHosting?.platform,
+        platformWeights: frontendWeights,
+      }),
       overallReasoning: result.overallReasoning,
       convexFeaturesDetected: result.convexFeaturesDetected,
       componentsDetected: result.componentsDetected,
@@ -326,6 +364,7 @@ async function enrichResults(
       error: result.error,
       sourcesUsed: result.sourcesUsed,
       urlCheck: result.urlCheck,
+      frontendHosting: result.frontendHosting,
       editedAt: result.editedAt,
     });
   }
@@ -466,6 +505,11 @@ export const updateAiRubricWeights = mutation({
     // Rubric keys switched off for this group. Omitted = leave unchanged;
     // empty array = enable everything.
     disabledKeys: v.optional(v.array(v.string())),
+    // Per-platform weights for the frontend-checker criterion. Omitted =
+    // leave unchanged; empty array = reset every platform to 1.
+    frontendWeights: v.optional(
+      v.array(v.object({ key: v.string(), weight: v.number() })),
+    ),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -502,7 +546,31 @@ export const updateAiRubricWeights = mutation({
     const patch: {
       aiRubricWeights: typeof args.weights;
       aiDisabledCriteria?: Array<string> | undefined;
+      aiFrontendWeights?: typeof args.frontendWeights;
     } = { aiRubricWeights: args.weights };
+
+    if (args.frontendWeights !== undefined) {
+      const platformKeys = new Set(AI_FRONTEND_PLATFORMS.map((p) => p.key));
+      const seenPlatforms = new Set<string>();
+      for (const entry of args.frontendWeights) {
+        if (!platformKeys.has(entry.key)) {
+          throw new Error(`Unknown frontend platform key "${entry.key}"`);
+        }
+        if (seenPlatforms.has(entry.key)) {
+          throw new Error(`Duplicate frontend platform key "${entry.key}"`);
+        }
+        seenPlatforms.add(entry.key);
+        if (!Number.isFinite(entry.weight) || entry.weight < 0 || entry.weight > 10) {
+          throw new Error("Platform weights must be numbers between 0 and 10");
+        }
+      }
+      // All-default (or empty) platform weights clear the stored field
+      const allDefault = args.frontendWeights.every((w) => w.weight === 1);
+      patch.aiFrontendWeights =
+        args.frontendWeights.length === 0 || allDefault
+          ? undefined
+          : args.frontendWeights;
+    }
 
     if (args.disabledKeys !== undefined) {
       const disabled = new Set<string>();
@@ -600,10 +668,14 @@ export const updateAiCustomCriteria = mutation({
       validKeys.has(key),
     );
 
+    // Removing the frontend-checker criterion also clears its platform weights
+    const keepFrontendWeights = validKeys.has(FRONTEND_CHECKER_KEY);
+
     await ctx.db.patch(args.groupId, {
       aiCustomCriteria: criteria,
       aiRubricWeights: prunedWeights.length > 0 ? prunedWeights : undefined,
       aiDisabledCriteria: prunedDisabled.length > 0 ? prunedDisabled : undefined,
+      ...(keepFrontendWeights ? {} : { aiFrontendWeights: undefined }),
     });
     return null;
   },
@@ -757,7 +829,12 @@ export const getGroupAiResults = query({
       .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
       .collect();
 
-    const results = await enrichResults(ctx, rows, group?.aiRubricWeights);
+    const results = await enrichResults(
+      ctx,
+      rows,
+      group?.aiRubricWeights,
+      group?.aiFrontendWeights,
+    );
     const counts = { pending: 0, running: 0, completed: 0, failed: 0 };
     for (const r of results) {
       counts[r.status]++;
@@ -813,6 +890,7 @@ export const getGroupAiReportData = query({
           selfReportedHarness: v.optional(v.string()),
           selfReportedModel: v.optional(v.string()),
           urlCheck: v.optional(urlCheckValidator),
+          frontendHosting: v.optional(frontendHostingValidator),
           sourcesUsed: v.optional(
             v.object({
               github: v.boolean(),
@@ -872,6 +950,7 @@ export const getGroupAiReportData = query({
         statusCode?: number;
         note: string;
       };
+      frontendHosting?: { platform: string; evidence: string };
       sourcesUsed?: { github: boolean; liveUrl: boolean; videoTranscript?: boolean };
       error?: string;
     }> = [];
@@ -893,7 +972,10 @@ export const getGroupAiReportData = query({
         criteriaScores: row.criteriaScores,
         totalScore: row.totalScore,
         averageScore: row.averageScore,
-        weightedScore: computeWeightedScore(row.criteriaScores, group.aiRubricWeights),
+        weightedScore: computeWeightedScore(row.criteriaScores, group.aiRubricWeights, {
+          platform: row.frontendHosting?.platform,
+          platformWeights: group.aiFrontendWeights,
+        }),
         overallReasoning: row.overallReasoning,
         convexFeaturesDetected: row.convexFeaturesDetected,
         componentsDetected: row.componentsDetected,
@@ -905,6 +987,7 @@ export const getGroupAiReportData = query({
         selfReportedHarness: story.selfReportedHarness,
         selfReportedModel: story.selfReportedModel,
         urlCheck: row.urlCheck,
+        frontendHosting: row.frontendHosting,
         sourcesUsed: row.sourcesUsed,
         error: row.error,
       });
@@ -1037,6 +1120,7 @@ export const saveResult = internalMutation({
           videoTranscript: v.optional(v.boolean()),
         }),
         urlCheck: v.optional(urlCheckValidator),
+        frontendHosting: v.optional(frontendHostingValidator),
       }),
       v.object({
         kind: v.literal("error"),
@@ -1078,6 +1162,7 @@ export const saveResult = internalMutation({
         model: undefined,
         sourcesUsed: args.outcome.sourcesUsed,
         urlCheck: args.outcome.urlCheck,
+        frontendHosting: args.outcome.frontendHosting,
         error: undefined,
         editedBy: undefined,
         editedAt: undefined,
@@ -1183,6 +1268,7 @@ async function getCompletedResultsForGroup(ctx: QueryCtx, groupId: Id<"judgingGr
     ctx,
     rows.filter((r) => r.status === "completed"),
     group?.aiRubricWeights,
+    group?.aiFrontendWeights,
   );
   return enriched;
 }

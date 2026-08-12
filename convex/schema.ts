@@ -19,6 +19,7 @@ export default defineSchema({
     isVerified: v.optional(v.boolean()), // New field for verifying users
     inboxEnabled: v.optional(v.boolean()), // Inbox messaging toggle (default true)
     emojiTheme: v.optional(v.string()), // Emoji color theme preference: "default", "red", "blue", "green", "purple", "orange"
+    nameCustomized: v.optional(v.boolean()), // True once the user edits their name in-app; blocks Clerk name sync from overwriting it
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_username", ["username"]) // Index for fetching by username
@@ -525,6 +526,13 @@ export default defineSchema({
     aiRubricWeights: v.optional(
       v.array(v.object({ key: v.string(), weight: v.number() })),
     ),
+    // Per-platform weights for the frontend-checker criterion. Fixed keys:
+    // codex-sites, convex-hosting, vercel, netlify, other. Absent = weight 1
+    // for every platform. The detected platform's weight multiplies the
+    // frontend-checker criterion weight in the derived weighted score.
+    aiFrontendWeights: v.optional(
+      v.array(v.object({ key: v.string(), weight: v.number() })),
+    ),
     // Admin-defined extra AI rubric criteria appended to the built-in six.
     // The AI judge scores these alongside the fixed rubric.
     aiCustomCriteria: v.optional(
@@ -680,6 +688,14 @@ export default defineSchema({
         isLive: v.boolean(), // Whether the URL responded successfully
         statusCode: v.optional(v.number()), // HTTP status code when a response was received
         note: v.string(), // Short reason ("OK", "404 Not Found", "network error", "no URL provided")
+      }),
+    ),
+    // Deterministic frontend hosting detection (URL host, response headers,
+    // repo signals). Drives the per-platform frontend-checker weight.
+    frontendHosting: v.optional(
+      v.object({
+        platform: v.string(), // "codex-sites" | "convex-hosting" | "vercel" | "netlify" | "other"
+        evidence: v.string(), // What matched (host suffix, header, or repo file)
       }),
     ),
     editedBy: v.optional(v.id("users")), // Admin who last edited scores
