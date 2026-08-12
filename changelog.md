@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Added] - 2026-08-12
+
+**Judging group emails to submission owners**
+
+- The judging group Emails section now has a Send to selector: Judges or Submission owners. Same compose flow (templates, markdown, variables, preview, test send, schedule, daily cap) for both audiences (2026-08-12).
+- Submission owners are resolved from group submissions (hidden and rejected skipped), prefer the account email when present, and are deduplicated by address. Sends still use the `judging_group` email type and `judging.emails` permission.
+- **Backend**: `convex/emails/judgingGroupEmails.ts` (`listGroupSubmissionOwnerRecipients`, `sendGroupEmail` recipientType / storyIds).
+- **Frontend**: `src/components/admin/judging/GroupEmailsSection.tsx`.
+- **Docs**: `prds/judging-group-email-submission-owners.md` (new).
+
 ### [Changed] - 2026-08-11
 
 **New default Light theme with a soft grey and white mono palette**

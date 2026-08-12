@@ -20,9 +20,14 @@ import {
   templateEmailShell,
 } from "./render";
 
-// Organizer emails to a judging group's judges. Composed in the group
-// workspace Emails section, gated by the judging.emails permission plus the
+// Organizer emails to a judging group's judges or submission owners. Composed
+// in the group workspace Emails section, gated by judging.emails plus the
 // emailsEnabled master switch and the judging_group per-type toggle.
+
+const recipientTypeValidator = v.union(
+  v.literal("judges"),
+  v.literal("submission_owners"),
+);
 
 async function getCurrentUser(
   ctx: QueryCtx | MutationCtx,
@@ -55,7 +60,7 @@ async function readBooleanSetting(
 }
 
 // Group judges with an email, deduplicated by lowercased address.
-async function collectGroupRecipients(
+async function collectGroupJudgeRecipients(
   ctx: QueryCtx | MutationCtx,
   groupId: Id<"judgingGroups">,
 ): Promise<Array<{ judgeId: Id<"judges">; name: string; email: string }>> {
@@ -78,6 +83,64 @@ async function collectGroupRecipients(
     seen.add(key);
     recipients.push({ judgeId: judge._id, name: judge.name, email });
   }
+  return recipients;
+}
+
+// Submission owners in the group with an email (account email preferred),
+// deduplicated by lowercased address. storyId is the first matching story so
+// the picker can select/deselect without inventing addresses.
+async function collectGroupSubmissionOwnerRecipients(
+  ctx: QueryCtx | MutationCtx,
+  groupId: Id<"judgingGroups">,
+): Promise<
+  Array<{
+    storyId: Id<"stories">;
+    name: string;
+    email: string;
+    storyTitle: string;
+  }>
+> {
+  const submissions = await ctx.db
+    .query("judgingGroupSubmissions")
+    .withIndex("by_groupId", (q) => q.eq("groupId", groupId))
+    .collect();
+
+  const seen = new Set<string>();
+  const recipients: Array<{
+    storyId: Id<"stories">;
+    name: string;
+    email: string;
+    storyTitle: string;
+  }> = [];
+
+  for (const submission of submissions) {
+    const story = await ctx.db.get(submission.storyId);
+    if (!story || story.isHidden === true || story.status === "rejected") {
+      continue;
+    }
+
+    let email: string | undefined = story.email;
+    let name = story.submitterName || "there";
+    if (story.userId) {
+      const author = await ctx.db.get(story.userId);
+      if (author) {
+        email = author.email || email;
+        name = author.name || author.username || name;
+      }
+    }
+    if (!email) continue;
+
+    const key = email.trim().toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    recipients.push({
+      storyId: story._id,
+      name,
+      email: email.trim(),
+      storyTitle: story.title,
+    });
+  }
+
   return recipients;
 }
 
@@ -141,7 +204,7 @@ export const getGroupEmailStatus = query({
           emailTypeSettingKey("judging_group"),
           EMAIL_TYPE_DEFAULTS.judging_group,
         ),
-        collectGroupRecipients(ctx, args.groupId),
+        collectGroupJudgeRecipients(ctx, args.groupId),
         countGroupUsage(ctx, args.groupId, args.now),
       ]);
     return {
@@ -169,7 +232,27 @@ export const listGroupRecipients = query({
   ),
   handler: async (ctx, args) => {
     await requireJudgingGroupPermission(ctx, args.groupId, "judging.emails");
-    return await collectGroupRecipients(ctx, args.groupId);
+    return await collectGroupJudgeRecipients(ctx, args.groupId);
+  },
+});
+
+/**
+ * Submission owners in the group with an email, for the recipient picker
+ * (deduplicated by address; account email preferred over form email).
+ */
+export const listGroupSubmissionOwnerRecipients = query({
+  args: { groupId: v.id("judgingGroups") },
+  returns: v.array(
+    v.object({
+      storyId: v.id("stories"),
+      name: v.string(),
+      email: v.string(),
+      storyTitle: v.string(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.emails");
+    return await collectGroupSubmissionOwnerRecipients(ctx, args.groupId);
   },
 });
 
@@ -304,9 +387,9 @@ function newSendId(): string {
 }
 
 /**
- * Send (or schedule) a template email to selected judges in the group.
- * Recipients are resolved and validated here, the daily cap is enforced,
- * then delivery runs in a scheduled action (immediately or at scheduledAtMs).
+ * Send (or schedule) a template email to selected judges or submission
+ * owners in the group. Recipients are resolved and validated here, the
+ * daily cap is enforced, then delivery runs in a scheduled action.
  */
 export const sendGroupEmail = mutation({
   args: {
@@ -315,7 +398,10 @@ export const sendGroupEmail = mutation({
     body: v.string(),
     signature: v.optional(v.string()),
     replyTo: v.optional(v.string()),
-    judgeIds: v.array(v.id("judges")),
+    // Defaults to judges for older clients; submission_owners uses storyIds.
+    recipientType: v.optional(recipientTypeValidator),
+    judgeIds: v.optional(v.array(v.id("judges"))),
+    storyIds: v.optional(v.array(v.id("stories"))),
     templateId: v.optional(v.id("emailTemplates")),
     // Optional future send time (ms since epoch). Undefined sends now.
     scheduledAtMs: v.optional(v.number()),
@@ -334,15 +420,43 @@ export const sendGroupEmail = mutation({
       args.replyTo,
     );
 
-    if (args.judgeIds.length === 0) {
-      throw new Error("Select at least one recipient");
-    }
+    const recipientType = args.recipientType ?? "judges";
+    let recipients: Array<{ name: string; email: string }> = [];
 
-    const allRecipients = await collectGroupRecipients(ctx, args.groupId);
-    const selectedIds = new Set<string>(args.judgeIds);
-    const recipients = allRecipients.filter((r) => selectedIds.has(r.judgeId));
-    if (recipients.length === 0) {
-      throw new Error("None of the selected judges have an email address");
+    if (recipientType === "judges") {
+      const judgeIds = args.judgeIds ?? [];
+      if (judgeIds.length === 0) {
+        throw new Error("Select at least one recipient");
+      }
+      const allRecipients = await collectGroupJudgeRecipients(
+        ctx,
+        args.groupId,
+      );
+      const selectedIds = new Set<string>(judgeIds);
+      recipients = allRecipients
+        .filter((r) => selectedIds.has(r.judgeId))
+        .map((r) => ({ name: r.name, email: r.email }));
+      if (recipients.length === 0) {
+        throw new Error("None of the selected judges have an email address");
+      }
+    } else {
+      const storyIds = args.storyIds ?? [];
+      if (storyIds.length === 0) {
+        throw new Error("Select at least one recipient");
+      }
+      const allRecipients = await collectGroupSubmissionOwnerRecipients(
+        ctx,
+        args.groupId,
+      );
+      const selectedIds = new Set<string>(storyIds);
+      recipients = allRecipients
+        .filter((r) => selectedIds.has(r.storyId))
+        .map((r) => ({ name: r.name, email: r.email }));
+      if (recipients.length === 0) {
+        throw new Error(
+          "None of the selected submission owners have an email address",
+        );
+      }
     }
 
     // Rolling 24h cap across sent logs and pending scheduled sends
@@ -366,9 +480,10 @@ export const sendGroupEmail = mutation({
       replyTo: args.replyTo?.trim() || undefined,
       sentBy: sender._id,
       templateId: args.templateId,
-      recipients: recipients.map((r) => ({ name: r.name, email: r.email })),
+      recipients,
       isTest: false,
       sendId,
+      recipientType,
     };
 
     // Scheduled path: persist the send, queue it with runAt, keep the
@@ -558,6 +673,7 @@ export const deliverGroupEmails = internalAction({
     recipients: v.array(v.object({ name: v.string(), email: v.string() })),
     isTest: v.boolean(),
     sendId: v.string(),
+    recipientType: v.optional(recipientTypeValidator),
     // Present when this delivery came from a scheduled send
     scheduledEmailId: v.optional(v.id("groupScheduledEmails")),
   },
@@ -571,6 +687,7 @@ export const deliverGroupEmails = internalAction({
 
     // Group links are the same for every recipient in this send
     const groupUrls = judgingGroupUrls(args.groupSlug);
+    const recipientType = args.recipientType ?? "judges";
 
     const batchSize = 10;
     for (let i = 0; i < args.recipients.length; i += batchSize) {
@@ -605,6 +722,7 @@ export const deliverGroupEmails = internalAction({
               subject,
               isTest: args.isTest,
               sendId: args.sendId,
+              recipientType,
             },
           });
 

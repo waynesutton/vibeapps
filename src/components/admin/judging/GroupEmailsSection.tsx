@@ -14,20 +14,35 @@ import AlertDialog from "../../ui/AlertDialog";
 import { SimpleSelect } from "../../ui/SimpleSelect";
 import { GroupDetails, SectionCard } from "./groupSection";
 
-// Emails section of the judging group workspace: pick a template, edit the
-// message, choose recipients and a reply-to, preview, test, and send.
-// Server-side gate: judging.emails permission scoped to this group.
+type RecipientAudience = "judges" | "submission_owners";
+
+type PickerRecipient = {
+  id: string;
+  name: string;
+  email: string;
+  detail?: string;
+};
+
+// Emails section of the judging group workspace: pick audience (judges or
+// submission owners), template, message, recipients and reply-to, then
+// preview, test, and send. Server-side gate: judging.emails on this group.
 export function GroupEmailsSection({ group }: { group: GroupDetails }) {
   // Stable "now" for the daily-cap window so the query args don't change on
   // every render (queries must stay deterministic, no Date.now() server side)
   const [loadedAt] = useState(() => Date.now());
+  const [audience, setAudience] = useState<RecipientAudience>("judges");
+
   const status = useQuery(api.emails.judgingGroupEmails.getGroupEmailStatus, {
     groupId: group._id,
     now: loadedAt,
   });
-  const recipients = useQuery(
+  const judgeRecipients = useQuery(
     api.emails.judgingGroupEmails.listGroupRecipients,
-    { groupId: group._id },
+    audience === "judges" ? { groupId: group._id } : "skip",
+  );
+  const ownerRecipients = useQuery(
+    api.emails.judgingGroupEmails.listGroupSubmissionOwnerRecipients,
+    audience === "submission_owners" ? { groupId: group._id } : "skip",
   );
   const recentSends = useQuery(api.emails.judgingGroupEmails.listGroupSends, {
     groupId: group._id,
@@ -49,7 +64,7 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
   );
 
   // Compose state. Recipients default to everyone; excluded holds opt-outs
-  // so no effect is needed to sync with the loaded judge list.
+  // so no effect is needed to sync with the loaded list.
   const [templateId, setTemplateId] = useState<string>("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -57,7 +72,7 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
   const [replyTo, setReplyTo] = useState("");
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [scheduleAt, setScheduleAt] = useState("");
-  const [previewJudgeId, setPreviewJudgeId] = useState("");
+  const [previewRecipientId, setPreviewRecipientId] = useState("");
   const [showPreview, setShowPreview] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [cancelTarget, setCancelTarget] =
@@ -68,8 +83,25 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
     text: string;
   } | null>(null);
 
+  const isJudges = audience === "judges";
+  const audienceNoun = isJudges ? "judge" : "submission owner";
+  const audienceNounPlural = isJudges ? "judges" : "submission owners";
+
+  const recipients: Array<PickerRecipient> | undefined = isJudges
+    ? judgeRecipients?.map((r) => ({
+        id: r.judgeId as string,
+        name: r.name,
+        email: r.email,
+      }))
+    : ownerRecipients?.map((r) => ({
+        id: r.storyId as string,
+        name: r.name,
+        email: r.email,
+        detail: r.storyTitle,
+      }));
+
   const selectedRecipients = (recipients ?? []).filter(
-    (r) => !excluded.has(r.judgeId),
+    (r) => !excluded.has(r.id),
   );
 
   const blocked =
@@ -101,13 +133,20 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
     }
   };
 
-  const toggleRecipient = (judgeId: string) => {
+  const changeAudience = (next: RecipientAudience) => {
+    setAudience(next);
+    setExcluded(new Set());
+    setPreviewRecipientId("");
+    setFeedback(null);
+  };
+
+  const toggleRecipient = (id: string) => {
     setExcluded((prev) => {
       const next = new Set(prev);
-      if (next.has(judgeId)) {
-        next.delete(judgeId);
+      if (next.has(id)) {
+        next.delete(id);
       } else {
-        next.add(judgeId);
+        next.add(id);
       }
       return next;
     });
@@ -116,7 +155,7 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
   const toggleAll = () => {
     if (!recipients) return;
     setExcluded((prev) =>
-      prev.size === 0 ? new Set(recipients.map((r) => r.judgeId)) : new Set(),
+      prev.size === 0 ? new Set(recipients.map((r) => r.id)) : new Set(),
     );
   };
 
@@ -162,23 +201,29 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
         body,
         signature: signature.trim() || undefined,
         replyTo: replyTo.trim() || undefined,
-        judgeIds: selectedRecipients.map((r) => r.judgeId),
+        recipientType: audience,
+        judgeIds: isJudges
+          ? selectedRecipients.map((r) => r.id as Id<"judges">)
+          : undefined,
+        storyIds: !isJudges
+          ? selectedRecipients.map((r) => r.id as Id<"stories">)
+          : undefined,
         templateId: (templateId || undefined) as
           | Id<"emailTemplates">
           | undefined,
         scheduledAtMs,
       });
-      const judgeCount = `${result.totalRecipients} judge${result.totalRecipients === 1 ? "" : "s"}`;
+      const countLabel = `${result.totalRecipients} ${result.totalRecipients === 1 ? audienceNoun : audienceNounPlural}`;
       if (result.scheduledFor !== undefined) {
         setScheduleAt("");
         setFeedback({
           kind: "success",
-          text: `Email scheduled for ${new Date(result.scheduledFor).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} to ${judgeCount}. You can cancel it below before it sends.`,
+          text: `Email scheduled for ${new Date(result.scheduledFor).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} to ${countLabel}. You can cancel it below before it sends.`,
         });
       } else {
         setFeedback({
           kind: "success",
-          text: `Email queued to ${judgeCount}.`,
+          text: `Email queued to ${countLabel}.`,
         });
       }
     } catch (error) {
@@ -212,10 +257,10 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
     }
   };
 
-  // Preview substitutes a real selected judge (pickable, defaults to the
-  // first) so the organizer sees exactly what that judge receives.
+  // Preview substitutes a real selected recipient (pickable, defaults to the
+  // first) so the organizer sees exactly what that person receives.
   const previewRecipient =
-    selectedRecipients.find((r) => r.judgeId === previewJudgeId) ??
+    selectedRecipients.find((r) => r.id === previewRecipientId) ??
     selectedRecipients[0];
   const previewVars = {
     firstname: previewRecipient
@@ -234,6 +279,10 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
       : undefined,
   );
 
+  const emptyRecipientsCopy = isJudges
+    ? "No judges in this group registered with an email address, so there is nobody to send to yet."
+    : "No submission owners in this group have an email address, so there is nobody to send to yet.";
+
   return (
     <div className="space-y-4">
       {/* Toggle status banner */}
@@ -248,9 +297,35 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
       )}
 
       <SectionCard
-        title="Email judges"
-        description="Send an email to this group's judges. Start from a template or write from scratch. Bodies support basic markdown and per-recipient variables."
+        title={`Email ${audienceNounPlural}`}
+        description={`Send an email to this group's ${audienceNounPlural}. Start from a template or write from scratch. Bodies support basic markdown and per-recipient variables.`}
       >
+        {/* Audience: judges or submission owners */}
+        <div>
+          <label
+            htmlFor="group-email-audience"
+            className="block text-[13px] font-medium text-copy mb-1"
+          >
+            Send to
+          </label>
+          <SimpleSelect
+            id="group-email-audience"
+            value={audience}
+            onChange={(value) => changeAudience(value as RecipientAudience)}
+            disabled={isSending}
+            className="w-full max-w-md h-auto py-2 text-sm"
+            options={[
+              { value: "judges", label: "Judges" },
+              { value: "submission_owners", label: "Submission owners" },
+            ]}
+          />
+          <p className="text-xs text-soft mt-1">
+            {isJudges
+              ? "Judges who registered for this group with an email address."
+              : "Owners of submissions in this group. Account email is used when available; duplicates are sent once."}
+          </p>
+        </div>
+
         {/* Template picker */}
         <div>
           <label
@@ -312,7 +387,11 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
             value={body}
             onChange={(e) => setBody(e.target.value)}
             rows={8}
-            placeholder={`Hi {{firstname}},\n\nJudging for **{{groupname}}** is open.\n\n- Review your assigned submissions\n- Score each criteria`}
+            placeholder={
+              isJudges
+                ? `Hi {{firstname}},\n\nJudging for **{{groupname}}** is open.\n\n- Review your assigned submissions\n- Score each criteria`
+                : `Hi {{firstname}},\n\nThanks for submitting to **{{groupname}}**.\n\n- Keep an eye on {{resultsurl}}\n- Reply here if you have questions`
+            }
             disabled={isSending}
             className="w-full px-3 py-2 text-sm border border-hairline rounded-md bg-surface focus:outline-none focus:ring-2 focus:ring-hairline-strong focus:border-transparent font-mono"
           />
@@ -373,8 +452,8 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
             ))}
           </datalist>
           <p className="text-xs text-soft mt-1">
-            Judge replies go to this address. Blank means replies go to the
-            default from address. Group notification emails are suggested.
+            Replies go to this address. Blank means replies go to the default
+            from address. Group notification emails are suggested.
           </p>
         </div>
 
@@ -383,7 +462,7 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
           <div className="flex items-center justify-between mb-1">
             <span className="block text-[13px] font-medium text-copy">
               Recipients ({selectedRecipients.length} of{" "}
-              {recipients?.length ?? 0} judges with an email)
+              {recipients?.length ?? 0} {audienceNounPlural} with an email)
             </span>
             {recipients !== undefined && recipients.length > 0 && (
               <button
@@ -396,31 +475,31 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
             )}
           </div>
           {recipients === undefined ? (
-            <p className="text-xs text-soft">Loading judges...</p>
-          ) : recipients.length === 0 ? (
             <p className="text-xs text-soft">
-              No judges in this group registered with an email address, so there
-              is nobody to send to yet.
+              Loading {audienceNounPlural}...
             </p>
+          ) : recipients.length === 0 ? (
+            <p className="text-xs text-soft">{emptyRecipientsCopy}</p>
           ) : (
             <div className="max-h-48 overflow-y-auto rounded-md border border-hairline divide-y divide-hairline">
               {recipients.map((recipient) => (
                 <label
-                  key={recipient.judgeId}
+                  key={recipient.id}
                   className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-surface-hover"
                 >
                   <input
                     type="checkbox"
-                    checked={!excluded.has(recipient.judgeId)}
-                    onChange={() => toggleRecipient(recipient.judgeId)}
+                    checked={!excluded.has(recipient.id)}
+                    onChange={() => toggleRecipient(recipient.id)}
                     disabled={isSending}
                     className="h-4 w-4 rounded border-hairline-strong text-ink focus:ring-hairline-strong"
                   />
-                  <span className="text-[13px] text-ink">
+                  <span className="text-[13px] text-ink shrink-0">
                     {recipient.name}
                   </span>
                   <span className="text-xs text-soft truncate">
                     {recipient.email}
+                    {recipient.detail ? ` · ${recipient.detail}` : ""}
                   </span>
                 </label>
               ))}
@@ -492,7 +571,7 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
             <Send className="w-4 h-4" />
             {isSending
               ? "Sending..."
-              : `${scheduleAt ? "Schedule for" : "Send to"} ${selectedRecipients.length} judge${selectedRecipients.length === 1 ? "" : "s"}`}
+              : `${scheduleAt ? "Schedule for" : "Send to"} ${selectedRecipients.length} ${selectedRecipients.length === 1 ? audienceNoun : audienceNounPlural}`}
           </button>
           <button
             type="button"
@@ -520,12 +599,12 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
               <span>Preview as</span>
               {selectedRecipients.length > 1 ? (
                 <SimpleSelect
-                  value={previewRecipient?.judgeId ?? ""}
-                  onChange={(value) => setPreviewJudgeId(value)}
-                  aria-label="Preview as judge"
+                  value={previewRecipient?.id ?? ""}
+                  onChange={(value) => setPreviewRecipientId(value)}
+                  aria-label={`Preview as ${audienceNoun}`}
                   className="w-auto h-auto px-2 py-1 text-xs gap-1"
                   options={selectedRecipients.map((recipient) => ({
-                    value: recipient.judgeId as string,
+                    value: recipient.id,
                     label: recipient.name,
                   }))}
                 />
@@ -650,11 +729,15 @@ export function GroupEmailsSection({ group }: { group: GroupDetails }) {
           setConfirmOpen(false);
           void handleSend();
         }}
-        title={scheduleAt ? "Schedule email to judges" : "Send email to judges"}
+        title={
+          scheduleAt
+            ? `Schedule email to ${audienceNounPlural}`
+            : `Send email to ${audienceNounPlural}`
+        }
         description={
           scheduleAt
-            ? `This schedules "${subject.trim()}" to ${selectedRecipients.length} judge${selectedRecipients.length === 1 ? "" : "s"} in ${group.name} for ${new Date(scheduleAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}. You can cancel it from Scheduled sends before it fires.`
-            : `This sends "${subject.trim()}" to ${selectedRecipients.length} judge${selectedRecipients.length === 1 ? "" : "s"} in ${group.name}. Send a test to yourself first if you have not checked the rendering.`
+            ? `This schedules "${subject.trim()}" to ${selectedRecipients.length} ${selectedRecipients.length === 1 ? audienceNoun : audienceNounPlural} in ${group.name} for ${new Date(scheduleAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}. You can cancel it from Scheduled sends before it fires.`
+            : `This sends "${subject.trim()}" to ${selectedRecipients.length} ${selectedRecipients.length === 1 ? audienceNoun : audienceNounPlural} in ${group.name}. Send a test to yourself first if you have not checked the rendering.`
         }
         confirmButtonText={
           scheduleAt
