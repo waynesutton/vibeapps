@@ -1,54 +1,33 @@
-# robots.txt — Allow access to major LLM crawlers
+# Vibe Apps robots.txt
+# Public directory files: /llms.txt and /vibeapps.md
 
-# Allow all general crawlers
-
-User-agent: \*
+User-agent: *
 Allow: /
-
-# OpenAI's GPTBot (ChatGPT)
 
 User-agent: GPTBot
 Allow: /
 
-# OpenAI's ChatGPT browsing user-agent
-
 User-agent: ChatGPT-User
 Allow: /
-
-# Anthropic's Claude
 
 User-agent: ClaudeBot
 Allow: /
 
-# Anthropic alternate identifier
-
 User-agent: anthropic-ai
 Allow: /
-
-# Google AI crawler (used for Bard, Gemini, and other LLMs)
 
 User-agent: Google-Extended
 Allow: /
 
-# Common Crawl bot (used in many AI training datasets)
-
 User-agent: CCBot
 Allow: /
-
-# Perplexity AI
 
 User-agent: PerplexityBot
 Allow: /
 
-# NeevaAI (acquired by Snowflake, but still seen)
-
-User-agent: NeevaAI
+User-agent: Applebot-Extended
 Allow: /
 
-# Add more LLM bots as needed below
-
-# Example:
-
-# User-agent: YourCustomAIBot
-
-# Allow: /
+Sitemap: https://vibeapps.dev/sitemap.xml
+LLMs: https://vibeapps.dev/llms.txt
+# Markdown directory: https://vibeapps.dev/vibeapps.md

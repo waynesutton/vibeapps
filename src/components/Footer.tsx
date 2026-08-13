@@ -23,6 +23,12 @@ export function Footer() {
           <Link to="/leaderboard" className="hover:text-copy">
             Leaderboard
           </Link>
+          <a href="/llms.txt" className="hover:text-copy">
+            llms.txt
+          </a>
+          <a href="/vibeapps.md" className="hover:text-copy">
+            vibeapps.md
+          </a>
           {/* <a href="#" target="_blank" rel="noopener noreferrer" className="hover:text-copy">
             Submit
           </a> */}

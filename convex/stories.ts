@@ -2722,6 +2722,7 @@ export const getStoryMetadata = internalQuery({
       .unique();
 
     if (!story) return null;
+    if (story.isSpam === true || story.isArchived === true) return null;
 
     // Resolve screenshot URL (main image for social sharing)
     const screenshotUrl = story.screenshotId

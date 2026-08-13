@@ -13,15 +13,18 @@ import {
   TogglePill,
   useSaveState,
 } from "./groupSection";
+import { GroupSlugEditor } from "./GroupSlugEditor";
 
-// Basic group settings: name, description, active status, judges per
+// Basic group settings: name, slug, description, active status, judges per
 // submission, plus a delete danger zone for admins with judging.delete.
 export function GroupSettingsSection({
   group,
   canDelete,
+  canChangeSlug,
 }: {
   group: GroupDetails;
   canDelete: boolean;
+  canChangeSlug: boolean;
 }) {
   const navigate = useNavigate();
   const updateGroup = useMutation(api.judgingGroups.updateGroup);
@@ -99,6 +102,28 @@ export function GroupSettingsSection({
             disabled={saving}
             className="mt-1"
           />
+        </div>
+        <div>
+          <Label htmlFor="group-slug">URL slug</Label>
+          <div className="mt-1 flex items-center gap-2">
+            <Input
+              id="group-slug"
+              value={`/judging/${group.slug}`}
+              readOnly
+              className="font-mono text-sm"
+            />
+            {canChangeSlug && (
+              <GroupSlugEditor
+                groupId={group._id}
+                currentSlug={group.slug}
+                variant="button"
+              />
+            )}
+          </div>
+          <p className="text-xs text-soft mt-1">
+            Drives every public URL for this group (judging, submit, results,
+            AI results, Agent API). Changing it breaks old links.
+          </p>
         </div>
         <div>
           <Label htmlFor="group-description">Description</Label>

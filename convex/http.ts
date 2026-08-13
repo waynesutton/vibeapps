@@ -6,14 +6,22 @@ import { resend } from "./sendEmails";
 import { registerRoutes } from "@waynesutton/agent-ready";
 import { RateLimiter, MINUTE } from "@convex-dev/rate-limiter";
 import { sha256Hex } from "./agentJudges";
+import {
+  SITE_ORIGIN,
+  buildLlmsTxt,
+  buildRobotsTxt,
+  buildSitemapXml,
+  buildVibeappsMd,
+  type PublicDirectory,
+} from "./siteDirectory";
 
 const http = httpRouter();
 
 // Agent Ready component routes (agents.md, llms-full.txt, llms-status, etc.)
-// /llms.txt and /robots.txt are skipped because this app already serves them
-// from the siteFiles table via the routes defined below.
+// /llms.txt, /robots.txt, and /sitemap.xml are skipped because this app
+// serves live directory files from public submissions.
 registerRoutes(http, components.agentReady, {
-  skipRoutes: ["/llms.txt", "/robots.txt"],
+  skipRoutes: ["/llms.txt", "/robots.txt", "/sitemap.xml"],
 });
 
 // Define a route for Clerk webhooks
@@ -94,6 +102,25 @@ function generateStoryHTML(story: {
   const safeDescription = escapeHtml(story.description);
   const safeAuthorName = story.authorName ? escapeHtml(story.authorName) : "";
 
+  const jsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: story.title,
+    description: story.description,
+    url: canonicalUrl,
+    image: imageUrl,
+    applicationCategory: "DeveloperApplication",
+    operatingSystem: "Web",
+    isPartOf: {
+      "@type": "WebSite",
+      name: siteName,
+      url: "https://vibeapps.dev",
+    },
+    ...(story.authorName
+      ? { author: { "@type": "Person", name: story.authorName } }
+      : {}),
+  }).replace(/</g, "\\u003c");
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -104,6 +131,8 @@ function generateStoryHTML(story: {
   <title>${safeTitle} | ${siteName}</title>
   <meta name="description" content="${safeDescription}">
   <link rel="canonical" href="${canonicalUrl}">
+  <link rel="alternate" type="text/plain" title="LLMs" href="https://vibeapps.dev/llms.txt">
+  <link rel="alternate" type="text/markdown" title="Directory" href="https://vibeapps.dev/vibeapps.md">
   
   <!-- Open Graph -->
   <meta property="og:title" content="${safeTitle} | ${siteName}">
@@ -112,6 +141,10 @@ function generateStoryHTML(story: {
   <meta property="og:url" content="${canonicalUrl}">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="${siteName}">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:image:alt" content="${safeTitle}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
@@ -120,6 +153,9 @@ function generateStoryHTML(story: {
   <meta name="twitter:title" content="${safeTitle} | ${siteName}">
   <meta name="twitter:description" content="${safeDescription}">
   <meta name="twitter:image" content="${imageUrl}">
+  <meta name="twitter:image:alt" content="${safeTitle}">
+  
+  <script type="application/ld+json">${jsonLd}</script>
   
   <!-- Redirect to actual app after a brief delay for crawlers -->
   <script>
@@ -209,6 +245,20 @@ function generateSubmissionPageHTML(page: {
   const safeTitle = escapeHtml(page.title);
   const safeDescription = escapeHtml(page.description);
 
+  const jsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: page.title,
+    description: page.description,
+    url: canonicalUrl,
+    image: imageUrl,
+    isPartOf: {
+      "@type": "WebSite",
+      name: siteName,
+      url: "https://vibeapps.dev",
+    },
+  }).replace(/</g, "\\u003c");
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -219,6 +269,8 @@ function generateSubmissionPageHTML(page: {
   <title>${safeTitle} | ${siteName}</title>
   <meta name="description" content="${safeDescription}">
   <link rel="canonical" href="${canonicalUrl}">
+  <link rel="alternate" type="text/plain" title="LLMs" href="https://vibeapps.dev/llms.txt">
+  <link rel="alternate" type="text/markdown" title="Directory" href="https://vibeapps.dev/vibeapps.md">
   
   <!-- Open Graph -->
   <meta property="og:title" content="${safeTitle} | ${siteName}">
@@ -227,6 +279,10 @@ function generateSubmissionPageHTML(page: {
   <meta property="og:url" content="${canonicalUrl}">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="${siteName}">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:image:alt" content="${safeTitle}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
@@ -235,6 +291,9 @@ function generateSubmissionPageHTML(page: {
   <meta name="twitter:title" content="${safeTitle} | ${siteName}">
   <meta name="twitter:description" content="${safeDescription}">
   <meta name="twitter:image" content="${imageUrl}">
+  <meta name="twitter:image:alt" content="${safeTitle}">
+  
+  <script type="application/ld+json">${jsonLd}</script>
   
   <!-- Redirect to actual app after a brief delay for crawlers -->
   <script>
@@ -297,22 +356,108 @@ http.route({
   }),
 });
 
-// Export router at bottom after routes are defined
-// New routes for robots.txt and llms.txt
+function discoveryHeaders(contentType: string): Record<string, string> {
+  return {
+    "content-type": contentType,
+    "cache-control":
+      "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
+    "access-control-allow-origin": "*",
+    "content-signal": "search=yes, ai-train=yes",
+    link: `<${SITE_ORIGIN}/llms.txt>; rel="describedby"; type="text/plain", <${SITE_ORIGIN}/vibeapps.md>; rel="alternate"; type="text/markdown"`,
+  };
+}
+
+async function serveLiveDirectoryFile(
+  ctx: ActionCtx,
+  kind: "robots" | "llms" | "vibeapps" | "sitemap",
+): Promise<Response> {
+  try {
+    const directory: PublicDirectory = await ctx.runQuery(
+      internal.siteFiles.listPublicDirectory,
+      {},
+    );
+    if (kind === "robots") {
+      return new Response(buildRobotsTxt(SITE_ORIGIN), {
+        status: 200,
+        headers: discoveryHeaders("text/plain; charset=utf-8"),
+      });
+    }
+    if (kind === "llms") {
+      return new Response(buildLlmsTxt(directory, SITE_ORIGIN), {
+        status: 200,
+        headers: discoveryHeaders("text/plain; charset=utf-8"),
+      });
+    }
+    if (kind === "vibeapps") {
+      return new Response(buildVibeappsMd(directory, SITE_ORIGIN), {
+        status: 200,
+        headers: discoveryHeaders("text/markdown; charset=utf-8"),
+      });
+    }
+    return new Response(buildSitemapXml(directory, SITE_ORIGIN), {
+      status: 200,
+      headers: discoveryHeaders("application/xml; charset=utf-8"),
+    });
+  } catch (error) {
+    console.error("Live directory file failed, using cache", error);
+    const key =
+      kind === "robots"
+        ? "robots.txt"
+        : kind === "llms"
+          ? "llms.txt"
+          : kind === "vibeapps"
+            ? "vibeapps.md"
+            : "sitemap.xml";
+    const cached = await ctx.runQuery(internal.siteFiles.getFile, { key });
+    if (cached) {
+      const contentType =
+        kind === "sitemap"
+          ? "application/xml; charset=utf-8"
+          : kind === "vibeapps"
+            ? "text/markdown; charset=utf-8"
+            : "text/plain; charset=utf-8";
+      return new Response(cached, {
+        status: 200,
+        headers: discoveryHeaders(contentType),
+      });
+    }
+    return new Response("User-agent: *\nAllow: /\n", {
+      status: 200,
+      headers: discoveryHeaders("text/plain; charset=utf-8"),
+    });
+  }
+}
+
+// Live discovery files generated from public submissions
 http.route({
   path: "/robots.txt",
   method: "GET",
   handler: httpAction(async (ctx) => {
-    const body = await ctx.runQuery(internal.siteFiles.getFile, {
-      key: "robots.txt",
-    });
-    return new Response(body ?? "User-agent: *\nAllow: /\n", {
-      status: 200,
-      headers: {
-        "content-type": "text/plain; charset=utf-8",
-        "cache-control": "public, max-age=300, s-maxage=600",
-      },
-    });
+    return await serveLiveDirectoryFile(ctx, "robots");
+  }),
+});
+
+http.route({
+  path: "/llms.txt",
+  method: "GET",
+  handler: httpAction(async (ctx) => {
+    return await serveLiveDirectoryFile(ctx, "llms");
+  }),
+});
+
+http.route({
+  path: "/vibeapps.md",
+  method: "GET",
+  handler: httpAction(async (ctx) => {
+    return await serveLiveDirectoryFile(ctx, "vibeapps");
+  }),
+});
+
+http.route({
+  path: "/sitemap.xml",
+  method: "GET",
+  handler: httpAction(async (ctx) => {
+    return await serveLiveDirectoryFile(ctx, "sitemap");
   }),
 });
 
@@ -325,23 +470,6 @@ http.route({
   method: "POST",
   handler: httpAction(async (ctx, req) => {
     return await resend.handleResendEventWebhook(ctx, req);
-  }),
-});
-
-http.route({
-  path: "/llms.txt",
-  method: "GET",
-  handler: httpAction(async (ctx) => {
-    const body = await ctx.runQuery(internal.siteFiles.getFile, {
-      key: "llms.txt",
-    });
-    return new Response(body ?? "User-agent: *\nAllow: /\n", {
-      status: 200,
-      headers: {
-        "content-type": "text/plain; charset=utf-8",
-        "cache-control": "public, max-age=300, s-maxage=600",
-      },
-    });
   }),
 });
 

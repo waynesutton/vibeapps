@@ -1,4 +1,33 @@
+# Vibe Apps robots.txt
+# Public directory files: /llms.txt and /vibeapps.md
+
 User-agent: *
 Allow: /
 
-Sitemap: /sitemap.xml 
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+Sitemap: https://vibeapps.dev/sitemap.xml
+LLMs: https://vibeapps.dev/llms.txt
+# Markdown directory: https://vibeapps.dev/vibeapps.md

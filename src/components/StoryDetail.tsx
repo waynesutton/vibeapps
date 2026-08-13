@@ -171,6 +171,35 @@ export function StoryDetail({ story }: StoryDetailProps) {
     return null;
   }, [story.title, story.description, story.screenshotUrl]);
 
+  // Structured data for answer engines. Does not change Open Graph tags.
+  React.useEffect(() => {
+    const imageUrl =
+      story.screenshotUrl ||
+      "https://vibeapps.dev/vibe-apps-open-graphi-image.png";
+    const payload = {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      name: story.title,
+      description: story.description,
+      url: `https://vibeapps.dev/s/${story.slug}`,
+      image: imageUrl,
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "Web",
+    };
+    const existing = document.getElementById("vibeapps-jsonld");
+    const script =
+      existing instanceof HTMLScriptElement
+        ? existing
+        : document.createElement("script");
+    script.id = "vibeapps-jsonld";
+    script.type = "application/ld+json";
+    script.textContent = JSON.stringify(payload).replace(/</g, "\\u003c");
+    if (!existing) document.head.appendChild(script);
+    return () => {
+      script.remove();
+    };
+  }, [story.title, story.description, story.screenshotUrl, story.slug]);
+
   // Edit mode state
   const isEditMode = searchParams.get("edit") === "true";
   const [isEditing, setIsEditing] = React.useState(false);

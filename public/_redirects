@@ -1,9 +1,11 @@
 # Meta endpoint for social sharing (for manual testing and direct access)
-/meta/s/:slug https://acoustic-goldfinch-461.convex.site/meta/s?slug=:slug 200
+/meta/s/:slug https://whimsical-dalmatian-205.convex.site/meta/s?slug=:slug 200
 
-# Dynamic text files
-/robots.txt https://acoustic-goldfinch-461.convex.site/robots.txt 200
-/llms.txt https://acoustic-goldfinch-461.convex.site/llms.txt 200
+# Live discovery files generated from public submissions
+/robots.txt https://whimsical-dalmatian-205.convex.site/robots.txt 200
+/llms.txt https://whimsical-dalmatian-205.convex.site/llms.txt 200
+/vibeapps.md https://whimsical-dalmatian-205.convex.site/vibeapps.md 200
+/sitemap.xml https://whimsical-dalmatian-205.convex.site/sitemap.xml 200
 
 # Email unsubscribe (GET link clicks and RFC 8058 one-click POST).
 # Must proxy to the same Convex deployment that sends the emails,
@@ -11,4 +13,4 @@
 /api/unsubscribe https://acoustic-goldfinch-461.convex.site/api/unsubscribe 200
 
 # All routes go to the SPA (including /s/:slug)
-/* /index.html 200 
+/* /index.html 200

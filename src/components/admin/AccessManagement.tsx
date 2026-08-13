@@ -88,6 +88,11 @@ const SECTIONS: Array<SectionDef> = [
         label: "Send template emails to a group's judges",
       },
       {
+        key: "judging.slug",
+        label: "Change judging group URL slug",
+        destructive: true,
+      },
+      {
         key: "judging.delete",
         label: "Delete judging groups",
         destructive: true,

@@ -22,8 +22,9 @@
 - `AGENTS.md`: Project context and conventions for coding agents
 - `CLAUDE.md`: Project context for Claude-based agents
 - `skills-lock.json`: Manifest of installed agent skills and their versions
-- `llms.txt`: LLM context and training documentation
-- `robots.txt`: Search engine crawling configuration
+- `llms.txt`: Pointer to the live auto-updating `/llms.txt` on vibeapps.dev (generated from public submissions)
+- `robots.txt`: Search and AI crawler allow list; live copy is served from Convex
+
 
 ### Agent Skills (.agents/, .claude/)
 
@@ -35,7 +36,8 @@
 
 All PRD files are now organized in the `prds/` folder for better project structure:
 
-- `prds/judging-submit-page-width-and-required-tag-visibility.md`: Wider single column judging submit layout, square/wide (16:9) header image shape, and per-group required tag show/hide on the submission form
+- `prds/judging-group-editable-slug.md`: Editable judging group URL slug after create, warning dialog, judging.slug access permission, uniqueness, and public URL follow-through
+- `prds/public-directory-llms-and-aeo.md`: Live llms.txt and vibeapps.md directory files plus additive AEO/SEO/GEO work that keeps existing Open Graph tags
 - `prds/ai-judge-frontend-checker-hosting-weights.md`: AI judge frontend checker rubric preset with per-platform hosting sub-weights (Codex Sites, Convex static hosting, Vercel, Netlify, Other) and deterministic hosting detection
 - `prds/fix-github-issues-15-and-11.md`: Fixes for GitHub issues 15 (public profile query leaked moderation data and showed rejected stories) and 11 (removing a last name reverted on refresh due to Clerk name sync)
 - `prds/submit-page-sidebar-setting.md`: Admin setting to hide the /submit right sidebar and widen the form for all users
@@ -114,7 +116,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 ### Admin & Moderation
 
-- `convex/adminAccess.ts`: Delegated admin permissions module: permission keys, `getAccessContext`/`hasPermission`/`requirePermission`/`requireJudgingGroupPermission`/`getAllowedJudgingGroupIds` helpers, the `getMyAdminAccess` frontend gate query, and full-admin-only grant/revoke/list/search CRUD backed by the `adminPermissions` table; grant and revoke actions write to the activity log
+- `convex/adminAccess.ts`: Delegated admin permissions module: permission keys (including `judging.slug` for changing a group's URL slug), `getAccessContext`/`hasPermission`/`requirePermission`/`requireJudgingGroupPermission`/`getAllowedJudgingGroupIds` helpers, the `getMyAdminAccess` frontend gate query, and full-admin-only grant/revoke/list/search CRUD backed by the `adminPermissions` table; grant and revoke actions write to the activity log
 - `convex/activityLog.ts`: Admin activity log backend: `logActivity` helper (pause-aware, actor resolution from auth or explicit override, never throws) called from email, submission, spam, judging, scoring, access, and settings mutations, plus `listActivity` paginated query with category/archived/sort filters, `getStatus`/`setPaused` pause switch (appSettings key `activityLogPaused`), `bulkArchive`/`bulkUnarchive`/`bulkDelete`, batched `clearLog`, `exportActivity` for CSV export (activity.view / activity.manage permissions), and the per-judging-group log: entries carry an optional `groupId` (by_groupId index) with `listGroupActivity` (paginated, judging.view group scoped), `exportGroupActivity`, and batched `clearGroupActivity` (judging.manage)
 - `convex/adminQueries.ts`: General admin dashboard queries for metrics and content
 - `convex/adminFollowsQueries.ts`: Admin-specific queries for managing user follows
@@ -129,7 +131,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 ### Comprehensive Judging System
 
-- `convex/judgingGroups.ts`: Judging group management with public/private access, password protection, configurable `judgesPerSubmission` for multi-judge mode, required-tag backfill in `updateGroup` (stories carrying a newly set required tag are auto-included for judging), auto-include backfill by multiple tags + submission date range (`autoIncludeTagIds`/`autoIncludeMatchMode` any|all/`autoIncludeStartDate`/`autoIncludeEndDate`, also returned from `getGroupWithDetails` along with `aiFrontendWeights`), and AI Judge settings (`aiJudgeEnabled`/`aiResultsIsPublic`/`aiResultsPassword` on create/update, `aiJudgeResults` cascade delete in `deleteGroup`, exported `hashPassword`/`verifyPassword` helpers)
+- `convex/judgingGroups.ts`: Judging group management with public/private access, password protection, configurable `judgesPerSubmission` for multi-judge mode, `updateGroupSlug` (judging.slug, unique sanitized slug, activity log), required-tag backfill in `updateGroup` (stories carrying a newly set required tag are auto-included for judging), auto-include backfill by multiple tags + submission date range (`autoIncludeTagIds`/`autoIncludeMatchMode` any|all/`autoIncludeStartDate`/`autoIncludeEndDate`, also returned from `getGroupWithDetails` along with `aiFrontendWeights`), and AI Judge settings (`aiJudgeEnabled`/`aiResultsIsPublic`/`aiResultsPassword` on create/update, `aiJudgeResults` cascade delete in `deleteGroup`, exported `hashPassword`/`verifyPassword` helpers)
 - `convex/judgingCriteria.ts`: Judging criteria and scoring questions management with 1-10 star ratings
 - `convex/judgingGroupSubmissions.ts`: Submission assignment within judging groups with @mentions in notes, search functionality, status tracking, `markJudgeCompleted` mutation for multi-judge OCC-safe completion, required-tag inclusion (`ensureStoryInGroup`/`syncStoryToTaggedGroups` helpers + `syncRequiredTagSubmissions` admin mutation) so any story carrying a group's required tag is judged and counted, multi-tag + date-range auto-include (`storyMatchesAutoInclude` helper supporting any/all match modes, `syncStoryToTaggedGroups` honors auto-include criteria, `syncAutoIncludeSubmissions` admin mutation), and `exportGroupSubmissions` admin query that returns flattened submission rows (custom form info, links, tags, hackathon team info; no images) for CSV download; `getGroupSubmissions` returns `customFormAnswers` and `dynamicFormValues` so judges see per-group answers and admin-added field values; its "judged" author notification is only triggered by human judging and never by the AI Judge flow
 - `convex/judges.ts`: Judge registration, session management, and group-wide progress tracking with canEdit/completedBy flags for multi-judge transparency and edit permission enforcement
@@ -164,7 +166,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `convex/sendEmails.ts`: Convex Resend Component client (onEmailEvent callback registered) with subject prefix and from address enforcement
 - `convex/emailSettings.ts`: User email preferences management with unsubscribe functionality
 - `convex/testDailyEmail.ts`: Admin testing functions for daily/weekly email triggers with clear logs utility
-- `convex/crons.ts`: Email cron jobs (daily admin, engagement processing, weekly digest)
+- `convex/crons.ts`: Email cron jobs (daily admin, engagement processing, weekly digest) plus a daily rebuild of cached discovery files
 
 ### Utilities & Configuration
 
@@ -172,7 +174,9 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `convex/validators.ts`: Shared document and return validators (tag docs with per-view visibility flags, story-with-details including self-reported AI attribution, custom form answers, and `dynamicFormValues`) used across queries
 - `convex/convexBoxConfig.ts`: Configuration for ConvexBox notification system
 - `convex/convex.config.ts`: Convex app definition installing the Resend, crons, workpool (plus a separate spamWorkpool), Agent Ready, rate limiter, Firecrawl (bound to `FIRECRAWL_API_KEY`), and Context.dev (bound to `CONTEXT_DEV_API_KEY`, used for video transcript scraping) components
-- `convex/http.ts`: HTTP actions for external requests, Resend webhook handler, Agent Ready component routes (agents.md, llms-full.txt, llms-status; /llms.txt and /robots.txt skipped since the app serves them from siteFiles), and the agent judging API under `/api/judging/:slug` (openapi.json discovery plus keyed criteria/submissions/results/scores endpoints with rate limiting and a 403 that distinguishes invalid keys from a group with the agent API turned off)
+- `convex/siteDirectory.ts`: Pure builders for live `/llms.txt`, `/vibeapps.md`, `/robots.txt`, and `/sitemap.xml` from public submissions
+- `convex/siteFiles.ts`: Indexed query of public apps plus daily cache rebuild into the siteFiles table
+- `convex/http.ts`: HTTP actions for external requests, Resend webhook handler, Agent Ready component routes (agents.md, llms-full.txt, llms-status; `/llms.txt`, `/robots.txt`, and `/sitemap.xml` skipped because this app serves live directory files from public submissions), live `/vibeapps.md`, and the agent judging API under `/api/judging/:slug` (openapi.json discovery plus keyed criteria/submissions/results/scores endpoints with rate limiting and a 403 that distinguishes invalid keys from a group with the agent API turned off)
 - `convex/agentReady/content.ts`: Admin-gated app-facing wrappers for the Agent Ready component (settings, generated files, pages)
 - `convex/agentReady/analytics.ts`: App-facing analytics wrappers for the Agent Ready component (request summary and time series)
 - `agent-ready.config.json`: Agent Ready component configuration (app name, widget, cron, and file generation settings)
@@ -193,7 +197,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 - `src/components/Layout.tsx`: Main layout wrapper with navigation and structure
 - `src/components/ProtectedLayout.tsx`: Authentication-protected layout wrapper
-- `src/components/Footer.tsx`: Site footer with links and information
+- `src/components/Footer.tsx`: Site footer with About, Leaderboard, live `/llms.txt` and `/vibeapps.md` directory links
 - `src/components/UserSyncer.tsx`: Clerk-Convex user synchronization component
 - `src/components/DynamicSubmitForm.tsx`: Public dynamic submit form renderer
 
@@ -223,8 +227,8 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 - `src/components/admin/AdminDashboard.tsx`: Main admin dashboard overview with permission-gated navigation: renders only the tabs the caller's access allows (via `getMyAdminAccess`), shows a "Delegated access" badge for non-full admins, and includes Access (full admins only) and Docs tabs; the legacy Custom Forms sub-tab under Forms is hidden (commented out)
 - `src/components/admin/useAdminAccess.tsx`: Admin access hook and React context: `useAdminAccessQuery` route gate, `AdminAccessProvider`, and `useAdminAccess` with `can(key)` and `canAccessGroup(groupId)` helpers for hiding actions per permission
-- `src/components/admin/AccessManagement.tsx`: Access tab UI for delegated admin permissions: user search with avatars, per-section permission cards with action toggles, judging group multi-select or all-groups scope, summary chips, notes, and a grants list with edit and revoke
-- `src/components/admin/AdminDocs.tsx`: In-admin Docs tab: sidebar-nav markdown documentation covering judging groups (workspace sections with required permissions, links ledger, per-URL access gates), criteria, submissions, judge flow, results and tracking, the AI judge (context sources including hackathon log files and /hackathon.json manifest, custom criteria, editable system prompt), the agent judges HTTP API as a full integration guide (setup steps, auth headers, endpoint table, POST /scores example, rate limits, error reference), the AI spam check (scan triggers, signals, editable prompt, mark flow, email kill switch, permissions), delegated access, and environment variables for both AI features
+- `src/components/admin/AccessManagement.tsx`: Access tab UI for delegated admin permissions: user search with avatars, per-section permission cards with action toggles (including judging.slug), judging group multi-select or all-groups scope, summary chips, notes, and a grants list with edit and revoke
+- `src/components/admin/AdminDocs.tsx`: In-admin Docs tab: sidebar-nav markdown documentation covering judging groups (workspace sections with required permissions, slug change warning, links ledger, per-URL access gates), criteria, submissions, judge flow, results and tracking, the AI judge (context sources including hackathon log files and /hackathon.json manifest, custom criteria, editable system prompt), the agent judges HTTP API as a full integration guide (setup steps, auth headers, endpoint table, POST /scores example, rate limits, error reference), the AI spam check (scan triggers, signals, editable prompt, mark flow, email kill switch, permissions), delegated access (including judging.slug), and environment variables for both AI features
 - `src/components/admin/ContentModeration.tsx`: Content approval/rejection interface with image management; confirmed spam submissions show a red Spam badge with the reason on hover
 - `src/components/admin/ActivityLog.tsx`: Activity admin tab: paginated feed of app activity (emails, submissions, spam, judging, scoring, moderation, access, settings) with category filter pills, Active/Archived view, newest/oldest sort, pause/resume logging with paused banner, select all with bulk archive/restore/delete, batched clear log with confirm, CSV export of the current view, and expandable rows with action key, target, and metadata
 - `src/components/admin/SpamCheck.tsx`: AI Spam admin tab in two steps: a "Run a scan" card (own date range picker with presets, Scan and Re-scan buttons that scope to the picked range or the 100 most recent, inline help copy) and a "Scan results" section with view-only filters (verdict, sort, submission date range), live counts strip, editable AI system prompt panel with reset to default, select all with bulk mark-as-spam (optional custom reason sent to submitters), bulk hide and delete, per-row mark/unmark/re-scan, verdict badges with confidence, inline URL/repo/duplicate signals, and expandable rows with full AI reasoning and scan metadata; both date ranges persist in localStorage across tab switches and reloads, and the counts strip pills are clickable quick filters synced with the verdict dropdown
@@ -252,10 +256,11 @@ All PRD files are now organized in the `prds/` folder for better project structu
 ### Judging System Components
 
 - `src/components/admin/Judging.tsx`: Compact Linear-style list of judging groups (active status dot, public/private lock, submission and judge counts, created time) with inline totals and the Create Judging Group button; each row links into the group workspace at `/admin/judging/:slug`
-- `src/pages/AdminJudgingGroupPage.tsx`: Full-page docs-style workspace for one judging group with a collapsible sticky sidebar (icon-only mode via a PanelLeft toggle, persisted in localStorage) and `?section=` deep links (Overview, Links, Settings, Access, Criteria, Submissions, Submit page, AI judge, Results, AI results, Judge tracking); sections are hidden when the caller lacks the mapped delegated permission and embed the existing criteria/results/AI/tracking components without their standalone headers
+- `src/pages/AdminJudgingGroupPage.tsx`: Full-page docs-style workspace for one judging group with a collapsible sticky sidebar (icon-only mode via a PanelLeft toggle, persisted in localStorage) and `?section=` deep links (Overview, Links, Settings, Access, Criteria, Submissions, Submit page, AI judge, Results, AI results, Judge tracking); header slug shows a pencil (judging.slug) to change the URL; sections are hidden when the caller lacks the mapped delegated permission and embed the existing criteria/results/AI/tracking components without their standalone headers
 - `src/components/admin/judging/groupSection.tsx`: Shared utilities for group workspace sections: `GroupDetails` type, submission field/section/visibility definitions, custom question types and key generation (`makeQuestionKey`, `mergeVisibility`), AI rubric definitions, date input helpers, and UI primitives (`SectionCard` with optional `headerAction` slot, `SaveFooter`, `HeaderSaveButton`, `UrlRow`, `TogglePill`, `useSaveState`)
+- `src/components/admin/judging/GroupSlugEditor.tsx`: Pencil and Settings button that open a warning dialog to change a judging group's URL slug, then replace-navigate to the new admin path
 - `src/components/admin/judging/GroupOverviewSection.tsx`: Group stats, active/public status toggles, and copyable public URLs (judging, results, submit page)
-- `src/components/admin/judging/GroupSettingsSection.tsx`: Name, description, active status, judges per submission, scoring scale (1-5 or 1-10), and permission-gated danger zone delete
+- `src/components/admin/judging/GroupSettingsSection.tsx`: Name, URL slug (read-only plus Change slug when judging.slug is granted), description, active status, judges per submission, scoring scale (1-5 or 1-10), and permission-gated danger zone delete
 - `src/components/admin/judging/GroupAccessSection.tsx`: Judge access, submission page access, and results visibility passwords (blank input keeps the existing password)
 - `src/components/admin/judging/GroupSubmissionsSection.tsx`: Search-and-add any site submission to the group, auto-include tags/date range/match rule config, sync matching submissions action, and CSV export
 - `src/components/admin/judging/GroupSubmitPageSection.tsx`: Custom submission page toggle (persists immediately so the public URL works right away), branding (title, description, layout, header image upload, links), required tag picker with hidden tags listed, inline tag creation (defaults to hidden, standard tags.create mutation) and backfill sync, per-field show/hide and required/optional toggles, section visibility (team info, additional images/links), custom questions editor (text/url/email/textarea) with per-question Shown/Hidden pills, section Required/Optional pills, an Additional form fields list with per-group Required/Shown overrides for Manage Form Fields entries, guard-rail warnings (hidden tags need a required tag, hidden GitHub URL with AI judge on), and a header save button when expanded
@@ -334,9 +339,9 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 ### Configuration Files
 
-- `_redirects`: `Netlify` routing configuration for SPA, plus proxies for `/robots.txt`, `/llms.txt`, `/meta/s/*`, and `/api/unsubscribe` (email unsubscribe links) to the Convex site domain
-- `robots.txt`: Search engine crawling instructions
-- `sitemap.xml`: Site structure for search engines
+- `_redirects`: `Netlify` routing configuration for SPA, plus production proxies for `/robots.txt`, `/llms.txt`, `/vibeapps.md`, `/sitemap.xml`, `/meta/s/*`, and `/api/unsubscribe` to the Convex site domain
+- `robots.txt`: Search and AI crawler allow list (live copy served from Convex)
+- `sitemap.xml`: Static stub; the live sitemap of public apps is served from Convex
 
 ### Graphics
 

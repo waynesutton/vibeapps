@@ -63,6 +63,7 @@ import type * as migrations from "../migrations.js";
 import type * as reports from "../reports.js";
 import type * as sendEmails from "../sendEmails.js";
 import type * as settings from "../settings.js";
+import type * as siteDirectory from "../siteDirectory.js";
 import type * as siteFiles from "../siteFiles.js";
 import type * as spamCheck from "../spamCheck.js";
 import type * as spamCheckAnalysis from "../spamCheckAnalysis.js";
@@ -142,6 +143,7 @@ declare const fullApi: ApiFromModules<{
   reports: typeof reports;
   sendEmails: typeof sendEmails;
   settings: typeof settings;
+  siteDirectory: typeof siteDirectory;
   siteFiles: typeof siteFiles;
   spamCheck: typeof spamCheck;
   spamCheckAnalysis: typeof spamCheckAnalysis;

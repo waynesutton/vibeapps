@@ -60,7 +60,7 @@ Create a group from the Judging tab with **Create Judging Group**. Each group ha
 
 ## Basics
 
-- **Name, description, slug**: the slug drives every URL (\`/judging/your-slug\`, \`/judging/your-slug/results\`).
+- **Name, description, slug**: the slug drives every URL (\`/judging/your-slug\`, \`/judging/your-slug/submit\`, \`/judging/your-slug/results\`). After create, change it with the pencil next to the slug in the workspace header (or Settings). Changing the slug needs the **judging.slug** permission.
 - **Active toggle**: pausing a group blocks new judge scoring without deleting anything. Use the pause and play icons in the group list.
 - **Public or private**: public groups appear in listings; private groups are reachable only by URL.
 
@@ -89,7 +89,7 @@ Opening a group takes you to \`/admin/judging/your-slug\`, a workspace with a se
 | --- | --- | --- |
 | Overview | Live stats, active and public toggles, quick links | judging.view |
 | Links | Real-time ledger of every shareable link with lock status | judging.view |
-| Settings | Name, slug, description, passwords, dates, deletion | judging.manage |
+| Settings | Name, slug (judging.slug to change), description, dates, deletion | judging.manage |
 | Access | Who can manage this group | judging.manage |
 | Criteria | Scoring questions and weights for human judges | judging.manage |
 | Submissions | Add, sync, and remove submissions | judging.manage |
@@ -135,6 +135,10 @@ Every page a group exposes has its own gate:
 - **AI results page** (\`/ai-results\`): open when AI results are public, otherwise asks for the AI results password.
 - **Agent API** (\`/api/judging/your-slug/*\`): needs a valid agent key, and the group's agent API toggle must be on.
 - **Admin workspace**: needs a full admin account or a delegated grant scoped to this group.
+
+## Changing the URL slug
+
+The pencil next to \`/judging/your-slug\` in the workspace header (and the Change slug button in Settings) lets an admin with **judging.slug** pick a new slug. Public pages, the submit form, results, AI results, the admin workspace, and the Agent API all look up the current slug, so they switch immediately. Old URLs 404. Emails already sent still contain the old links. The dialog warns before saving. Full Clerk admins always can; delegated users need the Access tab grant.
 
 ## Deleting a group
 
@@ -477,7 +481,7 @@ A user granted the full judging set for one group can manage that event end to e
 - **Moderation**: view, moderate (approve, reject, hide, archive, pin, edit, tags), delete
 - **Tags**: view, manage, delete
 - **Forms**: view, manage, results, delete
-- **Judging** (group scoped): view, manage, results, tracking, ai, delete
+- **Judging** (group scoped): view, manage, results, tracking, ai, emails, slug, delete
 - **Numbers**: view
 - **Users**: view, moderate, reports, delete
 - **Emails**: view, send

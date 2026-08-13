@@ -3,10 +3,11 @@ import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
-// Biweekly (every 14 days) using interval for precision
+// Daily fallback cache for discovery files. HTTP routes generate live from
+// public submissions; this keeps siteFiles populated if a live query fails.
 crons.interval(
-  "rebuild robots and llms biweekly",
-  { hours: 24 * 14 },
+  "rebuild robots llms and directory daily",
+  { hours: 24 },
   internal.siteFiles.rebuild,
   {},
 );

@@ -40,6 +40,7 @@ import { GroupAiSection } from "../components/admin/judging/GroupAiSection";
 import { GroupEmailsSection } from "../components/admin/judging/GroupEmailsSection";
 import { GroupLinksSection } from "../components/admin/judging/GroupLinksSection";
 import { GroupActivitySection } from "../components/admin/judging/GroupActivitySection";
+import { GroupSlugEditor } from "../components/admin/judging/GroupSlugEditor";
 
 // Sidebar sections. Each maps to a ?section= value and a permission key
 // (null means visible to anyone who can open the page).
@@ -183,6 +184,7 @@ function GroupWorkspace({ group }: { group: GroupDetails }) {
 
   const canManage = can("judging.manage");
   const canDelete = can("judging.delete");
+  const canChangeSlug = can("judging.slug");
   const canAi = can("judging.ai");
 
   return (
@@ -225,8 +227,14 @@ function GroupWorkspace({ group }: { group: GroupDetails }) {
           >
             {group.isActive ? "Active" : "Inactive"}
           </span>
-          <span className="text-xs text-faint font-mono">
+          <span className="inline-flex items-center gap-1 text-xs text-faint font-mono">
             /judging/{group.slug}
+            {canChangeSlug && (
+              <GroupSlugEditor
+                groupId={group._id}
+                currentSlug={group.slug}
+              />
+            )}
           </span>
         </div>
         {group.description && (
@@ -277,7 +285,11 @@ function GroupWorkspace({ group }: { group: GroupDetails }) {
           )}
           {activeSection === "links" && <GroupLinksSection group={group} />}
           {activeSection === "settings" && canManage && (
-            <GroupSettingsSection group={group} canDelete={canDelete} />
+            <GroupSettingsSection
+              group={group}
+              canDelete={canDelete}
+              canChangeSlug={canChangeSlug}
+            />
           )}
           {activeSection === "access" && canManage && (
             <GroupAccessSection group={group} />

@@ -305,6 +305,69 @@ export const createGroup = mutation({
   },
 });
 
+// Sanitize a custom slug the same way createGroup derives one from a name.
+function normalizeGroupSlug(raw: string): string {
+  const slug = generateSlug(raw);
+  if (slug.length < 2) {
+    throw new Error(
+      "Slug must be at least 2 characters after cleanup (letters, numbers, hyphens).",
+    );
+  }
+  if (slug.length > 80) {
+    throw new Error("Slug must be 80 characters or fewer.");
+  }
+  return slug;
+}
+
+/**
+ * Change a judging group's URL slug. Public pages, submit links, results,
+ * AI results, the admin workspace, and the Agent API all look up the current
+ * slug, so they follow immediately. Old URLs 404. Gated by judging.slug.
+ */
+export const updateGroupSlug = mutation({
+  args: {
+    groupId: v.id("judgingGroups"),
+    slug: v.string(),
+  },
+  returns: v.object({ slug: v.string() }),
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.slug");
+
+    const group = await ctx.db.get(args.groupId);
+    if (!group) {
+      throw new Error("Judging group not found");
+    }
+
+    const slug = normalizeGroupSlug(args.slug);
+    if (slug === group.slug) {
+      return { slug };
+    }
+
+    const existing = await ctx.db
+      .query("judgingGroups")
+      .withIndex("by_slug", (q) => q.eq("slug", slug))
+      .first();
+    if (existing && existing._id !== args.groupId) {
+      throw new Error("That URL slug is already used by another judging group.");
+    }
+
+    await ctx.db.patch(args.groupId, { slug });
+
+    await logActivity(ctx, {
+      category: "judging",
+      action: "judgingGroup.slugChanged",
+      message: `Changed judging group slug from "${group.slug}" to "${slug}"`,
+      targetType: "judgingGroup",
+      targetId: args.groupId,
+      targetLabel: group.name,
+      groupId: args.groupId,
+      metadata: { oldSlug: group.slug, newSlug: slug },
+    });
+
+    return { slug };
+  },
+});
+
 /**
  * Update a judging group
  */

@@ -1,39 +1,16 @@
-User-agent: *
-Allow: /
+# Vibe Apps
 
-# OpenAI's GPTBot (ChatGPT)
-User-agent: GPTBot
-Allow: /
+> The place to share and discover new apps. A public directory of apps built with Convex, vibe coding, and modern AI tools.
 
-# OpenAI's ChatGPT browsing user-agent
-User-agent: ChatGPT-User
-Allow: /
+This GitHub copy is a pointer. The live, auto updating files are generated from public submissions (approved, not hidden, not spam):
 
-# Anthropic's Claude
-User-agent: ClaudeBot
-Allow: /
+- [llms.txt](https://vibeapps.dev/llms.txt)
+- [vibeapps.md](https://vibeapps.dev/vibeapps.md)
+- [sitemap.xml](https://vibeapps.dev/sitemap.xml)
 
-# Anthropic alternate identifier
-User-agent: anthropic-ai
-Allow: /
+## Site
 
-# Google AI crawler (used for Bard, Gemini, and other LLMs)
-User-agent: Google-Extended
-Allow: /
-
-# Common Crawl bot (used in many AI training datasets)
-User-agent: CCBot
-Allow: /
-
-# Perplexity AI
-User-agent: PerplexityBot
-Allow: /
-
-# NeevaAI (acquired by Snowflake, but still seen)
-User-agent: NeevaAI
-Allow: /
-
-# Add more LLM bots as needed below
-# Example:
-# User-agent: YourCustomAIBot
-# Allow: /
+- [Home](https://vibeapps.dev/): Browse the latest apps submitted by the community, vote, and comment.
+- [Submit an app](https://vibeapps.dev/submit): Share what you have built with the Vibe Apps community.
+- [Search](https://vibeapps.dev/search): Search apps, tags, and creators across the site.
+- [Leaderboard](https://vibeapps.dev/leaderboard): Top apps and builders ranked by community votes and engagement.

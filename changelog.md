@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [Added] - 2026-08-13
 
+**Editable judging group URL slug**
+
+- After a judging group exists, admins can change its URL slug from the pencil next to `/judging/{slug}` in the workspace header, or from Settings (2026-08-13).
+- A site-design warning dialog explains that judging, submit, results, AI results, admin, and Agent API links all follow the new slug and that old URLs (including emails already sent) stop working. Save replace-navigates the admin workspace to the new slug and keeps the current section.
+- New delegated Access permission `judging.slug` (destructive, same family as delete). Full Clerk admins always can; delegated users with only `judging.manage` cannot. Uniqueness is enforced, invalid slugs are rejected, and unchanged slugs are a no-op.
+- **Backend**: `convex/adminAccess.ts`, `convex/judgingGroups.ts` (`updateGroupSlug`).
+- **Frontend**: `src/components/admin/judging/GroupSlugEditor.tsx` (new), `src/pages/AdminJudgingGroupPage.tsx`, `src/components/admin/judging/GroupSettingsSection.tsx`, `src/components/admin/AccessManagement.tsx`, `src/components/admin/AdminDocs.tsx`.
+- **Docs**: `prds/judging-group-editable-slug.md` (new).
+
+
+### [Added] - 2026-08-13
+
+**Live llms.txt, vibeapps.md directory, and AEO/SEO extras**
+
+- `/llms.txt` is now a live llmstxt.org index of the site plus every public app (approved, not hidden, not spam, not archived). `/vibeapps.md` is the full markdown directory with title, tagline, live URL, GitHub, tags, and vibes, same idea as the Convex components directory markdown catalog (2026-08-13).
+- Footer links to both files. HTTP routes generate from an indexed query on each request (5 minute browser / 1 hour CDN cache) with a daily `siteFiles` fallback. Production Netlify proxies `/llms.txt`, `/vibeapps.md`, `/robots.txt`, and `/sitemap.xml` to the production Convex site host.
+- Additive discovery only: existing `og:title`, `og:description`, `og:image`, `og:url`, `og:type`, and Twitter card values are unchanged. New JSON-LD (WebSite + Organization on the homepage, SoftwareApplication on story crawler HTML), canonical URL, `og:locale` / image dimensions, AI crawler allow rules, and a sitemap that lists site pages plus every public app URL.
+- **Backend**: `convex/siteDirectory.ts` (new), `convex/siteFiles.ts`, `convex/http.ts`, `convex/crons.ts`, `convex/stories.ts`.
+- **Frontend**: `src/components/Footer.tsx`, `src/components/StoryDetail.tsx`, `index.html`, `public/_redirects`, `public/robots.txt`.
+- **Docs**: `prds/public-directory-llms-and-aeo.md` (new).
+
+
+### [Added] - 2026-08-13
+
 **Wider judging submit page, 16:9 header images, and required tag visibility**
 
 - The single column layout on judging group submit pages is now as wide as the main submit page with the sidebar hidden (max-w-4xl instead of max-w-2xl), so the form and hero get real room (2026-08-13).
