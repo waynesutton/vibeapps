@@ -186,6 +186,11 @@ export function SpamCheck() {
     setFilterRangeState(range);
   };
   const [selectedIds, setSelectedIds] = useState<Set<Id<"stories">>>(new Set());
+  // Separate selection for the marked-spam review section
+  const [markedSelectedIds, setMarkedSelectedIds] = useState<
+    Set<Id<"stories">>
+  >(new Set());
+  const [showMarkedReview, setShowMarkedReview] = useState(false);
   const [expandedId, setExpandedId] = useState<Id<"spamCheckResults"> | null>(
     null,
   );
@@ -215,6 +220,12 @@ export function SpamCheck() {
   });
 
   const promptData = useQuery(api.spamCheck.getSpamPrompt, {});
+
+  // Only fetched while the marked-spam review section is open
+  const markedSpam = useQuery(
+    api.spamCheck.listMarkedSpam,
+    showMarkedReview ? {} : "skip",
+  );
 
   const startBatchScan = useMutation(api.spamCheck.startBatchScan);
   const setSpamPrompt = useMutation(api.spamCheck.setSpamPrompt);
@@ -249,6 +260,66 @@ export function SpamCheck() {
   };
 
   const clearSelection = () => setSelectedIds(new Set());
+
+  // The backend caps bulk actions at 50 ids per call, so large selections
+  // are deleted in sequential chunks.
+  const deleteInChunks = async (
+    ids: Array<Id<"stories">>,
+  ): Promise<number> => {
+    let total = 0;
+    for (let i = 0; i < ids.length; i += 50) {
+      const { deleted } = await bulkDelete({
+        storyIds: ids.slice(i, i + 50),
+      });
+      total += deleted;
+    }
+    return total;
+  };
+
+  const toggleMarkedSelect = (storyId: Id<"stories">) => {
+    setMarkedSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(storyId)) next.delete(storyId);
+      else next.add(storyId);
+      return next;
+    });
+  };
+
+  const toggleMarkedSelectAll = () => {
+    const rows = markedSpam ?? [];
+    if (markedSelectedIds.size === rows.length) {
+      setMarkedSelectedIds(new Set());
+    } else {
+      setMarkedSelectedIds(new Set(rows.map((r) => r.storyId)));
+    }
+  };
+
+  const handleDeleteMarkedSelected = () => {
+    const ids = Array.from(markedSelectedIds);
+    if (ids.length === 0) return;
+    showConfirm(
+      `Permanently delete ${ids.length} marked submission${ids.length === 1 ? "" : "s"}?`,
+      "This permanently deletes the selected spam submissions along with their comments, votes, ratings, bookmarks, scan results, and images. This cannot be undone.",
+      () => {
+        deleteInChunks(ids)
+          .then((deleted) => {
+            toast.success(
+              `Deleted ${deleted} submission${deleted === 1 ? "" : "s"}`,
+            );
+            setMarkedSelectedIds(new Set());
+          })
+          .catch((error) => {
+            toast.error(
+              error instanceof Error ? error.message : "Failed to delete",
+            );
+          });
+      },
+      {
+        confirmButtonText: "Delete forever",
+        confirmButtonVariant: "destructive",
+      },
+    );
+  };
 
   const handleBatchScan = (rescan: boolean) => {
     const { startMs, endMs } = rangeToMs(scanRange);
@@ -338,8 +409,8 @@ export function SpamCheck() {
       `Permanently delete ${ids.length} submission${ids.length === 1 ? "" : "s"}?`,
       "This permanently deletes the submissions along with their comments, votes, ratings, bookmarks, and images. This cannot be undone.",
       () => {
-        bulkDelete({ storyIds: ids })
-          .then(({ deleted }) => {
+        deleteInChunks(ids)
+          .then((deleted) => {
             toast.success(`Deleted ${deleted} submission${deleted === 1 ? "" : "s"}`);
             clearSelection();
           })
@@ -376,7 +447,16 @@ export function SpamCheck() {
       `"${title}" will lose its spam label and become visible again.`,
       () => {
         unmarkSpam({ storyId })
-          .then(() => toast.success("Spam label removed; submission is visible"))
+          .then(() => {
+            toast.success("Spam label removed; submission is visible");
+            // Drop the story from the marked-review selection if present
+            setMarkedSelectedIds((prev) => {
+              if (!prev.has(storyId)) return prev;
+              const next = new Set(prev);
+              next.delete(storyId);
+              return next;
+            });
+          })
           .catch((error) => {
             toast.error(
               error instanceof Error ? error.message : "Failed to unmark",
@@ -994,6 +1074,168 @@ export function SpamCheck() {
           })}
         </div>
       )}
+
+      {/* Step 3: review everything marked as spam and permanently delete it */}
+      <div className="border border-hairline rounded-lg bg-surface p-4 space-y-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-medium text-ink">Marked spam</h3>
+            <p className="text-xs text-soft mt-0.5">
+              Every submission currently marked as spam, even ones without a
+              scan result. Review the list, select what to remove, and delete
+              for good.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowMarkedReview((prev) => !prev)}
+          >
+            {showMarkedReview ? (
+              <ChevronUp className="w-4 h-4 mr-1" />
+            ) : (
+              <ChevronDown className="w-4 h-4 mr-1" />
+            )}
+            {showMarkedReview ? "Hide" : "Review marked spam"}
+          </Button>
+        </div>
+
+        {showMarkedReview &&
+          (markedSpam === undefined ? (
+            <div className="text-sm text-soft py-6 text-center">
+              Loading marked spam...
+            </div>
+          ) : markedSpam.length === 0 ? (
+            <div className="text-sm text-soft py-6 text-center border border-dashed border-hairline rounded-lg">
+              Nothing is marked as spam right now.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {/* Section toolbar: select all + delete selected */}
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-2 text-sm text-soft cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={
+                      markedSelectedIds.size === markedSpam.length &&
+                      markedSpam.length > 0
+                    }
+                    onChange={toggleMarkedSelectAll}
+                    className="rounded border-hairline-strong"
+                  />
+                  Select all ({markedSpam.length})
+                </label>
+                {markedSelectedIds.size > 0 && (
+                  <>
+                    <span className="text-sm font-medium text-ink">
+                      {markedSelectedIds.size} selected
+                    </span>
+                    {canDelete && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 border-red-200 hover:bg-red-50"
+                        onClick={handleDeleteMarkedSelected}
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Delete selected
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setMarkedSelectedIds(new Set())}
+                    >
+                      Clear
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              {/* Marked spam rows */}
+              {markedSpam.map((row) => (
+                <div
+                  key={row.storyId}
+                  className="flex items-start gap-3 p-3 border border-red-200 rounded-lg bg-surface"
+                >
+                  <input
+                    type="checkbox"
+                    checked={markedSelectedIds.has(row.storyId)}
+                    onChange={() => toggleMarkedSelect(row.storyId)}
+                    className="mt-1 rounded border-hairline-strong"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        to={`/s/${row.storySlug}`}
+                        className="text-sm font-medium text-ink hover:underline truncate"
+                      >
+                        {row.storyTitle}
+                      </Link>
+                      <a
+                        href={row.storyUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-soft hover:underline"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        URL
+                      </a>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-soft">
+                      <span>
+                        by{" "}
+                        {row.authorUsername ? (
+                          <Link
+                            to={`/${row.authorUsername}`}
+                            className="hover:underline"
+                          >
+                            {row.submitterName || row.authorUsername}
+                          </Link>
+                        ) : (
+                          (row.submitterName || "anonymous")
+                        )}
+                      </span>
+                      <span>
+                        submitted{" "}
+                        {formatDistanceToNow(row.submittedAt, {
+                          addSuffix: true,
+                        })}
+                      </span>
+                      {row.spamMarkedAt && (
+                        <span>
+                          marked{" "}
+                          {formatDistanceToNow(row.spamMarkedAt, {
+                            addSuffix: true,
+                          })}
+                          {row.markedByName ? ` by ${row.markedByName}` : ""}
+                        </span>
+                      )}
+                    </div>
+                    {row.spamReason && (
+                      <div className="mt-1 text-xs text-soft">
+                        {row.spamReason}
+                      </div>
+                    )}
+                  </div>
+                  {canModerate && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs flex-shrink-0"
+                      onClick={() =>
+                        handleUnmarkOne(row.storyId, row.storyTitle)
+                      }
+                    >
+                      <Undo2 className="w-3.5 h-3.5 mr-1" />
+                      Unmark
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
+      </div>
 
       <DialogComponents />
     </div>

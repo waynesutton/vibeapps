@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Added] - 2026-08-13
+
+**Marked spam review with bulk delete**
+
+- New "Marked spam" section on the AI Spam admin tab lists every submission currently marked as spam, read straight from the stories table through a new `by_isSpam` index, so marked stories without a scan result row now show up too (2026-08-13).
+- Each row shows the title, live URL, author, when it was submitted and marked, which admin marked it, and the reason sent to the submitter, with a per-row Unmark action.
+- Select all plus Delete selected permanently removes the chosen submissions and their comments, votes, ratings, bookmarks, scan rows, and images. Deletes run in chunks of 50, so large selections no longer hit the bulk action cap; the scan-results bulk delete uses the same chunked path.
+- **Backend**: `convex/schema.ts` (`by_isSpam` index), `convex/spamCheck.ts` (`listMarkedSpam`).
+- **Frontend**: `src/components/admin/SpamCheck.tsx`.
+- **Docs**: `prds/marked-spam-review-bulk-delete.md` (new).
+
+
 ### [Fixed] - 2026-08-13
 
 **Story pages 404 on refresh after per-app markdown launch**

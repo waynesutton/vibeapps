@@ -193,6 +193,7 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_userId_isApproved", ["userId", "isApproved"])
     .index("by_url", ["url"]) // Duplicate-URL detection for spam checks
+    .index("by_isSpam", ["isSpam"]) // Marked-spam review list
     .index("by_votes", ["votes"])
     .index("by_status_isHidden_votes", ["status", "isHidden", "votes"])
     .index("by_status_isHidden", ["status", "isHidden"])

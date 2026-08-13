@@ -372,6 +372,71 @@ export const listSpamResults = query({
   },
 });
 
+/**
+ * Admin review list: every story currently marked as spam, straight from the
+ * stories table. Unlike listSpamResults this does not depend on a scan row
+ * existing, so nothing marked can hide from this view. Newest marks first.
+ */
+export const listMarkedSpam = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      storyId: v.id("stories"),
+      storyTitle: v.string(),
+      storySlug: v.string(),
+      storyUrl: v.string(),
+      submitterName: v.optional(v.string()),
+      authorUsername: v.optional(v.string()),
+      submittedAt: v.number(),
+      spamReason: v.optional(v.string()),
+      spamMarkedAt: v.optional(v.number()),
+      markedByName: v.optional(v.string()),
+    }),
+  ),
+  handler: async (ctx) => {
+    await requirePermission(ctx, "moderation.view");
+
+    const stories = await ctx.db
+      .query("stories")
+      .withIndex("by_isSpam", (q) => q.eq("isSpam", true))
+      .collect();
+
+    const rows = await Promise.all(
+      stories.map(async (story) => {
+        let authorUsername: string | undefined;
+        if (story.userId) {
+          const author = await ctx.db.get(story.userId);
+          authorUsername = author?.username;
+        }
+        let markedByName: string | undefined;
+        if (story.spamMarkedBy) {
+          const admin = await ctx.db.get(story.spamMarkedBy);
+          markedByName = admin?.name || admin?.username;
+        }
+        return {
+          storyId: story._id,
+          storyTitle: story.title,
+          storySlug: story.slug,
+          storyUrl: story.url,
+          submitterName: story.submitterName,
+          authorUsername,
+          submittedAt: story._creationTime,
+          spamReason: story.spamReason,
+          spamMarkedAt: story.spamMarkedAt,
+          markedByName,
+        };
+      }),
+    );
+
+    // Most recently marked first; unmarked timestamps fall back to submission time
+    rows.sort(
+      (a, b) =>
+        (b.spamMarkedAt ?? b.submittedAt) - (a.spamMarkedAt ?? a.submittedAt),
+    );
+    return rows;
+  },
+});
+
 // --- Admin: AI system prompt (view, edit, reset) ---
 
 /**
