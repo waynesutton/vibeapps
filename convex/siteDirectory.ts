@@ -48,8 +48,11 @@ export function storyLlmsTxtPath(slug: string): string {
   return `/s/${slug}/llms.txt`;
 }
 
+// Markdown lives under /md/ instead of /s/{slug}.md because Netlify redirect
+// rules cannot match partial path segments like :slug.md; a /s/ rule with an
+// extension over-matches and proxies plain story URLs away from the SPA.
 export function storyMarkdownPath(slug: string): string {
-  return `/s/${slug}.md`;
+  return `/md/${slug}.md`;
 }
 
 function oneLine(text: string, max: number): string {
@@ -104,7 +107,7 @@ export function buildRobotsTxt(baseUrl: string): string {
   const lines: Array<string> = [
     "# Vibe Apps robots.txt",
     "# Public directory files: /llms.txt and /vibeapps.md",
-    "# Per-app files: /s/{slug}/llms.txt and /s/{slug}.md",
+    "# Per-app files: /s/{slug}/llms.txt and /md/{slug}.md",
     "",
     "User-agent: *",
     "Allow: /",
@@ -160,7 +163,7 @@ export function buildLlmsTxt(
     `- [Full markdown directory](${baseUrl}/vibeapps.md): title, tagline, live URL, GitHub, tags, and vibes for every public app`,
     `- [Sitemap](${baseUrl}/sitemap.xml)`,
     `- [Homepage](${baseUrl}/)`,
-    `- Each app also has \`/s/{slug}/llms.txt\` and \`/s/{slug}.md\``,
+    `- Each app also has \`/s/{slug}/llms.txt\` and \`/md/{slug}.md\``,
     "",
     "## Site",
     "",
@@ -200,7 +203,7 @@ export function buildVibeappsMd(
     "",
     `${directory.stories.length} apps | Updated ${updated}`,
     "",
-    "Agents: treat this file as the canonical directory. Each app links to its page on vibeapps.dev plus `/s/{slug}/llms.txt` and `/s/{slug}.md`. Fetch `/llms.txt` for the shorter index.",
+    "Agents: treat this file as the canonical directory. Each app links to its page on vibeapps.dev plus `/s/{slug}/llms.txt` and `/md/{slug}.md`. Fetch `/llms.txt` for the shorter index.",
     "",
     "## Site",
     "",

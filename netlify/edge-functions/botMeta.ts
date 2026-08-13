@@ -27,9 +27,10 @@ export default async (request: Request, context: any) => {
     // Only intercept bot traffic; let browsers hit SPA normally
     if (!isBot) return context.next();
 
-    // Extract slug from /s/{slug}
-    const match = url.pathname.match(/^\/s\/(.+)$/);
-    if (!match) return fetch(request);
+    // Extract slug from /s/{slug}. Only intercept single-segment story
+    // paths so /s/{slug}/llms.txt passes through to the Convex proxy.
+    const match = url.pathname.match(/^\/s\/([^/]+)\/?$/);
+    if (!match) return context.next();
     const slug = match[1];
 
     // IMPORTANT: Use PRODUCTION Convex deployment for crawler-visible metadata

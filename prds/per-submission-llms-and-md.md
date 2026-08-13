@@ -1,7 +1,7 @@
 # Per-submission llms.txt and markdown files
 
 Created: 2026-08-13 08:34 UTC
-Last Updated: 2026-08-13 08:41 UTC
+Last Updated: 2026-08-13 09:00 UTC
 Status: Done
 
 ## Problem
@@ -63,3 +63,4 @@ paths to the Convex site host, ahead of the SPA catch-all.
 
 - 2026-08-13 08:34 UTC: PRD drafted.
 - 2026-08-13 08:41 UTC: Shipped. Live `/s/{slug}/llms.txt` and `/s/{slug}.md` return 200 for public apps and 404 for missing slugs. Site `/llms.txt` and `/vibeapps.md` list the per-app files. Story sidebar links sit above View Change Log. convex codegen TypeScript green, eslint 0 errors on touched files.
+- 2026-08-13 09:00 UTC: Fixed prod regression: story pages 404ed on refresh because the `/s/:slug.md` and `/s/*.md` Netlify rules over-matched (placeholders/splats must be whole segments) and proxied plain `/s/{slug}` URLs to Convex. Markdown URL moved to `/md/{slug}.md` behind a `/md/*` rule; Convex serves `/md/` plus legacy `/s/{slug}.md`; botMeta edge function limited to single-segment `/s/{slug}` so bots can fetch `/s/{slug}/llms.txt`. Verified on dev .site (200/404 matrix and `/md/` links in `/llms.txt`). Prod needs git push (Netlify) and convex deploy.

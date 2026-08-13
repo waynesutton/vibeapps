@@ -136,7 +136,7 @@ function StoryAgentFileLinks({ slug }: { slug: string }) {
         llms.txt
       </a>
       <a
-        href={`/s/${slug}.md`}
+        href={`/md/${slug}.md`}
         className="flex items-center gap-2 text-sm text-copy hover:text-ink hover:underline"
       >
         <FileText className="w-4 h-4" />

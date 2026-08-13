@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Fixed] - 2026-08-13
+
+**Story pages 404 on refresh after per-app markdown launch**
+
+- Netlify redirect placeholders and splats only match whole path segments, so the `/s/:slug.md` and `/s/*.md` proxy rules over-matched and sent plain story URLs like `/s/socialnestapp` to Convex, which returned 404 on refresh (2026-08-13).
+- Per-app markdown moved from `/s/{slug}.md` to `/md/{slug}.md` with a safe `/md/*` proxy rule; `/s/{slug}/llms.txt` is unchanged. Convex keeps the old `/s/{slug}.md` path working on its own host. Sidebar, site `/llms.txt`, `/vibeapps.md`, sitemap, and robots all point at `/md/{slug}.md` now.
+- The `botMeta` edge function now only intercepts single-segment `/s/{slug}` paths for bots, so crawlers fetching `/s/{slug}/llms.txt` reach the file instead of meta HTML.
+- **Files**: `public/_redirects`, `netlify/edge-functions/botMeta.ts`, `convex/siteDirectory.ts`, `convex/http.ts`, `src/components/StoryDetail.tsx`, `public/robots.txt`.
+
+
 ### [Added] - 2026-08-13
 
 **Per-submission llms.txt and markdown files**

@@ -1,14 +1,16 @@
 # Meta endpoint for social sharing (for manual testing and direct access)
 /meta/s/:slug https://whimsical-dalmatian-205.convex.site/meta/s?slug=:slug 200
 
-# Live discovery files generated from public submissions
+# Live discovery files generated from public submissions.
+# Netlify placeholders/splats must be whole path segments, so per-app
+# markdown lives at /md/{slug}.md (a /s/:slug.md rule would over-match
+# and steal plain /s/{slug} story URLs from the SPA).
 /robots.txt https://whimsical-dalmatian-205.convex.site/robots.txt 200
 /llms.txt https://whimsical-dalmatian-205.convex.site/llms.txt 200
 /vibeapps.md https://whimsical-dalmatian-205.convex.site/vibeapps.md 200
 /sitemap.xml https://whimsical-dalmatian-205.convex.site/sitemap.xml 200
 /s/:slug/llms.txt https://whimsical-dalmatian-205.convex.site/s/:slug/llms.txt 200
-/s/:slug.md https://whimsical-dalmatian-205.convex.site/s/:slug.md 200
-/s/*.md https://whimsical-dalmatian-205.convex.site/s/:splat.md 200
+/md/* https://whimsical-dalmatian-205.convex.site/md/:splat 200
 
 # Email unsubscribe (GET link clicks and RFC 8058 one-click POST).
 # Must proxy to the same Convex deployment that sends the emails,

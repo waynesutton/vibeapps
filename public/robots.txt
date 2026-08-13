@@ -1,6 +1,6 @@
 # Vibe Apps robots.txt
 # Public directory files: /llms.txt and /vibeapps.md
-# Per-app files: /s/{slug}/llms.txt and /s/{slug}.md
+# Per-app files: /s/{slug}/llms.txt and /md/{slug}.md
 
 User-agent: *
 Allow: /
