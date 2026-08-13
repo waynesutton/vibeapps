@@ -51,6 +51,7 @@ import type * as emails_welcome from "../emails/welcome.js";
 import type * as follows from "../follows.js";
 import type * as forms from "../forms.js";
 import type * as hackathon from "../hackathon.js";
+import type * as hackathonLog from "../hackathonLog.js";
 import type * as http from "../http.js";
 import type * as judgeScores from "../judgeScores.js";
 import type * as judges from "../judges.js";
@@ -129,6 +130,7 @@ declare const fullApi: ApiFromModules<{
   follows: typeof follows;
   forms: typeof forms;
   hackathon: typeof hackathon;
+  hackathonLog: typeof hackathonLog;
   http: typeof http;
   judgeScores: typeof judgeScores;
   judges: typeof judges;

@@ -98,6 +98,19 @@ Opening a group takes you to \`/admin/judging/your-slug\`, a workspace with a se
 | Results | Human judging rankings and exports | judging.results |
 | AI results | AI run dashboard with per-criterion reasoning | judging.ai |
 | Judge tracking | Per-judge activity, score edits, notes | judging.tracking |
+| Activity | Per-group audit log with exports | judging.view |
+
+## The group Activity log
+
+The **Activity** section below Judge tracking is a realtime audit trail scoped to this group. It records:
+
+- submissions **added** (manual add, tag sync, auto-include, and the custom submit page) and **removed**, with a note when the removed submission already had judge scores or an AI review,
+- **AI review runs**: run started with the queued count, one entry per completed or failed review (actor "AI Judge"), and retries,
+- **judge scores** as they come in, plus group setting changes.
+
+Entries link to the submission where one applies. The dropdown switches between showing 30, 60, or 100 entries, and **Load more** pages further back. **Export CSV** and **Save as .md** download the full log (newest first) as an audit file. **Clear** (judging.manage) permanently deletes the group's entries after a confirm; because per-group entries live in the same table as the site-wide Activity Log, clearing removes them there too, so export first if you need a record.
+
+Removing a submission also deletes its judge scores and its AI review result, so overview stats, results rankings, and AI counts update in realtime the moment it happens. A submission added back later starts clean and is picked up by the next AI run.
 
 ## The Links ledger
 
@@ -172,8 +185,19 @@ Configure **auto-include tags** plus the group's event dates. Apps submitted wit
 Enable **custom submission page** to get a dedicated form at \`/judging/your-slug/submit\`. It can:
 
 - require a **submission password**,
-- use its own **custom form fields** (team name, member count, links, and so on),
 - create the app and link it to the group in one step.
+
+The page supports three layouts (two column, one third, single column). The single column layout is as wide as the main submit page and works with a **header image shape** setting: **Square (1:1)** with an adjustable pixel size, or **Wide (16:9)** which fills the page width, good for banner art.
+
+The **Submit page** section in the group workspace controls exactly what the form asks for:
+
+- **Form fields**: every core field (title, tagline, description, links, screenshot, name, email, tags) can be marked **Required** or **Optional** and **Shown** or **Hidden**. Hidden fields are removed from the form entirely.
+- **Required tag visibility**: when a required tag is set, a **Shown/Hidden** pill controls whether submitters see the locked tag on the form. Hidden only affects the form display; the tag is still applied to every submission so entries land in the group, and the tag's own hidden flag in Tag Management keeps controlling story cards and tag limits, so the two settings never conflict.
+- **Form sections**: the Hackathon Team Info, Additional Images, and Additional link fields sections each get the same Required/Optional and Shown/Hidden pills. A required section must be filled in before the form submits.
+- **Additional form fields**: fields created in **Admin, Forms, Manage Form Fields** appear here automatically. Each one can be overridden per group as Required/Optional and Shown/Hidden. Unset overrides fall back to the field's own defaults. These fields render inside the Additional link fields section, so hiding that section hides all of them.
+- **Custom questions**: extra questions that belong to this group only. Each has a type (text, url, email, textarea) plus Required/Optional and Shown/Hidden pills. Answers are stored with the submission and shown to judges under **Additional Answers**.
+
+Fields added in Manage Form Fields also flow to the main public submit forms, and values without a dedicated column are stored with the submission and shown to judges under **Additional Form Fields**.
 
 Removing a submission from a group also removes its scores in that group. The app itself is untouched.`,
   },

@@ -5,7 +5,7 @@ import { NotFoundPage } from "../../pages/NotFoundPage";
 import { TagManagement } from "./TagManagement";
 import { ContentModeration } from "./ContentModeration";
 import { Settings } from "./Settings";
-import { Forms } from "./Forms";
+// import { Forms } from "./Forms"; // Legacy Custom Forms builder, sub-tab hidden below
 import { ReportManagement } from "./ReportManagement";
 import { NumbersView } from "./NumbersView";
 import { UserModeration } from "./UserModeration";
@@ -97,8 +97,12 @@ export function AdminDashboard() {
     (searchParams.get("tab") as MainAdminTab) || "content",
   );
 
+  // Coerce the hidden legacy "forms" sub-tab back to form fields
+  const rawSubmitSubTab = searchParams.get("subtab") as SubmitSubTab | null;
   const initialSubmitSubTab =
-    (searchParams.get("subtab") as SubmitSubTab) || "form-fields";
+    rawSubmitSubTab && rawSubmitSubTab !== "forms"
+      ? rawSubmitSubTab
+      : "form-fields";
   const [activeSubmitSubTab, setActiveSubmitSubTab] =
     useState<SubmitSubTab>(initialSubmitSubTab);
 
@@ -230,19 +234,24 @@ export function AdminDashboard() {
                   >
                     Story Form Fields
                   </Tabs.Trigger>
+                  {/* Custom Forms sub-tab hidden: legacy custom form builder.
+                      Re-enable by uncommenting the trigger and content below.
                   <Tabs.Trigger
                     value="forms"
                     className="px-2.5 sm:px-3 py-1.5 text-[13px] font-medium text-soft hover:text-copy data-[state=active]:text-ink data-[state=active]:border-b-2 data-[state=active]:border-ink focus:outline-none focus:z-10 whitespace-nowrap"
                   >
                     Custom Forms
                   </Tabs.Trigger>
+                  */}
                 </Tabs.List>
                 <Tabs.Content value="form-fields" className="focus:outline-none">
                   <FormFieldManagement />
                 </Tabs.Content>
+                {/* Custom Forms content hidden alongside the trigger above.
                 <Tabs.Content value="forms" className="focus:outline-none">
                   <Forms />
                 </Tabs.Content>
+                */}
               </Tabs.Root>
             </Tabs.Content>
           )}

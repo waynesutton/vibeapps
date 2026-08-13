@@ -24,6 +24,10 @@ const submissionFieldRequirementsValidator = v.object({
   submitterName: v.optional(v.boolean()),
   email: v.optional(v.boolean()),
   tags: v.optional(v.boolean()),
+  // Form sections can also be marked required
+  teamInfo: v.optional(v.boolean()),
+  additionalImages: v.optional(v.boolean()),
+  additionalLinks: v.optional(v.boolean()),
 });
 
 // Validator for admin-selectable visible fields on the custom submission form.
@@ -58,6 +62,17 @@ const submissionCustomQuestionsValidator = v.array(
       v.literal("textarea"),
     ),
     required: v.boolean(),
+    visible: v.optional(v.boolean()), // Unset = shown
+  }),
+);
+
+// Per-group overrides for admin-managed form fields (storyFormFields).
+// Keyed by the field's key; unset entries fall back to the field defaults.
+const submissionDynamicFieldOverridesValidator = v.record(
+  v.string(),
+  v.object({
+    required: v.optional(v.boolean()),
+    visible: v.optional(v.boolean()),
   }),
 );
 
@@ -74,7 +89,9 @@ function generateSlug(name: string): string {
 // Helper function to check if a story should be included in judging
 // Returns true if story is valid for judging (not deleted, hidden, archived, or rejected)
 // Type guard to ensure TypeScript knows story is not null when this returns true
-function isStoryValidForJudging(story: Doc<"stories"> | null): story is Doc<"stories"> {
+function isStoryValidForJudging(
+  story: Doc<"stories"> | null,
+): story is Doc<"stories"> {
   if (!story) return false;
   if (story.isHidden === true) return false;
   if (story.isArchived === true) return false;
@@ -153,7 +170,10 @@ export const listGroups = query({
               return submission;
             }),
           )
-        ).filter((submission): submission is NonNullable<typeof submission> => submission !== null);
+        ).filter(
+          (submission): submission is NonNullable<typeof submission> =>
+            submission !== null,
+        );
 
         const submissionCount = validSubmissions.length;
 
@@ -278,6 +298,7 @@ export const createGroup = mutation({
       targetType: "judgingGroup",
       targetId: newGroupId,
       targetLabel: args.name,
+      groupId: newGroupId,
     });
 
     return newGroupId;
@@ -301,6 +322,9 @@ export const updateGroup = mutation({
     hasCustomSubmissionPage: v.optional(v.boolean()),
     submissionPageImageId: v.optional(v.union(v.id("_storage"), v.null())),
     submissionPageImageSize: v.optional(v.number()),
+    submissionPageImageAspect: v.optional(
+      v.union(v.literal("square"), v.literal("wide")),
+    ),
     submissionPageLayout: v.optional(
       v.union(
         v.literal("two-column"),
@@ -321,15 +345,23 @@ export const updateGroup = mutation({
     submissionFormTitle: v.optional(v.union(v.string(), v.null())),
     submissionFormSubtitle: v.optional(v.union(v.string(), v.null())),
     submissionFormRequiredTagId: v.optional(v.union(v.id("tags"), v.null())),
-    submissionFieldRequirements: v.optional(submissionFieldRequirementsValidator),
+    submissionFormRequiredTagVisible: v.optional(v.boolean()),
+    submissionFieldRequirements: v.optional(
+      submissionFieldRequirementsValidator,
+    ),
     submissionFieldVisibility: v.optional(submissionFieldVisibilityValidator),
     submissionCustomQuestions: v.optional(submissionCustomQuestionsValidator),
+    submissionDynamicFieldOverrides: v.optional(
+      submissionDynamicFieldOverridesValidator,
+    ),
     judgesPerSubmission: v.optional(v.number()),
     // Human judging score scale: 5 or 10 (unset = 10)
     scoreScale: v.optional(v.union(v.literal(5), v.literal(10))),
     // Multi-tag + date range auto-include config (nullable to clear)
     autoIncludeTagIds: v.optional(v.union(v.array(v.id("tags")), v.null())),
-    autoIncludeMatchMode: v.optional(v.union(v.literal("any"), v.literal("all"))),
+    autoIncludeMatchMode: v.optional(
+      v.union(v.literal("any"), v.literal("all")),
+    ),
     autoIncludeStartDate: v.optional(v.union(v.number(), v.null())),
     autoIncludeEndDate: v.optional(v.union(v.number(), v.null())),
     // Event window for the build-timeline check (builtDuringEvent)
@@ -387,7 +419,7 @@ export const updateGroup = mutation({
 
     // Build finalUpdates object properly, handling nulls explicitly
     const finalUpdates: any = {};
-    
+
     // Copy non-password fields. Null means "clear this optional field";
     // patching undefined unsets it, while null would fail schema validation.
     Object.keys(updates).forEach((key) => {
@@ -399,7 +431,10 @@ export const updateGroup = mutation({
 
     // Clamp judgesPerSubmission to >= 1
     if (judgesPerSubmission !== undefined) {
-      finalUpdates.judgesPerSubmission = Math.max(1, Math.round(judgesPerSubmission));
+      finalUpdates.judgesPerSubmission = Math.max(
+        1,
+        Math.round(judgesPerSubmission),
+      );
     }
 
     // Auto-include config: null clears (store undefined), otherwise set the value.
@@ -426,7 +461,9 @@ export const updateGroup = mutation({
 
     // Hash passwords if provided, set undefined if null to clear
     if (judgePassword !== undefined) {
-      finalUpdates.judgePassword = judgePassword ? hashPassword(judgePassword) : undefined;
+      finalUpdates.judgePassword = judgePassword
+        ? hashPassword(judgePassword)
+        : undefined;
     }
     if (submissionPagePassword !== undefined) {
       finalUpdates.submissionPagePassword = submissionPagePassword
@@ -453,6 +490,7 @@ export const updateGroup = mutation({
       targetType: "judgingGroup",
       targetId: groupId,
       targetLabel: existingGroup?.name,
+      groupId,
       metadata: { fields: Object.keys(finalUpdates) },
     });
 
@@ -462,12 +500,9 @@ export const updateGroup = mutation({
     const newRequiredTagId =
       args.submissionFormRequiredTagId === undefined
         ? previousRequiredTagId
-        : args.submissionFormRequiredTagId ?? undefined;
+        : (args.submissionFormRequiredTagId ?? undefined);
 
-    if (
-      newRequiredTagId &&
-      newRequiredTagId !== previousRequiredTagId
-    ) {
+    if (newRequiredTagId && newRequiredTagId !== previousRequiredTagId) {
       const addedBy = await getAuthenticatedUserId(ctx);
       const stories = await ctx.db.query("stories").collect();
       for (const story of stories) {
@@ -678,6 +713,9 @@ export const getGroupWithDetails = query({
       hasCustomSubmissionPage: v.optional(v.boolean()),
       submissionPageImageId: v.optional(v.id("_storage")),
       submissionPageImageSize: v.optional(v.number()),
+      submissionPageImageAspect: v.optional(
+        v.union(v.literal("square"), v.literal("wide")),
+      ),
       submissionPageLayout: v.optional(
         v.union(
           v.literal("two-column"),
@@ -698,11 +736,19 @@ export const getGroupWithDetails = query({
       submissionFormTitle: v.optional(v.string()),
       submissionFormSubtitle: v.optional(v.string()),
       submissionFormRequiredTagId: v.optional(v.id("tags")),
-      submissionFieldRequirements: v.optional(submissionFieldRequirementsValidator),
+      submissionFormRequiredTagVisible: v.optional(v.boolean()),
+      submissionFieldRequirements: v.optional(
+        submissionFieldRequirementsValidator,
+      ),
       submissionFieldVisibility: v.optional(submissionFieldVisibilityValidator),
       submissionCustomQuestions: v.optional(submissionCustomQuestionsValidator),
+      submissionDynamicFieldOverrides: v.optional(
+        submissionDynamicFieldOverridesValidator,
+      ),
       autoIncludeTagIds: v.optional(v.array(v.id("tags"))),
-      autoIncludeMatchMode: v.optional(v.union(v.literal("any"), v.literal("all"))),
+      autoIncludeMatchMode: v.optional(
+        v.union(v.literal("any"), v.literal("all")),
+      ),
       autoIncludeStartDate: v.optional(v.number()),
       autoIncludeEndDate: v.optional(v.number()),
       judgesPerSubmission: v.number(),
@@ -732,10 +778,6 @@ export const getGroupWithDetails = query({
       hasCustomAiPrompt: v.boolean(),
       agentScoresAdvisory: v.optional(v.boolean()),
       agentKeysEnabled: v.optional(v.boolean()),
-      hackathonSkillEnabled: v.optional(v.boolean()),
-      hackathonRegistrationCodes: v.optional(v.array(v.string())),
-      hackathonRules: v.optional(v.string()),
-      hackathonRulesUpdatedAt: v.optional(v.number()),
       notificationEmails: v.optional(v.array(v.string())),
       criteria: v.array(
         v.object({
@@ -788,7 +830,10 @@ export const getGroupWithDetails = query({
           return submission;
         }),
       )
-    ).filter((submission): submission is NonNullable<typeof submission> => submission !== null);
+    ).filter(
+      (submission): submission is NonNullable<typeof submission> =>
+        submission !== null,
+    );
 
     const submissionCount = validSubmissions.length;
 
@@ -816,6 +861,7 @@ export const getGroupWithDetails = query({
       hasCustomSubmissionPage: group.hasCustomSubmissionPage,
       submissionPageImageId: group.submissionPageImageId,
       submissionPageImageSize: group.submissionPageImageSize,
+      submissionPageImageAspect: group.submissionPageImageAspect,
       submissionPageLayout: group.submissionPageLayout,
       submissionPageTitle: group.submissionPageTitle,
       submissionPageDescription: group.submissionPageDescription,
@@ -823,9 +869,11 @@ export const getGroupWithDetails = query({
       submissionFormTitle: group.submissionFormTitle,
       submissionFormSubtitle: group.submissionFormSubtitle,
       submissionFormRequiredTagId: group.submissionFormRequiredTagId,
+      submissionFormRequiredTagVisible: group.submissionFormRequiredTagVisible,
       submissionFieldRequirements: group.submissionFieldRequirements,
       submissionFieldVisibility: group.submissionFieldVisibility,
       submissionCustomQuestions: group.submissionCustomQuestions,
+      submissionDynamicFieldOverrides: group.submissionDynamicFieldOverrides,
       autoIncludeTagIds: group.autoIncludeTagIds,
       autoIncludeMatchMode: group.autoIncludeMatchMode,
       autoIncludeStartDate: group.autoIncludeStartDate,
@@ -845,10 +893,6 @@ export const getGroupWithDetails = query({
       hasCustomAiPrompt: !!group.aiJudgeSystemPrompt,
       agentScoresAdvisory: group.agentScoresAdvisory,
       agentKeysEnabled: group.agentKeysEnabled,
-      hackathonSkillEnabled: group.hackathonSkillEnabled,
-      hackathonRegistrationCodes: group.hackathonRegistrationCodes,
-      hackathonRules: group.hackathonRules,
-      hackathonRulesUpdatedAt: group.hackathonRulesUpdatedAt,
       notificationEmails: group.notificationEmails,
       criteria,
       submissionCount,
@@ -1028,6 +1072,9 @@ export const getSubmissionPage = query({
       hasCustomSubmissionPage: v.optional(v.boolean()),
       submissionPageImageUrl: v.optional(v.string()),
       submissionPageImageSize: v.optional(v.number()),
+      submissionPageImageAspect: v.optional(
+        v.union(v.literal("square"), v.literal("wide")),
+      ),
       submissionPageLayout: v.optional(
         v.union(
           v.literal("two-column"),
@@ -1048,9 +1095,15 @@ export const getSubmissionPage = query({
       submissionFormTitle: v.optional(v.string()),
       submissionFormSubtitle: v.optional(v.string()),
       submissionFormRequiredTagId: v.optional(v.id("tags")),
-      submissionFieldRequirements: v.optional(submissionFieldRequirementsValidator),
+      submissionFormRequiredTagVisible: v.optional(v.boolean()),
+      submissionFieldRequirements: v.optional(
+        submissionFieldRequirementsValidator,
+      ),
       submissionFieldVisibility: v.optional(submissionFieldVisibilityValidator),
       submissionCustomQuestions: v.optional(submissionCustomQuestionsValidator),
+      submissionDynamicFieldOverrides: v.optional(
+        submissionDynamicFieldOverridesValidator,
+      ),
     }),
   ),
   handler: async (ctx, args) => {
@@ -1085,6 +1138,7 @@ export const getSubmissionPage = query({
       hasCustomSubmissionPage: group.hasCustomSubmissionPage,
       submissionPageImageUrl,
       submissionPageImageSize: group.submissionPageImageSize,
+      submissionPageImageAspect: group.submissionPageImageAspect,
       submissionPageLayout: group.submissionPageLayout || "two-column", // Default to two-column
       submissionPageTitle: group.submissionPageTitle,
       submissionPageDescription: group.submissionPageDescription,
@@ -1092,9 +1146,11 @@ export const getSubmissionPage = query({
       submissionFormTitle: group.submissionFormTitle,
       submissionFormSubtitle: group.submissionFormSubtitle,
       submissionFormRequiredTagId: group.submissionFormRequiredTagId,
+      submissionFormRequiredTagVisible: group.submissionFormRequiredTagVisible,
       submissionFieldRequirements: group.submissionFieldRequirements,
       submissionFieldVisibility: group.submissionFieldVisibility,
       submissionCustomQuestions: group.submissionCustomQuestions,
+      submissionDynamicFieldOverrides: group.submissionDynamicFieldOverrides,
     };
   },
 });
@@ -1153,7 +1209,7 @@ export const verifyResultsPassword = query({
   returns: v.boolean(),
   handler: async (ctx, args) => {
     const group = await ctx.db.get(args.groupId);
-    
+
     if (!group || !group.resultsPassword) {
       return false;
     }
@@ -1182,7 +1238,7 @@ export const getPublicResultsInfo = query({
   ),
   handler: async (ctx, args) => {
     const group = await ctx.db.get(args.groupId);
-    
+
     if (!group) {
       return null;
     }

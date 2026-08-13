@@ -1631,6 +1631,34 @@ export default function JudgingInterfacePage() {
                   </div>
                 )}
 
+              {/* Admin-added form field values without a dedicated column */}
+              {(currentSubmission as any).dynamicFormValues &&
+                (currentSubmission as any).dynamicFormValues.length > 0 && (
+                  <div className="bg-surface rounded-lg border border-hairline p-6">
+                    <h3 className="font-medium text-ink mb-4">
+                      Additional Form Fields
+                    </h3>
+                    <div className="space-y-3">
+                      {(currentSubmission as any).dynamicFormValues.map(
+                        (entry: {
+                          key: string;
+                          label: string;
+                          value: string;
+                        }) => (
+                          <div key={entry.key}>
+                            <span className="text-sm font-medium text-copy block">
+                              {entry.label}
+                            </span>
+                            <p className="text-sm text-ink whitespace-pre-wrap break-words">
+                              {entry.value}
+                            </p>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                )}
+
               {/* Judge Notes Section */}
               <div className="bg-surface rounded-lg border border-hairline p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-3">

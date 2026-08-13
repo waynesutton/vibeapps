@@ -84,6 +84,16 @@ export const baseStoryValidator = {
       }),
     ),
   ),
+  // Values for admin-added form fields without a dedicated stories column
+  dynamicFormValues: v.optional(
+    v.array(
+      v.object({
+        key: v.string(),
+        label: v.string(),
+        value: v.string(),
+      }),
+    ),
+  ),
   // Changelog tracking for user edits
   changeLog: v.optional(
     v.array(
@@ -246,6 +256,12 @@ export type StoryWithDetailsPublic = {
   selfReportedModel?: string;
   // Answers to per-group custom submission questions
   customFormAnswers?: Array<{
+    key: string;
+    label: string;
+    value: string;
+  }>;
+  // Values for admin-added form fields without a dedicated stories column
+  dynamicFormValues?: Array<{
     key: string;
     label: string;
     value: string;

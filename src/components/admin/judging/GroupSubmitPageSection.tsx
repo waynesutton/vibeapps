@@ -10,6 +10,7 @@ import { SimpleSelect } from "../../ui/SimpleSelect";
 import {
   ALWAYS_VISIBLE_FIELD_KEYS,
   CustomQuestion,
+  DynamicFieldOverrides,
   GroupDetails,
   HeaderSaveButton,
   SUBMISSION_FIELD_DEFS,
@@ -54,6 +55,10 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
   const [imageSize, setImageSize] = useState(
     group.submissionPageImageSize || 400,
   );
+  // Header image crop: square (1:1) or wide (16:9, fills the layout width)
+  const [imageAspect, setImageAspect] = useState<"square" | "wide">(
+    group.submissionPageImageAspect || "square",
+  );
   const [links, setLinks] = useState<Array<{ label: string; url: string }>>(
     group.submissionPageLinks || [],
   );
@@ -64,6 +69,11 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
   const [requiredTagId, setRequiredTagId] = useState<Id<"tags"> | null>(
     group.submissionFormRequiredTagId || null,
   );
+  // Display-only: hide the locked required tag from submitters. The tag is
+  // still applied on submit; Tag Management's hidden flag is separate.
+  const [requiredTagVisible, setRequiredTagVisible] = useState(
+    group.submissionFormRequiredTagVisible !== false,
+  );
   const [requirements, setRequirements] =
     useState<SubmissionFieldRequirements>(
       mergeRequirements(group.submissionFieldRequirements),
@@ -73,6 +83,16 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
   );
   const [customQuestions, setCustomQuestions] = useState<CustomQuestion[]>(
     group.submissionCustomQuestions || [],
+  );
+  // Per-group required/shown overrides for admin-managed form fields
+  const [dynamicOverrides, setDynamicOverrides] =
+    useState<DynamicFieldOverrides>(
+      group.submissionDynamicFieldOverrides || {},
+    );
+  // Enabled fields from Manage Form Fields (githubUrl is a core field above)
+  const enabledFormFields = useQuery(api.storyFormFields.listEnabled);
+  const dynamicFields = (enabledFormFields || []).filter(
+    (field) => field.key !== "githubUrl",
   );
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
@@ -163,6 +183,7 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
           description: q.description?.trim() || undefined,
           fieldType: q.fieldType,
           required: q.required,
+          visible: q.visible,
         };
       });
       await updateGroup({
@@ -172,13 +193,16 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
         submissionPageDescription: pageDescription.trim() || null,
         submissionPageLayout: layout,
         submissionPageImageSize: imageSize,
+        submissionPageImageAspect: imageAspect,
         submissionPageLinks: cleanLinks,
         submissionFormTitle: formTitle.trim() || null,
         submissionFormSubtitle: formSubtitle.trim() || null,
         submissionFormRequiredTagId: requiredTagId,
+        submissionFormRequiredTagVisible: requiredTagVisible,
         submissionFieldRequirements: requirements,
         submissionFieldVisibility: visibility,
         submissionCustomQuestions: cleanQuestions,
+        submissionDynamicFieldOverrides: dynamicOverrides,
         ...(uploadedImageId
           ? { submissionPageImageId: uploadedImageId }
           : removeImage
@@ -404,22 +428,57 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                   disabled={saving}
                   className="mt-1"
                 />
+                {/* Image crop: square keeps the size slider, wide fills the
+                    layout width at 16:9 */}
                 <div className="mt-2">
-                  <Label htmlFor="image-size">
-                    Image display size ({imageSize}px)
-                  </Label>
-                  <input
-                    id="image-size"
-                    type="range"
-                    min={200}
-                    max={800}
-                    step={20}
-                    value={imageSize}
-                    onChange={(e) => setImageSize(parseInt(e.target.value))}
-                    disabled={saving}
-                    className="w-full mt-1 accent-cta"
-                  />
+                  <Label>Image shape</Label>
+                  <div className="flex gap-2 mt-1">
+                    {(
+                      [
+                        { value: "square", label: "Square (1:1)" },
+                        { value: "wide", label: "Wide (16:9)" },
+                      ] as const
+                    ).map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setImageAspect(option.value)}
+                        disabled={saving}
+                        className={`px-3 py-1.5 text-[13px] font-medium rounded-md border transition-colors ${
+                          imageAspect === option.value
+                            ? "bg-cta border-ink text-on-cta"
+                            : "bg-surface border-hairline text-copy hover:border-hairline-strong"
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  {imageAspect === "wide" && (
+                    <p className="text-xs text-soft mt-1">
+                      Wide images fill the page width at 16:9, so the size
+                      slider does not apply.
+                    </p>
+                  )}
                 </div>
+                {imageAspect === "square" && (
+                  <div className="mt-2">
+                    <Label htmlFor="image-size">
+                      Image display size ({imageSize}px)
+                    </Label>
+                    <input
+                      id="image-size"
+                      type="range"
+                      min={200}
+                      max={800}
+                      step={20}
+                      value={imageSize}
+                      onChange={(e) => setImageSize(parseInt(e.target.value))}
+                      disabled={saving}
+                      className="w-full mt-1 accent-cta"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Page links */}
@@ -518,19 +577,50 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                   lands in this judging group.
                 </p>
                 {requiredTagName && (
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-surface-alt text-copy rounded-full">
-                      {requiredTagName}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setRequiredTagId(null)}
-                      disabled={saving}
-                      className="text-xs text-soft hover:text-copy"
-                    >
-                      Clear
-                    </button>
-                  </div>
+                  <>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-surface-alt text-copy rounded-full">
+                        {requiredTagName}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setRequiredTagId(null)}
+                        disabled={saving}
+                        className="text-xs text-soft hover:text-copy"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    {/* Display-only toggle: the tag is always applied on
+                        submit; this just controls whether submitters see it */}
+                    <div className="flex items-center justify-between gap-2 mt-2 rounded-md border border-hairline px-3 py-1.5">
+                      <div>
+                        <p className="text-[13px] text-copy">
+                          Show required tag on the form
+                        </p>
+                        <p className="text-xs text-soft">
+                          Hidden only removes the locked tag pill from the
+                          submission form. The tag is still applied to every
+                          submission so entries land in this group.
+                          {allTags?.find((t) => t._id === requiredTagId)
+                            ?.isHidden &&
+                            " This tag is also marked hidden in Tag Management, so it stays off story cards and tag limits either way."}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setRequiredTagVisible((prev) => !prev)}
+                        disabled={saving}
+                        className={`px-2 py-0.5 text-xs font-medium rounded-full transition-colors flex-shrink-0 ${
+                          requiredTagVisible
+                            ? "bg-green-50 text-green-700 border border-green-200"
+                            : "bg-surface-alt text-soft hover:bg-surface-hover border border-transparent"
+                        }`}
+                      >
+                        {requiredTagVisible ? "Shown" : "Hidden"}
+                      </button>
+                    </div>
+                  </>
                 )}
                 <Input
                   value={tagSearch}
@@ -702,11 +792,106 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                 )}
               </div>
 
-              {/* Section visibility */}
+              {/* Admin-managed form fields (Manage Form Fields) with
+                  per-group required/shown overrides */}
+              <div>
+                <Label>Additional form fields</Label>
+                <p className="text-xs text-soft mt-0.5">
+                  Fields added in Admin, Forms, Manage Form Fields. They render
+                  inside the Additional link fields section; override each one
+                  for this group here.
+                </p>
+                <div className="mt-1.5 rounded-md border border-hairline divide-y divide-hairline">
+                  {enabledFormFields === undefined && (
+                    <p className="px-3 py-2 text-[13px] text-soft">
+                      Loading form fields...
+                    </p>
+                  )}
+                  {enabledFormFields !== undefined &&
+                    dynamicFields.length === 0 && (
+                      <p className="px-3 py-2 text-[13px] text-soft">
+                        No enabled fields. Add fields under Admin, Forms,
+                        Manage Form Fields.
+                      </p>
+                    )}
+                  {dynamicFields.map((field) => {
+                    const override = dynamicOverrides[field.key] || {};
+                    const isVisible = override.visible ?? true;
+                    const isRequired = override.required ?? field.isRequired;
+                    return (
+                      <div
+                        key={field.key}
+                        className="flex items-center justify-between gap-2 px-3 py-1.5"
+                      >
+                        <span
+                          className={`text-[13px] ${
+                            isVisible ? "text-copy" : "text-faint"
+                          }`}
+                        >
+                          {field.label}
+                        </span>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {isVisible && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDynamicOverrides((prev) => ({
+                                  ...prev,
+                                  [field.key]: {
+                                    ...prev[field.key],
+                                    required: !isRequired,
+                                  },
+                                }))
+                              }
+                              disabled={saving}
+                              className={`px-2 py-0.5 text-xs font-medium rounded-full transition-colors ${
+                                isRequired
+                                  ? "bg-cta text-on-cta"
+                                  : "bg-surface-alt text-soft hover:bg-surface-hover"
+                              }`}
+                            >
+                              {isRequired ? "Required" : "Optional"}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setDynamicOverrides((prev) => ({
+                                ...prev,
+                                [field.key]: {
+                                  ...prev[field.key],
+                                  visible: !isVisible,
+                                },
+                              }))
+                            }
+                            disabled={saving}
+                            className={`px-2 py-0.5 text-xs font-medium rounded-full transition-colors ${
+                              isVisible
+                                ? "bg-green-50 text-green-700 border border-green-200"
+                                : "bg-surface-alt text-soft hover:bg-surface-hover border border-transparent"
+                            }`}
+                          >
+                            {isVisible ? "Shown" : "Hidden"}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {!visibility.additionalLinks && dynamicFields.length > 0 && (
+                  <p className="mt-1.5 text-xs text-amber-700">
+                    The Additional link fields section is hidden below, so
+                    these fields do not appear on the form regardless of
+                    per-field settings.
+                  </p>
+                )}
+              </div>
+
+              {/* Section visibility and requirements */}
               <div>
                 <Label>Form sections</Label>
                 <p className="text-xs text-soft mt-0.5">
-                  Show or hide the optional sections of the form.
+                  Show, hide, or require the optional sections of the form.
                 </p>
                 <div className="mt-1.5 rounded-md border border-hairline divide-y divide-hairline">
                   {SUBMISSION_SECTION_DEFS.map((section) => (
@@ -723,23 +908,46 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                       >
                         {section.label}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setVisibility((prev) => ({
-                            ...prev,
-                            [section.key]: !prev[section.key],
-                          }))
-                        }
-                        disabled={saving}
-                        className={`px-2 py-0.5 text-xs font-medium rounded-full transition-colors flex-shrink-0 ${
-                          visibility[section.key]
-                            ? "bg-green-50 text-green-700 border border-green-200"
-                            : "bg-surface-alt text-soft hover:bg-surface-hover border border-transparent"
-                        }`}
-                      >
-                        {visibility[section.key] ? "Shown" : "Hidden"}
-                      </button>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {visibility[section.key] && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setRequirements((prev) => ({
+                                ...prev,
+                                [section.key]: !prev[section.key],
+                              }))
+                            }
+                            disabled={saving}
+                            className={`px-2 py-0.5 text-xs font-medium rounded-full transition-colors ${
+                              requirements[section.key]
+                                ? "bg-cta text-on-cta"
+                                : "bg-surface-alt text-soft hover:bg-surface-hover"
+                            }`}
+                          >
+                            {requirements[section.key]
+                              ? "Required"
+                              : "Optional"}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setVisibility((prev) => ({
+                              ...prev,
+                              [section.key]: !prev[section.key],
+                            }))
+                          }
+                          disabled={saving}
+                          className={`px-2 py-0.5 text-xs font-medium rounded-full transition-colors ${
+                            visibility[section.key]
+                              ? "bg-green-50 text-green-700 border border-green-200"
+                              : "bg-surface-alt text-soft hover:bg-surface-hover border border-transparent"
+                          }`}
+                        >
+                          {visibility[section.key] ? "Shown" : "Hidden"}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -863,6 +1071,26 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                           }`}
                         >
                           {question.required ? "Required" : "Optional"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCustomQuestions((prev) =>
+                              prev.map((q, i) =>
+                                i === index
+                                  ? { ...q, visible: !(q.visible ?? true) }
+                                  : q,
+                              ),
+                            )
+                          }
+                          disabled={saving}
+                          className={`px-2 py-0.5 text-xs font-medium rounded-full transition-colors flex-shrink-0 ${
+                            (question.visible ?? true)
+                              ? "bg-green-50 text-green-700 border border-green-200"
+                              : "bg-surface-alt text-soft hover:bg-surface-hover border border-transparent"
+                          }`}
+                        >
+                          {(question.visible ?? true) ? "Shown" : "Hidden"}
                         </button>
                       </div>
                     </div>

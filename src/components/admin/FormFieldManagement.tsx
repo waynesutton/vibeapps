@@ -237,9 +237,7 @@ export function FormFieldManagement() {
       <div className="bg-canvas rounded-lg p-6 border border-hairline">
         {/* Header and Save Button */}
         <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
-          <h2 className="text-xl font-medium text-copy">
-            Manage Form Fields
-          </h2>
+          <h2 className="text-xl font-medium text-copy">Manage Form Fields</h2>
           <div className="flex gap-2">
             {hasPendingChanges && (
               <button
@@ -407,6 +405,7 @@ export function FormFieldManagement() {
                       { value: "url", label: "URL" },
                       { value: "text", label: "Text" },
                       { value: "email", label: "Email" },
+                      { value: "textarea", label: "Textarea" },
                     ]}
                   />
                 </div>
@@ -622,6 +621,7 @@ export function FormFieldManagement() {
                               { value: "url", label: "URL" },
                               { value: "text", label: "Text" },
                               { value: "email", label: "Email" },
+                              { value: "textarea", label: "Textarea" },
                             ]}
                           />
                         </div>
@@ -639,9 +639,7 @@ export function FormFieldManagement() {
                               }
                               className="rounded"
                             />
-                            <span className="text-xs text-copy">
-                              Enabled
-                            </span>
+                            <span className="text-xs text-copy">Enabled</span>
                           </label>
                           <label className="flex items-center gap-1">
                             <input
@@ -656,9 +654,7 @@ export function FormFieldManagement() {
                               }
                               className="rounded"
                             />
-                            <span className="text-xs text-copy">
-                              Required
-                            </span>
+                            <span className="text-xs text-copy">Required</span>
                           </label>
                         </div>
                       </div>
@@ -698,9 +694,7 @@ export function FormFieldManagement() {
                           </span>
                         )}
                         {!field.isEnabled && (
-                          <span className="text-xs text-soft">
-                            (Disabled)
-                          </span>
+                          <span className="text-xs text-soft">(Disabled)</span>
                         )}
                       </div>
                       <div className="text-sm text-soft space-y-1">

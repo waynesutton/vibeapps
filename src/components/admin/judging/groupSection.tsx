@@ -24,9 +24,8 @@ export const SUBMISSION_FIELD_DEFS = [
 ] as const;
 
 export type SubmissionFieldKey = (typeof SUBMISSION_FIELD_DEFS)[number]["key"];
-export type SubmissionFieldRequirements = Record<SubmissionFieldKey, boolean>;
 
-// Whole form sections that can be shown or hidden (no required toggle).
+// Whole form sections that can be shown/hidden and marked required.
 // additionalLinks covers the global optional link fields (LinkedIn, X,
 // Chef links) managed in Form Fields settings.
 export const SUBMISSION_SECTION_DEFS = [
@@ -37,10 +36,23 @@ export const SUBMISSION_SECTION_DEFS = [
 
 export type SubmissionSectionKey =
   (typeof SUBMISSION_SECTION_DEFS)[number]["key"];
+// Requirements cover core fields plus form sections (sections default optional)
+export type SubmissionRequirementKey = SubmissionFieldKey | SubmissionSectionKey;
+export type SubmissionFieldRequirements = Record<
+  SubmissionRequirementKey,
+  boolean
+>;
 export type SubmissionVisibilityKey = SubmissionFieldKey | SubmissionSectionKey;
 export type SubmissionFieldVisibility = Record<
   SubmissionVisibilityKey,
   boolean
+>;
+
+// Per-group overrides for admin-managed form fields (Manage Form Fields),
+// keyed by the field's key. Unset entries fall back to the field defaults.
+export type DynamicFieldOverrides = Record<
+  string,
+  { required?: boolean; visible?: boolean }
 >;
 
 // Title can never be hidden: judging lists, results, and the AI judge all
@@ -57,6 +69,7 @@ export type CustomQuestion = {
   description?: string;
   fieldType: "text" | "url" | "email" | "textarea";
   required: boolean;
+  visible?: boolean; // Unset = shown
 };
 
 // Merge stored (partial) visibility over the default (everything visible).
@@ -144,11 +157,17 @@ export const DEFAULT_FRONTEND_PLATFORM_WEIGHTS: Record<string, number> =
     {} as Record<string, number>,
   );
 
-export const DEFAULT_FIELD_REQUIREMENTS: SubmissionFieldRequirements =
-  SUBMISSION_FIELD_DEFS.reduce((acc, field) => {
-    acc[field.key] = field.default;
-    return acc;
-  }, {} as SubmissionFieldRequirements);
+export const DEFAULT_FIELD_REQUIREMENTS: SubmissionFieldRequirements = (() => {
+  const result = {} as SubmissionFieldRequirements;
+  for (const field of SUBMISSION_FIELD_DEFS) {
+    result[field.key] = field.default;
+  }
+  // Sections default to optional
+  for (const section of SUBMISSION_SECTION_DEFS) {
+    result[section.key] = false;
+  }
+  return result;
+})();
 
 // Merge stored (partial) requirements over the defaults so unset keys keep defaults.
 export function mergeRequirements(
@@ -156,7 +175,7 @@ export function mergeRequirements(
 ): SubmissionFieldRequirements {
   const result = { ...DEFAULT_FIELD_REQUIREMENTS };
   if (stored) {
-    (Object.keys(result) as SubmissionFieldKey[]).forEach((key) => {
+    (Object.keys(result) as SubmissionRequirementKey[]).forEach((key) => {
       if (typeof stored[key] === "boolean") {
         result[key] = stored[key] as boolean;
       }

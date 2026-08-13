@@ -63,7 +63,11 @@ type StatsResult = {
   convexFeaturesDetected?: Array<string>;
   componentsDetected?: Array<string>;
   urlCheck?: { isLive: boolean };
-  sourcesUsed?: { github: boolean; liveUrl: boolean; videoTranscript?: boolean };
+  sourcesUsed?: {
+    github: boolean;
+    liveUrl: boolean;
+    videoTranscript?: boolean;
+  };
 };
 
 // Rollup numbers for the Stats tab and the report overview
@@ -73,15 +77,20 @@ function computeStats(results: Array<StatsResult>) {
   const usesConvex = (r: StatsResult) =>
     (r.convexFeaturesDetected?.length ?? 0) > 0;
   const usesAdvanced = (r: StatsResult) =>
-    (r.convexFeaturesDetected || []).some((f) => ADVANCED_FEATURE_REGEX.test(f)) ||
-    (r.criteriaScores || []).some((cs) => cs.key === "advanced" && cs.score >= 6);
+    (r.convexFeaturesDetected || []).some((f) =>
+      ADVANCED_FEATURE_REGEX.test(f),
+    ) ||
+    (r.criteriaScores || []).some(
+      (cs) => cs.key === "advanced" && cs.score >= 6,
+    );
 
   const scores = completed
     .map((r) => r.averageScore)
     .filter((s): s is number => s !== undefined);
   const averageScore =
     scores.length > 0
-      ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
+      ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) /
+        10
       : 0;
 
   // Count each detected feature (case-insensitive) for the top features list
@@ -110,7 +119,9 @@ function computeStats(results: Array<StatsResult>) {
       componentCounts.set(key, (componentCounts.get(key) || 0) + 1);
     }
   }
-  const componentsUsed = [...componentCounts.entries()].sort((a, b) => b[1] - a[1]);
+  const componentsUsed = [...componentCounts.entries()].sort(
+    (a, b) => b[1] - a[1],
+  );
 
   // Average-score distribution bands for the mini chart
   const bands = [
@@ -157,8 +168,17 @@ type ReportSubmission = {
   overallReasoning?: string;
   convexFeaturesDetected?: Array<string>;
   componentsDetected?: Array<string>;
-  urlCheck?: { checkedUrl?: string; isLive: boolean; statusCode?: number; note: string };
-  sourcesUsed?: { github: boolean; liveUrl: boolean; videoTranscript?: boolean };
+  urlCheck?: {
+    checkedUrl?: string;
+    isLive: boolean;
+    statusCode?: number;
+    note: string;
+  };
+  sourcesUsed?: {
+    github: boolean;
+    liveUrl: boolean;
+    videoTranscript?: boolean;
+  };
   error?: string;
 };
 
@@ -215,11 +235,15 @@ function buildHackathonReport(
   lines.push(`| Submissions in group | ${data.submissions.length} |`);
   lines.push(`| AI reviews completed | ${stats.completed} |`);
   lines.push(`| Apps using Convex | ${stats.usingConvex} |`);
-  lines.push(`| Apps using advanced Convex features | ${stats.advancedConvex} |`);
+  lines.push(
+    `| Apps using advanced Convex features | ${stats.advancedConvex} |`,
+  );
   lines.push(
     `| Apps using Convex components | ${stats.usingComponents}${stats.componentsUsed.length > 0 ? ` (${stats.componentsUsed.length} distinct: ${stats.componentsUsed.map(([name]) => name).join(", ")})` : ""} |`,
   );
-  lines.push(`| Live apps at review time | ${stats.liveApps} of ${stats.urlChecked} checked |`);
+  lines.push(
+    `| Live apps at review time | ${stats.liveApps} of ${stats.urlChecked} checked |`,
+  );
   lines.push(`| GitHub repos analyzed | ${stats.reposAnalyzed} |`);
   lines.push(`| Average score | ${stats.averageScore}/10 |`);
 
@@ -230,24 +254,35 @@ function buildHackathonReport(
     `- ${data.submissions.length} submission${data.submissions.length === 1 ? "" : "s"} from ${teams.size} team${teams.size === 1 ? "" : "s"} and ${solo.length} solo builder${solo.length === 1 ? "" : "s"}`,
   );
   if (listedMembers > 0) {
-    lines.push(`- ${listedMembers} listed team member${listedMembers === 1 ? "" : "s"}`);
+    lines.push(
+      `- ${listedMembers} listed team member${listedMembers === 1 ? "" : "s"}`,
+    );
   }
 
   lines.push("");
   lines.push("## Rankings");
   lines.push("");
-  lines.push("| Rank | Submission | Team | Score | Live app | GitHub | Convex features |");
+  lines.push(
+    "| Rank | Submission | Team | Score | Live app | GitHub | Convex features |",
+  );
   lines.push("| --- | --- | --- | --- | --- | --- | --- |");
   completed.forEach((s, index) => {
     const submissionLink = `[${mdCell(s.title)}](${origin}/s/${s.slug})`;
-    const team = s.teamName ? mdCell(s.teamName) : (s.submitterName ? mdCell(s.submitterName) : "-");
-    const score = s.averageScore !== undefined ? `${s.averageScore.toFixed(1)}/10` : "-";
+    const team = s.teamName
+      ? mdCell(s.teamName)
+      : s.submitterName
+        ? mdCell(s.submitterName)
+        : "-";
+    const score =
+      s.averageScore !== undefined ? `${s.averageScore.toFixed(1)}/10` : "-";
     const live = s.url
       ? `[${s.urlCheck ? (s.urlCheck.isLive ? "Live" : s.urlCheck.statusCode === 404 ? "404" : "Down") : "Link"}](${s.url})`
       : "-";
     const github = s.githubUrl ? `[Repo](${s.githubUrl})` : "-";
     const features = mdCell((s.convexFeaturesDetected || []).join(", ")) || "-";
-    lines.push(`| ${index + 1} | ${submissionLink} | ${team} | ${score} | ${live} | ${github} | ${features} |`);
+    lines.push(
+      `| ${index + 1} | ${submissionLink} | ${team} | ${score} | ${live} | ${github} | ${features} |`,
+    );
   });
 
   if (teams.size > 0 || solo.length > 0) {
@@ -262,10 +297,14 @@ function buildHackathonReport(
       const memberText = members.length > 0 ? `: ${members.join(", ")}` : "";
       const titles = teamSubs.map((s) => `*${mdCell(s.title)}*`).join(", ");
       const memberCount = teamSubs[0].teamMemberCount ?? (members.length || 1);
-      lines.push(`- **${mdCell(teamName)}** (${memberCount} member${memberCount === 1 ? "" : "s"})${memberText}, built ${titles}`);
+      lines.push(
+        `- **${mdCell(teamName)}** (${memberCount} member${memberCount === 1 ? "" : "s"})${memberText}, built ${titles}`,
+      );
     }
     for (const s of solo) {
-      lines.push(`- ${s.submitterName ? mdCell(s.submitterName) : "Unknown builder"}, built *${mdCell(s.title)}*`);
+      lines.push(
+        `- ${s.submitterName ? mdCell(s.submitterName) : "Unknown builder"}, built *${mdCell(s.title)}*`,
+      );
     }
   }
 
@@ -376,7 +415,10 @@ function VideoTranscriptSection({
                   {transcript.status.replace(/_/g, " ")}
                 </span>
                 <span className="px-1.5 py-0.5 rounded-full border bg-surface border-hairline">
-                  via {transcript.provider === "contextdev" ? "Context.dev" : "Firecrawl"}
+                  via{" "}
+                  {transcript.provider === "contextdev"
+                    ? "Context.dev"
+                    : "Firecrawl"}
                 </span>
                 <a
                   href={transcript.videoUrl}
@@ -389,7 +431,9 @@ function VideoTranscriptSection({
                 </a>
               </div>
               {transcript.errorMessage && (
-                <p className="text-xs text-red-700">{transcript.errorMessage}</p>
+                <p className="text-xs text-red-700">
+                  {transcript.errorMessage}
+                </p>
               )}
               {transcript.markdown ? (
                 <pre className="text-xs text-copy whitespace-pre-wrap max-h-72 overflow-y-auto font-sans">
@@ -497,7 +541,9 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
       showMessage(
         "Could Not Start AI Review",
         error instanceof Error
-          ? error.message.replace(/^\[.*?\]\s*/, "").replace(/^Uncaught Error:\s*/, "")
+          ? error.message
+              .replace(/^\[.*?\]\s*/, "")
+              .replace(/^Uncaught Error:\s*/, "")
           : "Please try again.",
         "error",
       );
@@ -630,7 +676,9 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
           ) : (
             <>
               <Sparkles className="w-4 h-4 mr-2" />
-              {completedResults.length > 0 ? "Re-run AI Review" : "Run AI Review"}
+              {completedResults.length > 0
+                ? "Re-run AI Review"
+                : "Run AI Review"}
             </>
           )}
         </Button>
@@ -644,10 +692,26 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {(
               [
-                { label: "Pending", value: data.counts.pending, color: "text-copy" },
-                { label: "Reviewing", value: data.counts.running, color: "text-blue-600" },
-                { label: "Completed", value: data.counts.completed, color: "text-green-600" },
-                { label: "Failed", value: data.counts.failed, color: "text-red-600" },
+                {
+                  label: "Pending",
+                  value: data.counts.pending,
+                  color: "text-copy",
+                },
+                {
+                  label: "Reviewing",
+                  value: data.counts.running,
+                  color: "text-blue-600",
+                },
+                {
+                  label: "Completed",
+                  value: data.counts.completed,
+                  color: "text-green-600",
+                },
+                {
+                  label: "Failed",
+                  value: data.counts.failed,
+                  color: "text-red-600",
+                },
               ] as const
             ).map((stat) => (
               <div
@@ -747,7 +811,9 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                     ) : (
                       <>
                         <FileText className="w-4 h-4 mr-2" />
-                        {reportMarkdown ? "Regenerate Report" : "Generate Report"}
+                        {reportMarkdown
+                          ? "Regenerate Report"
+                          : "Generate Report"}
                       </>
                     )}
                   </Button>
@@ -814,10 +880,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
             <div className="space-y-3">
               {/* Build-timeline filter */}
               <div className="flex items-center justify-end gap-2">
-                <label
-                  htmlFor="timeline-filter"
-                  className="text-xs text-soft"
-                >
+                <label htmlFor="timeline-filter" className="text-xs text-soft">
                   Build timeline
                 </label>
                 <SimpleSelect
@@ -891,7 +954,9 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                   }
                                 >
                                   <Github className="w-3 h-3" />
-                                  {result.sourcesUsed.github ? "repo" : "no repo"}
+                                  {result.sourcesUsed.github
+                                    ? "repo"
+                                    : "no repo"}
                                 </span>
                                 <span
                                   className={`inline-flex items-center gap-1 ${result.sourcesUsed.liveUrl ? "text-green-600" : "text-faint"}`}
@@ -902,7 +967,9 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                   }
                                 >
                                   <Globe className="w-3 h-3" />
-                                  {result.sourcesUsed.liveUrl ? "site" : "no site"}
+                                  {result.sourcesUsed.liveUrl
+                                    ? "site"
+                                    : "no site"}
                                 </span>
                                 <span
                                   className={`inline-flex items-center gap-1 ${result.sourcesUsed.videoTranscript ? "text-green-600" : "text-faint"}`}
@@ -945,6 +1012,25 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                 {FRONTEND_PLATFORM_LABELS[
                                   result.frontendHosting.platform
                                 ] ?? result.frontendHosting.platform}
+                              </span>
+                            )}
+                            {result.hackathonLogEvent && (
+                              <span
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-surface-alt text-soft border-hairline"
+                                title="Event named in this submission's hackathon.md header. Self-reported, informational only; never used to route, match, or score."
+                              >
+                                {result.hackathonLogEvent}
+                              </span>
+                            )}
+                            {(result.logDiscrepancies?.length ?? 0) > 0 && (
+                              <span
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200"
+                                title={`hackathon.md claims that do not match detected facts (recorded only, never scored):\n${(result.logDiscrepancies ?? []).join("\n")}`}
+                              >
+                                {result.logDiscrepancies?.length} log{" "}
+                                {result.logDiscrepancies?.length === 1
+                                  ? "discrepancy"
+                                  : "discrepancies"}
                               </span>
                             )}
                             {result.repoAccess === "private_or_missing" && (
@@ -1090,86 +1176,88 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
 
                         {/* Criteria */}
                         <div className="space-y-3">
-                          {(isEditing ? editScores : result.criteriaScores || []).map(
-                            (cs, csIndex) => (
-                              <div
-                                key={cs.key}
-                                className="bg-surface-alt border border-hairline rounded-md p-3"
-                              >
-                                <div className="flex items-center justify-between gap-3">
-                                  <p className="text-sm font-medium text-ink">
-                                    {cs.label}
-                                  </p>
-                                  {isEditing ? (
-                                    <div className="flex items-center gap-1">
-                                      {Array.from({ length: 10 }, (_, i) => i + 1).map(
-                                        (score) => (
-                                          <button
-                                            key={score}
-                                            type="button"
-                                            onClick={() =>
-                                              setEditScores((prev) =>
-                                                prev.map((item, idx) =>
-                                                  idx === csIndex
-                                                    ? { ...item, score }
-                                                    : item,
-                                                ),
-                                              )
-                                            }
-                                            className={`w-7 h-7 rounded text-xs font-medium border transition-colors ${
-                                              cs.score === score
-                                                ? "bg-cta text-on-cta border-ink"
-                                                : "bg-surface text-copy border-hairline hover:border-hairline-strong"
-                                            }`}
-                                          >
-                                            {score}
-                                          </button>
-                                        ),
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <span className="text-sm font-semibold text-ink">
-                                      {cs.score}/10
-                                    </span>
-                                  )}
-                                </div>
+                          {(isEditing
+                            ? editScores
+                            : result.criteriaScores || []
+                          ).map((cs, csIndex) => (
+                            <div
+                              key={cs.key}
+                              className="bg-surface-alt border border-hairline rounded-md p-3"
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="text-sm font-medium text-ink">
+                                  {cs.label}
+                                </p>
                                 {isEditing ? (
-                                  <div className="mt-2">
-                                    <Label
-                                      htmlFor={`reasoning-${result._id}-${cs.key}`}
-                                      className="text-xs text-soft"
-                                    >
-                                      Reasoning
-                                    </Label>
-                                    <Textarea
-                                      id={`reasoning-${result._id}-${cs.key}`}
-                                      value={cs.reasoning}
-                                      onChange={(e) =>
-                                        setEditScores((prev) =>
-                                          prev.map((item, idx) =>
-                                            idx === csIndex
-                                              ? {
-                                                  ...item,
-                                                  reasoning: e.target.value,
-                                                }
-                                              : item,
-                                          ),
-                                        )
-                                      }
-                                      rows={2}
-                                      className="mt-1"
-                                    />
+                                  <div className="flex items-center gap-1">
+                                    {Array.from(
+                                      { length: 10 },
+                                      (_, i) => i + 1,
+                                    ).map((score) => (
+                                      <button
+                                        key={score}
+                                        type="button"
+                                        onClick={() =>
+                                          setEditScores((prev) =>
+                                            prev.map((item, idx) =>
+                                              idx === csIndex
+                                                ? { ...item, score }
+                                                : item,
+                                            ),
+                                          )
+                                        }
+                                        className={`w-7 h-7 rounded text-xs font-medium border transition-colors ${
+                                          cs.score === score
+                                            ? "bg-cta text-on-cta border-ink"
+                                            : "bg-surface text-copy border-hairline hover:border-hairline-strong"
+                                        }`}
+                                      >
+                                        {score}
+                                      </button>
+                                    ))}
                                   </div>
                                 ) : (
-                                  cs.reasoning && (
-                                    <p className="text-sm text-copy mt-2">
-                                      {cs.reasoning}
-                                    </p>
-                                  )
+                                  <span className="text-sm font-semibold text-ink">
+                                    {cs.score}/10
+                                  </span>
                                 )}
                               </div>
-                            ),
-                          )}
+                              {isEditing ? (
+                                <div className="mt-2">
+                                  <Label
+                                    htmlFor={`reasoning-${result._id}-${cs.key}`}
+                                    className="text-xs text-soft"
+                                  >
+                                    Reasoning
+                                  </Label>
+                                  <Textarea
+                                    id={`reasoning-${result._id}-${cs.key}`}
+                                    value={cs.reasoning}
+                                    onChange={(e) =>
+                                      setEditScores((prev) =>
+                                        prev.map((item, idx) =>
+                                          idx === csIndex
+                                            ? {
+                                                ...item,
+                                                reasoning: e.target.value,
+                                              }
+                                            : item,
+                                        ),
+                                      )
+                                    }
+                                    rows={2}
+                                    className="mt-1"
+                                  />
+                                </div>
+                              ) : (
+                                cs.reasoning && (
+                                  <p className="text-sm text-copy mt-2">
+                                    {cs.reasoning}
+                                  </p>
+                                )
+                              )}
+                            </div>
+                          ))}
                         </div>
 
                         {/* Overall reasoning */}
@@ -1198,14 +1286,16 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                 Convex Features Detected
                               </h4>
                               <div className="flex flex-wrap gap-2">
-                                {result.convexFeaturesDetected.map((feature) => (
-                                  <span
-                                    key={feature}
-                                    className="px-2.5 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full"
-                                  >
-                                    {feature}
-                                  </span>
-                                ))}
+                                {result.convexFeaturesDetected.map(
+                                  (feature) => (
+                                    <span
+                                      key={feature}
+                                      className="px-2.5 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full"
+                                    >
+                                      {feature}
+                                    </span>
+                                  ),
+                                )}
                               </div>
                             </div>
                           )}
@@ -1280,13 +1370,19 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                               {(
                                 [
-                                  ["Convex files", result.repoFacts.convexFileCount],
+                                  [
+                                    "Convex files",
+                                    result.repoFacts.convexFileCount,
+                                  ],
                                   ["Tables", result.repoFacts.tableCount],
                                   ["Indexes", result.repoFacts.indexCount],
                                   ["Queries", result.repoFacts.queryCount],
                                   ["Mutations", result.repoFacts.mutationCount],
                                   ["Actions", result.repoFacts.actionCount],
-                                  ["HTTP actions", result.repoFacts.httpActionCount],
+                                  [
+                                    "HTTP actions",
+                                    result.repoFacts.httpActionCount,
+                                  ],
                                   [
                                     "Return validators",
                                     result.repoFacts.returnsValidatorCount,
@@ -1308,16 +1404,25 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                               {(
                                 [
                                   ["schema", result.repoFacts.hasSchema],
-                                  ["http router", result.repoFacts.hasHttpRouter],
+                                  [
+                                    "http router",
+                                    result.repoFacts.hasHttpRouter,
+                                  ],
                                   ["crons", result.repoFacts.hasCrons],
                                   ["scheduler", result.repoFacts.usesScheduler],
-                                  ["file storage", result.repoFacts.usesStorage],
+                                  [
+                                    "file storage",
+                                    result.repoFacts.usesStorage,
+                                  ],
                                   [
                                     "vector search",
                                     result.repoFacts.usesVectorSearch,
                                   ],
                                   ["auth", result.repoFacts.usesAuth],
-                                  ["pagination", result.repoFacts.usesPagination],
+                                  [
+                                    "pagination",
+                                    result.repoFacts.usesPagination,
+                                  ],
                                 ] as const
                               ).map(([label, present]) => (
                                 <span
@@ -1442,6 +1547,28 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                           </div>
                         )}
 
+                        {/* hackathon.md cross-check notes (recorded, never scored) */}
+                        {(result.logDiscrepancies?.length ?? 0) > 0 && (
+                          <div>
+                            <h4 className="text-sm font-medium text-ink mb-2">
+                              Hackathon Log Discrepancies
+                              <span className="ml-2 text-xs font-normal text-faint">
+                                recorded only, never affects scores
+                              </span>
+                            </h4>
+                            <ul className="space-y-1">
+                              {result.logDiscrepancies?.map((note, i) => (
+                                <li
+                                  key={i}
+                                  className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5"
+                                >
+                                  {note}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
                         {/* Retry a completed review */}
                         <div className="pt-2 border-t border-hairline">
                           <button
@@ -1478,14 +1605,24 @@ function StatsPanel({
 }) {
   const stats = computeStats(results);
   const maxBand = Math.max(1, ...stats.bands.map((b) => b.count));
-  const maxFeature = Math.max(1, ...stats.topFeatures.map(([, count]) => count));
+  const maxFeature = Math.max(
+    1,
+    ...stats.topFeatures.map(([, count]) => count),
+  );
 
   const cards = [
-    { label: "Apps reviewed", value: `${stats.completed}`, sub: `of ${stats.total} in group` },
+    {
+      label: "Apps reviewed",
+      value: `${stats.completed}`,
+      sub: `of ${stats.total} in group`,
+    },
     {
       label: "Using Convex",
       value: `${stats.usingConvex}`,
-      sub: stats.completed > 0 ? `${Math.round((stats.usingConvex / stats.completed) * 100)}% of reviewed` : "",
+      sub:
+        stats.completed > 0
+          ? `${Math.round((stats.usingConvex / stats.completed) * 100)}% of reviewed`
+          : "",
     },
     {
       label: "Advanced Convex features",
@@ -1503,10 +1640,21 @@ function StatsPanel({
     {
       label: "Live apps",
       value: `${stats.liveApps}`,
-      sub: stats.urlChecked > 0 ? `of ${stats.urlChecked} URLs checked` : "no URLs checked",
+      sub:
+        stats.urlChecked > 0
+          ? `of ${stats.urlChecked} URLs checked`
+          : "no URLs checked",
     },
-    { label: "Repos analyzed", value: `${stats.reposAnalyzed}`, sub: "GitHub accessible" },
-    { label: "Average score", value: `${stats.averageScore}`, sub: "out of 10" },
+    {
+      label: "Repos analyzed",
+      value: `${stats.reposAnalyzed}`,
+      sub: "GitHub accessible",
+    },
+    {
+      label: "Average score",
+      value: `${stats.averageScore}`,
+      sub: "out of 10",
+    },
   ];
 
   return (
@@ -1557,7 +1705,9 @@ function StatsPanel({
                 <div key={feature} className="flex items-center gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2 mb-0.5">
-                      <span className="text-sm text-copy truncate">{feature}</span>
+                      <span className="text-sm text-copy truncate">
+                        {feature}
+                      </span>
                       <span className="text-xs text-soft flex-shrink-0">
                         {count} app{count === 1 ? "" : "s"}
                       </span>
@@ -1591,7 +1741,9 @@ function StatsPanel({
                 <div key={component} className="flex items-center gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2 mb-0.5">
-                      <span className="text-sm text-copy truncate">{component}</span>
+                      <span className="text-sm text-copy truncate">
+                        {component}
+                      </span>
                       <span className="text-xs text-soft flex-shrink-0">
                         {count} app{count === 1 ? "" : "s"}
                       </span>

@@ -193,7 +193,8 @@ export const submitScore = mutation({
         targetType: "story",
         targetId: args.storyId,
         targetLabel: scoredStory?.title,
-        metadata: { groupId: judge.groupId, score: args.score, scoreScale },
+        groupId: judge.groupId,
+        metadata: { score: args.score, scoreScale },
       });
     }
 

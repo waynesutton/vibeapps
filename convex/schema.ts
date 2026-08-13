@@ -62,11 +62,13 @@ export default defineSchema({
     targetType: v.optional(v.string()), // e.g. "story", "judgingGroup"
     targetId: v.optional(v.string()),
     targetLabel: v.optional(v.string()),
+    groupId: v.optional(v.id("judgingGroups")), // Set on group-scoped events for the per-group log
     metadata: v.optional(v.any()),
     isArchived: v.boolean(), // Always written on insert so indexes stay dense
   })
     .index("by_archived", ["isArchived"])
-    .index("by_archived_category", ["isArchived", "category"]),
+    .index("by_archived_category", ["isArchived", "category"])
+    .index("by_groupId", ["groupId"]),
 
   stories: defineTable({
     title: v.string(),
@@ -123,10 +125,26 @@ export default defineSchema({
     // rubric criterion, clamp, or AI judge prompt context.
     selfReportedHarness: v.optional(v.string()), // e.g. "cursor", "claude-code"
     selfReportedModel: v.optional(v.string()), // e.g. "claude-sonnet-4-5"
+    // Pasted hackathon.md contents for private/no-repo submissions. Capped
+    // at 20k chars and secret-redacted server side. Self-reported context
+    // for the AI judge; a repo copy of hackathon.md always wins over this.
+    hackathonLog: v.optional(v.string()),
     // Answers to per-group custom submission questions (judging group custom
     // submit pages). Label is denormalized so answers keep meaning even if
     // the question is later edited or removed from the group config.
     customFormAnswers: v.optional(
+      v.array(
+        v.object({
+          key: v.string(),
+          label: v.string(),
+          value: v.string(),
+        }),
+      ),
+    ),
+    // Values for admin-added Manage Form Fields entries that have no
+    // dedicated stories column. Label is denormalized from the field
+    // definition so values stay readable if the field is edited or removed.
+    dynamicFormValues: v.optional(
       v.array(
         v.object({
           key: v.string(),
@@ -399,7 +417,12 @@ export default defineSchema({
     isEnabled: v.boolean(), // Whether the field is shown in the form
     isRequired: v.boolean(), // Whether the field is required
     order: v.number(), // Display order in the form
-    fieldType: v.union(v.literal("url"), v.literal("text"), v.literal("email")), // Field input type
+    fieldType: v.union(
+      v.literal("url"),
+      v.literal("text"),
+      v.literal("email"),
+      v.literal("textarea"),
+    ), // Field input type
     description: v.optional(v.string()), // Optional description text
     storyPropertyName: v.string(), // Property name in stories table (e.g., "linkedinUrl")
   })
@@ -425,7 +448,10 @@ export default defineSchema({
     // Custom submission page settings
     hasCustomSubmissionPage: v.optional(v.boolean()), // Enable custom submission page
     submissionPageImageId: v.optional(v.id("_storage")), // Header image for submission page
-    submissionPageImageSize: v.optional(v.number()), // Image size in pixels (square)
+    submissionPageImageSize: v.optional(v.number()), // Image size in pixels (square crop only)
+    submissionPageImageAspect: v.optional(
+      v.union(v.literal("square"), v.literal("wide")),
+    ), // Header image crop: square (1:1, default) or wide (16:9, fills layout width)
     submissionPageLayout: v.optional(
       v.union(
         v.literal("two-column"),
@@ -446,6 +472,11 @@ export default defineSchema({
     submissionFormTitle: v.optional(v.string()), // Custom title for submission form (default: "Submit Your App")
     submissionFormSubtitle: v.optional(v.string()), // Optional subtitle text below form title
     submissionFormRequiredTagId: v.optional(v.id("tags")), // Required tag that will be auto-selected and locked in submission form
+    // Whether the locked required tag is visible to submitters on the form
+    // (pills, quick select, tag counter). Unset = shown. Display only: the tag
+    // is always applied on submit, and Tag Management's isHidden flag keeps
+    // controlling story cards and tag limits site-wide so the two never conflict.
+    submissionFormRequiredTagVisible: v.optional(v.boolean()),
     // Auto-populate by multiple tags (OR match) within an optional date range.
     // Separate from the single required form tag above. Matching stories are
     // materialized into judgingGroupSubmissions so judging/results work unchanged.
@@ -457,6 +488,9 @@ export default defineSchema({
     autoIncludeStartDate: v.optional(v.number()), // Inclusive lower bound on story creation time (ms)
     autoIncludeEndDate: v.optional(v.number()), // Inclusive upper bound on story creation time (ms)
     // Admin-selectable required fields for the custom submission form. Unset keys fall back to defaults.
+    // teamInfo/additionalImages/additionalLinks mark whole form sections required:
+    // teamInfo = team name required, additionalImages = at least one extra image,
+    // additionalLinks = at least one link field filled.
     submissionFieldRequirements: v.optional(
       v.object({
         title: v.optional(v.boolean()),
@@ -469,6 +503,9 @@ export default defineSchema({
         submitterName: v.optional(v.boolean()),
         email: v.optional(v.boolean()),
         tags: v.optional(v.boolean()),
+        teamInfo: v.optional(v.boolean()),
+        additionalImages: v.optional(v.boolean()),
+        additionalLinks: v.optional(v.boolean()),
       }),
     ),
     // Admin-selectable visible fields for the custom submission form.
@@ -509,6 +546,20 @@ export default defineSchema({
             v.literal("textarea"),
           ),
           required: v.boolean(),
+          // Unset = shown. Hidden questions stay stored but never render.
+          visible: v.optional(v.boolean()),
+        }),
+      ),
+    ),
+    // Per-group overrides for admin-managed Form Fields (storyFormFields),
+    // keyed by field key. Unset = enabled fields render with their global
+    // required setting. visible=false removes the field from this group's form.
+    submissionDynamicFieldOverrides: v.optional(
+      v.record(
+        v.string(),
+        v.object({
+          required: v.optional(v.boolean()),
+          visible: v.optional(v.boolean()),
         }),
       ),
     ),
@@ -558,16 +609,13 @@ export default defineSchema({
     // Absent = enabled. When false, key creation is blocked and every
     // keyed API call returns 403.
     agentKeysEnabled: v.optional(v.boolean()),
-    // Hackathon skill support: gates the /api/hackathon/{slug} endpoints
-    // the /hackathon agent skill talks to. Absent = off.
+    // DEPRECATED: hackathon skill API fields. The /api/hackathon/{slug}
+    // endpoints were removed; the simplified skill keeps one hackathon.md
+    // file and needs no registration. Kept optional so existing rows stay
+    // valid. Safe to remove after a production cleanup migration.
     hackathonSkillEnabled: v.optional(v.boolean()),
-    // Shared multi-use registration codes (e.g. "AUG18-GLOBAL") a team
-    // passes to /hackathon start. Matched case-insensitively.
     hackathonRegistrationCodes: v.optional(v.array(v.string())),
-    // Markdown rules the skill writes into each team's rules.md
     hackathonRules: v.optional(v.string()),
-    // Bumped whenever the rules or codes change so the skill can detect
-    // stale rules and show the team a diff
     hackathonRulesUpdatedAt: v.optional(v.number()),
     // Organizer emails for the per-group new-submission alert. Empty or
     // absent means no alert; the dashboard toggle controls the type globally.
@@ -698,6 +746,13 @@ export default defineSchema({
         evidence: v.string(), // What matched (host suffix, header, or repo file)
       }),
     ),
+    // Cross-check notes comparing the hackathon.md header claims against
+    // detected facts (frontend platform, components, auth provider).
+    // Recorded for organizers only; never affects any score or weight.
+    logDiscrepancies: v.optional(v.array(v.string())),
+    // Event free text from the hackathon.md header (repo copy wins over a
+    // pasted one). Shown beside track info in admin results; never scored.
+    hackathonLogEvent: v.optional(v.string()),
     editedBy: v.optional(v.id("users")), // Admin who last edited scores
     editedAt: v.optional(v.number()), // When scores were last edited
   })
@@ -789,9 +844,9 @@ export default defineSchema({
     .index("by_keyHash", ["keyHash"])
     .index("by_groupId", ["groupId"]),
 
-  // Teams that ran "/hackathon start CODE" against a judging group's
-  // registration endpoint. Organizer-facing audit trail only; submissions
-  // still flow through the group submit form.
+  // DEPRECATED: audit trail from the removed hackathon skill registration
+  // endpoint. Table kept so existing production rows stay valid; no code
+  // writes to it anymore. Safe to drop after a production cleanup.
   hackathonRegistrations: defineTable({
     groupId: v.id("judgingGroups"), // Group the code belongs to
     code: v.string(), // Registration code used (uppercased)

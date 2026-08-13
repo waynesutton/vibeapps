@@ -12,6 +12,8 @@ import { Workpool } from "@convex-dev/workpool";
 import { isUserAdmin, getAuthenticatedUserId } from "./users";
 import { requireJudgingGroupPermission } from "./adminAccess";
 import { verifyPassword } from "./judgingGroups";
+import { parseHackathonLogHeader } from "./hackathonLog"; // hackathon.md header parsing (admin views)
+import { logActivity } from "./activityLog";
 
 // Analyses run through a workpool with limited parallelism: faster than the
 // old one-at-a-time scheduler chain while staying inside GitHub rate limits.
@@ -20,7 +22,11 @@ const aiJudgePool = new Workpool(components.workpool, { maxParallelism: 4 });
 // Built-in "Best Use of Convex" rubric. Shared with the analysis action so
 // prompts and stored results always use the same keys. Groups can append
 // their own criteria via aiCustomCriteria (see getRubricForGroup).
-export const AI_JUDGE_RUBRIC: Array<{ key: string; label: string; description: string }> = [
+export const AI_JUDGE_RUBRIC: Array<{
+  key: string;
+  label: string;
+  description: string;
+}> = [
   {
     key: "schema",
     label: "Schema and data modeling",
@@ -59,7 +65,11 @@ export const AI_JUDGE_RUBRIC: Array<{ key: string; label: string; description: s
   },
 ];
 
-export type RubricCriterion = { key: string; label: string; description: string };
+export type RubricCriterion = {
+  key: string;
+  label: string;
+  description: string;
+};
 
 // Frontend checker: preset custom criterion key plus the fixed hosting
 // platform list for per-platform sub-weights. The detected platform's weight
@@ -202,9 +212,7 @@ const repoAccessValidator = v.union(
 // aiRubricWeights. Never stored: weight edits and admin score edits both stay
 // consistent because every read recomputes.
 export function computeWeightedScore(
-  criteriaScores:
-    | Array<{ key: string; score: number }>
-    | undefined,
+  criteriaScores: Array<{ key: string; score: number }> | undefined,
   weights: Array<{ key: string; weight: number }> | undefined,
   // Detected hosting platform for this result plus the group's per-platform
   // weights. The platform weight multiplies the frontend-checker criterion
@@ -217,9 +225,8 @@ export function computeWeightedScore(
   if (!criteriaScores || criteriaScores.length === 0) return undefined;
   const weightByKey = new Map((weights ?? []).map((w) => [w.key, w.weight]));
   const platformWeight = frontend?.platform
-    ? (frontend.platformWeights ?? []).find(
-        (w) => w.key === frontend.platform,
-      )?.weight ?? 1
+    ? ((frontend.platformWeights ?? []).find((w) => w.key === frontend.platform)
+        ?.weight ?? 1)
     : 1;
   const total = criteriaScores.reduce((sum, cs) => {
     const base = weightByKey.get(cs.key) ?? 1;
@@ -272,11 +279,17 @@ const aiResultValidator = v.object({
   ),
   urlCheck: v.optional(urlCheckValidator),
   frontendHosting: v.optional(frontendHostingValidator),
+  // hackathon.md header cross-check notes; populated for admin views only
+  logDiscrepancies: v.optional(v.array(v.string())),
+  // Event free text from the repo or pasted hackathon.md header; admin only
+  hackathonLogEvent: v.optional(v.string()),
   editedAt: v.optional(v.number()),
 });
 
 // Helper mirroring judgingGroups: exclude deleted/hidden/archived/rejected stories
-function isStoryValidForJudging(story: Doc<"stories"> | null): story is Doc<"stories"> {
+function isStoryValidForJudging(
+  story: Doc<"stories"> | null,
+): story is Doc<"stories"> {
   if (!story) return false;
   if (story.isHidden === true) return false;
   if (story.isArchived === true) return false;
@@ -291,6 +304,9 @@ async function enrichResults(
   results: Array<Doc<"aiJudgeResults">>,
   weights: Array<{ key: string; weight: number }> | undefined,
   frontendWeights?: Array<{ key: string; weight: number }>,
+  // When true (admin views only), include hackathon.md cross-check notes and
+  // the header event text. Public callers leave this undefined.
+  options?: { includeLogMeta?: boolean },
 ) {
   const enriched: Array<{
     _id: Id<"aiJudgeResults">;
@@ -301,7 +317,12 @@ async function enrichResults(
     storyUrl?: string;
     githubUrl?: string;
     status: "pending" | "running" | "completed" | "failed";
-    criteriaScores?: Array<{ key: string; label: string; score: number; reasoning: string }>;
+    criteriaScores?: Array<{
+      key: string;
+      label: string;
+      score: number;
+      reasoning: string;
+    }>;
     totalScore?: number;
     averageScore?: number;
     weightedScore?: number;
@@ -318,7 +339,11 @@ async function enrichResults(
     selfReportedHarness?: string;
     selfReportedModel?: string;
     error?: string;
-    sourcesUsed?: { github: boolean; liveUrl: boolean; videoTranscript?: boolean };
+    sourcesUsed?: {
+      github: boolean;
+      liveUrl: boolean;
+      videoTranscript?: boolean;
+    };
     urlCheck?: {
       checkedUrl?: string;
       isLive: boolean;
@@ -326,6 +351,8 @@ async function enrichResults(
       note: string;
     };
     frontendHosting?: { platform: string; evidence: string };
+    logDiscrepancies?: Array<string>;
+    hackathonLogEvent?: string;
     editedAt?: number;
   }> = [];
 
@@ -365,6 +392,17 @@ async function enrichResults(
       sourcesUsed: result.sourcesUsed,
       urlCheck: result.urlCheck,
       frontendHosting: result.frontendHosting,
+      logDiscrepancies: options?.includeLogMeta
+        ? result.logDiscrepancies
+        : undefined,
+      // Prefer the event stored at analysis time (parsed from the repo's
+      // hackathon.md); fall back to parsing a pasted log for older rows.
+      hackathonLogEvent: options?.includeLogMeta
+        ? (result.hackathonLogEvent ??
+          (story.hackathonLog
+            ? parseHackathonLogHeader(story.hackathonLog).event
+            : undefined))
+        : undefined,
       editedAt: result.editedAt,
     });
   }
@@ -376,7 +414,8 @@ async function enrichResults(
     r.criteriaScores?.find((cs) => cs.key === "depth")?.score ?? 0;
   enriched.sort((a, b) => {
     const scoreDiff =
-      (b.weightedScore ?? b.totalScore ?? -1) - (a.weightedScore ?? a.totalScore ?? -1);
+      (b.weightedScore ?? b.totalScore ?? -1) -
+      (a.weightedScore ?? a.totalScore ?? -1);
     if (scoreDiff !== 0) return scoreDiff;
     const componentDiff =
       (b.componentsUsed?.length ?? 0) - (a.componentsUsed?.length ?? 0);
@@ -460,6 +499,18 @@ export const startReview = mutation({
       );
     }
 
+    // Group activity log entry for the audit trail
+    await logActivity(ctx, {
+      category: "judging",
+      action: "judging.aiRunStarted",
+      message: `Started an AI review run in ${group.name} (${pendingIds.length} submission${pendingIds.length === 1 ? "" : "s"} queued)`,
+      targetType: "judgingGroup",
+      targetId: args.groupId,
+      targetLabel: group.name,
+      groupId: args.groupId,
+      metadata: { queued: pendingIds.length },
+    });
+
     return { queued: pendingIds.length };
   },
 });
@@ -484,8 +535,25 @@ export const retrySubmission = mutation({
       status: "pending" as const,
       error: undefined,
     });
-    await aiJudgePool.enqueueAction(ctx, internal.aiJudgeAnalysis.analyzeSubmission, {
-      resultId: args.resultId,
+    await aiJudgePool.enqueueAction(
+      ctx,
+      internal.aiJudgeAnalysis.analyzeSubmission,
+      {
+        resultId: args.resultId,
+      },
+    );
+
+    // Group activity log entry for the audit trail
+    const retryStory = await ctx.db.get(result.storyId);
+    await logActivity(ctx, {
+      category: "judging",
+      action: "judging.aiRetryQueued",
+      message: `Queued an AI review retry for "${retryStory?.title ?? "a submission"}"`,
+      targetType: "story",
+      targetId: result.storyId,
+      targetLabel: retryStory?.title,
+      groupId: result.groupId,
+      metadata: { storySlug: retryStory?.slug },
     });
     return null;
   },
@@ -537,7 +605,11 @@ export const updateAiRubricWeights = mutation({
           throw new Error(`Duplicate rubric key "${entry.key}"`);
         }
         seen.add(entry.key);
-        if (!Number.isFinite(entry.weight) || entry.weight < 0 || entry.weight > 10) {
+        if (
+          !Number.isFinite(entry.weight) ||
+          entry.weight < 0 ||
+          entry.weight > 10
+        ) {
           throw new Error("Weights must be numbers between 0 and 10");
         }
       }
@@ -560,7 +632,11 @@ export const updateAiRubricWeights = mutation({
           throw new Error(`Duplicate frontend platform key "${entry.key}"`);
         }
         seenPlatforms.add(entry.key);
-        if (!Number.isFinite(entry.weight) || entry.weight < 0 || entry.weight > 10) {
+        if (
+          !Number.isFinite(entry.weight) ||
+          entry.weight < 0 ||
+          entry.weight > 10
+        ) {
           throw new Error("Platform weights must be numbers between 0 and 10");
         }
       }
@@ -624,7 +700,9 @@ export const updateAiCustomCriteria = mutation({
 
     if (criteria) {
       if (criteria.length > MAX_CUSTOM_CRITERIA) {
-        throw new Error(`At most ${MAX_CUSTOM_CRITERIA} custom criteria are allowed`);
+        throw new Error(
+          `At most ${MAX_CUSTOM_CRITERIA} custom criteria are allowed`,
+        );
       }
       const builtInKeys = new Set(AI_JUDGE_RUBRIC.map((c) => c.key));
       const seen = new Set<string>();
@@ -674,7 +752,8 @@ export const updateAiCustomCriteria = mutation({
     await ctx.db.patch(args.groupId, {
       aiCustomCriteria: criteria,
       aiRubricWeights: prunedWeights.length > 0 ? prunedWeights : undefined,
-      aiDisabledCriteria: prunedDisabled.length > 0 ? prunedDisabled : undefined,
+      aiDisabledCriteria:
+        prunedDisabled.length > 0 ? prunedDisabled : undefined,
       ...(keepFrontendWeights ? {} : { aiFrontendWeights: undefined }),
     });
     return null;
@@ -781,7 +860,10 @@ export const updateResultScore = mutation({
       }
     }
 
-    const totalScore = args.criteriaScores.reduce((sum, cs) => sum + cs.score, 0);
+    const totalScore = args.criteriaScores.reduce(
+      (sum, cs) => sum + cs.score,
+      0,
+    );
     const averageScore =
       args.criteriaScores.length > 0
         ? Math.round((totalScore / args.criteriaScores.length) * 100) / 100
@@ -834,6 +916,7 @@ export const getGroupAiResults = query({
       rows,
       group?.aiRubricWeights,
       group?.aiFrontendWeights,
+      { includeLogMeta: true }, // Admin view: show log cross-check notes
     );
     const counts = { pending: 0, running: 0, completed: 0, failed: 0 };
     for (const r of results) {
@@ -951,7 +1034,11 @@ export const getGroupAiReportData = query({
         note: string;
       };
       frontendHosting?: { platform: string; evidence: string };
-      sourcesUsed?: { github: boolean; liveUrl: boolean; videoTranscript?: boolean };
+      sourcesUsed?: {
+        github: boolean;
+        liveUrl: boolean;
+        videoTranscript?: boolean;
+      };
       error?: string;
     }> = [];
 
@@ -972,10 +1059,14 @@ export const getGroupAiReportData = query({
         criteriaScores: row.criteriaScores,
         totalScore: row.totalScore,
         averageScore: row.averageScore,
-        weightedScore: computeWeightedScore(row.criteriaScores, group.aiRubricWeights, {
-          platform: row.frontendHosting?.platform,
-          platformWeights: group.aiFrontendWeights,
-        }),
+        weightedScore: computeWeightedScore(
+          row.criteriaScores,
+          group.aiRubricWeights,
+          {
+            platform: row.frontendHosting?.platform,
+            platformWeights: group.aiFrontendWeights,
+          },
+        ),
         overallReasoning: row.overallReasoning,
         convexFeaturesDetected: row.convexFeaturesDetected,
         componentsDetected: row.componentsDetected,
@@ -1057,6 +1148,8 @@ export const getSubmissionForAnalysis = internalQuery({
       githubUrl: v.optional(v.string()),
       videoUrl: v.optional(v.string()),
       tags: v.array(v.string()),
+      // Pasted hackathon.md (already capped + redacted at submission time)
+      hackathonLog: v.optional(v.string()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -1089,6 +1182,7 @@ export const getSubmissionForAnalysis = internalQuery({
       githubUrl: story.githubUrl,
       videoUrl: story.videoUrl,
       tags,
+      hackathonLog: story.hackathonLog,
     };
   },
 });
@@ -1121,6 +1215,10 @@ export const saveResult = internalMutation({
         }),
         urlCheck: v.optional(urlCheckValidator),
         frontendHosting: v.optional(frontendHostingValidator),
+        // hackathon.md header claims vs detected facts (recorded, never scored)
+        logDiscrepancies: v.optional(v.array(v.string())),
+        // Event free text from the hackathon.md header (repo copy wins)
+        hackathonLogEvent: v.optional(v.string()),
       }),
       v.object({
         kind: v.literal("error"),
@@ -1140,7 +1238,9 @@ export const saveResult = internalMutation({
       );
       const averageScore =
         args.outcome.criteriaScores.length > 0
-          ? Math.round((totalScore / args.outcome.criteriaScores.length) * 100) / 100
+          ? Math.round(
+              (totalScore / args.outcome.criteriaScores.length) * 100,
+            ) / 100
           : 0;
       await ctx.db.patch(args.resultId, {
         status: "completed" as const,
@@ -1163,6 +1263,8 @@ export const saveResult = internalMutation({
         sourcesUsed: args.outcome.sourcesUsed,
         urlCheck: args.outcome.urlCheck,
         frontendHosting: args.outcome.frontendHosting,
+        logDiscrepancies: args.outcome.logDiscrepancies,
+        hackathonLogEvent: args.outcome.hackathonLogEvent,
         error: undefined,
         editedBy: undefined,
         editedAt: undefined,
@@ -1171,6 +1273,45 @@ export const saveResult = internalMutation({
       await ctx.db.patch(args.resultId, {
         status: "failed" as const,
         error: args.outcome.errorMessage,
+      });
+    }
+
+    // Group activity log entry per finished review (actor is the AI judge)
+    const reviewedStory = await ctx.db.get(result.storyId);
+    if (args.outcome.kind === "success") {
+      const avg =
+        args.outcome.criteriaScores.length > 0
+          ? Math.round(
+              (args.outcome.criteriaScores.reduce(
+                (sum, cs) => sum + cs.score,
+                0,
+              ) /
+                args.outcome.criteriaScores.length) *
+                100,
+            ) / 100
+          : 0;
+      await logActivity(ctx, {
+        category: "judging",
+        action: "judging.aiReviewCompleted",
+        message: `AI review completed for "${reviewedStory?.title ?? "a submission"}" (avg ${avg})`,
+        actorName: "AI Judge",
+        targetType: "story",
+        targetId: result.storyId,
+        targetLabel: reviewedStory?.title,
+        groupId: result.groupId,
+        metadata: { storySlug: reviewedStory?.slug, averageScore: avg },
+      });
+    } else {
+      await logActivity(ctx, {
+        category: "judging",
+        action: "judging.aiReviewFailed",
+        message: `AI review failed for "${reviewedStory?.title ?? "a submission"}": ${args.outcome.errorMessage.slice(0, 140)}`,
+        actorName: "AI Judge",
+        targetType: "story",
+        targetId: result.storyId,
+        targetLabel: reviewedStory?.title,
+        groupId: result.groupId,
+        metadata: { storySlug: reviewedStory?.slug },
       });
     }
 
@@ -1258,7 +1399,10 @@ export const verifyAiResultsPassword = query({
 });
 
 // Shared handler for public/validated AI results: completed results only, ranked
-async function getCompletedResultsForGroup(ctx: QueryCtx, groupId: Id<"judgingGroups">) {
+async function getCompletedResultsForGroup(
+  ctx: QueryCtx,
+  groupId: Id<"judgingGroups">,
+) {
   const group = await ctx.db.get(groupId);
   const rows = await ctx.db
     .query("aiJudgeResults")

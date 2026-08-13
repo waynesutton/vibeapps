@@ -8,6 +8,10 @@ import {
   type RubricCriterion,
 } from "./aiJudge";
 import { fetchVideoContext, type VideoContext } from "./videoTranscripts";
+import {
+  parseHackathonLogHeader,
+  type HackathonLogHeader,
+} from "./hackathonLog";
 
 // Content budgets so prompts stay well under model context limits.
 // Facts are counted from a wider file set than the prompt includes, so
@@ -55,6 +59,10 @@ type RepoContext = {
   // Hackathon/tracking markdown files found at the repo root (self-reported
   // build context: hackathon.md, changelog.md, task.md, files.md)
   logFiles: Array<{ path: string; content: string }>;
+  // Auth provider detected from package.json dependencies ("Clerk",
+  // "WorkOS", "Convex Auth", "Better Auth", or "none"). Undefined when the
+  // repo or its package.json was not readable.
+  authProviderFromDeps?: string;
   // Agent skills present in the repo (.agents/skills/*/SKILL.md and similar)
   skillPaths: Array<string>;
   repoMeta?: {
@@ -118,7 +126,10 @@ function extractComponents(
         ...Object.keys(pkg.devDependencies || {}),
       ];
       for (const dep of deps) {
-        if (dep.startsWith("@convex-dev/") && dep !== "@convex-dev/eslint-plugin") {
+        if (
+          dep.startsWith("@convex-dev/") &&
+          dep !== "@convex-dev/eslint-plugin"
+        ) {
           found.add(dep.replace("@convex-dev/", ""));
         }
       }
@@ -146,6 +157,37 @@ function extractComponents(
   }
 
   return [...found].sort();
+}
+
+// Detect the auth provider from package.json dependencies for the
+// hackathon.md cross-check. Returns undefined when package.json was not
+// readable, "none" when no known provider dependency is present.
+function detectAuthProviderFromDeps(
+  packageJsonRaw: string | null,
+): string | undefined {
+  if (!packageJsonRaw) return undefined;
+  try {
+    const pkg = JSON.parse(packageJsonRaw) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    const deps = [
+      ...Object.keys(pkg.dependencies || {}),
+      ...Object.keys(pkg.devDependencies || {}),
+    ];
+    if (deps.some((d) => d.startsWith("@clerk/"))) return "Clerk";
+    if (deps.some((d) => d.startsWith("@workos-inc/"))) return "WorkOS";
+    if (deps.includes("@convex-dev/auth")) return "Convex Auth";
+    if (
+      deps.includes("better-auth") ||
+      deps.includes("@convex-dev/better-auth")
+    ) {
+      return "Better Auth";
+    }
+    return "none";
+  } catch {
+    return undefined;
+  }
 }
 
 // Strip // line comments and /* */ block comments without touching string
@@ -292,7 +334,8 @@ function extractComponentsUsed(
   fileContentsByPath: Map<string, string>,
   componentsInstalled: Array<string>,
 ): Array<string> {
-  const normalize = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const normalize = (name: string) =>
+    name.toLowerCase().replace(/[^a-z0-9]/g, "");
   const installedByNormalized = new Map<string, string>();
   for (const name of componentsInstalled) {
     installedByNormalized.set(normalize(name), name);
@@ -418,7 +461,9 @@ async function githubFetch(
 // fact extraction; only the top MAX_CONVEX_FILES_PROMPT by priority go into
 // the prompt. Facts are computed from the wider set so large projects are
 // measured completely (fixes truncation bias against complex submissions).
-async function fetchGithubContext(githubUrl: string | undefined): Promise<RepoContext> {
+async function fetchGithubContext(
+  githubUrl: string | undefined,
+): Promise<RepoContext> {
   const empty: RepoContext = {
     fetched: false,
     summary: "",
@@ -449,7 +494,9 @@ async function fetchGithubContext(githubUrl: string | undefined): Promise<RepoCo
   };
   const defaultBranch = repoJson.default_branch || "main";
   const repoMeta = {
-    createdAt: repoJson.created_at ? Date.parse(repoJson.created_at) : undefined,
+    createdAt: repoJson.created_at
+      ? Date.parse(repoJson.created_at)
+      : undefined,
     isFork: repoJson.fork === true,
     parentRepo: repoJson.parent?.full_name ?? undefined,
     defaultBranch,
@@ -464,7 +511,9 @@ async function fetchGithubContext(githubUrl: string | undefined): Promise<RepoCo
     const treeJson = (await treeRes.json()) as {
       tree?: Array<{ path: string; type: string; size?: number }>;
     };
-    treeEntries = (treeJson.tree || []).filter((entry) => entry.type === "blob");
+    treeEntries = (treeJson.tree || []).filter(
+      (entry) => entry.type === "blob",
+    );
   }
   const filePaths = treeEntries.map((entry) => entry.path);
   const sizeByPath = new Map(treeEntries.map((e) => [e.path, e.size ?? 0]));
@@ -481,13 +530,11 @@ async function fetchGithubContext(githubUrl: string | undefined): Promise<RepoCo
     if (/(^|\/)convex\/crons\.ts$/.test(p)) return 3;
     return 4;
   };
-  const convexFilesOrdered = filePaths
-    .filter(isConvexSource)
-    .sort((a, b) => {
-      const rankDiff = priorityRank(a) - priorityRank(b);
-      if (rankDiff !== 0) return rankDiff;
-      return (sizeByPath.get(b) ?? 0) - (sizeByPath.get(a) ?? 0);
-    });
+  const convexFilesOrdered = filePaths.filter(isConvexSource).sort((a, b) => {
+    const rankDiff = priorityRank(a) - priorityRank(b);
+    if (rankDiff !== 0) return rankDiff;
+    return (sizeByPath.get(b) ?? 0) - (sizeByPath.get(a) ?? 0);
+  });
 
   const factFiles = convexFilesOrdered.slice(0, MAX_CONVEX_FILES_FACTS);
   const promptConvexFiles = new Set(
@@ -549,7 +596,10 @@ async function fetchGithubContext(githubUrl: string | undefined): Promise<RepoCo
     ? (fileContentsByPath.get(convexConfigPath) ?? null)
     : null;
 
-  const componentsInstalled = extractComponents(packageJsonRaw, convexConfigRaw);
+  const componentsInstalled = extractComponents(
+    packageJsonRaw,
+    convexConfigRaw,
+  );
   const componentsUsed = extractComponentsUsed(
     fileContentsByPath,
     componentsInstalled,
@@ -615,6 +665,7 @@ async function fetchGithubContext(githubUrl: string | undefined): Promise<RepoCo
     repoFacts,
     filePaths,
     logFiles,
+    authProviderFromDeps: detectAuthProviderFromDeps(packageJsonRaw),
     skillPaths,
     repoMeta,
   };
@@ -634,7 +685,10 @@ async function fetchCommitHistory(
   let capped = false;
 
   for (let page = 1; page <= 3; page++) {
-    const res = await githubFetch(`${base}/commits?per_page=100&page=${page}`, headers);
+    const res = await githubFetch(
+      `${base}/commits?per_page=100&page=${page}`,
+      headers,
+    );
     // 409 = empty repo; 404 = private/missing. Either way: no history.
     if (!res.ok) {
       return { fetched: page > 1, commits, capped };
@@ -689,8 +743,10 @@ function computeGitFacts(
   const timestamps = history.commits
     .map((c) => c.committedAt)
     .filter((t): t is number => t !== undefined);
-  const firstCommitAt = timestamps.length > 0 ? Math.min(...timestamps) : undefined;
-  const lastCommitAt = timestamps.length > 0 ? Math.max(...timestamps) : undefined;
+  const firstCommitAt =
+    timestamps.length > 0 ? Math.min(...timestamps) : undefined;
+  const lastCommitAt =
+    timestamps.length > 0 ? Math.max(...timestamps) : undefined;
 
   const days = new Set<string>();
   for (const t of timestamps) {
@@ -705,7 +761,8 @@ function computeGitFacts(
 
   let builtDuringEvent: GitFacts["builtDuringEvent"] = "no_window_set";
   if (eventStartDate !== undefined && firstCommitAt !== undefined) {
-    builtDuringEvent = firstCommitAt >= eventStartDate ? "in_window" : "started_before";
+    builtDuringEvent =
+      firstCommitAt >= eventStartDate ? "in_window" : "started_before";
   }
   // eventEndDate is informational only; late commits are not an eligibility flag
   void eventEndDate;
@@ -800,7 +857,9 @@ function detectHarnessSignals(
   if (
     has(
       (p) =>
-        p === "opencode.json" || p === "opencode.jsonc" || p.startsWith(".opencode/"),
+        p === "opencode.json" ||
+        p === "opencode.jsonc" ||
+        p.startsWith(".opencode/"),
     )
   ) {
     add({
@@ -850,7 +909,8 @@ function detectHarnessSignals(
     add({
       tool: "unknown",
       source: "config_file",
-      evidence: "AGENTS.md alone (may be written by npx convex ai-files install)",
+      evidence:
+        "AGENTS.md alone (may be written by npx convex ai-files install)",
       confidence: "low",
     });
   }
@@ -858,7 +918,8 @@ function detectHarnessSignals(
     add({
       tool: "claude-code",
       source: "config_file",
-      evidence: "CLAUDE.md alone (may be written by npx convex ai-files install)",
+      evidence:
+        "CLAUDE.md alone (may be written by npx convex ai-files install)",
       confidence: "low",
     });
   }
@@ -902,7 +963,9 @@ function buildFeaturesFromFacts(
 // Deterministic liveness check of the submission's live app URL (never social
 // links). GET with redirects followed; any 2xx/3xx counts as live. Also
 // captures the response headers used by the hosting platform detection.
-async function checkUrlLiveness(url: string | undefined): Promise<LivenessResult> {
+async function checkUrlLiveness(
+  url: string | undefined,
+): Promise<LivenessResult> {
   if (!url) {
     return { check: { isLive: false, note: "no URL provided" }, headers: {} };
   }
@@ -910,7 +973,10 @@ async function checkUrlLiveness(url: string | undefined): Promise<LivenessResult
   try {
     parsed = new URL(url);
   } catch {
-    return { check: { checkedUrl: url, isLive: false, note: "invalid URL" }, headers: {} };
+    return {
+      check: { checkedUrl: url, isLive: false, note: "invalid URL" },
+      headers: {},
+    };
   }
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
     return {
@@ -937,7 +1003,12 @@ async function checkUrlLiveness(url: string | undefined): Promise<LivenessResult
     }
     if (res.ok) {
       return {
-        check: { checkedUrl: url, isLive: true, statusCode: res.status, note: "OK" },
+        check: {
+          checkedUrl: url,
+          isLive: true,
+          statusCode: res.status,
+          note: "OK",
+        },
         headers,
       };
     }
@@ -1021,7 +1092,10 @@ function detectFrontendHosting(
   if (repo.fetched) {
     const paths = repo.filePaths;
     if (paths.some((p) => p === ".openai/hosting.json")) {
-      return { platform: "codex-sites", evidence: ".openai/hosting.json in repo" };
+      return {
+        platform: "codex-sites",
+        evidence: ".openai/hosting.json in repo",
+      };
     }
     if (repo.componentsInstalled.includes("self-static-hosting")) {
       return {
@@ -1044,8 +1118,77 @@ function detectFrontendHosting(
   return undefined;
 }
 
+// Map the free-text frontend claim from a hackathon.md header to one of the
+// AI_FRONTEND_PLATFORMS keys. Unknown claims return undefined (no check).
+function mapHeaderFrontendToPlatform(value: string): string | undefined {
+  const lower = value.toLowerCase();
+  if (lower.includes("vercel")) return "vercel";
+  if (lower.includes("netlify")) return "netlify";
+  if (lower.includes("codex")) return "codex-sites";
+  if (lower.includes("convex")) return "convex-hosting";
+  return undefined;
+}
+
+// Cross-check hackathon.md header claims against detected facts. All three
+// checks are recorded only: they never change a score or a frontend weight.
+function computeLogDiscrepancies(
+  header: HackathonLogHeader,
+  frontendHosting: FrontendHosting | undefined,
+  repo: RepoContext,
+): Array<string> {
+  const discrepancies: Array<string> = [];
+
+  // a. Frontend platform claim vs deterministic detection
+  if (
+    header.frontend &&
+    frontendHosting &&
+    frontendHosting.platform !== "other"
+  ) {
+    const claimed = mapHeaderFrontendToPlatform(header.frontend);
+    if (claimed && claimed !== frontendHosting.platform) {
+      discrepancies.push(
+        `log says ${header.frontend}, detection says ${frontendHosting.platform} (${frontendHosting.evidence})`,
+      );
+    }
+  }
+
+  // b. Component claims vs the repo scan (package.json + convex.config.ts)
+  if (header.components && header.components.length > 0 && repo.fetched) {
+    const found = new Set(repo.componentsInstalled.map((c) => c.toLowerCase()));
+    const missing = header.components.filter((c) => {
+      const normalized = c
+        .toLowerCase()
+        .replace(/^@convex-dev\//, "")
+        .trim();
+      return normalized.length > 0 && !found.has(normalized);
+    });
+    if (missing.length > 0) {
+      discrepancies.push(
+        `log lists components not found in the repo scan: ${missing.join(", ")}`,
+      );
+    }
+  }
+
+  // c. Auth claim vs package.json dependencies (case-insensitive; claims
+  //    outside the known map compare as written so future providers degrade
+  //    to a readable string instead of a false mismatch)
+  if (header.auth && repo.authProviderFromDeps !== undefined) {
+    const claimed = header.auth.trim().toLowerCase();
+    const detected = repo.authProviderFromDeps.toLowerCase();
+    if (claimed !== detected) {
+      discrepancies.push(
+        `log says ${header.auth}, repo dependencies say ${repo.authProviderFromDeps}`,
+      );
+    }
+  }
+
+  return discrepancies;
+}
+
 // Scrape the live URL to markdown via Firecrawl (skipped if key is not set)
-async function fetchLiveUrlContext(url: string | undefined): Promise<ScrapeContext> {
+async function fetchLiveUrlContext(
+  url: string | undefined,
+): Promise<ScrapeContext> {
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey || !url) return { fetched: false, markdown: "" };
 
@@ -1056,7 +1199,11 @@ async function fetchLiveUrlContext(url: string | undefined): Promise<ScrapeConte
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
+      body: JSON.stringify({
+        url,
+        formats: ["markdown"],
+        onlyMainContent: true,
+      }),
     });
     if (!res.ok) return { fetched: false, markdown: "" };
     const json = (await res.json()) as {
@@ -1144,7 +1291,10 @@ function buildSystemPrompt(
   rubric: Array<RubricCriterion>,
 ): string {
   const rubricText = rubric
-    .map((c, idx) => `${idx + 1}. key: "${c.key}" — ${c.label}\n   ${c.description}`)
+    .map(
+      (c, idx) =>
+        `${idx + 1}. key: "${c.key}" — ${c.label}\n   ${c.description}`,
+    )
     .join("\n");
 
   let body = (customBody ?? DEFAULT_AI_JUDGE_PROMPT_BODY).trim();
@@ -1153,6 +1303,11 @@ function buildSystemPrompt(
   } else {
     body += `\n\nScore the submission on each rubric criterion from 1 to 10:\n${rubricText}`;
   }
+
+  // hackathon.md handling: self-reported context can support but never
+  // inflate a score. Appended outside the editable body so it always applies.
+  body +=
+    "\n\nA pasted or repo hackathon.md is self-reported context. Cross-check its claims against code facts and the live deployment; a claim contradicted by facts must never raise a score.";
 
   const jsonContract = `Respond with ONLY a JSON object in exactly this shape (no markdown fences, no extra text):
 {
@@ -1182,7 +1337,8 @@ function formatRepoFacts(facts: RepoFacts): string {
 
 // Render the git history block for the user message
 function formatGitFacts(git: GitFacts): string {
-  const fmt = (t?: number) => (t !== undefined ? new Date(t).toISOString() : "unknown");
+  const fmt = (t?: number) =>
+    t !== undefined ? new Date(t).toISOString() : "unknown";
   const lines = [
     `First commit (committer date): ${fmt(git.firstCommitAt)}`,
     `Last commit (committer date): ${fmt(git.lastCommitAt)}`,
@@ -1195,7 +1351,9 @@ function formatGitFacts(git: GitFacts): string {
       "Event window: the first commit predates the judging group's start date (started_before). Mention this in overallReasoning as an eligibility note for organizers; do not change any criterion score because of it.",
     );
   } else if (git.builtDuringEvent === "in_window") {
-    lines.push("Event window: first commit is within the judging group's event window.");
+    lines.push(
+      "Event window: first commit is within the judging group's event window.",
+    );
   }
   return lines.join("\n");
 }
@@ -1212,6 +1370,8 @@ function buildUserMessage(
     githubUrl?: string;
     videoUrl?: string;
     tags: Array<string>;
+    // Pasted hackathon.md (capped + redacted at submission time)
+    hackathonLog?: string;
   },
   repo: RepoContext,
   scrape: ScrapeContext,
@@ -1225,7 +1385,8 @@ function buildUserMessage(
     `SUBMISSION: ${data.title}`,
     `Tagline: ${data.description}`,
   ];
-  if (data.longDescription) sections.push(`Description: ${data.longDescription}`);
+  if (data.longDescription)
+    sections.push(`Description: ${data.longDescription}`);
   if (data.tags.length > 0) sections.push(`Tags: ${data.tags.join(", ")}`);
   sections.push(`Live URL: ${data.url || "not provided"}`);
   sections.push(`GitHub URL: ${data.githubUrl || "not provided"}`);
@@ -1258,7 +1419,8 @@ function buildUserMessage(
     `\n=== CONVEX COMPONENTS ===\nUsed in code (components.<name> referenced): ${
       repo.componentsUsed.length > 0 ? repo.componentsUsed.join(", ") : "none"
     }\nInstalled but not referenced in fetched code: ${
-      repo.componentsInstalled.filter((c) => !repo.componentsUsed.includes(c)).length > 0
+      repo.componentsInstalled.filter((c) => !repo.componentsUsed.includes(c))
+        .length > 0
         ? repo.componentsInstalled
             .filter((c) => !repo.componentsUsed.includes(c))
             .join(", ")
@@ -1272,13 +1434,33 @@ function buildUserMessage(
     );
   }
 
-  // Self-reported hackathon/tracking markdown from the repo root
-  if (repo.logFiles.length > 0) {
-    const logSections = repo.logFiles
-      .map((f) => `--- FILE: ${f.path} ---\n${f.content}`)
-      .join("\n");
+  // Self-reported hackathon/tracking markdown: repo root files plus, for
+  // private/no-repo submissions, the hackathon.md pasted at submission time.
+  // The repo copy always wins; never include both in full.
+  const repoHasHackathonMd = repo.logFiles.some((f) =>
+    /^hackathon\.md$/i.test(f.path),
+  );
+  const logEntries = repo.logFiles.map(
+    (f) => `--- FILE: ${f.path} ---\n${f.content}`,
+  );
+  if (data.hackathonLog) {
+    if (repoHasHackathonMd) {
+      logEntries.push(
+        "Note: a hackathon.md was also pasted at submission; the repo copy above is used and the pasted copy is ignored.",
+      );
+    } else {
+      const pasted =
+        data.hackathonLog.length > MAX_LOG_FILE_CHARS
+          ? data.hackathonLog.slice(0, MAX_LOG_FILE_CHARS) + "\n... (truncated)"
+          : data.hackathonLog;
+      logEntries.push(
+        `--- FILE: hackathon.md (pasted at submission; self-reported) ---\n${pasted}`,
+      );
+    }
+  }
+  if (logEntries.length > 0) {
     sections.push(
-      `\n=== PROJECT LOG FILES (self-reported by the team; verify against facts) ===\n${logSections}`,
+      `\n=== PROJECT LOG FILES (self-reported by the team; verify against facts) ===\n${logEntries.join("\n")}`,
     );
   }
 
@@ -1337,7 +1519,10 @@ type LlmResult = {
 };
 
 // Call Anthropic Messages API
-async function callAnthropic(systemPrompt: string, userMessage: string): Promise<LlmResult> {
+async function callAnthropic(
+  systemPrompt: string,
+  userMessage: string,
+): Promise<LlmResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY not set");
   const model = "claude-sonnet-4-5";
@@ -1462,7 +1647,12 @@ async function callLlmWithFallback(
 }
 
 type ParsedAnalysis = {
-  criteriaScores: Array<{ key: string; label: string; score: number; reasoning: string }>;
+  criteriaScores: Array<{
+    key: string;
+    label: string;
+    score: number;
+    reasoning: string;
+  }>;
   overallReasoning: string;
 };
 
@@ -1479,7 +1669,8 @@ function parseAnalysisResponse(
   if (!cleaned.startsWith("{")) {
     const start = cleaned.indexOf("{");
     const end = cleaned.lastIndexOf("}");
-    if (start === -1 || end === -1) throw new Error("Response contained no JSON object");
+    if (start === -1 || end === -1)
+      throw new Error("Response contained no JSON object");
     cleaned = cleaned.slice(start, end + 1);
   }
 
@@ -1495,7 +1686,9 @@ function parseAnalysisResponse(
   const criteriaScores = rubric.map((rubricItem) => {
     const entry = parsed.criteria![rubricItem.key];
     if (!entry || typeof entry.score !== "number") {
-      throw new Error(`Response missing score for criterion "${rubricItem.key}"`);
+      throw new Error(
+        `Response missing score for criterion "${rubricItem.key}"`,
+      );
     }
     const score = Math.min(10, Math.max(1, Math.round(entry.score)));
     return {
@@ -1509,11 +1702,18 @@ function parseAnalysisResponse(
   return {
     criteriaScores,
     overallReasoning:
-      typeof parsed.overallReasoning === "string" ? parsed.overallReasoning : "",
+      typeof parsed.overallReasoning === "string"
+        ? parsed.overallReasoning
+        : "",
   };
 }
 
-type CriteriaScore = { key: string; label: string; score: number; reasoning: string };
+type CriteriaScore = {
+  key: string;
+  label: string;
+  score: number;
+  reasoning: string;
+};
 
 // Cap one criterion at `cap`, prefixing the reasoning with the clamp note
 function clampCriterion(
@@ -1537,12 +1737,17 @@ export const analyzeSubmission = internalAction({
   args: { resultId: v.id("aiJudgeResults") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await ctx.runMutation(internal.aiJudge.markRunning, { resultId: args.resultId });
+    await ctx.runMutation(internal.aiJudge.markRunning, {
+      resultId: args.resultId,
+    });
 
     try {
-      const data = await ctx.runQuery(internal.aiJudge.getSubmissionForAnalysis, {
-        resultId: args.resultId,
-      });
+      const data = await ctx.runQuery(
+        internal.aiJudge.getSubmissionForAnalysis,
+        {
+          resultId: args.resultId,
+        },
+      );
       if (!data) {
         throw new Error("Submission is no longer available for review");
       }
@@ -1550,7 +1755,9 @@ export const analyzeSubmission = internalAction({
       // Gather context: GitHub repo + commit history (primary), live URL
       // scrape (secondary), a deterministic liveness check, and the video
       // demo transcript (unverified narrative, cached per story)
-      const parsedRepoUrl = data.githubUrl ? parseGithubUrl(data.githubUrl) : null;
+      const parsedRepoUrl = data.githubUrl
+        ? parseGithubUrl(data.githubUrl)
+        : null;
       const [repo, commitHistory, scrape, liveness, manifest, video] =
         await Promise.all([
           fetchGithubContext(data.githubUrl),
@@ -1580,6 +1787,19 @@ export const analyzeSubmission = internalAction({
         liveness.headers,
         repo,
       );
+
+      // hackathon.md header cross-checks (recorded only, never scored).
+      // The repo copy wins over the pasted one, matching the prompt rule.
+      const repoHackathonMd = repo.logFiles.find((f) =>
+        /^hackathon\.md$/i.test(f.path),
+      );
+      const effectiveLog = repoHackathonMd?.content ?? data.hackathonLog;
+      const logHeader = effectiveLog
+        ? parseHackathonLogHeader(effectiveLog)
+        : undefined;
+      const logDiscrepancies = logHeader
+        ? computeLogDiscrepancies(logHeader, frontendHosting, repo)
+        : [];
 
       // Build timeline + harness metadata (harness never feeds scoring)
       const gitFacts = repo.fetched
@@ -1617,7 +1837,8 @@ export const analyzeSubmission = internalAction({
           llm = await callLlmWithFallback(systemPrompt, userMessage);
           parsed = parseAnalysisResponse(llm.text, rubric);
         } catch (error) {
-          lastError = error instanceof Error ? error : new Error("Analysis failed");
+          lastError =
+            error instanceof Error ? error : new Error("Analysis failed");
         }
       }
       if (!parsed || !llm) {
@@ -1651,13 +1872,23 @@ export const analyzeSubmission = internalAction({
 
       if (!repo.fetched) {
         // 2. Repo not fetched: all repo-based criteria capped at 4
-        const note = "Repository was not accessible, so this score is capped at 4.";
-        for (const key of ["schema", "functions", "realtime", "advanced", "depth"]) {
+        const note =
+          "Repository was not accessible, so this score is capped at 4.";
+        for (const key of [
+          "schema",
+          "functions",
+          "realtime",
+          "advanced",
+          "depth",
+        ]) {
           criteriaScores = clampCriterion(criteriaScores, key, 4, note);
         }
       } else if (repo.repoFacts) {
         // 3. No Convex code at all: schema and functions capped at 2
-        if (repo.repoFacts.tableCount === 0 && repo.repoFacts.convexFileCount === 0) {
+        if (
+          repo.repoFacts.tableCount === 0 &&
+          repo.repoFacts.convexFileCount === 0
+        ) {
           const note =
             "Verified facts: no convex/ directory and no tables were found, so this score is capped at 2.";
           criteriaScores = clampCriterion(criteriaScores, "schema", 2, note);
@@ -1673,8 +1904,12 @@ export const analyzeSubmission = internalAction({
       }
 
       let overallReasoning = parsed.overallReasoning;
-      if (!urlCheck.isLive && !/404|not live|unreachable|no url|dead/i.test(overallReasoning)) {
-        overallReasoning = `${overallReasoning} Note: the submitted live app URL was not working at review time (${urlCheck.note}).`.trim();
+      if (
+        !urlCheck.isLive &&
+        !/404|not live|unreachable|no url|dead/i.test(overallReasoning)
+      ) {
+        overallReasoning =
+          `${overallReasoning} Note: the submitted live app URL was not working at review time (${urlCheck.note}).`.trim();
       }
       if (
         gitFacts?.builtDuringEvent === "started_before" &&
@@ -1711,6 +1946,9 @@ export const analyzeSubmission = internalAction({
           },
           urlCheck,
           frontendHosting,
+          logDiscrepancies:
+            logDiscrepancies.length > 0 ? logDiscrepancies : undefined,
+          hackathonLogEvent: logHeader?.event,
         },
       });
     } catch (error) {
@@ -1718,7 +1956,8 @@ export const analyzeSubmission = internalAction({
         resultId: args.resultId,
         outcome: {
           kind: "error" as const,
-          errorMessage: error instanceof Error ? error.message : "Unknown error",
+          errorMessage:
+            error instanceof Error ? error.message : "Unknown error",
         },
       });
     }

@@ -2,7 +2,10 @@ import { v } from "convex/values";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import { paginationOptsValidator } from "convex/server";
 import { Id } from "./_generated/dataModel";
-import { requirePermission } from "./adminAccess";
+import {
+  requirePermission,
+  requireJudgingGroupPermission,
+} from "./adminAccess";
 
 // Category keys for activity entries. Matches the schema union.
 export const ACTIVITY_CATEGORIES = [
@@ -46,6 +49,7 @@ export type ActivityEntryInput = {
   targetType?: string;
   targetId?: string;
   targetLabel?: string;
+  groupId?: Id<"judgingGroups">; // Scope to a judging group for the per-group log
   metadata?: unknown;
 };
 
@@ -91,6 +95,7 @@ export async function logActivity(
       targetType: entry.targetType,
       targetId: entry.targetId,
       targetLabel: entry.targetLabel,
+      groupId: entry.groupId,
       metadata: entry.metadata,
       isArchived: false,
     });
@@ -110,6 +115,7 @@ const entryValidator = v.object({
   targetType: v.optional(v.string()),
   targetId: v.optional(v.string()),
   targetLabel: v.optional(v.string()),
+  groupId: v.optional(v.id("judgingGroups")),
   metadata: v.optional(v.any()),
   isArchived: v.boolean(),
 });
@@ -263,5 +269,63 @@ export const exportActivity = query({
           .query("activityLog")
           .withIndex("by_archived", (q) => q.eq("isArchived", args.archived));
     return await base.order("desc").take(EXPORT_CAP);
+  },
+});
+
+// --- Per-judging-group activity log ---
+
+/**
+ * Paginated newest-first activity for one judging group. Powers the
+ * Activity section in the group workspace. Scoped by judging.view so
+ * delegated users only see groups they were granted.
+ */
+export const listGroupActivity = query({
+  args: {
+    groupId: v.id("judgingGroups"),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.view");
+    return await ctx.db
+      .query("activityLog")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .order("desc")
+      .paginate(args.paginationOpts);
+  },
+});
+
+/**
+ * Rows for the CSV / markdown audit export of one group's log.
+ * Capped at 5000 newest-first rows.
+ */
+export const exportGroupActivity = query({
+  args: { groupId: v.id("judgingGroups") },
+  returns: v.array(entryValidator),
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.view");
+    return await ctx.db
+      .query("activityLog")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .order("desc")
+      .take(EXPORT_CAP);
+  },
+});
+
+/**
+ * Permanently clear one group's log in batches of 500. These rows also
+ * disappear from the site-wide Activity Log (same table). Frontend calls
+ * repeatedly until done is true.
+ */
+export const clearGroupActivity = mutation({
+  args: { groupId: v.id("judgingGroups") },
+  returns: v.object({ deleted: v.number(), done: v.boolean() }),
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.manage");
+    const batch = await ctx.db
+      .query("activityLog")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .take(CLEAR_BATCH);
+    await Promise.all(batch.map((row) => ctx.db.delete(row._id)));
+    return { deleted: batch.length, done: batch.length < CLEAR_BATCH };
   },
 });

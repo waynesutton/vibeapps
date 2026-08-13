@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { getAuthenticatedUserId } from "./users";
 import { requirePermission } from "./adminAccess";
+import { resolveDynamicFieldRecord } from "./storyFormFields"; // Generic mapping for admin-added form fields
 
 // Helper to generate slugs
 function generateSlug(title: string): string {
@@ -105,6 +106,7 @@ export const getSubmitFormWithFields = query({
             v.literal("url"),
             v.literal("text"),
             v.literal("email"),
+            v.literal("textarea"),
           ),
           description: v.optional(v.string()),
           storyPropertyName: v.string(),
@@ -135,13 +137,29 @@ export const getSubmitFormWithFields = query({
 
     // Get the actual additional field data
     const additionalFields = [];
+    const linkedFieldIds = new Set<string>();
     for (const link of fieldLinks) {
       const field = await ctx.db.get(link.storyFieldId);
       if (field) {
+        linkedFieldIds.add(field._id);
         additionalFields.push({
           ...field,
           order: coreFields.length + link.order, // Offset by core fields length
         });
+      }
+    }
+
+    // Auto-include enabled fields added in Manage Form Fields after this
+    // form was created, so new fields flow to every submit form.
+    const enabledFields = await ctx.db
+      .query("storyFormFields")
+      .withIndex("by_enabled", (q) => q.eq("isEnabled", true))
+      .collect();
+    let nextOrder = coreFields.length + additionalFields.length;
+    for (const field of enabledFields.sort((a, b) => a.order - b.order)) {
+      if (!linkedFieldIds.has(field._id)) {
+        additionalFields.push({ ...field, order: nextOrder });
+        nextOrder++;
       }
     }
 
@@ -424,6 +442,7 @@ export const getPublicSubmitForm = query({
             v.literal("url"),
             v.literal("text"),
             v.literal("email"),
+            v.literal("textarea"),
           ),
           description: v.optional(v.string()),
           storyPropertyName: v.string(),
@@ -456,13 +475,31 @@ export const getPublicSubmitForm = query({
 
     // Get the actual additional field data
     const additionalFields = [];
+    const linkedFieldIds = new Set<string>();
     for (const link of fieldLinks) {
       const field = await ctx.db.get(link.storyFieldId);
-      if (field && field.isEnabled) {
-        additionalFields.push({
-          ...field,
-          order: coreFields.length + link.order, // Offset by core fields length
-        });
+      if (field) {
+        linkedFieldIds.add(field._id);
+        if (field.isEnabled) {
+          additionalFields.push({
+            ...field,
+            order: coreFields.length + link.order, // Offset by core fields length
+          });
+        }
+      }
+    }
+
+    // Auto-include enabled fields added in Manage Form Fields after this
+    // form was created, so new fields flow to every public submit form.
+    const enabledFields = await ctx.db
+      .query("storyFormFields")
+      .withIndex("by_enabled", (q) => q.eq("isEnabled", true))
+      .collect();
+    let nextOrder = coreFields.length + additionalFields.length;
+    for (const field of enabledFields.sort((a, b) => a.order - b.order)) {
+      if (!linkedFieldIds.has(field._id)) {
+        additionalFields.push({ ...field, order: nextOrder });
+        nextOrder++;
       }
     }
 
@@ -564,6 +601,12 @@ export const submitFormData = mutation({
       tagIds.push(...args.formData.tagIds);
     }
 
+    // Map admin-managed form fields generically: known keys fill their
+    // stories column (hackathonLog sanitized), the rest persist in
+    // dynamicFormValues so new admin-added fields are never dropped.
+    const { dynamicColumns, dynamicFormValues } =
+      await resolveDynamicFieldRecord(ctx, args.formData);
+
     // Create the story from form data
     const storyId = await ctx.db.insert("stories", {
       title: args.formData.title || "Untitled",
@@ -580,11 +623,11 @@ export const submitFormData = mutation({
       ratingSum: 0,
       ratingCount: 0,
       videoUrl: args.formData.videoUrl,
-      linkedinUrl: args.formData.linkedinUrl,
-      twitterUrl: args.formData.twitterUrl,
-      githubUrl: args.formData.githubUrl,
-      chefShowUrl: args.formData.chefShowUrl,
-      chefAppUrl: args.formData.chefAppUrl,
+      linkedinUrl: args.formData.linkedinUrl ?? dynamicColumns.linkedinUrl,
+      twitterUrl: args.formData.twitterUrl ?? dynamicColumns.twitterUrl,
+      githubUrl: args.formData.githubUrl ?? dynamicColumns.githubUrl,
+      chefShowUrl: args.formData.chefShowUrl ?? dynamicColumns.chefShowUrl,
+      chefAppUrl: args.formData.chefAppUrl ?? dynamicColumns.chefAppUrl,
       status: "approved", // Auto-approve form submissions
       isHidden: false,
       isPinned: false,
@@ -595,6 +638,13 @@ export const submitFormData = mutation({
       teamName: args.formData.teamName,
       teamMemberCount: args.formData.teamMemberCount,
       teamMembers: args.formData.teamMembers,
+      // Self-reported AI build attribution (unverified metadata, never scored)
+      selfReportedHarness: dynamicColumns.selfReportedHarness,
+      selfReportedModel: dynamicColumns.selfReportedModel,
+      // Pasted hackathon.md (capped, secrets redacted by the resolver)
+      hackathonLog: dynamicColumns.hackathonLog,
+      // Admin-added form fields with no dedicated column
+      dynamicFormValues,
     });
 
     // Log the submission

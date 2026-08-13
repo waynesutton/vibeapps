@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Added] - 2026-08-13
+
+**Wider judging submit page, 16:9 header images, and required tag visibility**
+
+- The single column layout on judging group submit pages is now as wide as the main submit page with the sidebar hidden (max-w-4xl instead of max-w-2xl), so the form and hero get real room (2026-08-13).
+- New header image shape setting per group: Square (1:1) keeps the adjustable pixel size, Wide (16:9) fills the layout width in both the single column hero and the two column sidebar, built for banner art. Existing groups keep the square crop.
+- When a group sets a required tag, a new Shown/Hidden pill under the Required tag picker controls whether submitters see the locked tag on the form (pills, quick select, tag counter). Hidden is display only: the tag is still applied to every submission so entries land in the group, and Tag Management's own hidden flag keeps controlling story cards and tag limits, so the two settings never conflict.
+- **Backend**: `convex/schema.ts`, `convex/judgingGroups.ts` (new `submissionPageImageAspect` and `submissionFormRequiredTagVisible` fields).
+- **Frontend**: `src/pages/JudgingGroupSubmitPage.tsx`, `src/components/admin/judging/GroupSubmitPageSection.tsx`, `src/components/admin/AdminDocs.tsx`.
+- **Docs**: `prds/judging-submit-page-width-and-required-tag-visibility.md` (new).
+
+### [Added] - 2026-08-13
+
+**Judging group activity log with realtime review counts on removal**
+
+- New Activity section in the judging group workspace (below Judge tracking) with a realtime, group-scoped audit trail: submissions added (manual add, tag sync, auto-include, custom submit page) and removed, AI review runs (started, completed, failed, retried, actor "AI Judge"), judge scores, and group setting changes (2026-08-13).
+- Removing a submission from a group now also deletes its AI review result alongside the existing score cleanup, so overview stats, human results rankings, and AI counts all update in realtime through Convex reactive queries; the removal log entry records how many scores were deleted and whether an AI review existed. A re-added submission starts clean and gets picked up by the next AI run.
+- Log entries carry the story slug so rows link straight to the submission. A dropdown shows 30, 60, or 100 entries with a Load more button; Export CSV and Save as .md download the full audit trail (5000 row cap, newest first); Clear (judging.manage) batch-deletes the group's entries after an in-design confirm.
+- Per-group entries live in the same `activityLog` table as the site-wide admin Activity Log (new optional `groupId` field plus `by_groupId` index), so the two views stay in sync automatically; clearing a group's log removes those rows from both. Viewing and exports follow the group's judging.view scope for delegated users.
+- Admin Docs: judging groups section documents the Activity log, exports, clear behavior, and the realtime effect of removals.
+- **Backend**: `convex/schema.ts`, `convex/activityLog.ts`, `convex/judgingGroupSubmissions.ts`, `convex/stories.ts`, `convex/aiJudge.ts`, `convex/judgingGroups.ts`, `convex/judgeScores.ts`.
+- **Frontend**: `src/components/admin/judging/GroupActivitySection.tsx` (new), `src/pages/AdminJudgingGroupPage.tsx`, `src/components/admin/AdminDocs.tsx`.
+- **Docs**: `prds/judging-group-activity-log.md` (new).
+
+### [Added] - 2026-08-12
+
+**Admin form fields flow to every submit form with per-group judging overrides**
+
+- Fields created in Admin, Forms, Manage Form Fields now work everywhere. A new field is available on the main submit form, appears on public dynamic submit forms automatically (even forms created before the field existed), and shows up in every judging group's Submit page section as an override row (2026-08-12).
+- Values for fields without a dedicated database column are no longer dropped: they persist on the submission in a new `dynamicFormValues` list and judges see them in an "Additional Form Fields" card in the judging interface. Known keys (LinkedIn, X, Chef links, harness, model, hackathon log) keep filling their existing columns through a shared resolver.
+- Judging group Submit page controls grew three ways: each admin-managed field can be marked Required/Optional and Shown/Hidden per group (unset falls back to the field's own defaults), the form sections (Hackathon Team Info, Additional Images, Additional link fields) each get a Required pill next to Shown/Hidden with submit-time validation, and per-group custom questions get a Shown/Hidden pill so a question can be paused without deleting it. Custom questions stay scoped to their group and their answers still land in "Additional Answers" for judges.
+- The legacy Custom Forms builder sub-tab in the admin Forms section is hidden (commented out with re-enable instructions); Manage Form Fields is the single field system going forward.
+- Admin Docs: the custom submission page section now documents the field, section, additional-field, and custom-question controls.
+- **Backend**: `convex/schema.ts`, `convex/validators.ts`, `convex/storyFormFields.ts`, `convex/stories.ts`, `convex/submitForms.ts`, `convex/judgingGroups.ts`, `convex/judgingGroupSubmissions.ts`.
+- **Frontend**: `src/components/StoryForm.tsx`, `src/pages/JudgingGroupSubmitPage.tsx`, `src/pages/JudgingInterfacePage.tsx`, `src/components/admin/judging/groupSection.tsx`, `src/components/admin/judging/GroupSubmitPageSection.tsx`, `src/components/admin/AdminDashboard.tsx`, `src/components/admin/AdminDocs.tsx`.
+- **Docs**: `prds/dynamic-form-fields-judging-overrides.md` (new).
+
+### [Changed] - 2026-08-12
+
+**Hackathon.md judging aligned to public-repo-only events**
+
+- The header parser now captures the skill's full fixed header: added the "What it does" field and the "Convex features" label (previously only "Features" was recognized) (2026-08-12).
+- The event badge in admin AI results now works when nothing was pasted: the analysis action parses the repo-fetched hackathon.md header and stores the event on the result row (`aiJudgeResults.hackathonLogEvent`, new optional field). Older rows still fall back to parsing a pasted log.
+- No submission form changes for a public-only event. The built-in hackathonLog paste field stays disabled; the only form setup is making the GitHub URL field required and stating the public-repo rule in the form description.
+- **Backend**: `convex/hackathonLog.ts`, `convex/schema.ts`, `convex/aiJudge.ts`, `convex/aiJudgeAnalysis.ts`.
+
+### [Added] - 2026-08-12
+
+**Single-file hackathon skill: paste hackathon.md at submission**
+
+- The hackathon agent skill now maintains one file, hackathon.md, at the participant's project root. Public repos need nothing new; the AI judge already reads the file from the repo. Private or no-repo teams can now paste the file's contents into the submission form (2026-08-12).
+- New built-in `hackathonLog` textarea form field (ships disabled; an admin enables it per hackathon form) rendered with a monospace font, character counter, and a warning not to paste keys or personal data. Wired through all four submission paths: submit, submitAnonymous, submitDynamic, and submitFormData.
+- Pasted logs are treated as untrusted input: capped at 20,000 characters server side with a readable error over the cap, and known secret shapes (sk-, pk*, ghp*, github_pat*, xox, AKIA, JWTs, Convex deploy keys) are replaced with `[redacted]` before storing. New shared module `convex/hackathonLog.ts` holds the cap, redaction, and header parser.
+- The AI judge injects the pasted log into the same PROJECT LOG FILES prompt section the repo path uses, labeled as pasted and self-reported. When the repo already returned hackathon.md, the repo copy wins and the pasted one is noted as ignored. Submissions without a pasted log produce byte-identical prompts to before.
+- `parseHackathonLogHeader` deterministically extracts the skill's fixed header (event, project, frontend, components, auth, AI models, and more) and powers three recorded-but-never-scored cross-checks stored on `aiJudgeResults.logDiscrepancies`: claimed frontend vs `detectFrontendHosting`, claimed components vs the `convex.config.ts` scan, and claimed auth vs `package.json` dependencies (Clerk, WorkOS, Convex Auth, Better Auth). Deterministic detection keeps driving the frontend weight.
+- Admin AI results show an event badge from the header and an expandable amber discrepancy indicator; nothing new appears in public results. The system prompt now tells the model that hackathon.md is self-reported context and a claim contradicted by facts must never raise a score.
+- **Backend**: `convex/schema.ts`, `convex/hackathonLog.ts` (new), `convex/stories.ts`, `convex/submitForms.ts`, `convex/storyFormFields.ts`, `convex/aiJudge.ts`, `convex/aiJudgeAnalysis.ts`.
+- **Frontend**: `src/components/StoryForm.tsx`, `src/components/DynamicSubmitForm.tsx`, `src/pages/JudgingGroupSubmitPage.tsx`, `src/components/admin/FormFieldManagement.tsx`, `src/components/admin/AIJudgeResults.tsx`.
+- **Docs**: `prds/hackathon-md-single-file-skill.md` (new).
+
+### [Removed] - 2026-08-12
+
+**Hackathon skill API endpoints and admin section**
+
+- Removed the `/api/hackathon/{slug}` HTTP API (openapi.json, rules.json, status, register, check), its registration-code auth and rate limiters, the backing queries and mutations in `convex/hackathon.ts`, and the Hackathon skill admin section in the judging group workspace. The single-file hackathon.md flow replaces all of it (2026-08-12).
+- The `hackathonRegistrations` table and the hackathon fields on `judgingGroups` stay in the schema as deprecated optional fields so existing rows remain valid; nothing reads or writes them anymore. `normalizeProjectUrl` and the per-group duplicate URL guard in `stories.submit` are unchanged.
+- **Backend**: `convex/http.ts`, `convex/hackathon.ts`, `convex/judgingGroups.ts`, `convex/schema.ts`.
+- **Frontend**: `src/components/admin/judging/GroupHackathonSection.tsx` (deleted), `src/pages/AdminJudgingGroupPage.tsx`.
+
 ### [Added] - 2026-08-12
 
 **AI judge frontend checker with per-platform hosting weights**

@@ -8,6 +8,7 @@ import {
   hasPermission,
 } from "./adminAccess";
 import { internal } from "./_generated/api";
+import { logActivity } from "./activityLog";
 
 // Helper function to check if a story should be included in judging
 // Returns true if story is valid for judging (not deleted, hidden, archived, or rejected)
@@ -107,6 +108,22 @@ export async function ensureStoryInGroup(
       lastUpdatedAt: Date.now(),
     });
   }
+
+  // Group activity log entry (never throws; only fires for new additions)
+  const [story, group] = await Promise.all([
+    ctx.db.get(storyId),
+    ctx.db.get(groupId),
+  ]);
+  await logActivity(ctx, {
+    category: "judging",
+    action: "judging.submissionAdded",
+    message: `Added "${story?.title ?? "a submission"}" to ${group?.name ?? "a judging group"}`,
+    targetType: "story",
+    targetId: storyId,
+    targetLabel: story?.title,
+    groupId,
+    metadata: { storySlug: story?.slug },
+  });
 
   return true;
 }
@@ -474,8 +491,50 @@ export const removeSubmission = mutation({
       await ctx.db.delete(completion._id);
     }
 
+    // Delete AI judge results so AI counts, rankings, and results pages
+    // update in realtime. saveResult no-ops if a run is mid-flight.
+    const aiResults = await ctx.db
+      .query("aiJudgeResults")
+      .withIndex("by_groupId_storyId", (q) =>
+        q.eq("groupId", args.groupId).eq("storyId", args.storyId),
+      )
+      .collect();
+
+    for (const aiResult of aiResults) {
+      await ctx.db.delete(aiResult._id);
+    }
+
     // Delete the submission
     await ctx.db.delete(submission._id);
+
+    // Audit entry: record what review data existed at removal time
+    const [story, group] = await Promise.all([
+      ctx.db.get(args.storyId),
+      ctx.db.get(args.groupId),
+    ]);
+    const aiStatus = aiResults[0]?.status;
+    const context: string[] = [];
+    if (scores.length > 0) {
+      context.push(`${scores.length} judge score${scores.length === 1 ? "" : "s"} deleted`);
+    }
+    if (aiStatus) {
+      context.push(`AI review (${aiStatus}) deleted`);
+    }
+    await logActivity(ctx, {
+      category: "judging",
+      action: "judging.submissionRemoved",
+      message: `Removed "${story?.title ?? "a submission"}" from ${group?.name ?? "a judging group"}${context.length > 0 ? ` (${context.join(", ")})` : ""}`,
+      targetType: "story",
+      targetId: args.storyId,
+      targetLabel: story?.title,
+      groupId: args.groupId,
+      metadata: {
+        storySlug: story?.slug,
+        scoresDeleted: scores.length,
+        hadAiReview: aiResults.length > 0,
+        aiReviewStatus: aiStatus,
+      },
+    });
 
     return null;
   },
@@ -913,6 +972,16 @@ export const getGroupSubmissions = query({
           }),
         ),
       ),
+      // Admin-added form field values without a dedicated stories column
+      dynamicFormValues: v.optional(
+        v.array(
+          v.object({
+            key: v.string(),
+            label: v.string(),
+            value: v.string(),
+          }),
+        ),
+      ),
       // Changelog tracking for user edits
       changeLog: v.optional(
         v.array(
@@ -1037,6 +1106,8 @@ export const getGroupSubmissions = query({
             teamMembers: story.teamMembers,
             // Per-group custom question answers
             customFormAnswers: story.customFormAnswers,
+            // Admin-added form field values
+            dynamicFormValues: story.dynamicFormValues,
             // Changelog tracking
             changeLog: story.changeLog,
           };

@@ -1,7 +1,113 @@
-import { query, mutation, internalMutation } from "./_generated/server";
+import {
+  query,
+  mutation,
+  internalMutation,
+  QueryCtx,
+  MutationCtx,
+} from "./_generated/server";
 import { v } from "convex/values";
 import { Doc } from "./_generated/dataModel";
 import { requirePermission } from "./adminAccess";
+import { sanitizeHackathonLog } from "./hackathonLog";
+
+// Stories columns that admin-managed form fields may map to via
+// storyPropertyName. Any other field key persists into
+// stories.dynamicFormValues instead of a dedicated column.
+export const STORY_DYNAMIC_COLUMNS = [
+  "linkedinUrl",
+  "twitterUrl",
+  "githubUrl",
+  "chefShowUrl",
+  "chefAppUrl",
+  "selfReportedHarness",
+  "selfReportedModel",
+  "hackathonLog",
+] as const;
+
+export type StoryDynamicColumn = (typeof STORY_DYNAMIC_COLUMNS)[number];
+
+export type DynamicFieldEntry = { key: string; label: string; value: string };
+
+export type ResolvedDynamicFields = {
+  // Values for known stories columns (hackathonLog already sanitized)
+  dynamicColumns: Partial<Record<StoryDynamicColumn, string>>;
+  // Values for admin-added fields with no dedicated column
+  dynamicFormValues: Array<DynamicFieldEntry> | undefined;
+};
+
+/**
+ * Shared resolver used by every submit path. Maps submitted dynamic field
+ * values to their stories column (via the field's storyPropertyName) when
+ * one exists, otherwise into the generic dynamicFormValues array with the
+ * label denormalized from the field definition. Unknown keys with no
+ * matching storyFormFields definition are dropped so clients cannot store
+ * arbitrary data.
+ */
+export async function resolveDynamicFieldValues(
+  ctx: QueryCtx | MutationCtx,
+  entries: Array<DynamicFieldEntry> | undefined,
+): Promise<ResolvedDynamicFields> {
+  const dynamicColumns: Partial<Record<StoryDynamicColumn, string>> = {};
+  const extras: Array<DynamicFieldEntry> = [];
+  const knownColumns = new Set<string>(STORY_DYNAMIC_COLUMNS);
+
+  for (const entry of entries ?? []) {
+    const key = entry.key.trim();
+    const value = entry.value.trim();
+    if (!key || !value) continue;
+
+    const field = await ctx.db
+      .query("storyFormFields")
+      .withIndex("by_key", (q) => q.eq("key", key))
+      .unique();
+
+    const propertyName = field?.storyPropertyName;
+    if (propertyName && knownColumns.has(propertyName)) {
+      const column = propertyName as StoryDynamicColumn;
+      if (dynamicColumns[column] === undefined) {
+        dynamicColumns[column] =
+          column === "hackathonLog" ? sanitizeHackathonLog(value) : value;
+      }
+    } else if (!field && knownColumns.has(key)) {
+      // Defensive: a known column key whose field definition was deleted
+      const column = key as StoryDynamicColumn;
+      if (dynamicColumns[column] === undefined) {
+        dynamicColumns[column] =
+          column === "hackathonLog" ? sanitizeHackathonLog(value) : value;
+      }
+    } else if (field) {
+      extras.push({ key, label: field.label, value });
+    }
+  }
+
+  return {
+    dynamicColumns,
+    dynamicFormValues: extras.length > 0 ? extras : undefined,
+  };
+}
+
+/**
+ * Record-based variant for submit paths that receive a flat formData record
+ * (dynamic submit forms). Only enabled fields are considered.
+ */
+export async function resolveDynamicFieldRecord(
+  ctx: QueryCtx | MutationCtx,
+  formData: Record<string, unknown>,
+): Promise<ResolvedDynamicFields> {
+  const enabledFields = await ctx.db
+    .query("storyFormFields")
+    .withIndex("by_enabled", (q) => q.eq("isEnabled", true))
+    .collect();
+
+  const entries: Array<DynamicFieldEntry> = [];
+  for (const field of enabledFields) {
+    const raw = formData[field.key];
+    if (typeof raw === "string" && raw.trim()) {
+      entries.push({ key: field.key, label: field.label, value: raw });
+    }
+  }
+  return resolveDynamicFieldValues(ctx, entries);
+}
 
 // Query to get all form fields ordered by display order
 export const list = query({
@@ -16,13 +122,21 @@ export const list = query({
       isEnabled: v.boolean(),
       isRequired: v.boolean(),
       order: v.number(),
-      fieldType: v.union(v.literal("url"), v.literal("text"), v.literal("email")),
+      fieldType: v.union(
+        v.literal("url"),
+        v.literal("text"),
+        v.literal("email"),
+        v.literal("textarea"),
+      ),
       description: v.optional(v.string()),
       storyPropertyName: v.string(),
-    })
+    }),
   ),
   handler: async (ctx) => {
-    const fields = await ctx.db.query("storyFormFields").withIndex("by_order").collect();
+    const fields = await ctx.db
+      .query("storyFormFields")
+      .withIndex("by_order")
+      .collect();
 
     return fields.sort((a, b) => a.order - b.order);
   },
@@ -41,10 +155,15 @@ export const listEnabled = query({
       isEnabled: v.boolean(),
       isRequired: v.boolean(),
       order: v.number(),
-      fieldType: v.union(v.literal("url"), v.literal("text"), v.literal("email")),
+      fieldType: v.union(
+        v.literal("url"),
+        v.literal("text"),
+        v.literal("email"),
+        v.literal("textarea"),
+      ),
       description: v.optional(v.string()),
       storyPropertyName: v.string(),
-    })
+    }),
   ),
   handler: async (ctx) => {
     const fields = await ctx.db
@@ -69,14 +188,22 @@ export const listAdmin = query({
       isEnabled: v.boolean(),
       isRequired: v.boolean(),
       order: v.number(),
-      fieldType: v.union(v.literal("url"), v.literal("text"), v.literal("email")),
+      fieldType: v.union(
+        v.literal("url"),
+        v.literal("text"),
+        v.literal("email"),
+        v.literal("textarea"),
+      ),
       description: v.optional(v.string()),
       storyPropertyName: v.string(),
-    })
+    }),
   ),
   handler: async (ctx) => {
     await requirePermission(ctx, "forms.view");
-    const fields = await ctx.db.query("storyFormFields").withIndex("by_order").collect();
+    const fields = await ctx.db
+      .query("storyFormFields")
+      .withIndex("by_order")
+      .collect();
 
     return fields.sort((a, b) => a.order - b.order);
   },
@@ -91,7 +218,12 @@ export const create = mutation({
     isEnabled: v.boolean(),
     isRequired: v.boolean(),
     order: v.number(),
-    fieldType: v.union(v.literal("url"), v.literal("text"), v.literal("email")),
+    fieldType: v.union(
+      v.literal("url"),
+      v.literal("text"),
+      v.literal("email"),
+      v.literal("textarea"),
+    ),
     description: v.optional(v.string()),
     storyPropertyName: v.string(),
   },
@@ -123,7 +255,14 @@ export const update = mutation({
     isEnabled: v.optional(v.boolean()),
     isRequired: v.optional(v.boolean()),
     order: v.optional(v.number()),
-    fieldType: v.optional(v.union(v.literal("url"), v.literal("text"), v.literal("email"))),
+    fieldType: v.optional(
+      v.union(
+        v.literal("url"),
+        v.literal("text"),
+        v.literal("email"),
+        v.literal("textarea"),
+      ),
+    ),
     description: v.optional(v.string()),
     storyPropertyName: v.optional(v.string()),
   },
@@ -151,12 +290,17 @@ export const update = mutation({
     const updateData: Partial<Doc<"storyFormFields">> = {};
     if (updates.key !== undefined) updateData.key = updates.key;
     if (updates.label !== undefined) updateData.label = updates.label;
-    if (updates.placeholder !== undefined) updateData.placeholder = updates.placeholder;
-    if (updates.isEnabled !== undefined) updateData.isEnabled = updates.isEnabled;
-    if (updates.isRequired !== undefined) updateData.isRequired = updates.isRequired;
+    if (updates.placeholder !== undefined)
+      updateData.placeholder = updates.placeholder;
+    if (updates.isEnabled !== undefined)
+      updateData.isEnabled = updates.isEnabled;
+    if (updates.isRequired !== undefined)
+      updateData.isRequired = updates.isRequired;
     if (updates.order !== undefined) updateData.order = updates.order;
-    if (updates.fieldType !== undefined) updateData.fieldType = updates.fieldType;
-    if (updates.description !== undefined) updateData.description = updates.description;
+    if (updates.fieldType !== undefined)
+      updateData.fieldType = updates.fieldType;
+    if (updates.description !== undefined)
+      updateData.description = updates.description;
     if (updates.storyPropertyName !== undefined)
       updateData.storyPropertyName = updates.storyPropertyName;
 
@@ -206,12 +350,12 @@ export const ensureGitHubFieldOptional = internalMutation({
       .query("storyFormFields")
       .filter((q) => q.eq(q.field("key"), "githubUrl"))
       .first();
-    
+
     if (githubField && githubField.isRequired) {
       await ctx.db.patch(githubField._id, { isRequired: false });
       console.log("Updated GitHub field to be optional");
     }
-    
+
     return null;
   },
 });
@@ -242,7 +386,8 @@ export const initializeDefaultFields = internalMutation({
       },
       {
         key: "twitterUrl",
-        label: "X (Twitter) or Bluesky Profile or Announcement Post URL (Optional)",
+        label:
+          "X (Twitter) or Bluesky Profile or Announcement Post URL (Optional)",
         placeholder: "https://twitter.com/...",
         isEnabled: true,
         isRequired: false,
@@ -292,7 +437,8 @@ export const initializeDefaultFields = internalMutation({
         isRequired: false,
         order: 5,
         fieldType: "text" as const,
-        description: "Which AI coding tool you used to build this (self-reported)",
+        description:
+          "Which AI coding tool you used to build this (self-reported)",
         storyPropertyName: "selfReportedHarness",
       },
       {
@@ -306,11 +452,53 @@ export const initializeDefaultFields = internalMutation({
         description: "Which AI model you used to build this (self-reported)",
         storyPropertyName: "selfReportedModel",
       },
+      {
+        key: "hackathonLog",
+        label: "Hackathon log (hackathon.md)",
+        placeholder: "Paste the full contents of your hackathon.md here...",
+        isEnabled: false,
+        isRequired: false,
+        order: 7,
+        fieldType: "textarea" as const,
+        description:
+          "Private or no repo? Paste the contents of your hackathon.md here. Public repos can skip this; we read the file from your repo.",
+        storyPropertyName: "hackathonLog",
+      },
     ];
 
     for (const field of defaultFields) {
       await ctx.db.insert("storyFormFields", field);
     }
+
+    return null;
+  },
+});
+
+// Internal mutation to add the hackathonLog paste field to existing
+// deployments (initializeDefaultFields only runs on empty tables).
+// Ships disabled; an admin turns it on for a hackathon form.
+export const ensureHackathonLogField = internalMutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const existing = await ctx.db
+      .query("storyFormFields")
+      .withIndex("by_key", (q) => q.eq("key", "hackathonLog"))
+      .first();
+    if (existing) return null;
+
+    await ctx.db.insert("storyFormFields", {
+      key: "hackathonLog",
+      label: "Hackathon log (hackathon.md)",
+      placeholder: "Paste the full contents of your hackathon.md here...",
+      isEnabled: false,
+      isRequired: false,
+      order: 92,
+      fieldType: "textarea" as const,
+      description:
+        "Private or no repo? Paste the contents of your hackathon.md here. Public repos can skip this; we read the file from your repo.",
+      storyPropertyName: "hackathonLog",
+    });
 
     return null;
   },
@@ -332,7 +520,8 @@ export const ensureAiAttributionFields = internalMutation({
         isRequired: false,
         order: 90,
         fieldType: "text" as const,
-        description: "Which AI coding tool you used to build this (self-reported)",
+        description:
+          "Which AI coding tool you used to build this (self-reported)",
         storyPropertyName: "selfReportedHarness",
       },
       {

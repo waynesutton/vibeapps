@@ -23,6 +23,10 @@ const DEFAULT_FIELD_REQUIREMENTS = {
   submitterName: true,
   email: false,
   tags: true,
+  // Form sections default to optional
+  teamInfo: false,
+  additionalImages: false,
+  additionalLinks: false,
 } as const;
 
 type SubmissionFieldRequirements = {
@@ -94,7 +98,14 @@ type CustomQuestion = {
   description?: string;
   fieldType: "text" | "url" | "email" | "textarea";
   required: boolean;
+  visible?: boolean; // Unset = shown
 };
+
+// Per-group overrides for admin-managed form fields, keyed by field key
+type DynamicFieldOverrides = Record<
+  string,
+  { required?: boolean; visible?: boolean }
+>;
 
 // Fields the hackathon skill can prefill via query params
 // (?url=&title=&tagline=&github=)
@@ -186,9 +197,7 @@ export function JudgingGroupSubmitPage() {
   if (submissionPage === null) {
     return (
       <div className="min-h-screen bg-canvas flex flex-col items-center justify-center p-4">
-        <h1 className="text-2xl font-medium text-ink mb-4">
-          Page Not Found
-        </h1>
+        <h1 className="text-2xl font-medium text-ink mb-4">Page Not Found</h1>
         <p className="text-copy mb-6">
           This submission page doesn't exist or isn't enabled.
         </p>
@@ -227,10 +236,7 @@ export function JudgingGroupSubmitPage() {
                 <p className="text-sm text-red-600 mt-1">{passwordError}</p>
               )}
             </div>
-            <Button
-              type="submit"
-              className="w-full bg-cta hover:bg-cta-hover"
-            >
+            <Button type="submit" className="w-full bg-cta hover:bg-cta-hover">
               Submit
             </Button>
           </form>
@@ -246,8 +252,9 @@ export function JudgingGroupSubmitPage() {
       ? "lg:grid-cols-[1fr_2fr]" // 33/67 split
       : "lg:grid-cols-2"; // 50/50 split
 
-  // Calculate image size (square)
+  // Calculate image size (square crop only) and aspect (square or 16:9 wide)
   const imageSize = submissionPage.submissionPageImageSize || 400;
+  const isWideImage = submissionPage.submissionPageImageAspect === "wide";
 
   // Shared form card used by every layout variant
   const formCard = (
@@ -270,9 +277,7 @@ export function JudgingGroupSubmitPage() {
               />
             </svg>
           </div>
-          <h2 className="text-3xl font-medium text-ink mb-2">
-            Thank You!
-          </h2>
+          <h2 className="text-3xl font-medium text-ink mb-2">Thank You!</h2>
           <p className="text-copy">
             Your submission has been received successfully.
           </p>
@@ -319,6 +324,9 @@ export function JudgingGroupSubmitPage() {
             <SubmissionFormContent
               judgingGroupId={submissionPage._id}
               requiredTagId={submissionPage.submissionFormRequiredTagId}
+              showRequiredTag={
+                submissionPage.submissionFormRequiredTagVisible !== false
+              }
               fieldRequirements={resolveRequirements(
                 submissionPage.submissionFieldRequirements,
               )}
@@ -326,6 +334,9 @@ export function JudgingGroupSubmitPage() {
                 submissionPage.submissionFieldVisibility,
               )}
               customQuestions={submissionPage.submissionCustomQuestions || []}
+              dynamicFieldOverrides={
+                submissionPage.submissionDynamicFieldOverrides || {}
+              }
               prefill={prefill}
               onSuccess={() => {
                 setShowSuccess(true);
@@ -343,14 +354,10 @@ export function JudgingGroupSubmitPage() {
               </p>
               <div className="flex items-center justify-center gap-3">
                 <Link to="/sign-up">
-                  <Button className="bg-cta hover:bg-cta-hover">
-                    Sign Up
-                  </Button>
+                  <Button className="bg-cta hover:bg-cta-hover">Sign Up</Button>
                 </Link>
                 <Link to="/sign-in">
-                  <Button className="bg-cta hover:bg-cta-hover">
-                    Sign In
-                  </Button>
+                  <Button className="bg-cta hover:bg-cta-hover">Sign In</Button>
                 </Link>
               </div>
             </div>
@@ -361,22 +368,27 @@ export function JudgingGroupSubmitPage() {
   );
 
   // Single column layout: centered hero (image, title, description, links)
-  // stacked above the form card. Built for focused reading and submitting.
+  // stacked above the form card. Matches the no-sidebar submit page width,
+  // with wide (16:9) header images filling the full column.
   if (isSingleColumn) {
     return (
       <div className="min-h-screen bg-canvas">
-        <div className="mx-auto max-w-2xl px-4 py-10 sm:py-16">
+        <div className="mx-auto max-w-4xl px-4 py-10 sm:py-16">
           <header className="mb-10 sm:mb-12 text-center">
             {submissionPage.submissionPageImageUrl && (
               <img
                 src={submissionPage.submissionPageImageUrl}
                 alt={submissionPage.submissionPageTitle || submissionPage.name}
-                style={{
-                  width: "100%",
-                  maxWidth: `${imageSize}px`,
-                  aspectRatio: "1 / 1",
-                  objectFit: "cover",
-                }}
+                style={
+                  isWideImage
+                    ? { width: "100%", aspectRatio: "16 / 9", objectFit: "cover" }
+                    : {
+                        width: "100%",
+                        maxWidth: `${imageSize}px`,
+                        aspectRatio: "1 / 1",
+                        objectFit: "cover",
+                      }
+                }
                 className="mx-auto rounded-xl border border-hairline mb-8"
               />
             )}
@@ -384,7 +396,7 @@ export function JudgingGroupSubmitPage() {
               {submissionPage.submissionPageTitle || submissionPage.name}
             </h1>
             {submissionPage.submissionPageDescription && (
-              <p className="mt-4 text-copy leading-relaxed whitespace-pre-wrap max-w-xl mx-auto">
+              <p className="mt-4 text-copy leading-relaxed whitespace-pre-wrap max-w-2xl mx-auto">
                 {submissionPage.submissionPageDescription}
               </p>
             )}
@@ -429,11 +441,19 @@ export function JudgingGroupSubmitPage() {
                   alt={
                     submissionPage.submissionPageTitle || submissionPage.name
                   }
-                  style={{
-                    width: `${imageSize}px`,
-                    height: `${imageSize}px`,
-                    objectFit: "cover",
-                  }}
+                  style={
+                    isWideImage
+                      ? {
+                          width: "100%",
+                          aspectRatio: "16 / 9",
+                          objectFit: "cover",
+                        }
+                      : {
+                          width: `${imageSize}px`,
+                          height: `${imageSize}px`,
+                          objectFit: "cover",
+                        }
+                  }
                   className="mx-auto"
                 />
               </div>
@@ -501,17 +521,23 @@ function SectionHeading({ label }: { label: string }) {
 function SubmissionFormContent({
   judgingGroupId,
   requiredTagId,
+  showRequiredTag,
   fieldRequirements,
   fieldVisibility,
   customQuestions,
+  dynamicFieldOverrides,
   prefill,
   onSuccess,
 }: {
   judgingGroupId: Id<"judgingGroups">;
   requiredTagId?: Id<"tags"> | null;
+  // Display-only: when false the locked required tag is hidden from the
+  // submitter (pills, quick select, counter) but still applied on submit
+  showRequiredTag: boolean;
   fieldRequirements: SubmissionFieldRequirements;
   fieldVisibility: SubmissionFieldVisibility;
   customQuestions: CustomQuestion[];
+  dynamicFieldOverrides: DynamicFieldOverrides;
   prefill: FormPrefill;
   onSuccess: () => void;
 }) {
@@ -528,6 +554,21 @@ function SubmissionFormContent({
   const allTags = useQuery(api.tags.listAllForDropdown); // For dropdown search
   const formFields = useQuery(api.storyFormFields.listEnabled);
   const siteSettings = useQuery(api.settings.get); // Tag limits
+
+  // Admin-managed dynamic fields, filtered and configured per group.
+  // Overrides beat the field's global defaults; unset entries fall through.
+  const visibleDynamicFields = (formFields || []).filter(
+    (field) =>
+      field.key !== "githubUrl" &&
+      (dynamicFieldOverrides[field.key]?.visible ?? true),
+  );
+  const isDynamicFieldRequired = (fieldKey: string, fallback: boolean) =>
+    dynamicFieldOverrides[fieldKey]?.required ?? fallback;
+
+  // Custom questions hidden by the group admin are removed entirely
+  const visibleCustomQuestions = customQuestions.filter(
+    (question) => question.visible !== false,
+  );
 
   const [selectedTagIds, setSelectedTagIds] = React.useState<Id<"tags">[]>([]);
   const [newTagInputValue, setNewTagInputValue] = React.useState("");
@@ -584,10 +625,9 @@ function SubmissionFormContent({
     const owner = match[1];
     const repo = match[2].replace(/\.git$/, "");
     try {
-      const res = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}`,
-        { headers: { Accept: "application/vnd.github+json" } },
-      );
+      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+        headers: { Accept: "application/vnd.github+json" },
+      });
       if (res.status === 404) {
         setRepoVisibilityWarning(
           "This repo looks private or missing. The AI judge can only analyze public repos, so make it public before judging starts.",
@@ -654,9 +694,13 @@ function SubmissionFormContent({
   const maxTags = siteSettings?.maxTagsPerSubmission ?? 6;
   const maxTagLength = siteSettings?.maxTagLength ?? 20;
 
-  // Count selected tags toward the limit, excluding hidden tags
+  // Count selected tags toward the limit, excluding hidden tags and a
+  // form-hidden required tag (submitters cannot see or remove it)
   const countedTags =
     selectedTagIds.filter((id) => {
+      if (!showRequiredTag && requiredTagId && id === requiredTagId) {
+        return false;
+      }
       const tag = allTags?.find((t) => t._id === id);
       return tag ? tag.isHidden !== true : true;
     }).length + newTagNames.length;
@@ -742,6 +786,26 @@ function SubmissionFormContent({
       return;
     }
 
+    // Section-level requirements set by the group admin
+    if (vis.teamInfo && req.teamInfo && !teamData.teamName.trim()) {
+      setError("Team info is required. Please add your team name.");
+      return;
+    }
+    if (vis.additionalImages && req.additionalImages && additionalImages.length === 0) {
+      setError("Please upload at least one additional image.");
+      return;
+    }
+    if (
+      vis.additionalLinks &&
+      req.additionalLinks &&
+      !visibleDynamicFields.some((field) =>
+        (dynamicFormData[field.key] || "").trim(),
+      )
+    ) {
+      setError("Please fill in at least one of the additional link fields.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -792,6 +856,20 @@ function SubmissionFormContent({
         githubUrl: dynamicFormData.githubUrl || undefined,
         chefShowUrl: dynamicFormData.chefShowUrl || undefined,
         chefAppUrl: dynamicFormData.chefAppUrl || undefined,
+        // Pasted hackathon.md for private/no-repo projects
+        hackathonLog: dynamicFormData.hackathonLog || undefined,
+        // Every visible admin-managed field, so new fields are never dropped
+        dynamicFieldValues: (formFields || [])
+          .filter(
+            (field) =>
+              (dynamicFieldOverrides[field.key]?.visible ?? true) &&
+              (dynamicFormData[field.key] || "").trim(),
+          )
+          .map((field) => ({
+            key: field.key,
+            label: field.label,
+            value: dynamicFormData[field.key],
+          })),
         // Team info (always included if provided)
         teamName: teamData.teamName ? teamData.teamName : undefined,
         teamMemberCount: teamData.teamName
@@ -800,10 +878,11 @@ function SubmissionFormContent({
         teamMembers: teamData.teamName
           ? teamData.teamMembers.filter((m) => m.name.trim() || m.email.trim())
           : undefined,
-        // Custom question answers (label denormalized for display)
+        // Custom question answers (label denormalized for display).
+        // Hidden questions are excluded; users never saw them.
         customFormAnswers:
-          customQuestions.length > 0
-            ? customQuestions
+          visibleCustomQuestions.length > 0
+            ? visibleCustomQuestions
                 .map((question) => ({
                   key: question.key,
                   label: question.label,
@@ -817,7 +896,9 @@ function SubmissionFormContent({
     } catch (err) {
       console.error("Submission error:", err);
       setError(
-        err instanceof Error ? cleanSubmitError(err.message) : "Failed to submit",
+        err instanceof Error
+          ? cleanSubmitError(err.message)
+          : "Failed to submit",
       );
       setIsSubmitting(false);
     }
@@ -853,60 +934,60 @@ function SubmissionFormContent({
 
       {/* Tagline */}
       {vis.tagline && (
-      <div>
-        <label className="block text-sm font-medium text-copy mb-1">
-          App/Project Tagline{req.tagline ? "*" : " (Optional)"}
-        </label>
-        <input
-          type="text"
-          value={formData.tagline}
-          onChange={(e) => {
-            if (e.target.value.length <= MAX_TAGLINE_LENGTH) {
-              setFormData((prev) => ({ ...prev, tagline: e.target.value }));
-            }
-          }}
-          maxLength={MAX_TAGLINE_LENGTH}
-          placeholder="One sentence pitch or description"
-          className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
-          required={req.tagline}
-          disabled={isSubmitting}
-        />
-        <div className="text-xs text-right text-soft mt-1">
-          {formData.tagline.length}/{MAX_TAGLINE_LENGTH}
+        <div>
+          <label className="block text-sm font-medium text-copy mb-1">
+            App/Project Tagline{req.tagline ? "*" : " (Optional)"}
+          </label>
+          <input
+            type="text"
+            value={formData.tagline}
+            onChange={(e) => {
+              if (e.target.value.length <= MAX_TAGLINE_LENGTH) {
+                setFormData((prev) => ({ ...prev, tagline: e.target.value }));
+              }
+            }}
+            maxLength={MAX_TAGLINE_LENGTH}
+            placeholder="One sentence pitch or description"
+            className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
+            required={req.tagline}
+            disabled={isSubmitting}
+          />
+          <div className="text-xs text-right text-soft mt-1">
+            {formData.tagline.length}/{MAX_TAGLINE_LENGTH}
+          </div>
         </div>
-      </div>
       )}
 
       {/* Long Description */}
       {vis.longDescription && (
-      <div>
-        <label className="block text-sm font-medium text-copy mb-1">
-          Description{req.longDescription ? "*" : ""} (Markdown and fenced `code`
-          blocks supported)
-        </label>
-        <textarea
-          value={formData.longDescription}
-          onChange={(e) =>
-            setFormData((prev) => ({
-              ...prev,
-              longDescription: e.target.value,
-            }))
-          }
-          placeholder="- Problem you're solving&#10;- How the app works&#10;- Notable features&#10;- Why did you build this&#10;- Tech stack list&#10;- Challenges we ran into&#10;- Any success stories or metrics&#10;"
-          rows={8}
-          className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
-          required={req.longDescription}
-          disabled={isSubmitting}
-        />
-        {formData.longDescription && (
-          <div className="mt-2">
-            <div className="text-xs text-soft mb-1">Preview</div>
-            <div className="prose prose-sm max-w-none text-copy bg-surface-alt border border-hairline rounded-md p-3">
-              <Markdown>{formData.longDescription}</Markdown>
+        <div>
+          <label className="block text-sm font-medium text-copy mb-1">
+            Description{req.longDescription ? "*" : ""} (Markdown and fenced
+            `code` blocks supported)
+          </label>
+          <textarea
+            value={formData.longDescription}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                longDescription: e.target.value,
+              }))
+            }
+            placeholder="- Problem you're solving&#10;- How the app works&#10;- Notable features&#10;- Why did you build this&#10;- Tech stack list&#10;- Challenges we ran into&#10;- Any success stories or metrics&#10;"
+            rows={8}
+            className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
+            required={req.longDescription}
+            disabled={isSubmitting}
+          />
+          {formData.longDescription && (
+            <div className="mt-2">
+              <div className="text-xs text-soft mb-1">Preview</div>
+              <div className="prose prose-sm max-w-none text-copy bg-surface-alt border border-hairline rounded-md p-3">
+                <Markdown>{formData.longDescription}</Markdown>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
       )}
 
       {(vis.url ||
@@ -918,184 +999,220 @@ function SubmissionFormContent({
 
       {/* URL */}
       {vis.url && (
-      <div>
-        <label className="block text-sm font-medium text-copy mb-1">
-          App Website Link{req.url ? "*" : " (Optional)"}
-        </label>
-        <div className="text-sm text-soft mb-2">
-          Enter your app url (ex: https://)
+        <div>
+          <label className="block text-sm font-medium text-copy mb-1">
+            App Website Link{req.url ? "*" : " (Optional)"}
+          </label>
+          <div className="text-sm text-soft mb-2">
+            Enter your app url (ex: https://)
+          </div>
+          <input
+            type="url"
+            value={formData.url}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, url: e.target.value }))
+            }
+            placeholder="https://"
+            className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
+            required={req.url}
+            disabled={isSubmitting}
+          />
         </div>
-        <input
-          type="url"
-          value={formData.url}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, url: e.target.value }))
-          }
-          placeholder="https://"
-          className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
-          required={req.url}
-          disabled={isSubmitting}
-        />
-      </div>
       )}
 
       {/* GitHub URL Field */}
       {vis.githubUrl && (
-      <div>
-        <label
-          htmlFor="githubUrl"
-          className="block text-sm font-medium text-copy mb-1"
-        >
-          GitHub Repo URL{req.githubUrl ? "*" : " (Optional)"}
-        </label>
-        <div className="text-sm text-soft mb-2">
-          GitHub repository URL for your project
-        </div>
-        <input
-          type="url"
-          id="githubUrl"
-          placeholder="https://github.com/username/repository"
-          value={dynamicFormData.githubUrl || ""}
-          onChange={(e) =>
-            setDynamicFormData((prev) => ({
-              ...prev,
-              githubUrl: e.target.value,
-            }))
-          }
-          onBlur={(e) => {
-            void checkRepoVisibility(e.target.value);
-          }}
-          className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
-          required={req.githubUrl}
-          disabled={isSubmitting}
-        />
-        {repoVisibilityWarning && (
-          <div className="mt-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-            {repoVisibilityWarning}
+        <div>
+          <label
+            htmlFor="githubUrl"
+            className="block text-sm font-medium text-copy mb-1"
+          >
+            GitHub Repo URL{req.githubUrl ? "*" : " (Optional)"}
+          </label>
+          <div className="text-sm text-soft mb-2">
+            GitHub repository URL for your project
           </div>
-        )}
-      </div>
+          <input
+            type="url"
+            id="githubUrl"
+            placeholder="https://github.com/username/repository"
+            value={dynamicFormData.githubUrl || ""}
+            onChange={(e) =>
+              setDynamicFormData((prev) => ({
+                ...prev,
+                githubUrl: e.target.value,
+              }))
+            }
+            onBlur={(e) => {
+              void checkRepoVisibility(e.target.value);
+            }}
+            className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
+            required={req.githubUrl}
+            disabled={isSubmitting}
+          />
+          {repoVisibilityWarning && (
+            <div className="mt-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+              {repoVisibilityWarning}
+            </div>
+          )}
+        </div>
       )}
 
-      {/* Dynamic Form Fields */}
+      {/* Dynamic Form Fields (per-group required/visible overrides applied) */}
       {vis.additionalLinks &&
-        formFields
-        ?.filter((field) => field.key !== "githubUrl")
-        .map((field) => (
-          <div key={field.key}>
-            <label
-              htmlFor={field.key}
-              className="block text-sm font-medium text-copy mb-1"
-            >
-              {field.label}
-            </label>
-            {field.description && (
-              <div className="text-sm text-soft mb-2">
-                {field.description}
-              </div>
-            )}
-            <input
-              type={field.fieldType}
-              id={field.key}
-              placeholder={field.placeholder}
-              value={dynamicFormData[field.key] || ""}
-              onChange={(e) =>
-                setDynamicFormData((prev) => ({
-                  ...prev,
-                  [field.key]: e.target.value,
-                }))
-              }
-              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
-              required={field.isRequired}
-              disabled={isSubmitting}
-            />
-          </div>
-        ))}
+        visibleDynamicFields.map((field) => {
+          const fieldRequired = isDynamicFieldRequired(
+            field.key,
+            field.isRequired,
+          );
+          return (
+            <div key={field.key}>
+              <label
+                htmlFor={field.key}
+                className="block text-sm font-medium text-copy mb-1"
+              >
+                {field.label}
+                {fieldRequired && !field.label.includes("*") ? "*" : ""}
+              </label>
+              {field.description && (
+                <div className="text-sm text-soft mb-2">
+                  {field.description}
+                </div>
+              )}
+              {field.fieldType === "textarea" ? (
+                <>
+                  <textarea
+                    id={field.key}
+                    placeholder={field.placeholder}
+                    value={dynamicFormData[field.key] || ""}
+                    onChange={(e) =>
+                      setDynamicFormData((prev) => ({
+                        ...prev,
+                        [field.key]: e.target.value,
+                      }))
+                    }
+                    rows={10}
+                    maxLength={20000}
+                    className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline font-mono text-xs"
+                    required={fieldRequired}
+                    disabled={isSubmitting}
+                  />
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-xs text-soft">
+                      This will be read by judges. Do not paste API keys, env
+                      values, or personal data.
+                    </span>
+                    <span className="text-xs text-soft tabular-nums">
+                      {(dynamicFormData[field.key] || "").length}/20000
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <input
+                  type={field.fieldType}
+                  id={field.key}
+                  placeholder={field.placeholder}
+                  value={dynamicFormData[field.key] || ""}
+                  onChange={(e) =>
+                    setDynamicFormData((prev) => ({
+                      ...prev,
+                      [field.key]: e.target.value,
+                    }))
+                  }
+                  className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
+                  required={fieldRequired}
+                  disabled={isSubmitting}
+                />
+              )}
+            </div>
+          );
+        })}
       {vis.additionalLinks && formFields === undefined && (
         <div className="text-sm text-soft">Loading form fields...</div>
       )}
 
       {/* Video URL */}
       {vis.videoUrl && (
-      <div>
-        <label className="block text-sm font-medium text-copy mb-1">
-          Video Demo{req.videoUrl ? "*" : " (Recommended)"}
-        </label>
-        <div className="text-sm text-soft mb-2">
-          Share a video demo of your app (YouTube, Vimeo, etc.)
+        <div>
+          <label className="block text-sm font-medium text-copy mb-1">
+            Video Demo{req.videoUrl ? "*" : " (Recommended)"}
+          </label>
+          <div className="text-sm text-soft mb-2">
+            Share a video demo of your app (YouTube, Vimeo, etc.)
+          </div>
+          <input
+            type="url"
+            value={formData.videoUrl}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, videoUrl: e.target.value }))
+            }
+            placeholder="https://youtube.com/..."
+            className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
+            required={req.videoUrl}
+            disabled={isSubmitting}
+          />
         </div>
-        <input
-          type="url"
-          value={formData.videoUrl}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, videoUrl: e.target.value }))
-          }
-          placeholder="https://youtube.com/..."
-          className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
-          required={req.videoUrl}
-          disabled={isSubmitting}
-        />
-      </div>
       )}
 
       {/* Screenshot */}
       {vis.screenshot && (
-      <div>
-        <label className="block text-sm font-medium text-copy mb-1">
-          Screenshot or Image{req.screenshot ? "*" : " (Optional)"}
-        </label>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleImageChange}
-          disabled={isSubmitting}
-          className="w-full text-sm text-copy file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-surface-alt file:text-ink hover:file:bg-surface-hover"
-          required={req.screenshot}
-        />
-      </div>
+        <div>
+          <label className="block text-sm font-medium text-copy mb-1">
+            Screenshot or Image{req.screenshot ? "*" : " (Optional)"}
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            disabled={isSubmitting}
+            className="w-full text-sm text-copy file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-surface-alt file:text-ink hover:file:bg-surface-hover"
+            required={req.screenshot}
+          />
+        </div>
       )}
 
       {/* Additional Images */}
       {vis.additionalImages && (
-      <div>
-        <label className="block text-sm font-medium text-copy mb-1">
-          Additional Images (Optional, max 4)
-        </label>
-        <input
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={handleAdditionalImagesChange}
-          disabled={isSubmitting || additionalImages.length >= 5}
-          className="w-full text-sm text-copy file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-surface-alt file:text-ink hover:file:bg-surface-hover"
-        />
-        {additionalImages.length > 0 && (
-          <div className="mt-2 space-y-1">
-            {additionalImages.map((file, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between text-sm text-copy bg-surface-alt p-2 rounded"
-              >
-                <span className="truncate">{file.name}</span>
-                <button
-                  type="button"
-                  onClick={() => removeAdditionalImage(index)}
-                  className="text-red-600 hover:text-red-800"
+        <div>
+          <label className="block text-sm font-medium text-copy mb-1">
+            Additional Images{req.additionalImages ? "*" : " (Optional)"} (max
+            4)
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleAdditionalImagesChange}
+            disabled={isSubmitting || additionalImages.length >= 5}
+            className="w-full text-sm text-copy file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-surface-alt file:text-ink hover:file:bg-surface-hover"
+          />
+          {additionalImages.length > 0 && (
+            <div className="mt-2 space-y-1">
+              {additionalImages.map((file, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between text-sm text-copy bg-surface-alt p-2 rounded"
                 >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+                  <span className="truncate">{file.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeAdditionalImage(index)}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
-      {/* Custom questions defined by the group admin */}
-      {customQuestions.length > 0 && (
+      {/* Custom questions defined by the group admin (hidden ones excluded) */}
+      {visibleCustomQuestions.length > 0 && (
         <>
           <SectionHeading label="Additional questions" />
-          {customQuestions.map((question) => (
+          {visibleCustomQuestions.map((question) => (
             <div key={question.key}>
               <label
                 htmlFor={`custom-${question.key}`}
@@ -1151,453 +1268,480 @@ function SubmissionFormContent({
 
       {/* Submitter Name */}
       {vis.submitterName && (
-      <div>
-        <label className="block text-sm font-medium text-copy mb-1">
-          Your Name{req.submitterName ? "*" : " (Optional)"}
-        </label>
-        <input
-          type="text"
-          value={formData.submitterName}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, submitterName: e.target.value }))
-          }
-          placeholder="Your name"
-          className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
-          required={req.submitterName}
-          disabled={isSubmitting}
-        />
-      </div>
+        <div>
+          <label className="block text-sm font-medium text-copy mb-1">
+            Your Name{req.submitterName ? "*" : " (Optional)"}
+          </label>
+          <input
+            type="text"
+            value={formData.submitterName}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                submitterName: e.target.value,
+              }))
+            }
+            placeholder="Your name"
+            className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
+            required={req.submitterName}
+            disabled={isSubmitting}
+          />
+        </div>
       )}
 
       {/* Email */}
       {vis.email && (
-      <div>
-        <label className="block text-sm font-medium text-copy mb-1">
-          Email{req.email ? "*" : " (Optional)"}
-        </label>
-        <div className="text-sm text-soft mb-2">
-          Hidden and for hackathon notifications
+        <div>
+          <label className="block text-sm font-medium text-copy mb-1">
+            Email{req.email ? "*" : " (Optional)"}
+          </label>
+          <div className="text-sm text-soft mb-2">
+            Hidden and for hackathon notifications
+          </div>
+          <input
+            type="email"
+            value={formData.email}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, email: e.target.value }))
+            }
+            placeholder="your@email.com"
+            className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
+            required={req.email}
+            disabled={isSubmitting}
+          />
         </div>
-        <input
-          type="email"
-          value={formData.email}
-          onChange={(e) =>
-            setFormData((prev) => ({ ...prev, email: e.target.value }))
-          }
-          placeholder="your@email.com"
-          className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
-          required={req.email}
-          disabled={isSubmitting}
-        />
-      </div>
       )}
 
       {/* Hackathon Team Info */}
       {vis.teamInfo && (
-      <div className="bg-canvas p-4 rounded-md border border-hairline">
-        <h3 className="text-base font-medium text-ink mb-3">
-          Hackathon Team Info (Optional)
-        </h3>
+        <div className="bg-canvas p-4 rounded-md border border-hairline">
+          <h3 className="text-base font-medium text-ink mb-3">
+            Hackathon Team Info{req.teamInfo ? "*" : " (Optional)"}
+          </h3>
 
-        <div className="space-y-4">
-          {/* Team Name */}
-          <div>
-            <label
-              className="block text-sm font-medium text-copy mb-1"
-              htmlFor="teamName"
-            >
-              Team Name (Optional)
-            </label>
-            <input
-              type="text"
-              id="teamName"
-              placeholder="e.g., The Code Wizards"
-              value={teamData.teamName}
-              onChange={(e) =>
-                setTeamData((prev) => ({
-                  ...prev,
-                  teamName: e.target.value,
-                }))
-              }
-              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
-              disabled={isSubmitting}
-            />
-          </div>
-
-          {/* Team Size */}
-          {teamData.teamName && (
+          <div className="space-y-4">
+            {/* Team Name */}
             <div>
               <label
                 className="block text-sm font-medium text-copy mb-1"
-                htmlFor="teamSize"
+                htmlFor="teamName"
               >
-                Team Size
+                Team Name{req.teamInfo ? "*" : " (Optional)"}
               </label>
               <input
-                type="number"
-                id="teamSize"
-                min="1"
-                max="20"
-                placeholder="e.g., 4"
-                value={teamData.teamSize}
+                type="text"
+                id="teamName"
+                placeholder="e.g., The Code Wizards"
+                value={teamData.teamName}
                 onChange={(e) =>
                   setTeamData((prev) => ({
                     ...prev,
-                    teamSize: e.target.value,
+                    teamName: e.target.value,
                   }))
                 }
                 className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
+                required={req.teamInfo}
                 disabled={isSubmitting}
               />
             </div>
-          )}
 
-          {/* Team Members */}
-          {teamData.teamName && (
-            <div>
-              <label className="block text-sm font-medium text-copy mb-2">
-                Team Members (Optional)
-              </label>
-              <div className="space-y-2">
-                {teamData.teamMembers.map((member, index) => (
-                  <div key={index} className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Name"
-                      value={member.name}
-                      onChange={(e) => {
-                        const newMembers = [...teamData.teamMembers];
-                        newMembers[index].name = e.target.value;
-                        setTeamData((prev) => ({
-                          ...prev,
-                          teamMembers: newMembers,
-                        }));
-                      }}
-                      className="flex-1 px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
-                      disabled={isSubmitting}
-                    />
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      value={member.email}
-                      onChange={(e) => {
-                        const newMembers = [...teamData.teamMembers];
-                        newMembers[index].email = e.target.value;
-                        setTeamData((prev) => ({
-                          ...prev,
-                          teamMembers: newMembers,
-                        }));
-                      }}
-                      className="flex-1 px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
-                      disabled={isSubmitting}
-                    />
-                    {index > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newMembers = teamData.teamMembers.filter(
-                            (_, i) => i !== index,
-                          );
+            {/* Team Size */}
+            {teamData.teamName && (
+              <div>
+                <label
+                  className="block text-sm font-medium text-copy mb-1"
+                  htmlFor="teamSize"
+                >
+                  Team Size
+                </label>
+                <input
+                  type="number"
+                  id="teamSize"
+                  min="1"
+                  max="20"
+                  placeholder="e.g., 4"
+                  value={teamData.teamSize}
+                  onChange={(e) =>
+                    setTeamData((prev) => ({
+                      ...prev,
+                      teamSize: e.target.value,
+                    }))
+                  }
+                  className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
+                  disabled={isSubmitting}
+                />
+              </div>
+            )}
+
+            {/* Team Members */}
+            {teamData.teamName && (
+              <div>
+                <label className="block text-sm font-medium text-copy mb-2">
+                  Team Members (Optional)
+                </label>
+                <div className="space-y-2">
+                  {teamData.teamMembers.map((member, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Name"
+                        value={member.name}
+                        onChange={(e) => {
+                          const newMembers = [...teamData.teamMembers];
+                          newMembers[index].name = e.target.value;
                           setTeamData((prev) => ({
                             ...prev,
                             teamMembers: newMembers,
                           }));
                         }}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                        className="flex-1 px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
                         disabled={isSubmitting}
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTeamData((prev) => ({
-                      ...prev,
-                      teamMembers: [
-                        ...prev.teamMembers,
-                        { name: "", email: "" },
-                      ],
-                    }));
-                  }}
-                  className="w-full px-3 py-2 border border-hairline text-copy hover:bg-surface-hover rounded-md transition-colors flex items-center justify-center gap-2"
-                  disabled={isSubmitting}
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Team Member
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-      )}
-
-      {vis.tags && (
-      <>
-      <SectionHeading label="Tags" />
-
-      {/* Tags Section */}
-      <div>
-        <label className="block text-sm font-medium text-copy mb-2">
-          Select Tags{req.tags ? " *" : " (Optional)"}
-        </label>
-        <span className="ml-2 text-xs text-copy">
-          Select tags that best describe your app or hackathon participation
-        </span>
-
-        {/* Quick Select - Header Tags */}
-        <div className="flex flex-wrap gap-2 mb-4 mt-3">
-          {availableTags === undefined && (
-            <span className="text-sm text-soft">Loading tags...</span>
-          )}
-          {availableTags?.map((tag) => (
-            <button
-              key={tag._id}
-              type="button"
-              onClick={() => toggleTag(tag._id)}
-              disabled={
-                isSubmitting || !!(requiredTagId && tag._id === requiredTagId)
-              }
-              className={`px-3 py-1 rounded-md text-sm transition-colors border flex items-center gap-1 ${
-                selectedTagIds.includes(tag._id)
-                  ? "bg-surface-alt text-ink border-hairline-strong"
-                  : "bg-surface text-soft border-hairline-strong hover:border-hairline-strong hover:text-copy"
-              }`}
-              style={{
-                backgroundColor: selectedTagIds.includes(tag._id)
-                  ? tag.backgroundColor || "var(--th-surface-alt)"
-                  : "white",
-                color: selectedTagIds.includes(tag._id)
-                  ? (tag.textColor ?? "var(--th-ink)")
-                  : "var(--th-soft)",
-                borderColor: selectedTagIds.includes(tag._id)
-                  ? tag.borderColor ||
-                    (tag.backgroundColor ? "transparent" : "var(--th-hairline-strong)")
-                  : "var(--th-hairline-strong)",
-              }}
-            >
-              {tag.emoji && <span className="text-sm">{tag.emoji}</span>}
-              {tag.iconUrl && !tag.emoji && (
-                <img
-                  src={tag.iconUrl}
-                  alt=""
-                  className="w-4 h-4 rounded-sm object-cover"
-                />
-              )}
-              {tag.name}
-            </button>
-          ))}
-        </div>
-
-        {/* Search All Tags Dropdown */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-copy mb-2">
-            Search All Available Tags
-          </label>
-          <span className="ml-2 text-xs text-copy mb-2 block">
-            Find and select from all tags, including those not shown above
-          </span>
-          <div className="relative" ref={dropdownRef}>
-            <input
-              type="text"
-              value={dropdownSearchValue}
-              onChange={(e) => {
-                setDropdownSearchValue(e.target.value);
-                setShowDropdown(e.target.value.length > 0);
-              }}
-              onFocus={() => setShowDropdown(dropdownSearchValue.length > 0)}
-              placeholder="Type to search for tags..."
-              disabled={isSubmitting}
-              className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline text-sm"
-            />
-
-            {/* Dropdown Results */}
-            {showDropdown && allTags && (
-              <div className="absolute z-10 w-full mt-1 bg-surface border border-hairline rounded-md shadow-lg max-h-48 overflow-y-auto">
-                {(() => {
-                  const searchTerm = dropdownSearchValue.toLowerCase();
-                  const filteredTags = allTags
-                    .filter(
-                      (tag) =>
-                        tag.name.toLowerCase().includes(searchTerm) &&
-                        !selectedTagIds.includes(tag._id) &&
-                        !newTagNames.some(
-                          (newTag) =>
-                            newTag.toLowerCase() === tag.name.toLowerCase(),
-                        ),
-                    )
-                    .slice(0, 10);
-
-                  if (filteredTags.length === 0) {
-                    return (
-                      <div className="px-3 py-2 text-sm text-soft">
-                        No matching tags found
-                      </div>
-                    );
-                  }
-
-                  return filteredTags.map((tag) => (
-                    <button
-                      key={tag._id}
-                      type="button"
-                      onClick={() => handleSelectFromDropdown(tag._id)}
-                      disabled={isSubmitting}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-surface-hover focus:bg-surface-alt focus:outline-none flex items-center gap-2"
-                    >
-                      {tag.emoji && (
-                        <span className="text-sm">{tag.emoji}</span>
-                      )}
-                      {tag.iconUrl && !tag.emoji && (
-                        <img
-                          src={tag.iconUrl}
-                          alt=""
-                          className="w-4 h-4 rounded-sm object-cover"
-                        />
-                      )}
-                      <span
-                        className="inline-block px-2 py-0.5 rounded text-xs font-medium"
-                        style={{
-                          backgroundColor: tag.backgroundColor || "var(--th-surface-alt)",
-                          color: tag.textColor || "var(--th-copy)",
-                          border: `1px solid ${tag.backgroundColor ? "transparent" : "var(--th-hairline-strong)"}`,
+                      />
+                      <input
+                        type="email"
+                        placeholder="Email"
+                        value={member.email}
+                        onChange={(e) => {
+                          const newMembers = [...teamData.teamMembers];
+                          newMembers[index].email = e.target.value;
+                          setTeamData((prev) => ({
+                            ...prev,
+                            teamMembers: newMembers,
+                          }));
                         }}
-                      >
-                        {tag.name}
-                      </span>
-                      {tag.isHidden && (
-                        <span className="text-xs text-faint">(Hidden)</span>
+                        className="flex-1 px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
+                        disabled={isSubmitting}
+                      />
+                      {index > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newMembers = teamData.teamMembers.filter(
+                              (_, i) => i !== index,
+                            );
+                            setTeamData((prev) => ({
+                              ...prev,
+                              teamMembers: newMembers,
+                            }));
+                          }}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                          disabled={isSubmitting}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
                       )}
-                    </button>
-                  ));
-                })()}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTeamData((prev) => ({
+                        ...prev,
+                        teamMembers: [
+                          ...prev.teamMembers,
+                          { name: "", email: "" },
+                        ],
+                      }));
+                    }}
+                    className="w-full px-3 py-2 border border-hairline text-copy hover:bg-surface-hover rounded-md transition-colors flex items-center justify-center gap-2"
+                    disabled={isSubmitting}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Team Member
+                  </button>
+                </div>
               </div>
             )}
           </div>
         </div>
+      )}
 
-        {/* Create New Tag */}
-        <label className="block text-sm font-medium text-copy mb-2">
-          Add New Tags (optional)
-        </label>
-        <div className="flex gap-2 mb-2">
-          <input
-            type="text"
-            value={newTagInputValue}
-            onChange={(e) => setNewTagInputValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleAddNewTag();
-              }
-            }}
-            maxLength={maxTagLength}
-            placeholder={
-              countedTags >= maxTags
-                ? `Maximum ${maxTags} tags reached`
-                : "Enter new tag name..."
-            }
-            disabled={isSubmitting || countedTags >= maxTags}
-            className="flex-1 px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline text-sm"
-          />
-          <button
-            type="button"
-            onClick={handleAddNewTag}
-            disabled={
-              !newTagInputValue.trim() ||
-              isSubmitting ||
-              countedTags >= maxTags
-            }
-            className="px-3 py-1 bg-surface-alt text-copy rounded-md hover:bg-surface-hover transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-          >
-            <Plus className="w-4 h-4" /> Add
-          </button>
-        </div>
+      {vis.tags && (
+        <>
+          <SectionHeading label="Tags" />
 
-        {/* Tag Selection Hints */}
-        {req.tags &&
-          selectedTagIds.length === 0 &&
-          newTagNames.length === 0 && (
-            <p className="text-xs text-red-500 mt-1">
-              Please select or add at least one tag.
-            </p>
-          )}
-        {countedTags >= maxTags && (
-          <p className="text-xs text-amber-600 mt-1">
-            Maximum of {maxTags} tags reached. Remove a tag to add another.
-          </p>
-        )}
-      </div>
+          {/* Tags Section */}
+          <div>
+            <label className="block text-sm font-medium text-copy mb-2">
+              Select Tags{req.tags ? " *" : " (Optional)"}
+            </label>
+            <span className="ml-2 text-xs text-copy">
+              Select tags that best describe your app or hackathon participation
+            </span>
 
-      {/* Selected Tags - Always Visible */}
-      <div className="p-4 bg-canvas rounded-md border border-hairline">
-        <div className="text-sm font-medium text-copy mb-3">
-          Selected Tags ({countedTags}/{maxTags})
-        </div>
-        {selectedTagIds.length > 0 || newTagNames.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {/* Show selected existing tags */}
-            {allTags &&
-              selectedTagIds.map((tagId) => {
-                const tag =
-                  availableTags?.find((t) => t._id === tagId) ||
-                  allTags.find((t) => t._id === tagId);
-                if (!tag) return null;
-                const isRequired = requiredTagId && tagId === requiredTagId;
+            {/* Quick Select - Header Tags */}
+            <div className="flex flex-wrap gap-2 mb-4 mt-3">
+              {availableTags === undefined && (
+                <span className="text-sm text-soft">Loading tags...</span>
+              )}
+              {availableTags
+                ?.filter(
+                  // A form-hidden required tag never renders as a quick-select
+                  // button; it is still applied automatically on submit
+                  (tag) =>
+                    showRequiredTag ||
+                    !requiredTagId ||
+                    tag._id !== requiredTagId,
+                )
+                .map((tag) => (
+                <button
+                  key={tag._id}
+                  type="button"
+                  onClick={() => toggleTag(tag._id)}
+                  disabled={
+                    isSubmitting ||
+                    !!(requiredTagId && tag._id === requiredTagId)
+                  }
+                  className={`px-3 py-1 rounded-md text-sm transition-colors border flex items-center gap-1 ${
+                    selectedTagIds.includes(tag._id)
+                      ? "bg-surface-alt text-ink border-hairline-strong"
+                      : "bg-surface text-soft border-hairline-strong hover:border-hairline-strong hover:text-copy"
+                  }`}
+                  style={{
+                    backgroundColor: selectedTagIds.includes(tag._id)
+                      ? tag.backgroundColor || "var(--th-surface-alt)"
+                      : "white",
+                    color: selectedTagIds.includes(tag._id)
+                      ? (tag.textColor ?? "var(--th-ink)")
+                      : "var(--th-soft)",
+                    borderColor: selectedTagIds.includes(tag._id)
+                      ? tag.borderColor ||
+                        (tag.backgroundColor
+                          ? "transparent"
+                          : "var(--th-hairline-strong)")
+                      : "var(--th-hairline-strong)",
+                  }}
+                >
+                  {tag.emoji && <span className="text-sm">{tag.emoji}</span>}
+                  {tag.iconUrl && !tag.emoji && (
+                    <img
+                      src={tag.iconUrl}
+                      alt=""
+                      className="w-4 h-4 rounded-sm object-cover"
+                    />
+                  )}
+                  {tag.name}
+                </button>
+              ))}
+            </div>
 
-                return (
-                  <span
-                    key={tag._id}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm border transition-colors"
-                    style={{
-                      backgroundColor: tag.backgroundColor || "var(--th-surface-alt)",
-                      color: tag.textColor || "var(--th-ink)",
-                      borderColor: tag.backgroundColor
-                        ? "transparent"
-                        : "var(--th-hairline-strong)",
-                    }}
-                  >
-                    {tag.emoji && <span className="text-sm">{tag.emoji}</span>}
-                    {tag.iconUrl && !tag.emoji && (
-                      <img
-                        src={tag.iconUrl}
-                        alt=""
-                        className="w-4 h-4 rounded-sm object-cover"
-                      />
-                    )}
-                    {tag.name}
-                    {tag.isHidden && (
-                      <span className="text-xs opacity-70">(Hidden)</span>
-                    )}
-                    {isRequired && (
-                      <span title="Required tag">
-                        <Lock className="w-3 h-3 ml-1 opacity-50" />
-                      </span>
-                    )}
-                  </span>
-                );
-              })}
-
-            {/* Show new tags being created */}
-            {newTagNames.map((tagName) => (
-              <span
-                key={tagName}
-                className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-sm border border-blue-200"
-              >
-                {tagName}
-                <span className="text-xs opacity-70">(New)</span>
+            {/* Search All Tags Dropdown */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-copy mb-2">
+                Search All Available Tags
+              </label>
+              <span className="ml-2 text-xs text-copy mb-2 block">
+                Find and select from all tags, including those not shown above
               </span>
-            ))}
+              <div className="relative" ref={dropdownRef}>
+                <input
+                  type="text"
+                  value={dropdownSearchValue}
+                  onChange={(e) => {
+                    setDropdownSearchValue(e.target.value);
+                    setShowDropdown(e.target.value.length > 0);
+                  }}
+                  onFocus={() =>
+                    setShowDropdown(dropdownSearchValue.length > 0)
+                  }
+                  placeholder="Type to search for tags..."
+                  disabled={isSubmitting}
+                  className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline text-sm"
+                />
+
+                {/* Dropdown Results */}
+                {showDropdown && allTags && (
+                  <div className="absolute z-10 w-full mt-1 bg-surface border border-hairline rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    {(() => {
+                      const searchTerm = dropdownSearchValue.toLowerCase();
+                      const filteredTags = allTags
+                        .filter(
+                          (tag) =>
+                            tag.name.toLowerCase().includes(searchTerm) &&
+                            !selectedTagIds.includes(tag._id) &&
+                            !newTagNames.some(
+                              (newTag) =>
+                                newTag.toLowerCase() === tag.name.toLowerCase(),
+                            ),
+                        )
+                        .slice(0, 10);
+
+                      if (filteredTags.length === 0) {
+                        return (
+                          <div className="px-3 py-2 text-sm text-soft">
+                            No matching tags found
+                          </div>
+                        );
+                      }
+
+                      return filteredTags.map((tag) => (
+                        <button
+                          key={tag._id}
+                          type="button"
+                          onClick={() => handleSelectFromDropdown(tag._id)}
+                          disabled={isSubmitting}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-surface-hover focus:bg-surface-alt focus:outline-none flex items-center gap-2"
+                        >
+                          {tag.emoji && (
+                            <span className="text-sm">{tag.emoji}</span>
+                          )}
+                          {tag.iconUrl && !tag.emoji && (
+                            <img
+                              src={tag.iconUrl}
+                              alt=""
+                              className="w-4 h-4 rounded-sm object-cover"
+                            />
+                          )}
+                          <span
+                            className="inline-block px-2 py-0.5 rounded text-xs font-medium"
+                            style={{
+                              backgroundColor:
+                                tag.backgroundColor || "var(--th-surface-alt)",
+                              color: tag.textColor || "var(--th-copy)",
+                              border: `1px solid ${tag.backgroundColor ? "transparent" : "var(--th-hairline-strong)"}`,
+                            }}
+                          >
+                            {tag.name}
+                          </span>
+                          {tag.isHidden && (
+                            <span className="text-xs text-faint">(Hidden)</span>
+                          )}
+                        </button>
+                      ));
+                    })()}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Create New Tag */}
+            <label className="block text-sm font-medium text-copy mb-2">
+              Add New Tags (optional)
+            </label>
+            <div className="flex gap-2 mb-2">
+              <input
+                type="text"
+                value={newTagInputValue}
+                onChange={(e) => setNewTagInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddNewTag();
+                  }
+                }}
+                maxLength={maxTagLength}
+                placeholder={
+                  countedTags >= maxTags
+                    ? `Maximum ${maxTags} tags reached`
+                    : "Enter new tag name..."
+                }
+                disabled={isSubmitting || countedTags >= maxTags}
+                className="flex-1 px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline text-sm"
+              />
+              <button
+                type="button"
+                onClick={handleAddNewTag}
+                disabled={
+                  !newTagInputValue.trim() ||
+                  isSubmitting ||
+                  countedTags >= maxTags
+                }
+                className="px-3 py-1 bg-surface-alt text-copy rounded-md hover:bg-surface-hover transition-colors flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                <Plus className="w-4 h-4" /> Add
+              </button>
+            </div>
+
+            {/* Tag Selection Hints */}
+            {req.tags &&
+              selectedTagIds.length === 0 &&
+              newTagNames.length === 0 && (
+                <p className="text-xs text-red-500 mt-1">
+                  Please select or add at least one tag.
+                </p>
+              )}
+            {countedTags >= maxTags && (
+              <p className="text-xs text-amber-600 mt-1">
+                Maximum of {maxTags} tags reached. Remove a tag to add another.
+              </p>
+            )}
           </div>
-        ) : (
-          <p className="text-sm text-faint">
-            No tags selected yet. Please select tags above.
-          </p>
-        )}
-      </div>
-      </>
+
+          {/* Selected Tags - Always Visible */}
+          <div className="p-4 bg-canvas rounded-md border border-hairline">
+            <div className="text-sm font-medium text-copy mb-3">
+              Selected Tags ({countedTags}/{maxTags})
+            </div>
+            {selectedTagIds.filter(
+              (id) =>
+                showRequiredTag || !requiredTagId || id !== requiredTagId,
+            ).length > 0 || newTagNames.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {/* Show selected existing tags */}
+                {allTags &&
+                  selectedTagIds.map((tagId) => {
+                    const tag =
+                      availableTags?.find((t) => t._id === tagId) ||
+                      allTags.find((t) => t._id === tagId);
+                    if (!tag) return null;
+                    const isRequired = requiredTagId && tagId === requiredTagId;
+                    // Form-hidden required tag stays out of the visible pills
+                    if (isRequired && !showRequiredTag) return null;
+
+                    return (
+                      <span
+                        key={tag._id}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-sm border transition-colors"
+                        style={{
+                          backgroundColor:
+                            tag.backgroundColor || "var(--th-surface-alt)",
+                          color: tag.textColor || "var(--th-ink)",
+                          borderColor: tag.backgroundColor
+                            ? "transparent"
+                            : "var(--th-hairline-strong)",
+                        }}
+                      >
+                        {tag.emoji && (
+                          <span className="text-sm">{tag.emoji}</span>
+                        )}
+                        {tag.iconUrl && !tag.emoji && (
+                          <img
+                            src={tag.iconUrl}
+                            alt=""
+                            className="w-4 h-4 rounded-sm object-cover"
+                          />
+                        )}
+                        {tag.name}
+                        {tag.isHidden && (
+                          <span className="text-xs opacity-70">(Hidden)</span>
+                        )}
+                        {isRequired && (
+                          <span title="Required tag">
+                            <Lock className="w-3 h-3 ml-1 opacity-50" />
+                          </span>
+                        )}
+                      </span>
+                    );
+                  })}
+
+                {/* Show new tags being created */}
+                {newTagNames.map((tagName) => (
+                  <span
+                    key={tagName}
+                    className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-sm border border-blue-200"
+                  >
+                    {tagName}
+                    <span className="text-xs opacity-70">(New)</span>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-faint">
+                No tags selected yet. Please select tags above.
+              </p>
+            )}
+          </div>
+        </>
       )}
 
       {/* Submit Button */}
