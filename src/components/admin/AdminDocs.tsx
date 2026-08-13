@@ -399,14 +399,25 @@ Toggle **agent scores advisory** per group to collect agent scores without letti
     icon: ShieldAlert,
     content: `# AI spam check
 
-The **AI Spam** tab reviews submissions for spam: dead or parked URLs, link farms, empty repos passed off as products, duplicate mass submissions, and promo pages with no relation to a real app. It flags; a human always confirms. Nothing is hidden or removed until an admin marks it.
+The **AI Spam** tab reviews submissions for spam: dead or parked URLs, link farms, empty repos passed off as products, duplicate mass submissions, and promo pages with no relation to a real app. By default it only flags and a human confirms; the optional **automation agent** can also mark and hide high-confidence spam on its own.
 
 ## When scans run
 
-- **Automatically**: every new submission is scanned right after it is created.
+- **Automatically**: every new submission is scanned right after it is created, while the **Auto-scan new submissions** toggle in the Automation card is on (it is on by default).
 - **Manually**: **Scan recent** queues up to 100 submissions that have not been scanned yet; **Re-scan all recent** re-runs everything. With a **date range** set in the filters row, both buttons pull from that window instead of the most recent.
 
 Scans run in their own background pool, so a batch scan never slows down the AI judge.
+
+## Automation
+
+The **Automation** card controls what happens to new submissions with no admin involved. Changing any toggle needs **moderation.moderate** and every change lands in the **Activity** tab.
+
+- **Auto-scan new submissions** (default on): run the spam scan on every new submission. Turn it off to pause scanning without losing any settings.
+- **Agent auto-mark spam** (default off): when an automatic scan returns a **spam** verdict at or above the **confidence threshold**, the agent marks the submission as spam and hides it immediately. Only automatic scans on fresh submissions qualify; batch and manual re-scans never auto-mark, so re-checking old content can never mass-hide it. Every auto-mark is logged in the Activity tab by the **AI Spam Agent** actor with the confidence and reasons.
+- **Confidence threshold** (default 85, range 50 to 100): higher means fewer, safer auto-marks.
+- **Notify submitter on auto-mark** (default on): send the same in-app alert and reason email a human mark sends. Turned off, the agent marks silently so you can review first and notify (or unmark) after.
+
+Auto-marked rows show an **Auto-marked spam** badge with a robot icon in both the scan results and the Marked spam review. **Unmark** reverses an auto-mark exactly like a human mark.
 
 ## What a scan checks
 
@@ -440,6 +451,14 @@ Marking a flagged submission (single or bulk, with an optional custom reason):
 **Unmark** reverses everything: label cleared, submission visible again. Deletion stays a separate explicit action; bulk delete removes the submissions with their comments, votes, ratings, bookmarks, and scan history.
 
 Confirmed spam also shows a red **Spam** badge on the row in the Moderation tab.
+
+## Reviewing marked spam
+
+The **Marked spam** card at the bottom of the tab lists every submission currently marked as spam, read straight from the stories table, so marked submissions without a scan row still show up. Each row shows the title, live URL, author, when it was submitted and marked, who (or which agent) marked it, and the reason sent to the submitter.
+
+- **Filter by marked date** narrows the list to a period (the range persists across visits).
+- **Select all** plus **Delete selected** permanently removes the chosen submissions with their comments, votes, ratings, bookmarks, scan rows, and images. Large selections delete in chunks of 50 automatically.
+- **Unmark** on any row restores the submission, whether a human or the agent marked it.
 
 ## Emails and the kill switch
 

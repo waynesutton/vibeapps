@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [Added] - 2026-08-13
 
+**Spam automation agent with auto-mark on submission**
+
+- New Automation card on the AI Spam admin tab with three server-enforced toggles: auto-scan new submissions (default on, now pausable), agent auto-mark spam (default off), and notify submitter on auto-mark (default on), plus a confidence threshold input (default 85, range 50 to 100) (2026-08-13).
+- With auto-mark on, a new submission whose automatic scan returns a spam verdict at or above the threshold is marked as spam and hidden immediately, in the same transaction that saves the scan. Manual and batch scans never auto-mark, so re-scanning old content cannot mass-hide it.
+- Auto-marked submissions carry a new `spamMarkedByAgent` flag, show an "Auto-marked spam" robot badge in the scan results and the Marked spam review, and log to the Activity tab as "AI Spam Agent" with confidence and reasons. Unmark reverses an auto-mark exactly like a human mark.
+- With notifications off the agent marks silently for later review; on, the usual in-app alert and reason email go out, still behind the global email kill switch and the spam notification type toggle.
+- The Marked spam review gained a filter by marked date (persisted like the other ranges on the tab). Admin Docs AI spam check section rewritten to cover automation and the review flow.
+- **Backend**: `convex/schema.ts` (`spamMarkedByAgent`), `convex/spamCheck.ts` (`getSpamAutomation`, `setSpamAutomation`, auto-mark hook in `saveResult`, auto-scan gate, date args on `listMarkedSpam`).
+- **Frontend**: `src/components/admin/SpamCheck.tsx`, `src/components/admin/AdminDocs.tsx`.
+- **Docs**: `prds/spam-automation-agent.md` (new).
+
+
+### [Added] - 2026-08-13
+
 **Marked spam review with bulk delete**
 
 - New "Marked spam" section on the AI Spam admin tab lists every submission currently marked as spam, read straight from the stories table through a new `by_isSpam` index, so marked stories without a scan result row now show up too (2026-08-13).

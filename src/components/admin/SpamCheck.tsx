@@ -14,6 +14,9 @@ import {
   Loader2,
   Github,
   PenLine,
+  Bot,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -42,6 +45,7 @@ type SortBy = "newest" | "oldest" | "confidence";
 // localStorage keys so picked date ranges survive tab switches and reloads
 const SCAN_RANGE_KEY = "adminSpamScanRange";
 const FILTER_RANGE_KEY = "adminSpamFilterRange";
+const MARKED_RANGE_KEY = "adminSpamMarkedRange";
 
 // Read a saved range ({from, to} ms timestamps) back into a DateRange
 function loadSavedRange(key: string): DateRange | undefined {
@@ -161,6 +165,50 @@ function CountPill({
   );
 }
 
+// One automation setting row: label, description, and an on/off toggle
+function AutomationToggle({
+  label,
+  description,
+  enabled,
+  disabled,
+  onToggle,
+}: {
+  label: string;
+  description: string;
+  enabled: boolean;
+  disabled?: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3 py-2">
+      <div className="min-w-0">
+        <div className="text-sm text-ink">{label}</div>
+        <p className="text-xs text-soft mt-0.5">{description}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        aria-label={`${enabled ? "Disable" : "Enable"} ${label}`}
+        onClick={onToggle}
+        disabled={disabled}
+        className={`flex items-center gap-1.5 flex-shrink-0 text-xs font-medium rounded-full px-2 py-1 border transition-colors ${
+          enabled
+            ? "text-green-700 bg-green-50 border-green-200"
+            : "text-soft bg-surface-alt border-hairline"
+        } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:shadow-sm"}`}
+      >
+        {enabled ? (
+          <ToggleRight className="w-4 h-4" />
+        ) : (
+          <ToggleLeft className="w-4 h-4" />
+        )}
+        {enabled ? "On" : "Off"}
+      </button>
+    </div>
+  );
+}
+
 export function SpamCheck() {
   const { can } = useAdminAccess();
   const { showConfirm, DialogComponents } = useDialog();
@@ -175,6 +223,10 @@ export function SpamCheck() {
   const [filterRange, setFilterRangeState] = useState<DateRange | undefined>(
     () => loadSavedRange(FILTER_RANGE_KEY),
   );
+  // Range for the marked-spam review section (filters by marked date)
+  const [markedRange, setMarkedRangeState] = useState<DateRange | undefined>(
+    () => loadSavedRange(MARKED_RANGE_KEY),
+  );
 
   const setScanRange = (range: DateRange | undefined) => {
     persistRange(SCAN_RANGE_KEY, range);
@@ -184,6 +236,11 @@ export function SpamCheck() {
   const setFilterRange = (range: DateRange | undefined) => {
     persistRange(FILTER_RANGE_KEY, range);
     setFilterRangeState(range);
+  };
+
+  const setMarkedRange = (range: DateRange | undefined) => {
+    persistRange(MARKED_RANGE_KEY, range);
+    setMarkedRangeState(range);
   };
   const [selectedIds, setSelectedIds] = useState<Set<Id<"stories">>>(new Set());
   // Separate selection for the marked-spam review section
@@ -211,6 +268,7 @@ export function SpamCheck() {
   };
 
   const { startMs: filterStartMs, endMs: filterEndMs } = rangeToMs(filterRange);
+  const { startMs: markedStartMs, endMs: markedEndMs } = rangeToMs(markedRange);
 
   const data = useQuery(api.spamCheck.listSpamResults, {
     verdictFilter,
@@ -224,8 +282,16 @@ export function SpamCheck() {
   // Only fetched while the marked-spam review section is open
   const markedSpam = useQuery(
     api.spamCheck.listMarkedSpam,
-    showMarkedReview ? {} : "skip",
+    showMarkedReview
+      ? { startDate: markedStartMs, endDate: markedEndMs }
+      : "skip",
   );
+
+  // Automation toggles (auto-scan, agent auto-mark, notify)
+  const automation = useQuery(api.spamCheck.getSpamAutomation, {});
+  const setSpamAutomation = useMutation(api.spamCheck.setSpamAutomation);
+  // Threshold input draft; null while not editing
+  const [confidenceDraft, setConfidenceDraft] = useState<string | null>(null);
 
   const startBatchScan = useMutation(api.spamCheck.startBatchScan);
   const setSpamPrompt = useMutation(api.spamCheck.setSpamPrompt);
@@ -424,6 +490,43 @@ export function SpamCheck() {
     );
   };
 
+  // Flip one automation toggle; the backend logs the change
+  const handleAutomationChange = (
+    change: Partial<{
+      autoScanEnabled: boolean;
+      autoMarkEnabled: boolean;
+      autoMarkConfidence: number;
+      autoMarkNotify: boolean;
+    }>,
+  ) => {
+    setSpamAutomation(change)
+      .then(() => toast.success("Automation settings saved"))
+      .catch((error) => {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to save settings",
+        );
+      });
+  };
+
+  const handleSaveConfidence = () => {
+    if (confidenceDraft === null) return;
+    const parsed = Number(confidenceDraft);
+    if (!Number.isFinite(parsed) || parsed < 50 || parsed > 100) {
+      toast.error("Confidence threshold must be between 50 and 100");
+      return;
+    }
+    setSpamAutomation({ autoMarkConfidence: Math.round(parsed) })
+      .then(() => {
+        toast.success("Confidence threshold saved");
+        setConfidenceDraft(null);
+      })
+      .catch((error) => {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to save threshold",
+        );
+      });
+  };
+
   const handleMarkOne = (storyId: Id<"stories">, title: string) => {
     showConfirm(
       "Mark as spam?",
@@ -599,6 +702,97 @@ export function SpamCheck() {
             Scan checks submissions that have no verdict yet. Re-scan also
             re-checks ones already scanned. Up to 100 per run.
           </p>
+        </div>
+      )}
+
+      {/* Automation: auto-scan and the agent auto-mark pipeline */}
+      {canModerate && (
+        <div className="border border-hairline rounded-lg bg-surface p-4 space-y-1">
+          <div className="flex items-center gap-2">
+            <Bot className="w-4 h-4 text-copy" />
+            <h3 className="text-sm font-medium text-ink">Automation</h3>
+          </div>
+          <p className="text-xs text-soft">
+            What happens to new submissions without an admin touching anything.
+            Batch and manual scans never auto-mark; only automatic scans on
+            fresh submissions do.
+          </p>
+          {automation === undefined ? (
+            <div className="text-sm text-soft py-4 text-center">
+              Loading automation settings...
+            </div>
+          ) : (
+            <div className="divide-y divide-hairline">
+              <AutomationToggle
+                label="Auto-scan new submissions"
+                description="Run the AI spam scan on every new submission right after it is created."
+                enabled={automation.autoScanEnabled}
+                onToggle={() =>
+                  handleAutomationChange({
+                    autoScanEnabled: !automation.autoScanEnabled,
+                  })
+                }
+              />
+              <AutomationToggle
+                label="Agent auto-mark spam"
+                description={`When an automatic scan returns a spam verdict at or above ${automation.autoMarkConfidence}% confidence, the agent marks the submission as spam and hides it immediately. Unmark reverses it, same as a human mark.`}
+                enabled={automation.autoMarkEnabled}
+                disabled={!automation.autoScanEnabled}
+                onToggle={() => {
+                  if (automation.autoMarkEnabled) {
+                    handleAutomationChange({ autoMarkEnabled: false });
+                    return;
+                  }
+                  showConfirm(
+                    "Turn on agent auto-mark?",
+                    `New submissions that scan as spam with ${automation.autoMarkConfidence}% confidence or higher will be marked and hidden automatically, without waiting for an admin. Every auto-mark is logged in the Activity tab and can be reversed with Unmark.`,
+                    () => handleAutomationChange({ autoMarkEnabled: true }),
+                    { confirmButtonText: "Turn on" },
+                  );
+                }}
+              />
+              {automation.autoMarkEnabled && (
+                <div className="flex flex-wrap items-center gap-2 py-2">
+                  <label
+                    htmlFor="spam-auto-mark-confidence"
+                    className="text-sm text-ink"
+                  >
+                    Confidence threshold
+                  </label>
+                  <Input
+                    id="spam-auto-mark-confidence"
+                    type="number"
+                    min={50}
+                    max={100}
+                    value={confidenceDraft ?? String(automation.autoMarkConfidence)}
+                    onChange={(e) => setConfidenceDraft(e.target.value)}
+                    className="h-8 w-20 text-sm bg-surface"
+                  />
+                  <span className="text-xs text-soft">%</span>
+                  {confidenceDraft !== null &&
+                    confidenceDraft !== String(automation.autoMarkConfidence) && (
+                      <Button size="sm" onClick={handleSaveConfidence}>
+                        Save
+                      </Button>
+                    )}
+                  <span className="text-xs text-faint">
+                    50 to 100. Higher means fewer, safer auto-marks.
+                  </span>
+                </div>
+              )}
+              <AutomationToggle
+                label="Notify submitter on auto-mark"
+                description="Send the in-app alert and reason email when the agent marks something. Off means the agent marks silently and you notify (or unmark) after review."
+                enabled={automation.autoMarkNotify}
+                disabled={!automation.autoMarkEnabled}
+                onToggle={() =>
+                  handleAutomationChange({
+                    autoMarkNotify: !automation.autoMarkNotify,
+                  })
+                }
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -865,8 +1059,13 @@ export function SpamCheck() {
                         confidence={result.confidence}
                       />
                       {result.isSpam && (
-                        <span className="text-xs font-medium text-white bg-red-600 rounded-full px-2 py-0.5">
-                          Marked spam
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-white bg-red-600 rounded-full px-2 py-0.5">
+                          {result.spamMarkedByAgent && (
+                            <Bot className="w-3 h-3" />
+                          )}
+                          {result.spamMarkedByAgent
+                            ? "Auto-marked spam"
+                            : "Marked spam"}
                         </span>
                       )}
                       {result.isHidden && !result.isSpam && (
@@ -1106,13 +1305,31 @@ export function SpamCheck() {
               Loading marked spam...
             </div>
           ) : markedSpam.length === 0 ? (
-            <div className="text-sm text-soft py-6 text-center border border-dashed border-hairline rounded-lg">
-              Nothing is marked as spam right now.
+            <div className="text-sm text-soft py-6 text-center border border-dashed border-hairline rounded-lg space-y-2">
+              <div>
+                {markedRange?.from
+                  ? "Nothing was marked as spam in this date range."
+                  : "Nothing is marked as spam right now."}
+              </div>
+              {markedRange?.from && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMarkedRange(undefined)}
+                >
+                  Clear date filter
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-2">
-              {/* Section toolbar: select all + delete selected */}
+              {/* Section toolbar: marked-date filter + select all + delete selected */}
               <div className="flex flex-wrap items-center gap-2">
+                <DateRangePicker
+                  value={markedRange}
+                  onChange={setMarkedRange}
+                  placeholder="Filter by marked date"
+                />
                 <label className="flex items-center gap-2 text-sm text-soft cursor-pointer">
                   <input
                     type="checkbox"
@@ -1181,6 +1398,12 @@ export function SpamCheck() {
                         <ExternalLink className="w-3 h-3" />
                         URL
                       </a>
+                      {row.markedByAgent && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-white bg-red-600 rounded-full px-2 py-0.5">
+                          <Bot className="w-3 h-3" />
+                          Auto-marked
+                        </span>
+                      )}
                     </div>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-soft">
                       <span>
@@ -1208,7 +1431,11 @@ export function SpamCheck() {
                           {formatDistanceToNow(row.spamMarkedAt, {
                             addSuffix: true,
                           })}
-                          {row.markedByName ? ` by ${row.markedByName}` : ""}
+                          {row.markedByName
+                            ? ` by ${row.markedByName}`
+                            : row.markedByAgent
+                              ? " by AI Spam Agent"
+                              : ""}
                         </span>
                       )}
                     </div>

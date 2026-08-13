@@ -109,6 +109,7 @@ export default defineSchema({
     spamReason: v.optional(v.string()), // Why it was marked (shown to the submitter)
     spamMarkedAt: v.optional(v.number()), // When it was marked
     spamMarkedBy: v.optional(v.id("users")), // Admin who confirmed the mark
+    spamMarkedByAgent: v.optional(v.boolean()), // True when the automation agent marked it
     // Hackathon team info
     teamName: v.optional(v.string()),
     teamMemberCount: v.optional(v.number()),
