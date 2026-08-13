@@ -16,6 +16,12 @@ export type PublicDirectoryStory = {
   tags: Array<string>;
 };
 
+export type PublicStoryFile = PublicDirectoryStory & {
+  longDescription?: string;
+  authorName?: string;
+  videoUrl?: string;
+};
+
 export type PublicDirectory = {
   stories: Array<PublicDirectoryStory>;
   newestCreatedAt: number | null;
@@ -36,6 +42,14 @@ export function isPublicStory(story: {
 
 function formatDay(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
+}
+
+export function storyLlmsTxtPath(slug: string): string {
+  return `/s/${slug}/llms.txt`;
+}
+
+export function storyMarkdownPath(slug: string): string {
+  return `/s/${slug}.md`;
 }
 
 function oneLine(text: string, max: number): string {
@@ -90,6 +104,7 @@ export function buildRobotsTxt(baseUrl: string): string {
   const lines: Array<string> = [
     "# Vibe Apps robots.txt",
     "# Public directory files: /llms.txt and /vibeapps.md",
+    "# Per-app files: /s/{slug}/llms.txt and /s/{slug}.md",
     "",
     "User-agent: *",
     "Allow: /",
@@ -145,6 +160,7 @@ export function buildLlmsTxt(
     `- [Full markdown directory](${baseUrl}/vibeapps.md): title, tagline, live URL, GitHub, tags, and vibes for every public app`,
     `- [Sitemap](${baseUrl}/sitemap.xml)`,
     `- [Homepage](${baseUrl}/)`,
+    `- Each app also has \`/s/{slug}/llms.txt\` and \`/s/{slug}.md\``,
     "",
     "## Site",
     "",
@@ -161,7 +177,9 @@ export function buildLlmsTxt(
   for (const story of directory.stories) {
     const label = escapeMdLinkLabel(story.title);
     const tagline = oneLine(story.description, 220);
-    lines.push(`- [${label}](${baseUrl}/s/${story.slug}): ${tagline}`);
+    lines.push(
+      `- [${label}](${baseUrl}/s/${story.slug}): ${tagline} ([llms.txt](${baseUrl}${storyLlmsTxtPath(story.slug)}), [markdown](${baseUrl}${storyMarkdownPath(story.slug)}))`,
+    );
   }
 
   lines.push("");
@@ -182,7 +200,7 @@ export function buildVibeappsMd(
     "",
     `${directory.stories.length} apps | Updated ${updated}`,
     "",
-    "Agents: treat this file as the canonical directory. Each app links to its page on vibeapps.dev. Fetch `/llms.txt` for the shorter index.",
+    "Agents: treat this file as the canonical directory. Each app links to its page on vibeapps.dev plus `/s/{slug}/llms.txt` and `/s/{slug}.md`. Fetch `/llms.txt` for the shorter index.",
     "",
     "## Site",
     "",
@@ -210,6 +228,10 @@ export function buildVibeappsMd(
       lines.push(`- Tags: ${story.tags.join(", ")}`);
     }
     lines.push(`- Vibes: ${story.votes}`);
+    lines.push(
+      `- llms.txt: ${baseUrl}${storyLlmsTxtPath(story.slug)}`,
+    );
+    lines.push(`- Markdown: ${baseUrl}${storyMarkdownPath(story.slug)}`);
     lines.push("");
   }
 
@@ -273,11 +295,24 @@ export function buildSitemapXml(
   ];
 
   for (const story of directory.stories) {
+    const lastmod = isoDate(story.createdAt);
     urls.push({
       loc: `${baseUrl}/s/${story.slug}`,
-      lastmod: isoDate(story.createdAt),
+      lastmod,
       changefreq: "weekly",
       priority: story.isPinned ? "0.9" : "0.6",
+    });
+    urls.push({
+      loc: `${baseUrl}${storyLlmsTxtPath(story.slug)}`,
+      lastmod,
+      changefreq: "weekly",
+      priority: "0.4",
+    });
+    urls.push({
+      loc: `${baseUrl}${storyMarkdownPath(story.slug)}`,
+      lastmod,
+      changefreq: "weekly",
+      priority: "0.4",
     });
   }
 
@@ -296,3 +331,87 @@ export function buildSitemapXml(
 
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
 }
+
+const STORY_MD_BODY_CAP = 8000;
+
+export function buildStoryLlmsTxt(
+  story: PublicStoryFile,
+  baseUrl: string,
+): string {
+  const tagline = oneLine(story.description, 280);
+  const lines: Array<string> = [
+    `# ${story.title}`,
+    "",
+    `> ${tagline}`,
+    "",
+    `Public app on [Vibe Apps](${baseUrl}).`,
+    "",
+    "## Links",
+    "",
+    `- [App page](${baseUrl}/s/${story.slug})`,
+    `- [Markdown](${baseUrl}${storyMarkdownPath(story.slug)})`,
+    `- [Live app](${story.url})`,
+  ];
+  if (story.githubUrl) {
+    lines.push(`- [GitHub](${story.githubUrl})`);
+  }
+  if (story.videoUrl) {
+    lines.push(`- [Video demo](${story.videoUrl})`);
+  }
+  lines.push(`- [Site llms.txt](${baseUrl}/llms.txt)`);
+  lines.push(`- [Site directory](${baseUrl}/vibeapps.md)`);
+  lines.push("");
+  if (story.tags.length > 0) {
+    lines.push(`Tags: ${story.tags.join(", ")}`);
+    lines.push("");
+  }
+  if (story.authorName) {
+    lines.push(`By ${story.authorName}`);
+    lines.push("");
+  }
+  lines.push(`Vibes: ${story.votes}`);
+  lines.push("");
+  return lines.join("\n");
+}
+
+export function buildStoryMarkdown(
+  story: PublicStoryFile,
+  baseUrl: string,
+): string {
+  const label = escapeMdLinkLabel(story.title);
+  const lines: Array<string> = [
+    `# ${story.title}`,
+    "",
+    oneLine(story.description, 400),
+    "",
+  ];
+  if (story.longDescription && story.longDescription.trim()) {
+    lines.push(oneLine(story.longDescription, STORY_MD_BODY_CAP));
+    lines.push("");
+  }
+  lines.push(`- App page: ${baseUrl}/s/${story.slug}`);
+  lines.push(`- Live app: ${story.url}`);
+  if (story.githubUrl) {
+    lines.push(`- GitHub: ${story.githubUrl}`);
+  }
+  if (story.videoUrl) {
+    lines.push(`- Video demo: ${story.videoUrl}`);
+  }
+  if (story.authorName) {
+    lines.push(`- By: ${story.authorName}`);
+  }
+  if (story.tags.length > 0) {
+    lines.push(`- Tags: ${story.tags.join(", ")}`);
+  }
+  lines.push(`- Vibes: ${story.votes}`);
+  lines.push(`- llms.txt: ${baseUrl}${storyLlmsTxtPath(story.slug)}`);
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+  lines.push(
+    `Listed in [${label} on Vibe Apps](${baseUrl}/s/${story.slug}). Site index: [${baseUrl}/llms.txt](${baseUrl}/llms.txt), catalog: [${baseUrl}/vibeapps.md](${baseUrl}/vibeapps.md).`,
+  );
+  lines.push("");
+  return lines.join("\n");
+}
+

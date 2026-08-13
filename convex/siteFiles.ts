@@ -15,6 +15,7 @@ import {
   isPublicStory,
   type PublicDirectory,
   type PublicDirectoryStory,
+  type PublicStoryFile,
 } from "./siteDirectory";
 
 const publicDirectoryStoryValidator = v.object({
@@ -27,6 +28,21 @@ const publicDirectoryStoryValidator = v.object({
   isPinned: v.boolean(),
   createdAt: v.number(),
   tags: v.array(v.string()),
+});
+
+const publicStoryFileValidator = v.object({
+  title: v.string(),
+  slug: v.string(),
+  description: v.string(),
+  url: v.string(),
+  githubUrl: v.optional(v.string()),
+  votes: v.number(),
+  isPinned: v.boolean(),
+  createdAt: v.number(),
+  tags: v.array(v.string()),
+  longDescription: v.optional(v.string()),
+  authorName: v.optional(v.string()),
+  videoUrl: v.optional(v.string()),
 });
 
 const publicDirectoryValidator = v.object({
@@ -103,6 +119,53 @@ export const listPublicDirectory = internalQuery({
     }
 
     return { stories, newestCreatedAt };
+  },
+});
+
+// One public app for per-slug discovery files. Indexed by slug, then
+// the same public-story rules as the site directory.
+export const getPublicStoryBySlug = internalQuery({
+  args: { slug: v.string() },
+  returns: v.union(publicStoryFileValidator, v.null()),
+  handler: async (ctx, args): Promise<PublicStoryFile | null> => {
+    const story = await ctx.db
+      .query("stories")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!story || !isPublicStory(story)) return null;
+
+    const tagDocs = await Promise.all(story.tagIds.map((id) => ctx.db.get(id)));
+    const tags: Array<string> = [];
+    for (const tag of tagDocs) {
+      if (!tag) continue;
+      if (tag.isHidden === true) continue;
+      if (tag.hideInStoryList === true) continue;
+      tags.push(tag.name);
+    }
+
+    let authorName: string | undefined;
+    if (story.userId) {
+      const author = await ctx.db.get(story.userId);
+      authorName = author?.name || story.submitterName;
+    } else {
+      authorName = story.submitterName;
+    }
+
+    const item: PublicStoryFile = {
+      title: story.title,
+      slug: story.slug,
+      description: story.description,
+      url: story.url,
+      votes: story.votes,
+      isPinned: story.isPinned,
+      createdAt: story._creationTime,
+      tags,
+    };
+    if (story.githubUrl) item.githubUrl = story.githubUrl;
+    if (story.longDescription) item.longDescription = story.longDescription;
+    if (authorName) item.authorName = authorName;
+    if (story.videoUrl) item.videoUrl = story.videoUrl;
+    return item;
   },
 });
 

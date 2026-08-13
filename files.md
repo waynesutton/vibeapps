@@ -36,6 +36,7 @@
 
 All PRD files are now organized in the `prds/` folder for better project structure:
 
+- `prds/per-submission-llms-and-md.md`: Per-app `/s/{slug}/llms.txt` and `/s/{slug}.md` files, story sidebar links, and listings in the site-wide directory files
 - `prds/judging-group-editable-slug.md`: Editable judging group URL slug after create, warning dialog, judging.slug access permission, uniqueness, and public URL follow-through
 - `prds/public-directory-llms-and-aeo.md`: Live llms.txt and vibeapps.md directory files plus additive AEO/SEO/GEO work that keeps existing Open Graph tags
 - `prds/ai-judge-frontend-checker-hosting-weights.md`: AI judge frontend checker rubric preset with per-platform hosting sub-weights (Codex Sites, Convex static hosting, Vercel, Netlify, Other) and deterministic hosting detection
@@ -174,9 +175,9 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `convex/validators.ts`: Shared document and return validators (tag docs with per-view visibility flags, story-with-details including self-reported AI attribution, custom form answers, and `dynamicFormValues`) used across queries
 - `convex/convexBoxConfig.ts`: Configuration for ConvexBox notification system
 - `convex/convex.config.ts`: Convex app definition installing the Resend, crons, workpool (plus a separate spamWorkpool), Agent Ready, rate limiter, Firecrawl (bound to `FIRECRAWL_API_KEY`), and Context.dev (bound to `CONTEXT_DEV_API_KEY`, used for video transcript scraping) components
-- `convex/siteDirectory.ts`: Pure builders for live `/llms.txt`, `/vibeapps.md`, `/robots.txt`, and `/sitemap.xml` from public submissions
-- `convex/siteFiles.ts`: Indexed query of public apps plus daily cache rebuild into the siteFiles table
-- `convex/http.ts`: HTTP actions for external requests, Resend webhook handler, Agent Ready component routes (agents.md, llms-full.txt, llms-status; `/llms.txt`, `/robots.txt`, and `/sitemap.xml` skipped because this app serves live directory files from public submissions), live `/vibeapps.md`, and the agent judging API under `/api/judging/:slug` (openapi.json discovery plus keyed criteria/submissions/results/scores endpoints with rate limiting and a 403 that distinguishes invalid keys from a group with the agent API turned off)
+- `convex/siteDirectory.ts`: Pure builders for live `/llms.txt`, `/vibeapps.md`, `/robots.txt`, `/sitemap.xml`, and per-app `/s/{slug}/llms.txt` plus `/s/{slug}.md` from public submissions
+- `convex/siteFiles.ts`: Indexed query of public apps, `getPublicStoryBySlug` for per-app discovery files, plus daily cache rebuild into the siteFiles table
+- `convex/http.ts`: HTTP actions for external requests, Resend webhook handler, Agent Ready component routes (agents.md, llms-full.txt, llms-status; `/llms.txt`, `/robots.txt`, and `/sitemap.xml` skipped because this app serves live directory files from public submissions), live `/vibeapps.md`, per-app `/s/{slug}/llms.txt` and `/s/{slug}.md`, and the agent judging API under `/api/judging/:slug` (openapi.json discovery plus keyed criteria/submissions/results/scores endpoints with rate limiting and a 403 that distinguishes invalid keys from a group with the agent API turned off)
 - `convex/agentReady/content.ts`: Admin-gated app-facing wrappers for the Agent Ready component (settings, generated files, pages)
 - `convex/agentReady/analytics.ts`: App-facing analytics wrappers for the Agent Ready component (request summary and time series)
 - `agent-ready.config.json`: Agent Ready component configuration (app name, widget, cron, and file generation settings)
@@ -206,7 +207,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/components/StoryForm.tsx`: Main app submission form with validation, enhanced tag search dropdown, and multi-image upload support
 - `src/components/ResendForm.tsx`: Resend integration form for email collection
 - `src/components/YCHackForm.tsx`: YC AI Hackathon submission form with team information support
-- `src/components/StoryDetail.tsx`: Detailed app view with comments, ratings, voting, image gallery, and sticky sidebar for project links and tags
+- `src/components/StoryDetail.tsx`: Detailed app view with comments, ratings, voting, image gallery, sticky sidebar for project links and tags, and per-app `llms.txt` plus `{slug}.md` links above View Change Log
 - `src/components/StoryList.tsx`: Story rendering in three view modes: ranked Product Hunt style list rows, grid cards, and refreshed vibe cards
 - `src/components/ImageGallery.tsx`: Multi-image gallery component with thumbnail navigation and modal Lightbox
 
@@ -339,7 +340,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 ### Configuration Files
 
-- `_redirects`: `Netlify` routing configuration for SPA, plus production proxies for `/robots.txt`, `/llms.txt`, `/vibeapps.md`, `/sitemap.xml`, `/meta/s/*`, and `/api/unsubscribe` to the Convex site domain
+- `_redirects`: `Netlify` routing configuration for SPA, plus production proxies for `/robots.txt`, `/llms.txt`, `/vibeapps.md`, `/sitemap.xml`, `/s/:slug/llms.txt`, `/s/*.md`, `/meta/s/*`, and `/api/unsubscribe` to the Convex site domain
 - `robots.txt`: Search and AI crawler allow list (live copy served from Convex)
 - `sitemap.xml`: Static stub; the live sitemap of public apps is served from Convex
 

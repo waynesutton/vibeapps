@@ -6,6 +6,9 @@
 /llms.txt https://whimsical-dalmatian-205.convex.site/llms.txt 200
 /vibeapps.md https://whimsical-dalmatian-205.convex.site/vibeapps.md 200
 /sitemap.xml https://whimsical-dalmatian-205.convex.site/sitemap.xml 200
+/s/:slug/llms.txt https://whimsical-dalmatian-205.convex.site/s/:slug/llms.txt 200
+/s/:slug.md https://whimsical-dalmatian-205.convex.site/s/:slug.md 200
+/s/*.md https://whimsical-dalmatian-205.convex.site/s/:splat.md 200
 
 # Email unsubscribe (GET link clicks and RFC 8058 one-click POST).
 # Must proxy to the same Convex deployment that sends the emails,

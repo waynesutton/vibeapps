@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [Added] - 2026-08-13
 
+**Per-submission llms.txt and markdown files**
+
+- Each public app now has live `/s/{slug}/llms.txt` and `/s/{slug}.md` generated from the same approved, visible, not-spam, not-archived rules as the site directory (2026-08-13).
+- The story sidebar lists `llms.txt` and `{slug}.md` above View Change Log. Hidden or unpublished apps do not show the links and the HTTP routes 404.
+- Footer `/llms.txt` and `/vibeapps.md` list those per-app URLs next to each app. The sitemap includes them. Production Netlify proxies `/s/:slug/llms.txt` and `/s/*.md` to Convex.
+- **Backend**: `convex/siteDirectory.ts`, `convex/siteFiles.ts` (`getPublicStoryBySlug`), `convex/http.ts`.
+- **Frontend**: `src/components/StoryDetail.tsx`, `public/_redirects`.
+- **Docs**: `prds/per-submission-llms-and-md.md` (new).
+
+
+### [Added] - 2026-08-13
+
 **Editable judging group URL slug**
 
 - After a judging group exists, admins can change its URL slug from the pencil next to `/judging/{slug}` in the workspace header, or from Settings (2026-08-13).

@@ -11,8 +11,11 @@ import {
   buildLlmsTxt,
   buildRobotsTxt,
   buildSitemapXml,
+  buildStoryLlmsTxt,
+  buildStoryMarkdown,
   buildVibeappsMd,
   type PublicDirectory,
+  type PublicStoryFile,
 } from "./siteDirectory";
 
 const http = httpRouter();
@@ -458,6 +461,52 @@ http.route({
   method: "GET",
   handler: httpAction(async (ctx) => {
     return await serveLiveDirectoryFile(ctx, "sitemap");
+  }),
+});
+
+function parseStoryDiscoveryPath(
+  pathname: string,
+): { slug: string; kind: "llms" | "md" } | null {
+  const rest = pathname.replace(/^\/s\//, "");
+  if (rest.endsWith("/llms.txt")) {
+    const slug = rest.slice(0, -"/llms.txt".length);
+    if (!slug || slug.includes("/")) return null;
+    return { slug: decodeURIComponent(slug), kind: "llms" };
+  }
+  if (rest.endsWith(".md") && !rest.includes("/")) {
+    const slug = rest.slice(0, -".md".length);
+    if (!slug) return null;
+    return { slug: decodeURIComponent(slug), kind: "md" };
+  }
+  return null;
+}
+
+// Per-app discovery files: /s/{slug}/llms.txt and /s/{slug}.md
+http.route({
+  pathPrefix: "/s/",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const parsed = parseStoryDiscoveryPath(new URL(request.url).pathname);
+    if (!parsed) {
+      return new Response("Not found", { status: 404 });
+    }
+    const story: PublicStoryFile | null = await ctx.runQuery(
+      internal.siteFiles.getPublicStoryBySlug,
+      { slug: parsed.slug },
+    );
+    if (!story) {
+      return new Response("Not found", { status: 404 });
+    }
+    if (parsed.kind === "llms") {
+      return new Response(buildStoryLlmsTxt(story, SITE_ORIGIN), {
+        status: 200,
+        headers: discoveryHeaders("text/plain; charset=utf-8"),
+      });
+    }
+    return new Response(buildStoryMarkdown(story, SITE_ORIGIN), {
+      status: 200,
+      headers: discoveryHeaders("text/markdown; charset=utf-8"),
+    });
   }),
 });
 

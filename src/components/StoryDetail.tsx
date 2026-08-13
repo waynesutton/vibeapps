@@ -7,6 +7,7 @@ import {
   Linkedin,
   Twitter,
   Github,
+  FileText,
   Flag,
   Bookmark,
   BookmarkCheck,
@@ -115,6 +116,35 @@ const BookmarkButton = ({ storyId }: { storyId: Id<"stories"> }) => {
     </button>
   );
 };
+
+function isPublicDirectoryStory(story: Story): boolean {
+  if (story.status !== "approved") return false;
+  if (story.isHidden === true) return false;
+  if (story.isSpam === true) return false;
+  if (story.isArchived === true) return false;
+  return true;
+}
+
+function StoryAgentFileLinks({ slug }: { slug: string }) {
+  return (
+    <>
+      <a
+        href={`/s/${slug}/llms.txt`}
+        className="flex items-center gap-2 text-sm text-copy hover:text-ink hover:underline"
+      >
+        <FileText className="w-4 h-4" />
+        llms.txt
+      </a>
+      <a
+        href={`/s/${slug}.md`}
+        className="flex items-center gap-2 text-sm text-copy hover:text-ink hover:underline"
+      >
+        <FileText className="w-4 h-4" />
+        {slug}.md
+      </a>
+    </>
+  );
+}
 
 export function StoryDetail({ story }: StoryDetailProps) {
   const navigate = useNavigate(); // Initialize navigate
@@ -1213,8 +1243,11 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 )}
               </div>
             </div>
-            {/* Changelog Link */}
-            <div className="mt-4 pt-3 border-t border-hairline">
+            {/* Agent files and changelog */}
+            <div className="mt-4 pt-3 border-t border-hairline space-y-2">
+              {isPublicDirectoryStory(story) && (
+                <StoryAgentFileLinks slug={story.slug} />
+              )}
               <a
                 href="#changelog"
                 className="flex items-center gap-2 text-sm text-copy hover:text-ink hover:underline"
@@ -2273,8 +2306,11 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 </div>
               )}
 
-              {/* Changelog Link */}
-              <div className="pt-3 border-t border-hairline mt-4">
+              {/* Agent files and changelog */}
+              <div className="pt-3 border-t border-hairline mt-4 space-y-2">
+                {isPublicDirectoryStory(story) && (
+                  <StoryAgentFileLinks slug={story.slug} />
+                )}
                 <a
                   href="#changelog"
                   className="flex items-center gap-2 text-sm text-copy hover:text-ink hover:underline"
