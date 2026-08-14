@@ -7,6 +7,7 @@ import { ExternalLink, Lock, Plus, X } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Markdown } from "../components/Markdown";
+import { ChoiceFieldInput } from "../components/ui/ChoiceFieldInput";
 import { useAuth } from "@clerk/clerk-react";
 import { Link } from "react-router-dom";
 
@@ -96,7 +97,15 @@ type CustomQuestion = {
   label: string;
   placeholder?: string;
   description?: string;
-  fieldType: "text" | "url" | "email" | "textarea";
+  fieldType:
+    | "text"
+    | "url"
+    | "email"
+    | "textarea"
+    | "radio"
+    | "multiselect"
+    | "select";
+  options?: string[]; // Choices for radio/multiselect/select questions
   required: boolean;
   visible?: boolean; // Unset = shown
 };
@@ -1079,7 +1088,25 @@ function SubmissionFormContent({
                   {field.description}
                 </div>
               )}
-              {field.fieldType === "textarea" ? (
+              {field.fieldType === "radio" ||
+              field.fieldType === "multiselect" ||
+              field.fieldType === "select" ? (
+                <ChoiceFieldInput
+                  fieldKey={field.key}
+                  fieldType={field.fieldType}
+                  options={field.options ?? []}
+                  placeholder={field.placeholder}
+                  value={dynamicFormData[field.key] || ""}
+                  onChange={(value) =>
+                    setDynamicFormData((prev) => ({
+                      ...prev,
+                      [field.key]: value,
+                    }))
+                  }
+                  required={fieldRequired}
+                  disabled={isSubmitting}
+                />
+              ) : field.fieldType === "textarea" ? (
                 <>
                   <textarea
                     id={field.key}
@@ -1226,7 +1253,25 @@ function SubmissionFormContent({
                   {question.description}
                 </div>
               )}
-              {question.fieldType === "textarea" ? (
+              {question.fieldType === "radio" ||
+              question.fieldType === "multiselect" ||
+              question.fieldType === "select" ? (
+                <ChoiceFieldInput
+                  fieldKey={`custom-${question.key}`}
+                  fieldType={question.fieldType}
+                  options={question.options ?? []}
+                  placeholder={question.placeholder}
+                  value={customAnswers[question.key] || ""}
+                  onChange={(value) =>
+                    setCustomAnswers((prev) => ({
+                      ...prev,
+                      [question.key]: value,
+                    }))
+                  }
+                  required={question.required}
+                  disabled={isSubmitting}
+                />
+              ) : question.fieldType === "textarea" ? (
                 <textarea
                   id={`custom-${question.key}`}
                   value={customAnswers[question.key] || ""}

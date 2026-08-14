@@ -176,12 +176,25 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
           key = makeQuestionKey(q.label, usedKeys);
           usedKeys.push(key);
         }
+        const isChoice =
+          q.fieldType === "radio" ||
+          q.fieldType === "multiselect" ||
+          q.fieldType === "select";
+        const cleanOptions = isChoice
+          ? (q.options ?? []).map((o) => o.trim()).filter(Boolean)
+          : undefined;
+        if (isChoice && (cleanOptions?.length ?? 0) < 2) {
+          throw new Error(
+            `"${q.label || "Untitled question"}" needs at least 2 options`,
+          );
+        }
         return {
           key,
           label: q.label.trim(),
           placeholder: q.placeholder?.trim() || undefined,
           description: q.description?.trim() || undefined,
           fieldType: q.fieldType,
+          options: cleanOptions,
           required: q.required,
           visible: q.visible,
         };
@@ -1005,6 +1018,12 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                             { value: "textarea", label: "Long text" },
                             { value: "url", label: "URL" },
                             { value: "email", label: "Email" },
+                            { value: "radio", label: "Radio (single choice)" },
+                            {
+                              value: "multiselect",
+                              label: "Multi-select (checkboxes)",
+                            },
+                            { value: "select", label: "Dropdown (select)" },
                           ]}
                         />
                         <button
@@ -1093,6 +1112,41 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                           {(question.visible ?? true) ? "Shown" : "Hidden"}
                         </button>
                       </div>
+                      {(question.fieldType === "radio" ||
+                        question.fieldType === "multiselect" ||
+                        question.fieldType === "select") && (
+                        <div>
+                          <label className="block text-xs font-medium text-copy mb-1">
+                            Options (one per line)
+                          </label>
+                          <textarea
+                            value={(question.options ?? []).join("\n")}
+                            onChange={(e) =>
+                              setCustomQuestions((prev) =>
+                                prev.map((q, i) =>
+                                  i === index
+                                    ? {
+                                        ...q,
+                                        options: e.target.value.split("\n"),
+                                      }
+                                    : q,
+                                ),
+                              )
+                            }
+                            rows={3}
+                            placeholder={"Option A\nOption B\nOption C"}
+                            disabled={saving}
+                            className="w-full px-3 py-2 border border-hairline rounded-md text-copy text-sm focus:outline-none focus:ring-1 focus:ring-ink bg-surface"
+                          />
+                          <p className="text-xs text-faint mt-0.5">
+                            {question.fieldType === "multiselect"
+                              ? "Submitters can pick multiple options."
+                              : question.fieldType === "select"
+                                ? "Submitters pick one option from a dropdown."
+                                : "Submitters pick one option."}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ))}
                   <button

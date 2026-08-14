@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Fixed] - 2026-08-13
+
+**Security remediation batch 2: strip email and clerkId from public profile queries**
+
+- Public profile query no longer returns email or Clerk id. Own-profile UI uses a server-computed `isOwnProfile` flag instead of comparing Clerk ids on the client (2026-08-13).
+- Follower and following lists return name, username, and avatar only.
+- Admin Numbers follow rankings now require `numbers.view` and return name, username, and counts only (no email or clerkId).
+- **Files**: `convex/users.ts`, `convex/validators.ts`, `convex/follows.ts`, `convex/adminFollowsQueries.ts`, `src/pages/UserProfilePage.tsx`, `src/components/admin/NumbersView.tsx`. Tracked in `prds/security-review-2026-08-13.md`.
+
+### [Fixed] - 2026-08-13
+
+**Security remediation batch 1: removed admin backdoors and restored an email gate**
+
+- Deleted four leftover `[TEMPORARY]` debug functions from `convex/users.ts` that were callable by anyone with the deployment URL: two that set any user to admin, one that dumped every user's email/username/role, and one that let any signed-in user make themselves admin. None had any caller in the app (2026-08-13).
+- Restored the permission check on `convex/emails/broadcast.ts` `debugUsers` and `searchUsers` (previously commented out, which let any signed-in user read every user's email and Clerk id) and removed the debug logging that wrote user emails into server logs (2026-08-13).
+- **Files**: `convex/users.ts`, `convex/emails/broadcast.ts`. Tracked in `prds/security-review-2026-08-13.md`.
+
+### [Security] - 2026-08-13
+
+**Full-app security review and dependency cleanup**
+
+- Ran a full `/sec-check` across all 341 public Convex functions (auth enforcement, data exposure, integrations). Documented 22 ungated findings, headlined by leftover `[TEMPORARY]` unauthenticated admin-escalation and user PII-dump functions in `convex/users.ts`, commented-out admin checks in `convex/emails/broadcast.ts`, email/clerkId exposure through public profile/follow queries, submitter PII on public story lists, and a client-trusted password bypass on the "validated" judging/AI results queries (2026-08-13).
+- Verified sound: Clerk and Resend webhook signature verification, all schedulers and crons target internal functions, secrets are server-side only, the agent judging HTTP API, and migration gating.
+- **Fixed**: removed the deprecated, unused `@clerk/clerk-sdk-node` dependency and bumped `@auth/core` to `^0.41.3`, reducing `npm audit` from 24 vulnerabilities (2 critical, 16 high) to 2 moderate. The 2 remaining are React Router advisories with no patched 6.x; clearing them needs a breaking React Router 7 upgrade (2026-08-13).
+- **Docs**: `prds/security-review-2026-08-13.md` (findings, verified-OK list, and prioritized remediation plan). Backend findings are review-only; no security code changed yet.
+
+### [Added] - 2026-08-13
+
+**Dropdown field type, modern choice controls, answer counts, and judge answer filter**
+
+- New Dropdown (select) choice field type alongside Radio and Multi-select, available in Admin, Forms, Manage Form Fields and in judging group custom questions; same options editor and the same server-side validation (single value must match the configured options, minimum two options) (2026-08-13).
+- Radio buttons and checkboxes on all submit forms restyled as larger custom controls that follow the site themes (20px, tappable full-width rows with hover and selected states); dropdown fields render with the site's themed select instead of the browser default.
+- Admin field rows for choice fields now show live answer counts: a mini bar per option with its count and a responses total, aggregated from submitted answers in `dynamicFormValues`.
+- Judges can filter a group's submissions by a choice answer: a new "Filter by answer" dropdown in the judging interface lists every field/option pair from dynamic form fields and the group's custom questions, works with multi-select answers, and combines with the existing tag, status, and search filters.
+- **Backend**: `convex/schema.ts`, `convex/storyFormFields.ts` (`getChoiceAnswerCounts`), `convex/judgingGroups.ts`, `convex/submitForms.ts`.
+- **Frontend**: `src/components/ui/ChoiceFieldInput.tsx`, `src/pages/JudgingInterfacePage.tsx`, `src/components/admin/FormFieldManagement.tsx`, `src/components/admin/judging/GroupSubmitPageSection.tsx`, `src/components/admin/judging/groupSection.tsx`, plus placeholder pass-through in the five submit forms.
+- **Docs**: `prds/story-form-choice-fields.md` (follow-up section).
+
+
+### [Added] - 2026-08-13
+
+**Radio and multi-select story form fields**
+
+- Admins can now create Radio (single choice) and Multi-select (checkboxes) questions in Admin, Forms, Manage Form Fields, with an options editor (one option per line, minimum two) alongside the existing text, url, email, and textarea types (2026-08-13).
+- Judging group custom questions gained the same two types with the same options editor, and the existing per-question Required and Shown/Hidden controls apply to them unchanged.
+- Choice fields render everywhere submissions happen: the main submit form, dynamic submit forms, the judging group submit page (both dynamic fields and custom questions), and the YC Hack and Resend forms, via a shared `ChoiceFieldInput` component with native required validation and screen reader labeling.
+- Answers stay plain strings (multi-select stores a comma-joined list in the configured option order), so judge views, CSV exports, and the AI judge keep working without changes. The server validates submitted values against the configured options before saving.
+- Story pages now show answers for admin-added fields stored in `dynamicFormValues` (including choice answers) in the Project Links & Tags sidebar.
+- **Backend**: `convex/schema.ts`, `convex/storyFormFields.ts`, `convex/judgingGroups.ts`, `convex/submitForms.ts`.
+- **Frontend**: `src/components/ui/ChoiceFieldInput.tsx` (new), `src/components/StoryForm.tsx`, `src/components/DynamicSubmitForm.tsx`, `src/components/YCHackForm.tsx`, `src/components/ResendForm.tsx`, `src/pages/JudgingGroupSubmitPage.tsx`, `src/components/admin/FormFieldManagement.tsx`, `src/components/admin/judging/GroupSubmitPageSection.tsx`, `src/components/admin/judging/groupSection.tsx`, `src/components/StoryDetail.tsx`.
+- **Docs**: `prds/story-form-choice-fields.md` (new).
+
+
+### [Added] - 2026-08-13
+
+**In-app spam review requests**
+
+- The spam alert on the notifications page now has a Request review button. Clicking it stamps the submission and logs a `spam.reviewRequested` entry in the admin Activity tab with the submitter as the actor, so disputes no longer depend on email deliverability (2026-08-13).
+- One request per mark: the button flips to a persistent "Review requested" chip, and repeat clicks change nothing. Only the story owner sees the button, and only while the mark stands.
+- Disputed rows show an amber "Review requested" badge in the scan results and the Marked spam review, and sort to the top of the review list. Admins resolve with Unmark (restores the post, clears the request) or a new Dismiss action that keeps the mark and logs `spam.reviewDismissed`.
+- The spam reason email and the alert copy now point at the in-app button alongside the existing reply-to and GitHub issue paths.
+- **Backend**: `convex/schema.ts` (`spamReviewRequestedAt`), `convex/spamCheck.ts` (`requestSpamReview`, `getMySpamStatus`, `dismissSpamReviewRequest`), `convex/emails/spam.ts`.
+- **Frontend**: `src/pages/NotificationsPage.tsx`, `src/components/admin/SpamCheck.tsx`, `src/components/admin/AdminDocs.tsx`.
+- **Docs**: `prds/spam-request-review.md` (new).
+
+
 ### [Added] - 2026-08-13
 
 **Spam automation agent with auto-mark on submission**

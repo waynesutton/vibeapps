@@ -67,7 +67,15 @@ export type CustomQuestion = {
   label: string;
   placeholder?: string;
   description?: string;
-  fieldType: "text" | "url" | "email" | "textarea";
+  fieldType:
+    | "text"
+    | "url"
+    | "email"
+    | "textarea"
+    | "radio"
+    | "multiselect"
+    | "select";
+  options?: string[]; // Choices for radio/multiselect/select questions
   required: boolean;
   visible?: boolean; // Unset = shown
 };

@@ -92,8 +92,9 @@ export const sendSpamNotificationEmail = internalAction({
             </div>
 
             <p style="color: #666; margin-bottom: 20px;">
-              If you think this is a mistake, reply to this email and an admin will take another look,
-              or <a href="https://github.com/waynesutton/vibeapps/issues" style="color: #292929;">file an issue on GitHub</a>.
+              If you think this is a mistake, use the Request review button on your
+              <a href="https://vibeapps.dev/notifications" style="color: #292929;">notifications page</a>,
+              reply to this email, or <a href="https://github.com/waynesutton/vibeapps/issues" style="color: #292929;">file an issue on GitHub</a>.
             </p>
 
             <p style="color: #999; font-size: 13px; margin-top: 40px;">

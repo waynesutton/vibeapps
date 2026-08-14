@@ -5,6 +5,7 @@ import { useAuth } from "@clerk/clerk-react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { formatDistanceToNow } from "date-fns";
+import { toast } from "sonner";
 
 type AlertType = {
   _id: Id<"alerts">;
@@ -130,6 +131,36 @@ function NotificationItem({ alert }: NotificationItemProps) {
     api.stories.getById,
     alert.storyId ? { id: alert.storyId } : "skip",
   );
+  // Owner-scoped spam status drives the Request review button on spam alerts
+  const spamStatus = useQuery(
+    api.spamCheck.getMySpamStatus,
+    alert.type === "spam" && alert.storyId
+      ? { storyId: alert.storyId }
+      : "skip",
+  );
+  const requestSpamReview = useMutation(api.spamCheck.requestSpamReview);
+  const [requestingReview, setRequestingReview] = React.useState(false);
+
+  // Dispute the spam mark in-app: stamps the story and pings admins in the
+  // Activity log, no email required
+  const handleRequestReview = async () => {
+    if (!alert.storyId || requestingReview) return;
+    setRequestingReview(true);
+    try {
+      const { status } = await requestSpamReview({ storyId: alert.storyId });
+      if (status === "requested") {
+        toast.success("Review requested. An admin will take another look.");
+      } else if (status === "notSpam") {
+        toast.success("Good news: this post is no longer marked as spam.");
+      } else {
+        toast.error("This submission no longer exists.");
+      }
+    } catch {
+      toast.error("Could not request a review. Please try again.");
+    } finally {
+      setRequestingReview(false);
+    }
+  };
 
   const getNotificationText = () => {
     switch (alert.type) {
@@ -231,7 +262,8 @@ function NotificationItem({ alert }: NotificationItemProps) {
             {alert.type === "spam" ? (
               <span>
                 Your post has been marked as spam and has been removed. Check
-                your email for the reason. If you think this was a mistake,{" "}
+                your email for the reason. If you think this was a mistake,
+                request a review below or{" "}
                 <a
                   href="https://github.com/waynesutton/vibeapps/issues"
                   target="_blank"
@@ -273,6 +305,29 @@ function NotificationItem({ alert }: NotificationItemProps) {
               <span>Someone {getNotificationText()}</span>
             )}
           </div>
+
+          {/* In-app dispute: only shown to the owner while the mark stands */}
+          {alert.type === "spam" && spamStatus?.isSpam && (
+            <div className="mt-2">
+              {spamStatus.reviewRequestedAt !== undefined ? (
+                <span className="inline-flex items-center text-xs font-medium text-copy bg-surface-hover border border-hairline rounded px-2 py-1">
+                  Review requested{" "}
+                  {formatDistanceToNow(spamStatus.reviewRequestedAt, {
+                    addSuffix: true,
+                  })}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleRequestReview}
+                  disabled={requestingReview}
+                  className="px-3 py-1 bg-cta text-on-cta text-xs rounded hover:bg-cta-hover transition-colors disabled:opacity-50"
+                >
+                  {requestingReview ? "Requesting..." : "Request review"}
+                </button>
+              )}
+            </div>
+          )}
 
           <div className="text-xs text-soft mt-1">
             {formatDistanceToNow(alert._creationTime, { addSuffix: true })}

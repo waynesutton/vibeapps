@@ -445,8 +445,8 @@ Each row shows the verdict badge with confidence, submitter, URL and repo status
 Marking a flagged submission (single or bulk, with an optional custom reason):
 
 - **hides** the submission and labels it with the reason,
-- sends the submitter an **in-app alert** saying the post was marked as spam and removed, with a link to the GitHub issues page for appeals,
-- **emails** the submitter the reason. The email has a reply-to pointing at \`ADMIN_EMAIL\` and the same GitHub issues link.
+- sends the submitter an **in-app alert** saying the post was marked as spam and removed, with a **Request review** button and a link to the GitHub issues page for appeals,
+- **emails** the submitter the reason. The email has a reply-to pointing at \`ADMIN_EMAIL\`, mentions the in-app Request review button, and links the same GitHub issues page.
 
 **Unmark** reverses everything: label cleared, submission visible again. Deletion stays a separate explicit action; bulk delete removes the submissions with their comments, votes, ratings, bookmarks, and scan history.
 
@@ -459,6 +459,17 @@ The **Marked spam** card at the bottom of the tab lists every submission current
 - **Filter by marked date** narrows the list to a period (the range persists across visits).
 - **Select all** plus **Delete selected** permanently removes the chosen submissions with their comments, votes, ratings, bookmarks, scan rows, and images. Large selections delete in chunks of 50 automatically.
 - **Unmark** on any row restores the submission, whether a human or the agent marked it.
+
+## Disputes and review requests
+
+Signed-in submitters can push back without email: the spam alert on their notifications page has a **Request review** button. Clicking it logs a **spam.reviewRequested** entry in the **Activity** tab with the submitter as the actor, so disputes show up even if the email bounces. One request per mark; repeat clicks do nothing.
+
+Disputed rows get an amber **Review requested** badge in the scan results and the Marked spam review, and they sort to the top of the review list so they never get buried. Two ways to resolve:
+
+- **Unmark** restores the submission and clears the request (the submitter wins).
+- **Dismiss** keeps the spam mark and clears the request, logging **spam.reviewDismissed** (the mark stands).
+
+Anonymous submissions have no account to alert, so their path stays email reply or GitHub issue.
 
 ## Emails and the kill switch
 

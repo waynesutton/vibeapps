@@ -7,6 +7,7 @@ import { Id, Doc } from "../../convex/_generated/dataModel";
 import { Plus, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
+import { ChoiceFieldInput } from "./ui/ChoiceFieldInput";
 
 // Inherits _id, _creationTime, name, showInHeader, isHidden?, backgroundColor?, textColor?
 type Tag = Doc<"tags">;
@@ -701,6 +702,7 @@ export function StoryForm() {
               <div key={field.key}>
                 <label
                   htmlFor={field.key}
+                  id={`${field.key}-label`}
                   className="block text-sm font-medium text-copy mb-1"
                 >
                   {field.label}
@@ -710,7 +712,25 @@ export function StoryForm() {
                     {field.description}
                   </div>
                 )}
-                {field.fieldType === "textarea" ? (
+                {field.fieldType === "radio" ||
+                field.fieldType === "multiselect" ||
+                field.fieldType === "select" ? (
+                  <ChoiceFieldInput
+                    fieldKey={field.key}
+                    fieldType={field.fieldType}
+                    options={field.options ?? []}
+                    placeholder={field.placeholder}
+                    value={dynamicFormData[field.key] || ""}
+                    onChange={(value) =>
+                      setDynamicFormData((prev) => ({
+                        ...prev,
+                        [field.key]: value,
+                      }))
+                    }
+                    required={field.isRequired}
+                    disabled={isSubmitting}
+                  />
+                ) : field.fieldType === "textarea" ? (
                   <>
                     <textarea
                       id={field.key}

@@ -25,13 +25,7 @@ export const debugUsers = query({
     }),
   ),
   handler: async (ctx) => {
-    // Temporarily disable admin check for debugging
-    // await requireAdminRole(ctx);
-
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Authentication required");
-    }
+    await requirePermission(ctx, "emails.send");
 
     const users = await ctx.db.query("users").collect();
 
@@ -60,29 +54,15 @@ export const searchUsers = query({
     }),
   ),
   handler: async (ctx, args) => {
-    // Temporarily disable admin check for debugging
-    // await requireAdminRole(ctx);
-
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Authentication required");
-    }
+    await requirePermission(ctx, "emails.send");
 
     const searchTerm = args.query.toLowerCase().trim();
     if (searchTerm.length < 2) {
       return [];
     }
 
-    // Get all users first to debug
-    const allUsers = await ctx.db.query("users").collect();
-    console.log(`Total users in database: ${allUsers.length}`);
-    console.log(`Users with email: ${allUsers.filter((u) => u.email).length}`);
-    console.log(`Search term: "${searchTerm}"`);
-
     // Search users by name or email - get all users and filter in JavaScript
     const users = await ctx.db.query("users").collect();
-
-    console.log(`Users with non-undefined email: ${users.length}`);
 
     const matchingUsers = users
       .filter((user) => {
@@ -94,15 +74,9 @@ export const searchUsers = query({
         const emailMatch =
           user.email.toLowerCase().includes(searchTerm) || false;
 
-        console.log(
-          `User: ${user.name} (${user.email}) - nameMatch: ${nameMatch}, emailMatch: ${emailMatch}`,
-        );
-
         return nameMatch || emailMatch;
       })
       .slice(0, 10); // Limit to 10 results
-
-    console.log(`Matching users found: ${matchingUsers.length}`);
 
     return matchingUsers.map((user) => ({
       _id: user._id,

@@ -7,6 +7,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 // import { Textarea } from "./ui/textarea"; // Unused for now
 import { CheckCircle, AlertCircle } from "lucide-react";
+import { ChoiceFieldInput } from "./ui/ChoiceFieldInput";
 import { Doc } from "../../convex/_generated/dataModel";
 
 type FormField = Doc<"storyFormFields">;
@@ -204,6 +205,18 @@ export function DynamicSubmitForm() {
             className={`w-full px-3 py-2 border border-hairline-strong rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
               error ? "border-red-500" : ""
             }`}
+          />
+        ) : field.fieldType === "radio" ||
+          field.fieldType === "multiselect" ||
+          field.fieldType === "select" ? (
+          <ChoiceFieldInput
+            fieldKey={field.key}
+            fieldType={field.fieldType}
+            options={field.options ?? []}
+            placeholder={field.placeholder}
+            value={value as string}
+            onChange={(newValue) => handleInputChange(field.key, newValue)}
+            disabled={isSubmitting}
           />
         ) : field.fieldType === "textarea" ? (
           // Monospace paste area (e.g. hackathonLog) with counter + warning

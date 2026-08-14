@@ -1062,6 +1062,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
           enabledFormFields?.some(
             (field) => (story as any)[field.storyPropertyName],
           ) ||
+          (story.dynamicFormValues?.length ?? 0) > 0 ||
           story.tags?.length > 0) && (
           <div className="w-80 flex-shrink-0 hidden lg:block self-start">
             <div className="bg-surface-alt rounded-lg p-4 border border-hairline sticky top-8">
@@ -1119,7 +1120,14 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 {enabledFormFields
                   ?.filter((field) => field.key !== "githubUrl")
                   .map((field) => {
-                    const fieldValue = (story as any)[field.storyPropertyName];
+                    // Fields without a dedicated stories column store their
+                    // value in dynamicFormValues (e.g. radio/multiselect)
+                    const fieldValue =
+                      (story as any)[field.storyPropertyName] ??
+                      story.dynamicFormValues?.find(
+                        (entry: { key: string; value: string }) =>
+                          entry.key === field.key,
+                      )?.value;
                     if (!fieldValue) return null;
 
                     // Get appropriate icon based on field key or type
@@ -2128,6 +2136,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
           enabledFormFields?.some(
             (field) => (story as any)[field.storyPropertyName],
           ) ||
+          (story.dynamicFormValues?.length ?? 0) > 0 ||
           story.tags?.length > 0) && (
           <div className="mt-8 bg-surface rounded-lg p-6 border border-hairline lg:hidden">
             <h2 className="text-lg font-medium text-copy mb-4">
@@ -2184,7 +2193,14 @@ export function StoryDetail({ story }: StoryDetailProps) {
               {enabledFormFields
                 ?.filter((field) => field.key !== "githubUrl")
                 .map((field) => {
-                  const fieldValue = (story as any)[field.storyPropertyName];
+                  // Fields without a dedicated stories column store their
+                  // value in dynamicFormValues (e.g. radio/multiselect)
+                  const fieldValue =
+                    (story as any)[field.storyPropertyName] ??
+                    story.dynamicFormValues?.find(
+                      (entry: { key: string; value: string }) =>
+                        entry.key === field.key,
+                    )?.value;
                   if (!fieldValue) return null;
 
                   // Get appropriate icon based on field key or type

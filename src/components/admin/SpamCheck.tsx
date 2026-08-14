@@ -17,6 +17,7 @@ import {
   Bot,
   ToggleLeft,
   ToggleRight,
+  Flag,
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -298,6 +299,9 @@ export function SpamCheck() {
   const scanStory = useMutation(api.spamCheck.scanStory);
   const markAsSpam = useMutation(api.spamCheck.markAsSpam);
   const unmarkSpam = useMutation(api.spamCheck.unmarkSpam);
+  const dismissReviewRequest = useMutation(
+    api.spamCheck.dismissSpamReviewRequest,
+  );
   const bulkMarkAsSpam = useMutation(api.spamCheck.bulkMarkAsSpam);
   const bulkHide = useMutation(api.spamCheck.bulkHide);
   const bulkDelete = useMutation(api.spamCheck.bulkDelete);
@@ -567,6 +571,24 @@ export function SpamCheck() {
           });
       },
       { confirmButtonText: "Unmark" },
+    );
+  };
+
+  // Resolve a submitter dispute while keeping the spam label in place
+  const handleDismissReview = (storyId: Id<"stories">, title: string) => {
+    showConfirm(
+      "Dismiss review request?",
+      `The spam mark on "${title}" stays; only the submitter's review request is cleared.`,
+      () => {
+        dismissReviewRequest({ storyId })
+          .then(() => toast.success("Review request dismissed"))
+          .catch((error) => {
+            toast.error(
+              error instanceof Error ? error.message : "Failed to dismiss",
+            );
+          });
+      },
+      { confirmButtonText: "Dismiss" },
     );
   };
 
@@ -1068,6 +1090,12 @@ export function SpamCheck() {
                             : "Marked spam"}
                         </span>
                       )}
+                      {result.reviewRequestedAt !== undefined && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-800 bg-amber-100 border border-amber-200 rounded-full px-2 py-0.5">
+                          <Flag className="w-3 h-3" />
+                          Review requested
+                        </span>
+                      )}
                       {result.isHidden && !result.isSpam && (
                         <span className="text-xs font-medium text-copy bg-surface-alt border border-hairline rounded-full px-2 py-0.5">
                           Hidden
@@ -1404,6 +1432,15 @@ export function SpamCheck() {
                           Auto-marked
                         </span>
                       )}
+                      {row.reviewRequestedAt !== undefined && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-800 bg-amber-100 border border-amber-200 rounded-full px-2 py-0.5">
+                          <Flag className="w-3 h-3" />
+                          Review requested{" "}
+                          {formatDistanceToNow(row.reviewRequestedAt, {
+                            addSuffix: true,
+                          })}
+                        </span>
+                      )}
                     </div>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-soft">
                       <span>
@@ -1446,17 +1483,32 @@ export function SpamCheck() {
                     )}
                   </div>
                   {canModerate && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 text-xs flex-shrink-0"
-                      onClick={() =>
-                        handleUnmarkOne(row.storyId, row.storyTitle)
-                      }
-                    >
-                      <Undo2 className="w-3.5 h-3.5 mr-1" />
-                      Unmark
-                    </Button>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {row.reviewRequestedAt !== undefined && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-xs"
+                          onClick={() =>
+                            handleDismissReview(row.storyId, row.storyTitle)
+                          }
+                        >
+                          <Flag className="w-3.5 h-3.5 mr-1" />
+                          Dismiss
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={() =>
+                          handleUnmarkOne(row.storyId, row.storyTitle)
+                        }
+                      >
+                        <Undo2 className="w-3.5 h-3.5 mr-1" />
+                        Unmark
+                      </Button>
+                    </div>
                   )}
                 </div>
               ))}

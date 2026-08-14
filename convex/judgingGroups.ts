@@ -60,7 +60,11 @@ const submissionCustomQuestionsValidator = v.array(
       v.literal("url"),
       v.literal("email"),
       v.literal("textarea"),
+      v.literal("radio"),
+      v.literal("multiselect"),
+      v.literal("select"),
     ),
+    options: v.optional(v.array(v.string())), // Choices for radio/multiselect/select
     required: v.boolean(),
     visible: v.optional(v.boolean()), // Unset = shown
   }),
@@ -472,6 +476,16 @@ export const updateGroup = mutation({
           throw new Error(`Duplicate custom question key: ${question.key}`);
         }
         seenKeys.add(question.key);
+        if (
+          (question.fieldType === "radio" ||
+            question.fieldType === "multiselect" ||
+            question.fieldType === "select") &&
+          (question.options ?? []).filter((o) => o.trim()).length < 2
+        ) {
+          throw new Error(
+            `Custom question "${question.label}" needs at least 2 options`,
+          );
+        }
       }
     }
     if (args.submissionFieldVisibility?.title === false) {

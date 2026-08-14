@@ -123,10 +123,10 @@ type BookmarkedStoryItem = Doc<"bookmarks"> & {
 
 // Define a type for user items in follower/following lists
 // Ensure this matches the return type of api.follows.getFollowers/getFollowing
-type FollowUserListItem = Doc<"users"> & {
-  // username is already part of Doc<"users">, but ensure it's handled if optional
-  username?: string | null; // explicitly define if it can be null/undefined in the query result
-  name?: string | null;
+type FollowUserListItem = {
+  _id: Id<"users">;
+  username: string;
+  name: string;
   imageUrl?: string | null;
 };
 
@@ -183,16 +183,8 @@ export default function UserProfilePage() {
     username && !username.startsWith("user-settings") ? { username } : "skip",
   );
 
-  // Candidate check for own profile to drive private queries
-  const profileUserClerkId = (profileData as any)?.user?.clerkId as
-    | string
-    | undefined;
-  const isOwnProfileCandidate =
-    !!isClerkLoaded && !!authUser && !!profileUserClerkId
-      ? authUser.id === profileUserClerkId
-      : false;
-
   // Email settings for the authenticated current user (only if own profile)
+  const isOwnProfileCandidate = profileData?.isOwnProfile === true;
   const emailSettingsData = useQuery(
     api.emailSettings.getEmailSettings,
     isOwnProfileCandidate ? {} : "skip",
@@ -454,6 +446,7 @@ export default function UserProfilePage() {
     followersCount,
     followingCount,
     isFollowedByCurrentUser,
+    isOwnProfile: isOwnProfileFromQuery,
   } = profileData || {
     user: null,
     stories: [],
@@ -463,13 +456,11 @@ export default function UserProfilePage() {
     followersCount: 0,
     followingCount: 0,
     isFollowedByCurrentUser: false,
+    isOwnProfile: false,
   };
 
-  // Correct calculation for isOwnProfile, using the reliably loadedProfileUser
-  const isOwnProfile =
-    !!authUser &&
-    !!loadedProfileUser &&
-    authUser.id === loadedProfileUser.clerkId;
+  // Own-profile gate comes from the query, not a client clerkId comparison
+  const isOwnProfile = isOwnProfileFromQuery === true;
 
   // If we are on a specific user's profile page (not user-settings) and loadedProfileUser is null (due to fallback from destructuring)
   // it implies an issue not caught by earlier checks, or profileData was an empty object without a 'user' field.

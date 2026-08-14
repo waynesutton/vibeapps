@@ -11,7 +11,7 @@ import { Doc, Id } from "./_generated/dataModel";
 import { internal, components } from "./_generated/api";
 import { Workpool } from "@convex-dev/workpool";
 import { requirePermission } from "./adminAccess";
-import { getAuthenticatedUserId } from "./users";
+import { getAuthenticatedUserId, getAuthenticatedUserDoc } from "./users";
 import { logActivity } from "./activityLog";
 
 // Spam scans run through their own workpool so batch scans never queue
@@ -154,6 +154,7 @@ const spamResultValidator = v.object({
   isHidden: v.boolean(),
   isSpam: v.boolean(),
   spamMarkedByAgent: v.optional(v.boolean()),
+  reviewRequestedAt: v.optional(v.number()),
   spamReason: v.optional(v.string()),
   status: statusValidator,
   verdict: v.optional(verdictValidator),
@@ -346,6 +347,7 @@ export const listSpamResults = query({
       isHidden: boolean;
       isSpam: boolean;
       spamMarkedByAgent?: boolean;
+      reviewRequestedAt?: number;
       spamReason?: string;
       status: "pending" | "running" | "completed" | "failed";
       verdict?: "spam" | "suspicious" | "clean";
@@ -392,6 +394,7 @@ export const listSpamResults = query({
         isHidden: story.isHidden,
         isSpam: story.isSpam === true,
         spamMarkedByAgent: story.spamMarkedByAgent,
+        reviewRequestedAt: story.spamReviewRequestedAt,
         spamReason: story.spamReason,
         status: row.status,
         verdict: row.verdict,
@@ -467,6 +470,7 @@ export const listMarkedSpam = query({
       spamMarkedAt: v.optional(v.number()),
       markedByName: v.optional(v.string()),
       markedByAgent: v.optional(v.boolean()),
+      reviewRequestedAt: v.optional(v.number()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -516,15 +520,21 @@ export const listMarkedSpam = query({
           spamMarkedAt: story.spamMarkedAt,
           markedByName,
           markedByAgent: story.spamMarkedByAgent,
+          reviewRequestedAt: story.spamReviewRequestedAt,
         };
       }),
     );
 
-    // Most recently marked first; unmarked timestamps fall back to submission time
-    rows.sort(
-      (a, b) =>
-        (b.spamMarkedAt ?? b.submittedAt) - (a.spamMarkedAt ?? a.submittedAt),
-    );
+    // Disputed rows first so review requests never get buried, then most
+    // recently marked; unmarked timestamps fall back to submission time
+    rows.sort((a, b) => {
+      const aDisputed = a.reviewRequestedAt !== undefined ? 1 : 0;
+      const bDisputed = b.reviewRequestedAt !== undefined ? 1 : 0;
+      if (aDisputed !== bDisputed) return bDisputed - aDisputed;
+      return (
+        (b.spamMarkedAt ?? b.submittedAt) - (a.spamMarkedAt ?? a.submittedAt)
+      );
+    });
     return rows;
   },
 });
@@ -841,12 +851,113 @@ export const unmarkSpam = mutation({
       spamMarkedAt: undefined,
       spamMarkedBy: undefined,
       spamMarkedByAgent: undefined,
+      spamReviewRequestedAt: undefined,
       isHidden: false,
     });
     await logActivity(ctx, {
       category: "spam",
       action: "spam.unmarked",
       message: `Cleared the spam label on "${story.title}"`,
+      targetType: "story",
+      targetId: args.storyId,
+      targetLabel: story.title,
+    });
+    return { success: true };
+  },
+});
+
+// --- Submitter dispute: in-app review requests ---
+
+/**
+ * Story owner disputes a spam mark from the notifications page. Stamps the
+ * story and pings admins through the Activity log, so the dispute does not
+ * depend on email deliverability.
+ */
+export const requestSpamReview = mutation({
+  args: { storyId: v.id("stories") },
+  returns: v.object({
+    status: v.union(
+      v.literal("requested"), // Stamped now (or previously): admins pinged
+      v.literal("notSpam"), // Mark already cleared, nothing to dispute
+      v.literal("gone"), // Story deleted
+    ),
+  }),
+  handler: async (ctx, args) => {
+    const userId = await getAuthenticatedUserId(ctx);
+    const story = await ctx.db.get(args.storyId);
+    if (!story) return { status: "gone" as const };
+    // Only the story owner can dispute their own mark
+    if (story.userId !== userId) {
+      throw new Error("You can only request a review of your own submission");
+    }
+    if (story.isSpam !== true) return { status: "notSpam" as const };
+    // Idempotent: one request per mark, repeat clicks change nothing
+    if (story.spamReviewRequestedAt !== undefined) {
+      return { status: "requested" as const };
+    }
+
+    await ctx.db.patch(args.storyId, { spamReviewRequestedAt: Date.now() });
+    await logActivity(ctx, {
+      category: "spam",
+      action: "spam.reviewRequested",
+      message: `Submitter requested a review of the spam mark on "${story.title}"`,
+      targetType: "story",
+      targetId: args.storyId,
+      targetLabel: story.title,
+      metadata: {
+        spamReason: story.spamReason,
+        autoMarked: story.spamMarkedByAgent === true,
+      },
+    });
+    return { status: "requested" as const };
+  },
+});
+
+/**
+ * Owner-scoped spam status for the notifications page button. Returns null
+ * when signed out or when the story is not the caller's, so the alert UI
+ * can quietly skip the button.
+ */
+export const getMySpamStatus = query({
+  args: { storyId: v.id("stories") },
+  returns: v.union(
+    v.null(),
+    v.object({
+      isSpam: v.boolean(),
+      reviewRequestedAt: v.optional(v.number()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const user = await getAuthenticatedUserDoc(ctx);
+    if (!user) return null;
+    const story = await ctx.db.get(args.storyId);
+    if (!story || story.userId !== user._id) return null;
+    return {
+      isSpam: story.isSpam === true,
+      reviewRequestedAt: story.spamReviewRequestedAt,
+    };
+  },
+});
+
+/**
+ * Admin resolves a dispute without unmarking: clears the request flag while
+ * keeping the spam label, so the badge stops flagging the row.
+ */
+export const dismissSpamReviewRequest = mutation({
+  args: { storyId: v.id("stories") },
+  returns: v.object({ success: v.boolean() }),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "moderation.moderate");
+    const story = await ctx.db.get(args.storyId);
+    if (!story) throw new Error("Story not found");
+    // Idempotent: nothing pending means nothing to dismiss
+    if (story.spamReviewRequestedAt === undefined) return { success: true };
+
+    await ctx.db.patch(args.storyId, { spamReviewRequestedAt: undefined });
+    await logActivity(ctx, {
+      category: "spam",
+      action: "spam.reviewDismissed",
+      message: `Dismissed the review request on "${story.title}" (spam mark kept)`,
       targetType: "story",
       targetId: args.storyId,
       targetLabel: story.title,

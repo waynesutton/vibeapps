@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { useQuery, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Link } from "react-router-dom";
-import { Doc, Id } from "../../../convex/_generated/dataModel";
+import { Id } from "../../../convex/_generated/dataModel";
 
 // Helper component for displaying each statistic
 const StatCard = ({
@@ -21,13 +21,17 @@ const StatCard = ({
 );
 
 // Define types for the user objects returned by the queries
-type UserWithFollowerCount = Doc<"users"> & {
-  username: string; // Ensure username is always a string, defaulting to "N/A" if needed
+type UserWithFollowerCount = {
+  _id: Id<"users">;
+  name: string;
+  username: string;
   followerCount: number;
 };
 
-type UserWithFollowingCount = Doc<"users"> & {
-  username: string; // Ensure username is always a string, defaulting to "N/A" if needed
+type UserWithFollowingCount = {
+  _id: Id<"users">;
+  name: string;
+  username: string;
   followingCount: number;
 };
 

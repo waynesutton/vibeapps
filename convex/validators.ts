@@ -154,8 +154,6 @@ export const userInProfileValidator = v.object({
   _id: v.id("users"),
   _creationTime: v.number(),
   name: v.string(),
-  clerkId: v.string(),
-  email: v.optional(v.string()),
   username: v.optional(v.string()),
   imageUrl: v.optional(v.string()),
   bio: v.optional(v.string()),
@@ -164,8 +162,6 @@ export const userInProfileValidator = v.object({
   bluesky: v.optional(v.string()),
   linkedin: v.optional(v.string()),
   isVerified: v.optional(v.boolean()),
-  // role is not on the user doc in DB currently
-  // isBanned & isPaused are usually admin-facing, but can be included if profile needs it
 });
 
 // Validator for Vote object with story details in profile data

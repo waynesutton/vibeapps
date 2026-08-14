@@ -1,8 +1,27 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { Id } from "./_generated/dataModel";
+import { Id, Doc } from "./_generated/dataModel";
 import { getUserByCtx } from "./users"; // Assuming this helper exists and is correctly implemented
 import { internal } from "./_generated/api";
+
+// Public follow-list shape: name and avatar only, no email/clerkId/role
+const publicFollowUserValidator = v.object({
+  _id: v.id("users"),
+  name: v.string(),
+  username: v.string(),
+  imageUrl: v.optional(v.string()),
+  isVerified: v.optional(v.boolean()),
+});
+
+function toPublicFollowUser(user: Doc<"users">) {
+  return {
+    _id: user._id,
+    name: user.name,
+    username: user.username || "N/A",
+    imageUrl: user.imageUrl,
+    isVerified: user.isVerified,
+  };
+}
 
 // --- MUTATIONS ---
 
@@ -83,28 +102,7 @@ export const unfollowUser = mutation({
 
 export const getFollowers = query({
   args: { userId: v.id("users") },
-  returns: v.array(
-    v.object({
-      _id: v.id("users"),
-      _creationTime: v.number(),
-      name: v.string(),
-      clerkId: v.string(),
-      email: v.optional(v.string()),
-      username: v.string(), // Guaranteed to be string (defaults to "N/A")
-      imageUrl: v.optional(v.string()),
-      bio: v.optional(v.string()),
-      website: v.optional(v.string()),
-      twitter: v.optional(v.string()),
-      bluesky: v.optional(v.string()),
-      linkedin: v.optional(v.string()),
-      isBanned: v.optional(v.boolean()),
-      isPaused: v.optional(v.boolean()),
-      isVerified: v.optional(v.boolean()),
-      inboxEnabled: v.optional(v.boolean()),
-      emojiTheme: v.optional(v.string()),
-      role: v.optional(v.string()),
-    }),
-  ),
+  returns: v.array(publicFollowUserValidator),
   handler: async (ctx, args) => {
     const follows = await ctx.db
       .query("follows")
@@ -112,15 +110,12 @@ export const getFollowers = query({
       .collect();
 
     const followerIds = follows.map((f) => f.followerId);
-    // Fetch actual user documents for followers
     const followers = await Promise.all(
       followerIds.map(async (id: Id<"users">) => {
         const user = await ctx.db.get(id);
-        // Attach username if it exists, handle potential null user
-        return user ? { ...user, username: user.username || "N/A" } : null;
+        return user ? toPublicFollowUser(user) : null;
       }),
     );
-    // Filter out nulls with proper type narrowing
     return followers.filter(
       (u): u is NonNullable<typeof u> => u !== null,
     );
@@ -129,28 +124,7 @@ export const getFollowers = query({
 
 export const getFollowing = query({
   args: { userId: v.id("users") },
-  returns: v.array(
-    v.object({
-      _id: v.id("users"),
-      _creationTime: v.number(),
-      name: v.string(),
-      clerkId: v.string(),
-      email: v.optional(v.string()),
-      username: v.string(), // Guaranteed to be string (defaults to "N/A")
-      imageUrl: v.optional(v.string()),
-      bio: v.optional(v.string()),
-      website: v.optional(v.string()),
-      twitter: v.optional(v.string()),
-      bluesky: v.optional(v.string()),
-      linkedin: v.optional(v.string()),
-      isBanned: v.optional(v.boolean()),
-      isPaused: v.optional(v.boolean()),
-      isVerified: v.optional(v.boolean()),
-      inboxEnabled: v.optional(v.boolean()),
-      emojiTheme: v.optional(v.string()),
-      role: v.optional(v.string()),
-    }),
-  ),
+  returns: v.array(publicFollowUserValidator),
   handler: async (ctx, args) => {
     const follows = await ctx.db
       .query("follows")
@@ -158,15 +132,12 @@ export const getFollowing = query({
       .collect();
 
     const followingIds = follows.map((f) => f.followingId);
-    // Fetch actual user documents for those being followed
     const following = await Promise.all(
       followingIds.map(async (id: Id<"users">) => {
         const user = await ctx.db.get(id);
-        // Attach username if it exists, handle potential null user
-        return user ? { ...user, username: user.username || "N/A" } : null;
+        return user ? toPublicFollowUser(user) : null;
       }),
     );
-    // Filter out nulls with proper type narrowing
     return following.filter(
       (u): u is NonNullable<typeof u> => u !== null,
     );

@@ -110,6 +110,7 @@ export default defineSchema({
     spamMarkedAt: v.optional(v.number()), // When it was marked
     spamMarkedBy: v.optional(v.id("users")), // Admin who confirmed the mark
     spamMarkedByAgent: v.optional(v.boolean()), // True when the automation agent marked it
+    spamReviewRequestedAt: v.optional(v.number()), // When the author disputed the mark in-app
     // Hackathon team info
     teamName: v.optional(v.string()),
     teamMemberCount: v.optional(v.number()),
@@ -424,7 +425,11 @@ export default defineSchema({
       v.literal("text"),
       v.literal("email"),
       v.literal("textarea"),
+      v.literal("radio"),
+      v.literal("multiselect"),
+      v.literal("select"),
     ), // Field input type
+    options: v.optional(v.array(v.string())), // Choices for radio/multiselect/select fields
     description: v.optional(v.string()), // Optional description text
     storyPropertyName: v.string(), // Property name in stories table (e.g., "linkedinUrl")
   })
@@ -546,7 +551,11 @@ export default defineSchema({
             v.literal("url"),
             v.literal("email"),
             v.literal("textarea"),
+            v.literal("radio"),
+            v.literal("multiselect"),
+            v.literal("select"),
           ),
+          options: v.optional(v.array(v.string())), // Choices for radio/multiselect/select questions
           required: v.boolean(),
           // Unset = shown. Hidden questions stay stored but never render.
           visible: v.optional(v.boolean()),

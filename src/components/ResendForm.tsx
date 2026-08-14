@@ -5,6 +5,7 @@ import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
 import { Github, Plus, X } from "lucide-react";
 import { SignUpButton } from "@clerk/clerk-react";
+import { ChoiceFieldInput } from "./ui/ChoiceFieldInput";
 
 // Inherits _id, _creationTime, name, showInHeader, isHidden?, backgroundColor?, textColor?
 type Tag = Doc<"tags">;
@@ -413,21 +414,41 @@ export function ResendForm() {
                     {field.description}
                   </div>
                 )}
-                <input
-                  type={field.fieldType}
-                  id={field.key}
-                  placeholder={field.placeholder}
-                  value={dynamicFormData[field.key] || ""}
-                  onChange={(e) =>
-                    setDynamicFormData((prev) => ({
-                      ...prev,
-                      [field.key]: e.target.value,
-                    }))
-                  }
-                  className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
-                  required={field.isRequired}
-                  disabled={isSubmitting}
-                />
+                {field.fieldType === "radio" ||
+                field.fieldType === "multiselect" ||
+                field.fieldType === "select" ? (
+                  <ChoiceFieldInput
+                    fieldKey={field.key}
+                    fieldType={field.fieldType}
+                    options={field.options ?? []}
+                    placeholder={field.placeholder}
+                    value={dynamicFormData[field.key] || ""}
+                    onChange={(value) =>
+                      setDynamicFormData((prev) => ({
+                        ...prev,
+                        [field.key]: value,
+                      }))
+                    }
+                    required={field.isRequired}
+                    disabled={isSubmitting}
+                  />
+                ) : (
+                  <input
+                    type={field.fieldType}
+                    id={field.key}
+                    placeholder={field.placeholder}
+                    value={dynamicFormData[field.key] || ""}
+                    onChange={(e) =>
+                      setDynamicFormData((prev) => ({
+                        ...prev,
+                        [field.key]: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
+                    required={field.isRequired}
+                    disabled={isSubmitting}
+                  />
+                )}
               </div>
             ))}
             {formFields === undefined && (

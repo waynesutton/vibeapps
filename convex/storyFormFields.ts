@@ -26,6 +26,34 @@ export const STORY_DYNAMIC_COLUMNS = [
 
 export type StoryDynamicColumn = (typeof STORY_DYNAMIC_COLUMNS)[number];
 
+// Shared field type validator used by every query/mutation in this file.
+// radio/select = single choice, multiselect = multiple choices (comma-joined).
+export const storyFormFieldTypeValidator = v.union(
+  v.literal("url"),
+  v.literal("text"),
+  v.literal("email"),
+  v.literal("textarea"),
+  v.literal("radio"),
+  v.literal("multiselect"),
+  v.literal("select"),
+);
+
+// Shared document shape returned by list queries.
+const storyFormFieldDoc = v.object({
+  _id: v.id("storyFormFields"),
+  _creationTime: v.number(),
+  key: v.string(),
+  label: v.string(),
+  placeholder: v.string(),
+  isEnabled: v.boolean(),
+  isRequired: v.boolean(),
+  order: v.number(),
+  fieldType: storyFormFieldTypeValidator,
+  options: v.optional(v.array(v.string())),
+  description: v.optional(v.string()),
+  storyPropertyName: v.string(),
+});
+
 export type DynamicFieldEntry = { key: string; label: string; value: string };
 
 export type ResolvedDynamicFields = {
@@ -43,6 +71,42 @@ export type ResolvedDynamicFields = {
  * matching storyFormFields definition are dropped so clients cannot store
  * arbitrary data.
  */
+// Multiselect answers are stored as a single comma-joined string so every
+// downstream consumer (judging UI, CSV export, AI judge context) keeps
+// working with plain string values.
+export const MULTISELECT_SEPARATOR = ", ";
+
+/**
+ * For radio/multiselect/select fields, keep only values that match the
+ * configured options. Returns null when nothing valid remains so the entry
+ * is skipped. Non-choice fields pass through unchanged.
+ */
+function sanitizeChoiceValue(
+  field: Doc<"storyFormFields"> | null,
+  value: string,
+): string | null {
+  if (!field) return value;
+  if (
+    field.fieldType !== "radio" &&
+    field.fieldType !== "multiselect" &&
+    field.fieldType !== "select"
+  ) {
+    return value;
+  }
+  const options = field.options ?? [];
+  if (options.length === 0) return null;
+  if (field.fieldType === "radio" || field.fieldType === "select") {
+    return options.includes(value) ? value : null;
+  }
+  const selected = value
+    .split(MULTISELECT_SEPARATOR)
+    .map((part) => part.trim())
+    .filter((part) => options.includes(part));
+  // Preserve option order for stable display regardless of click order
+  const ordered = options.filter((option) => selected.includes(option));
+  return ordered.length > 0 ? ordered.join(MULTISELECT_SEPARATOR) : null;
+}
+
 export async function resolveDynamicFieldValues(
   ctx: QueryCtx | MutationCtx,
   entries: Array<DynamicFieldEntry> | undefined,
@@ -53,13 +117,16 @@ export async function resolveDynamicFieldValues(
 
   for (const entry of entries ?? []) {
     const key = entry.key.trim();
-    const value = entry.value.trim();
-    if (!key || !value) continue;
+    const rawValue = entry.value.trim();
+    if (!key || !rawValue) continue;
 
     const field = await ctx.db
       .query("storyFormFields")
       .withIndex("by_key", (q) => q.eq("key", key))
       .unique();
+
+    const value = sanitizeChoiceValue(field, rawValue);
+    if (value === null) continue;
 
     const propertyName = field?.storyPropertyName;
     if (propertyName && knownColumns.has(propertyName)) {
@@ -112,26 +179,7 @@ export async function resolveDynamicFieldRecord(
 // Query to get all form fields ordered by display order
 export const list = query({
   args: {},
-  returns: v.array(
-    v.object({
-      _id: v.id("storyFormFields"),
-      _creationTime: v.number(),
-      key: v.string(),
-      label: v.string(),
-      placeholder: v.string(),
-      isEnabled: v.boolean(),
-      isRequired: v.boolean(),
-      order: v.number(),
-      fieldType: v.union(
-        v.literal("url"),
-        v.literal("text"),
-        v.literal("email"),
-        v.literal("textarea"),
-      ),
-      description: v.optional(v.string()),
-      storyPropertyName: v.string(),
-    }),
-  ),
+  returns: v.array(storyFormFieldDoc),
   handler: async (ctx) => {
     const fields = await ctx.db
       .query("storyFormFields")
@@ -145,26 +193,7 @@ export const list = query({
 // Query to get only enabled form fields for the story form
 export const listEnabled = query({
   args: {},
-  returns: v.array(
-    v.object({
-      _id: v.id("storyFormFields"),
-      _creationTime: v.number(),
-      key: v.string(),
-      label: v.string(),
-      placeholder: v.string(),
-      isEnabled: v.boolean(),
-      isRequired: v.boolean(),
-      order: v.number(),
-      fieldType: v.union(
-        v.literal("url"),
-        v.literal("text"),
-        v.literal("email"),
-        v.literal("textarea"),
-      ),
-      description: v.optional(v.string()),
-      storyPropertyName: v.string(),
-    }),
-  ),
+  returns: v.array(storyFormFieldDoc),
   handler: async (ctx) => {
     const fields = await ctx.db
       .query("storyFormFields")
@@ -175,29 +204,92 @@ export const listEnabled = query({
   },
 });
 
+// Admin query: per-option answer counts for every choice field. Counts come
+// from stories.dynamicFormValues (where admin-added choice answers live).
+// Multiselect answers count each selected option once; totals count stories
+// that answered the field at all. Scans the stories table, which is fine at
+// this app's scale for a single admin dashboard subscription.
+export const getChoiceAnswerCounts = query({
+  args: {},
+  returns: v.record(
+    v.string(),
+    v.object({
+      total: v.number(),
+      counts: v.array(v.object({ option: v.string(), count: v.number() })),
+    }),
+  ),
+  handler: async (ctx) => {
+    await requirePermission(ctx, "forms.view");
+
+    const fields = await ctx.db
+      .query("storyFormFields")
+      .withIndex("by_order")
+      .collect();
+    const choiceFields = fields.filter(
+      (field) =>
+        (field.fieldType === "radio" ||
+          field.fieldType === "multiselect" ||
+          field.fieldType === "select") &&
+        (field.options ?? []).length > 0,
+    );
+    if (choiceFields.length === 0) {
+      return {};
+    }
+
+    // key -> option -> count, seeded with zeros so every option shows a bar
+    const fieldByKey = new Map(choiceFields.map((field) => [field.key, field]));
+    const optionCounts: Record<string, Record<string, number>> = {};
+    const totals: Record<string, number> = {};
+    for (const field of choiceFields) {
+      optionCounts[field.key] = {};
+      totals[field.key] = 0;
+      for (const option of field.options ?? []) {
+        optionCounts[field.key][option] = 0;
+      }
+    }
+
+    for await (const story of ctx.db.query("stories")) {
+      for (const entry of story.dynamicFormValues ?? []) {
+        const field = fieldByKey.get(entry.key);
+        if (!field) continue;
+        const parts =
+          field.fieldType === "multiselect"
+            ? entry.value
+                .split(MULTISELECT_SEPARATOR)
+                .map((part) => part.trim())
+            : [entry.value.trim()];
+        let matched = false;
+        for (const part of parts) {
+          if (part in optionCounts[entry.key]) {
+            optionCounts[entry.key][part] += 1;
+            matched = true;
+          }
+        }
+        if (matched) totals[entry.key] += 1;
+      }
+    }
+
+    const result: Record<
+      string,
+      { total: number; counts: Array<{ option: string; count: number }> }
+    > = {};
+    for (const field of choiceFields) {
+      result[field.key] = {
+        total: totals[field.key],
+        counts: (field.options ?? []).map((option) => ({
+          option,
+          count: optionCounts[field.key][option],
+        })),
+      };
+    }
+    return result;
+  },
+});
+
 // Admin query to get all form fields
 export const listAdmin = query({
   args: {},
-  returns: v.array(
-    v.object({
-      _id: v.id("storyFormFields"),
-      _creationTime: v.number(),
-      key: v.string(),
-      label: v.string(),
-      placeholder: v.string(),
-      isEnabled: v.boolean(),
-      isRequired: v.boolean(),
-      order: v.number(),
-      fieldType: v.union(
-        v.literal("url"),
-        v.literal("text"),
-        v.literal("email"),
-        v.literal("textarea"),
-      ),
-      description: v.optional(v.string()),
-      storyPropertyName: v.string(),
-    }),
-  ),
+  returns: v.array(storyFormFieldDoc),
   handler: async (ctx) => {
     await requirePermission(ctx, "forms.view");
     const fields = await ctx.db
@@ -218,12 +310,8 @@ export const create = mutation({
     isEnabled: v.boolean(),
     isRequired: v.boolean(),
     order: v.number(),
-    fieldType: v.union(
-      v.literal("url"),
-      v.literal("text"),
-      v.literal("email"),
-      v.literal("textarea"),
-    ),
+    fieldType: storyFormFieldTypeValidator,
+    options: v.optional(v.array(v.string())),
     description: v.optional(v.string()),
     storyPropertyName: v.string(),
   },
@@ -255,14 +343,8 @@ export const update = mutation({
     isEnabled: v.optional(v.boolean()),
     isRequired: v.optional(v.boolean()),
     order: v.optional(v.number()),
-    fieldType: v.optional(
-      v.union(
-        v.literal("url"),
-        v.literal("text"),
-        v.literal("email"),
-        v.literal("textarea"),
-      ),
-    ),
+    fieldType: v.optional(storyFormFieldTypeValidator),
+    options: v.optional(v.array(v.string())),
     description: v.optional(v.string()),
     storyPropertyName: v.optional(v.string()),
   },
@@ -299,6 +381,7 @@ export const update = mutation({
     if (updates.order !== undefined) updateData.order = updates.order;
     if (updates.fieldType !== undefined)
       updateData.fieldType = updates.fieldType;
+    if (updates.options !== undefined) updateData.options = updates.options;
     if (updates.description !== undefined)
       updateData.description = updates.description;
     if (updates.storyPropertyName !== undefined)
