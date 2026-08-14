@@ -26,13 +26,15 @@ export type LinkEntry = {
   password?: string;
 };
 
-// Stored passwords are base64 encoded (see hashPassword in
-// convex/judgingGroups.ts). Decode so the admin-only event kit export can
-// include the access code alongside each locked link.
+// Stored passwords are SHA-256 hex (see hashPassword in
+// convex/judgingGroups.ts). Older rows used reversible btoa; decode those
+// so the admin-only event kit export can still include the access code.
 function decodeStoredPassword(
   encoded: string | undefined,
 ): string | undefined {
   if (!encoded) return undefined;
+  // SHA-256 hex is 64 lowercase hex chars and cannot be reversed
+  if (/^[0-9a-f]{64}$/.test(encoded)) return undefined;
   try {
     const bytes = Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0));
     return new TextDecoder().decode(bytes);

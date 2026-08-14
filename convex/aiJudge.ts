@@ -1376,7 +1376,7 @@ export const validateAiResultsPassword = mutation({
     if (!group || !group.aiResultsPassword) {
       return false;
     }
-    return verifyPassword(args.password, group.aiResultsPassword);
+    return await verifyPassword(args.password, group.aiResultsPassword);
   },
 });
 
@@ -1394,7 +1394,7 @@ export const verifyAiResultsPassword = query({
     if (!group || !group.aiResultsPassword) {
       return false;
     }
-    return verifyPassword(args.password, group.aiResultsPassword);
+    return await verifyPassword(args.password, group.aiResultsPassword);
   },
 });
 
@@ -1469,7 +1469,7 @@ export const resolveResultsAccess = internalQuery({
     if (
       args.password &&
       group.aiResultsPassword &&
-      verifyPassword(args.password, group.aiResultsPassword)
+      (await verifyPassword(args.password, group.aiResultsPassword))
     ) {
       return group._id;
     }
@@ -1482,11 +1482,18 @@ export const resolveResultsAccess = internalQuery({
  * getValidatedGroupScores in judgeScores.ts).
  */
 export const getValidatedAiResults = query({
-  args: { groupId: v.id("judgingGroups") },
+  args: { groupId: v.id("judgingGroups"), password: v.string() },
   returns: v.union(v.null(), v.array(aiResultValidator)),
   handler: async (ctx, args) => {
     const group = await ctx.db.get(args.groupId);
     if (!group || !group.aiJudgeEnabled) {
+      return null;
+    }
+    const admin = await isUserAdmin(ctx);
+    const passwordOk =
+      !!group.aiResultsPassword &&
+      (await verifyPassword(args.password, group.aiResultsPassword));
+    if (!admin && !passwordOk) {
       return null;
     }
     return await getCompletedResultsForGroup(ctx, args.groupId);

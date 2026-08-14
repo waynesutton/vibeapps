@@ -441,12 +441,15 @@ export const listUserStories = query({
       .order("desc")
       .collect();
 
-    if (basicStories.length === 0) {
+    const visibleStories = basicStories.filter(
+      (story) => story.status === "approved" && story.isHidden !== true,
+    );
+
+    if (visibleStories.length === 0) {
       return [];
     }
 
-    // Step 2: Get all story IDs
-    const storyIds = basicStories.map((story) => story._id);
+    const storyIds = visibleStories.map((story) => story._id);
 
     // Step 3: Call the internal batch query to get full details, including author info
     const detailedStories: StoryWithDetailsPublic[] = await ctx.runQuery(

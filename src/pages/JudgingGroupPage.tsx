@@ -56,6 +56,7 @@ export default function JudgingGroupPage() {
         groupId: group._id,
         name: judgeName.trim(),
         email: judgeEmail.trim() || undefined,
+        password: password.trim() || undefined,
       });
 
       // Store session ID in localStorage

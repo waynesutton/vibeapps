@@ -1,4 +1,4 @@
-import { query, mutation, MutationCtx } from "./_generated/server";
+import { query, mutation, MutationCtx, QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { getAuthenticatedUserId } from "./users";
@@ -19,6 +19,21 @@ function isStoryValidForJudging(story: Doc<"stories"> | null): story is Doc<"sto
   if (story.isArchived === true) return false;
   if (story.status === "rejected") return false;
   return true;
+}
+
+async function requireJudgeSession(
+  ctx: QueryCtx | MutationCtx,
+  sessionId: string,
+  groupId: Id<"judgingGroups">,
+): Promise<Doc<"judges">> {
+  const judge = await ctx.db
+    .query("judges")
+    .withIndex("by_sessionId", (q) => q.eq("sessionId", sessionId))
+    .unique();
+  if (!judge || judge.groupId !== groupId) {
+    throw new Error("Judge session not found");
+  }
+  return judge;
 }
 
 /**
@@ -912,7 +927,7 @@ export const exportGroupSubmissions = query({
  * Get submissions for a judging group (public access for judges)
  */
 export const getGroupSubmissions = query({
-  args: { groupId: v.id("judgingGroups") },
+  args: { groupId: v.id("judgingGroups"), sessionId: v.string() },
   returns: v.array(
     v.object({
       _id: v.id("stories"),
@@ -1019,7 +1034,7 @@ export const getGroupSubmissions = query({
     }),
   ),
   handler: async (ctx, args) => {
-    // No admin check - this is public for judges
+    await requireJudgeSession(ctx, args.sessionId, args.groupId);
 
     // Verify the group exists and is accessible
     const group = await ctx.db.get(args.groupId);
@@ -1133,15 +1148,11 @@ export const updateSubmissionStatus = mutation({
       v.literal("completed"),
       v.literal("skip"),
     ),
-    judgeId: v.id("judges"),
+    sessionId: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Verify the judge exists and belongs to the group
-    const judge = await ctx.db.get(args.judgeId);
-    if (!judge || judge.groupId !== args.groupId) {
-      throw new Error("Judge not found or not in this group");
-    }
+    const judge = await requireJudgeSession(ctx, args.sessionId, args.groupId);
 
     // Find existing status
     const existingStatus = await ctx.db
@@ -1158,8 +1169,8 @@ export const updateSubmissionStatus = mutation({
     // Update the status
     await ctx.db.patch(existingStatus._id, {
       status: args.status,
-      assignedJudgeId: args.status === "completed" ? args.judgeId : undefined,
-      lastUpdatedBy: args.judgeId,
+      assignedJudgeId: args.status === "completed" ? judge._id : undefined,
+      lastUpdatedBy: judge._id,
       lastUpdatedAt: Date.now(),
     });
 
@@ -1480,16 +1491,28 @@ export const addSubmissionNote = mutation({
   args: {
     groupId: v.id("judgingGroups"),
     storyId: v.id("stories"),
-    judgeId: v.id("judges"),
     content: v.string(),
     replyToId: v.optional(v.id("submissionNotes")),
+    sessionId: v.optional(v.string()),
+    judgeId: v.optional(v.id("judges")),
   },
   returns: v.id("submissionNotes"),
   handler: async (ctx, args) => {
-    // Verify the judge exists and belongs to the group
-    const judge = await ctx.db.get(args.judgeId);
-    if (!judge || judge.groupId !== args.groupId) {
-      throw new Error("Judge not found or not in this group");
+    let judge: Doc<"judges"> | null = null;
+    if (args.sessionId) {
+      judge = await requireJudgeSession(ctx, args.sessionId, args.groupId);
+    } else if (args.judgeId) {
+      await requireJudgingGroupPermission(
+        ctx,
+        args.groupId,
+        "judging.tracking",
+      );
+      judge = await ctx.db.get(args.judgeId);
+      if (!judge || judge.groupId !== args.groupId) {
+        throw new Error("Judge not found or not in this group");
+      }
+    } else {
+      throw new Error("Judge session not found");
     }
 
     // If replying to a note, verify it exists
@@ -1508,7 +1531,7 @@ export const addSubmissionNote = mutation({
     const noteId = await ctx.db.insert("submissionNotes", {
       groupId: args.groupId,
       storyId: args.storyId,
-      judgeId: args.judgeId,
+      judgeId: judge._id,
       content: args.content.trim(),
       replyToId: args.replyToId,
     });
@@ -1579,6 +1602,7 @@ export const getSubmissionNotes = query({
   args: {
     groupId: v.id("judgingGroups"),
     storyId: v.id("stories"),
+    sessionId: v.optional(v.string()),
   },
   returns: v.array(
     v.object({
@@ -1598,6 +1622,16 @@ export const getSubmissionNotes = query({
     }),
   ),
   handler: async (ctx, args) => {
+    if (args.sessionId) {
+      await requireJudgeSession(ctx, args.sessionId, args.groupId);
+    } else {
+      await requireJudgingGroupPermission(
+        ctx,
+        args.groupId,
+        "judging.tracking",
+      );
+    }
+
     // Get all notes for this submission
     const allNotes = await ctx.db
       .query("submissionNotes")

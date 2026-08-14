@@ -74,6 +74,7 @@ export const listApprovedByStory = query({
 export const listPendingByStory = query({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args): Promise<Doc<"comments">[]> => {
+    await requirePermission(ctx, "moderation.view");
     const comments = await ctx.db
       .query("comments")
       .withIndex("by_storyId_status", (q) =>

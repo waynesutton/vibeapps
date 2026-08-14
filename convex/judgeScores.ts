@@ -3,6 +3,8 @@ import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { requireJudgingGroupPermission } from "./adminAccess";
 import { logActivity } from "./activityLog";
+import { isUserAdmin } from "./users";
+import { verifyPassword } from "./judgingGroups";
 
 // Helper function to check if a story should be included in judging
 // Returns true if story is valid for judging (not deleted, hidden, archived, or rejected)
@@ -1211,7 +1213,7 @@ export const getPublicGroupScores = query({
  * This query is called after the user has successfully validated the results password
  */
 export const getValidatedGroupScores = query({
-  args: { groupId: v.id("judgingGroups") },
+  args: { groupId: v.id("judgingGroups"), password: v.string() },
   returns: v.union(
     v.null(),
     v.object({
@@ -1254,9 +1256,16 @@ export const getValidatedGroupScores = query({
     }),
   ),
   handler: async (ctx, args) => {
-    // Check if group exists (no public check - this is called after validation)
     const group = await ctx.db.get(args.groupId);
     if (!group) {
+      return null;
+    }
+
+    const admin = await isUserAdmin(ctx);
+    const passwordOk =
+      !!group.resultsPassword &&
+      (await verifyPassword(args.password, group.resultsPassword));
+    if (!admin && !passwordOk) {
       return null;
     }
 
@@ -1584,7 +1593,6 @@ export const getPublicGroupJudgeDetails = query({
 
         return {
           judgeName: judge.name,
-          judgeEmail: judge.email,
           lastActive: judge.lastActiveAt,
           scores: enrichedScores,
           totalScore,

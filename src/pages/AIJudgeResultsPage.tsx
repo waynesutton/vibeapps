@@ -20,6 +20,7 @@ import { Id } from "../../convex/_generated/dataModel";
 export default function AIJudgeResultsPage() {
   const { slug } = useParams<{ slug: string }>();
   const [password, setPassword] = useState("");
+  const [enteredPassword, setEnteredPassword] = useState("");
   const [isPasswordValidated, setIsPasswordValidated] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [isValidating, setIsValidating] = useState(false);
@@ -44,8 +45,9 @@ export default function AIJudgeResultsPage() {
   // Check sessionStorage for an existing validation for this group
   useEffect(() => {
     if (info && !info.isAiResultsPublic && !info.isAdmin) {
-      const validationKey = `aiResultsValidated_${info._id}`;
-      if (sessionStorage.getItem(validationKey) === "true") {
+      const stored = sessionStorage.getItem(`aiResultsPassword_${info._id}`);
+      if (stored) {
+        setEnteredPassword(stored);
         setIsPasswordValidated(true);
       }
     }
@@ -62,7 +64,7 @@ export default function AIJudgeResultsPage() {
   const validatedResults = useQuery(
     api.aiJudge.getValidatedAiResults,
     info && hasAccess && !info.isAiResultsPublic && !info.isAdmin
-      ? { groupId: info._id }
+      ? { groupId: info._id, password: enteredPassword }
       : "skip",
   );
   const results =
@@ -85,7 +87,11 @@ export default function AIJudgeResultsPage() {
 
       if (isValid) {
         setIsPasswordValidated(true);
-        sessionStorage.setItem(`aiResultsValidated_${info._id}`, "true");
+        setEnteredPassword(password.trim());
+        sessionStorage.setItem(
+          `aiResultsPassword_${info._id}`,
+          password.trim(),
+        );
       } else {
         setPasswordError("Incorrect password. Please try again.");
       }

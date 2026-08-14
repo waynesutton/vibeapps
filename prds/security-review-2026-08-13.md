@@ -1,8 +1,8 @@
 # Security review — full app
 
 Created: 2026-08-13 06:35 UTC
-Last Updated: 2026-08-14 06:58 UTC
-Status: In Progress (remediation batches 1-2 done)
+Last Updated: 2026-08-14 07:24 UTC
+Status: In Progress (remediation batches 1-3 done)
 
 ## Problem
 
@@ -46,31 +46,33 @@ Cross-cutting note: the DB `users.role` field is effectively unused for authoriz
 7. `convex/follows.ts` `getFollowers` and `getFollowing` — returned raw user docs (email, clerkId, role, ban/pause flags). **Fixed:** explicit public projection (`_id`, `name`, `username`, `imageUrl`, `isVerified`).
 8. `convex/adminFollowsQueries.ts` `getTopUsersByFollowers` and `getTopUsersByFollowing` — named "admin" but ungated; returned raw user docs. **Fixed:** `requirePermission(ctx, "numbers.view")` plus a name/username/count projection. `getTotalFollowRelationships` gated the same way.
 
-### High — content and results exposure
+### High — content and results exposure — FIXED 2026-08-14
 
-9. `convex/stories.ts` public lists/detail leak submitter PII and internal moderation fields: `fetchTagsAndCountsForStories` (`:68`) spreads the full story doc into `StoryWithDetailsPublic`, so `listApproved` (`:211`), `listApprovedStoriesWithDetails` (`:2399`), `getRelatedStoriesByTags` (`:2487`), and `getBySlug` (`:433`) carry `email`, `teamMembers[].email`, `rejectionReason`, `isSpam`, `spamReason`, `spamMarkedAt/By`, `customFormAnswers`, `dynamicFormValues`, `changeLog`, `authorEmail`.
-10. `convex/stories.ts:404` `listPending` — no auth; paginates all pending (unmoderated) stories with full details.
-11. `convex/users.ts:432` `listUserStories` — no auth/status filter; returns pending/rejected/hidden stories with submitter fields.
-12. `convex/judgeScores.ts:1213` `getValidatedGroupScores` and `convex/aiJudge.ts:1484` `getValidatedAiResults` — fetch the group by id and return full completed scores/rankings/judge breakdown without re-checking `resultsIsPublic` or the password. The gate is client-side only; the group id is discoverable via public slug queries. Password/private-results bypass. (`convex/judgeScores.ts:1475` `getPublicGroupJudgeDetails` additionally returns `judgeEmail` when a group's results are public.)
-13. `convex/judgingGroupSubmissions.ts:914` `getGroupSubmissions` — comment says "public for judges" but there is no session/password/admin check, only `isActive`; returns `teamMembers[].email`, `customFormAnswers`, `dynamicFormValues`, full `changeLog` for every submission.
+9. `convex/stories.ts` public lists/detail leak submitter PII and internal moderation fields. **Fixed:** `fetchTagsAndCountsForStories` strips email, authorEmail, team member emails, rejection/spam fields, customMessage, and changeLog by default. `listPending` keeps PII and now requires `moderation.view`. `getBySlug` and `_getStoryDetailsBatch` no longer map those fields. `dynamicFormValues` stay (shown on story pages).
+10. `convex/stories.ts` `listPending` — no auth; paginates pending stories. **Fixed:** `requirePermission(ctx, "moderation.view")`.
+11. `convex/users.ts` `listUserStories` — no status filter. **Fixed:** only `status === "approved"` and not hidden; PII stripped via the batch helper.
+12. `convex/judgeScores.ts` `getValidatedGroupScores` and `convex/aiJudge.ts` `getValidatedAiResults` — client-trusted password bypass. **Fixed:** both take `password`, re-verify SHA-256 (or legacy btoa) server-side, admins still pass. Frontend stores the real password in sessionStorage (not `"true"`). `getPublicGroupJudgeDetails` no longer returns `judgeEmail`.
+13. `convex/judgingGroupSubmissions.ts` `getGroupSubmissions` — no session check. **Fixed:** requires `sessionId` matching a judge in that group. `getSubmissionNotes` requires session or `judging.tracking`. Team emails stay for valid judge sessions.
 
-### Medium
+### Medium — FIXED 2026-08-14 (14, 15, 17, 21)
 
-14. `convex/judges.ts:142` `registerJudge` — public; does not enforce the group password server-side, so anyone with a `groupId` self-registers and receives a valid `sessionId` that then authorizes `submitScore` and all judge reads. `sessionId` is generated with `Math.random()` (`judges.ts:7`), not a CSPRNG.
-15. `convex/judgingGroupSubmissions.ts:1127` `updateSubmissionStatus` — trusts a client-supplied `judgeId` (+`groupId`) and only checks group membership, not the `sessionId`. Weaker than its `sessionId`-based siblings.
-16. Four ungated `generateUploadUrl` functions mint storage upload URLs with no auth: `convex/stories.ts:999`, `convex/submitForms.ts:679`, `convex/users.ts:1009`, `convex/convexBoxConfig.ts:134` (the last exists only for the admin logo). Anonymous storage-write / cost-abuse vector; no server-side content-type or size validation found. Contrast `convex/tags.ts:587`, which gates its upload URL with `requirePermission(ctx, "tags.manage")`.
-17. `convex/comments.ts:74` `listPendingByStory` — no auth; returns pending (unmoderated) comments.
+14. `convex/judges.ts` `registerJudge` — did not enforce the group password; `sessionId` used `Math.random()`. **Fixed:** optional `password` arg is required when the group has `judgePassword` (or legacy `password`); session ids from `crypto.getRandomValues` (32 bytes hex).
+15. `convex/judgingGroupSubmissions.ts` `updateSubmissionStatus` — trusted client `judgeId`. **Fixed:** takes `sessionId` and resolves the judge from it. `addSubmissionNote` uses `sessionId` for judges; admin Judge Tracking still passes `judgeId` behind `judging.tracking`.
+17. `convex/comments.ts` `listPendingByStory` — no auth. **Fixed:** `requirePermission(ctx, "moderation.view")`.
+21. `convex/judgingGroups.ts` `hashPassword` was reversible `btoa`. **Fixed:** SHA-256 hex via `crypto.subtle.digest`. `verifyPassword` still accepts legacy btoa hashes so existing groups keep working until the password is saved again. Event kit export can no longer decode SHA-256 hashes (legacy btoa rows still decode).
+
+### Medium — deferred
+
+16. Four ungated `generateUploadUrl` functions mint storage upload URLs with no auth: `convex/stories.ts:999`, `convex/submitForms.ts:679`, `convex/users.ts:1009`, `convex/convexBoxConfig.ts:134` (the last exists only for the admin logo). Anonymous storage-write / cost-abuse vector; no server-side content-type or size validation found. Contrast `convex/tags.ts:587`, which gates its upload URL with `requirePermission(ctx, "tags.manage")`. Anon submit needs upload URLs, so this stays until a dedicated submit-token design.
 18. `convex/dmReactions.ts:132` `getMessageReactions` — no participant check; given a `messageId`, returns who reacted (id + name). Private DM metadata leak.
 19. `convex/forms.ts:71` `getFormResultsBySlug` — when `resultsArePublic` is on, returns raw respondent `formSubmissions.data` (potential PII). Depends on the admin toggle and what the form collects.
 20. `convex/emails/linkHelpers.ts:44` — unsubscribe token uses `Math.random()` and embeds the userId. Single-use and expiring (`unsubscribe.ts:23`), so impact is limited to unsubscribing others, but it is forgeable. Use `crypto.randomUUID()`/`crypto.getRandomValues`.
-21. `convex/judgingGroups.ts:109` `hashPassword` is `btoa()` (reversible encoding, not a hash). Judging group and AI results passwords are stored effectively in plaintext. Use SHA-256 at minimum.
 22. `convex/users.ts` `fixMissingEmails`, `convex/judgingCriteria.ts:228` `getCriterion` — minor: ungated counts / config disclosure. (`getTotalFollowRelationships` was listed here; now gated with `numbers.view`.)
 
 ### Intentionally public but abusable (rate-limit / add checks)
 
 - `convex/stories.ts:846` `submitAnonymous` and `convex/submitForms.ts:536` `submitFormData` — unauthenticated, auto-approve, can create tags; the per-email 10/day rate limit is bypassable by changing the email. Spam/content-injection vector.
 - The four `generateUploadUrl` functions above.
-- `convex/judges.ts:142` `registerJudge`.
 
 ### Dependencies (npm audit)
 
@@ -97,11 +99,11 @@ Cross-cutting note: the DB `users.role` field is effectively unused for authoriz
 1. Delete the leftover `[TEMPORARY]` backdoors in `convex/users.ts`. **Done (batch 1).**
 2. Restore the admin gate in `convex/emails/broadcast.ts` `debugUsers`/`searchUsers`. **Done (batch 1).**
 3. Stop returning `email`/`clerkId` from `getUserProfileByUsername`, `follows.getFollowers`/`getFollowing`, `adminFollowsQueries.getTopUsersBy*`. **Done (batch 2).**
-4. Project public story shapes in `stories.ts` and gate/limit `listPending`, `users.listUserStories` (findings 9-11).
-5. Enforce `resultsIsPublic`/password server-side in `getValidatedGroupScores` and `getValidatedAiResults`; gate `getGroupSubmissions`; strip `judgeEmail` from public results (findings 12-13).
-6. Enforce the group password in `registerJudge`, validate `sessionId` (not raw `judgeId`) in `updateSubmissionStatus`, switch session/token generation to `crypto` (findings 14-15, 20).
-7. Add auth + server-side type/size validation to the `generateUploadUrl` functions; gate the convexBoxConfig one behind `settings.manage` (finding 16).
-8. Gate `comments.listPendingByStory`, add a participant check to `dmReactions.getMessageReactions`, replace `btoa` password "hashing" with SHA-256 (findings 17-18, 21).
+4. Project public story shapes in `stories.ts` and gate/limit `listPending`, `users.listUserStories` (findings 9-11). **Done (batch 3).**
+5. Enforce `resultsIsPublic`/password server-side in `getValidatedGroupScores` and `getValidatedAiResults`; gate `getGroupSubmissions`; strip `judgeEmail` from public results (findings 12-13). **Done (batch 3).**
+6. Enforce the group password in `registerJudge`, validate `sessionId` (not raw `judgeId`) in `updateSubmissionStatus`, switch session generation to `crypto` (findings 14-15). **Done (batch 3).** Finding 20 (unsubscribe tokens) still deferred.
+7. Add auth + server-side type/size validation to the `generateUploadUrl` functions; gate the convexBoxConfig one behind `settings.manage` (finding 16). **Deferred** (anon submit needs upload URLs).
+8. Gate `comments.listPendingByStory`, replace `btoa` password hashing with SHA-256 (findings 17, 21). **Done (batch 3).** Finding 18 (`dmReactions`) still deferred.
 9. Plan a tested React Router 7 upgrade to clear the last 2 moderate CVEs.
 
 ## Edge cases / notes
@@ -114,3 +116,4 @@ Cross-cutting note: the DB `users.role` field is effectively unused for authoriz
 - 2026-08-13 06:35 UTC — Review complete across auth surface (341 public fns), data exposure, and integrations. 22 ungated findings (4 critical, 4 high PII, several high content/results). Dependency count reduced from 24 to 2 (removed dead `@clerk/clerk-sdk-node`, bumped `@auth/core`). No security code changed yet; remediation plan above pending go-ahead.
 - 2026-08-13 06:52 UTC — Remediation batch 1 (findings 1-5): deleted the four `[TEMPORARY]` backdoors from `convex/users.ts` (`setUserAsAdminByUsername`, `setUserAsAdminByEmail`, `listAllUsersForDebug`, `setCurrentUserAsAdminTemp`) after confirming zero callers; restored `requirePermission(ctx, "emails.send")` on `broadcast.debugUsers`/`searchUsers` and removed their PII `console.log`s. Convex `tsc` clean, zero lints. Remaining findings (6-22) pending.
 - 2026-08-14 06:58 UTC — Remediation batch 2 (findings 6-8): stripped `email`/`clerkId` from `getUserProfileByUsername` (`userInProfileValidator` + handler), added server `isOwnProfile`; projected `getFollowers`/`getFollowing` to name/username/image; gated `adminFollowsQueries` with `numbers.view` and the same public projection. Profile page and NumbersView updated. Convex `tsc` exit 0, zero new frontend type errors. Remaining findings 9-22 pending.
+- 2026-08-14 07:24 UTC — Remediation batch 3 (findings 9-15, 17, 21): public story queries strip submitter/moderation PII; `listPending` and `listPendingByStory` require `moderation.view`; `listUserStories` is approved-only; results/AI queries re-check the password server-side; `getGroupSubmissions`/`updateSubmissionStatus`/`getSubmissionNotes` use judge `sessionId`; `registerJudge` re-checks the group password and uses `crypto.getRandomValues`; judging passwords are SHA-256 with legacy btoa verify. Convex `tsc` exit 0. Remaining deferred: 16, 18, 19, 20, 22, React Router 7.

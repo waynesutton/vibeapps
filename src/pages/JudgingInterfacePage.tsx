@@ -80,7 +80,9 @@ export default function JudgingInterfacePage() {
 
   const allSubmissions = useQuery(
     api.judgingGroupSubmissions.getGroupSubmissions,
-    judgeSession ? { groupId: judgeSession.group._id } : "skip",
+    judgeSession && sessionId
+      ? { groupId: judgeSession.group._id, sessionId }
+      : "skip",
   );
 
   const criteria = useQuery(
@@ -301,12 +303,14 @@ export default function JudgingInterfacePage() {
   const submissionNotes = useQuery(
     api.judgingGroupSubmissions.getSubmissionNotes,
     judgeSession &&
+      sessionId &&
       displaySubmissions &&
       displaySubmissions.length > 0 &&
       displaySubmissions[currentSubmissionIndex]
       ? {
           groupId: judgeSession.group._id,
           storyId: displaySubmissions[currentSubmissionIndex]._id,
+          sessionId,
         }
       : "skip",
   );
@@ -395,7 +399,7 @@ export default function JudgingInterfacePage() {
   const handleStatusUpdate = async (
     newStatus: "pending" | "completed" | "skip",
   ) => {
-    if (!judgeSession || !displaySubmissions) return;
+    if (!judgeSession || !displaySubmissions || !sessionId) return;
 
     const currentSubmission = displaySubmissions[currentSubmissionIndex];
 
@@ -404,7 +408,7 @@ export default function JudgingInterfacePage() {
         groupId: judgeSession.group._id,
         storyId: currentSubmission._id,
         status: newStatus,
-        judgeId: judgeSession._id,
+        sessionId,
       });
     } catch (error) {
       console.error("Error updating status:", error);
@@ -510,7 +514,7 @@ export default function JudgingInterfacePage() {
   };
 
   const handleAddNote = async () => {
-    if (!judgeSession || !displaySubmissions || !newNote.trim()) return;
+    if (!judgeSession || !displaySubmissions || !sessionId || !newNote.trim()) return;
 
     const currentSubmission = displaySubmissions[currentSubmissionIndex];
 
@@ -518,7 +522,7 @@ export default function JudgingInterfacePage() {
       await addSubmissionNote({
         groupId: judgeSession.group._id,
         storyId: currentSubmission._id,
-        judgeId: judgeSession._id,
+        sessionId,
         content: newNote.trim(),
       });
       setNewNote("");
@@ -529,7 +533,7 @@ export default function JudgingInterfacePage() {
   };
 
   const handleReply = async (noteId: Id<"submissionNotes">) => {
-    if (!judgeSession || !displaySubmissions || !replyContent.trim()) return;
+    if (!judgeSession || !displaySubmissions || !sessionId || !replyContent.trim()) return;
 
     const currentSubmission = displaySubmissions[currentSubmissionIndex];
 
@@ -537,7 +541,7 @@ export default function JudgingInterfacePage() {
       await addSubmissionNote({
         groupId: judgeSession.group._id,
         storyId: currentSubmission._id,
-        judgeId: judgeSession._id,
+        sessionId,
         content: replyContent.trim(),
         replyToId: noteId,
       });

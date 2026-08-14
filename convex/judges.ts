@@ -2,15 +2,13 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { requireJudgingGroupPermission } from "./adminAccess";
+import { verifyPassword } from "./judgingGroups";
 
-// Helper to generate secure session IDs using V8-compatible approach
+// 32-byte session token as hex (unguessable; Math.random is not)
 function generateSessionId(): string {
-  // Generate a random 64-character hex string using Math.random and timestamp
-  const timestamp = Date.now().toString(16);
-  const random1 = Math.random().toString(16).substring(2);
-  const random2 = Math.random().toString(16).substring(2);
-  const random3 = Math.random().toString(16).substring(2);
-  return (timestamp + random1 + random2 + random3).substring(0, 64);
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 // Helper function to check if a story should be included in judging
@@ -144,6 +142,7 @@ export const registerJudge = mutation({
     groupId: v.id("judgingGroups"),
     name: v.string(),
     email: v.optional(v.string()),
+    password: v.optional(v.string()),
   },
   returns: v.object({
     judgeId: v.id("judges"),
@@ -166,6 +165,18 @@ export const registerJudge = mutation({
 
     if (!group.isActive) {
       throw new Error("Judging for this group is not currently active");
+    }
+
+    const storedPassword =
+      group.judgePassword ||
+      (group as { password?: string }).password;
+    if (storedPassword) {
+      if (
+        !args.password ||
+        !(await verifyPassword(args.password, storedPassword))
+      ) {
+        throw new Error("Invalid password");
+      }
     }
 
     // Check if user is authenticated

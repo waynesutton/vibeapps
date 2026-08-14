@@ -103,18 +103,28 @@ function isStoryValidForJudging(
   return true;
 }
 
-// Simple password hashing (for basic protection)
-// In production, consider using a more robust solution
-// Exported so aiJudge.ts can reuse the same scheme for AI results passwords.
-export function hashPassword(password: string): string {
-  // Use TextEncoder for browser-compatible base64 encoding
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
+// SHA-256 hex digest. Older rows used reversible btoa; verifyPassword
+// still accepts those so existing groups keep working until the password
+// is saved again.
+export async function hashPassword(password: string): Promise<string> {
+  const data = new TextEncoder().encode(password);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest), (b) =>
+    b.toString(16).padStart(2, "0"),
+  ).join("");
+}
+
+function legacyBtoaHash(password: string): string {
+  const data = new TextEncoder().encode(password);
   return btoa(String.fromCharCode(...data));
 }
 
-export function verifyPassword(password: string, hash: string): boolean {
-  return hashPassword(password) === hash;
+export async function verifyPassword(
+  password: string,
+  hash: string,
+): Promise<boolean> {
+  if ((await hashPassword(password)) === hash) return true;
+  return legacyBtoaHash(password) === hash;
 }
 
 // --- Admin Functions ---
@@ -257,16 +267,16 @@ export const createGroup = mutation({
 
     // Hash passwords if provided
     const hashedJudgePassword = args.judgePassword
-      ? hashPassword(args.judgePassword)
+      ? await hashPassword(args.judgePassword)
       : undefined;
     const hashedSubmissionPassword = args.submissionPagePassword
-      ? hashPassword(args.submissionPagePassword)
+      ? await hashPassword(args.submissionPagePassword)
       : undefined;
     const hashedResultsPassword = args.resultsPassword
-      ? hashPassword(args.resultsPassword)
+      ? await hashPassword(args.resultsPassword)
       : undefined;
     const hashedAiResultsPassword = args.aiResultsPassword
-      ? hashPassword(args.aiResultsPassword)
+      ? await hashPassword(args.aiResultsPassword)
       : undefined;
 
     const newGroupId = await ctx.db.insert("judgingGroups", {
@@ -539,22 +549,22 @@ export const updateGroup = mutation({
     // Hash passwords if provided, set undefined if null to clear
     if (judgePassword !== undefined) {
       finalUpdates.judgePassword = judgePassword
-        ? hashPassword(judgePassword)
+        ? await hashPassword(judgePassword)
         : undefined;
     }
     if (submissionPagePassword !== undefined) {
       finalUpdates.submissionPagePassword = submissionPagePassword
-        ? hashPassword(submissionPagePassword)
+        ? await hashPassword(submissionPagePassword)
         : undefined;
     }
     if (resultsPassword !== undefined) {
       finalUpdates.resultsPassword = resultsPassword
-        ? hashPassword(resultsPassword)
+        ? await hashPassword(resultsPassword)
         : undefined;
     }
     if (aiResultsPassword !== undefined) {
       finalUpdates.aiResultsPassword = aiResultsPassword
-        ? hashPassword(aiResultsPassword)
+        ? await hashPassword(aiResultsPassword)
         : undefined;
     }
 
@@ -1052,7 +1062,7 @@ export const validatePassword = mutation({
       return false;
     }
 
-    return verifyPassword(args.password, storedPassword);
+    return await verifyPassword(args.password, storedPassword);
   },
 });
 
@@ -1071,7 +1081,7 @@ export const validateSubmissionPagePassword = mutation({
       return false;
     }
 
-    return verifyPassword(args.password, group.submissionPagePassword);
+    return await verifyPassword(args.password, group.submissionPagePassword);
   },
 });
 
@@ -1090,7 +1100,7 @@ export const validateResultsPassword = mutation({
       return false;
     }
 
-    return verifyPassword(args.password, group.resultsPassword);
+    return await verifyPassword(args.password, group.resultsPassword);
   },
 });
 
@@ -1291,7 +1301,7 @@ export const verifyResultsPassword = query({
       return false;
     }
 
-    return verifyPassword(args.password, group.resultsPassword);
+    return await verifyPassword(args.password, group.resultsPassword);
   },
 });
 

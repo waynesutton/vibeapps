@@ -15,6 +15,8 @@ export default function PublicJudgingResultsPage() {
   const [passwordError, setPasswordError] = useState("");
   const [isValidating, setIsValidating] = useState(false);
 
+  const [enteredPassword, setEnteredPassword] = useState("");
+
   const group = useQuery(
     api.judgingGroups.getPublicGroupForResults,
     slug ? { slug } : "skip",
@@ -24,17 +26,15 @@ export default function PublicJudgingResultsPage() {
     api.judgingGroups.validateResultsPassword,
   );
 
-  // Check sessionStorage for existing validation or if results are public
+  // Restore a previously entered password from this browser session
   useEffect(() => {
     if (group) {
-      // If results are explicitly set to public, allow access without password
       if (group.resultsIsPublic === true) {
         setIsPasswordValidated(true);
       } else {
-        // Check if user has previously validated for this group
-        const validationKey = `resultsValidated_${group._id}`;
-        const isValidated = sessionStorage.getItem(validationKey) === "true";
-        if (isValidated) {
+        const stored = sessionStorage.getItem(`resultsPassword_${group._id}`);
+        if (stored) {
+          setEnteredPassword(stored);
           setIsPasswordValidated(true);
         }
       }
@@ -56,9 +56,11 @@ export default function PublicJudgingResultsPage() {
 
       if (isValid) {
         setIsPasswordValidated(true);
-        // Store validation in sessionStorage so it persists during this session
-        const validationKey = `resultsValidated_${group._id}`;
-        sessionStorage.setItem(validationKey, "true");
+        setEnteredPassword(password.trim());
+        sessionStorage.setItem(
+          `resultsPassword_${group._id}`,
+          password.trim(),
+        );
       } else {
         setPasswordError("Incorrect password. Please try again.");
       }
@@ -188,6 +190,7 @@ export default function PublicJudgingResultsPage() {
         <PublicJudgingResultsDashboard
           groupId={group._id}
           isValidated={!group.resultsIsPublic && isPasswordValidated}
+          password={enteredPassword}
         />
       </div>
     </div>

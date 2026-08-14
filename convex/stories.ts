@@ -64,11 +64,35 @@ export type StoryWithDetails = Doc<"stories"> & {
   votesCount: number;
 };
 
+function omitPublicStoryPii(story: StoryWithDetails): StoryWithDetails {
+  const {
+    email: _email,
+    authorEmail: _authorEmail,
+    rejectionReason: _rejectionReason,
+    customMessage: _customMessage,
+    isSpam: _isSpam,
+    spamReason: _spamReason,
+    spamMarkedAt: _spamMarkedAt,
+    spamMarkedBy: _spamMarkedBy,
+    spamMarkedByAgent: _spamMarkedByAgent,
+    spamReviewRequestedAt: _spamReviewRequestedAt,
+    changeLog: _changeLog,
+    teamMembers,
+    ...rest
+  } = story;
+  return {
+    ...rest,
+    teamMembers: teamMembers?.map((member) => ({ name: member.name })),
+  } as StoryWithDetails;
+}
+
 // Helper to fetch tags and related counts for stories
 const fetchTagsAndCountsForStories = async (
   ctx: { db: GenericDatabaseReader<DataModel>; storage: StorageReader },
   stories: Doc<"stories">[],
+  options?: { stripPii?: boolean },
 ): Promise<StoryWithDetails[]> => {
+  const stripPii = options?.stripPii !== false;
   const allTagIds = stories.flatMap((story) => story.tagIds || []);
   const uniqueTagIds = [...new Set(allTagIds)];
 
@@ -176,7 +200,7 @@ const fetchTagsAndCountsForStories = async (
 
       const author = story.userId ? usersMap.get(story.userId) : undefined;
 
-      return {
+      const detailed: StoryWithDetails = {
         ...story,
         voteScore,
         screenshotUrl,
@@ -186,10 +210,11 @@ const fetchTagsAndCountsForStories = async (
         authorName: author?.name,
         authorUsername: author?.username,
         authorImageUrl: author?.imageUrl,
-        authorEmail: author?.email,
+        authorEmail: stripPii ? undefined : author?.email,
         averageRating,
         votesCount,
       };
+      return stripPii ? omitPublicStoryPii(detailed) : detailed;
     }),
   );
 };
@@ -411,6 +436,7 @@ export const listPending = query({
     isDone: boolean;
     continueCursor: string;
   }> => {
+    await requirePermission(ctx, "moderation.view");
     const query = ctx.db
       .query("stories")
       .withIndex("by_status", (q) => q.eq("status", "pending"))
@@ -420,6 +446,7 @@ export const listPending = query({
     const storiesWithDetails = await fetchTagsAndCountsForStories(
       ctx,
       paginatedStories.page,
+      { stripPii: false },
     );
 
     return {
@@ -478,20 +505,15 @@ export const getBySlug = query({
       status: storyWithDetails.status,
       isHidden: storyWithDetails.isHidden,
       isPinned: storyWithDetails.isPinned,
-      customMessage: storyWithDetails.customMessage,
       isApproved: storyWithDetails.isApproved,
-      email: storyWithDetails.email,
-      // Hackathon team info
+      // Hackathon team info (names only on public pages)
       teamName: storyWithDetails.teamName,
       teamMemberCount: storyWithDetails.teamMemberCount,
       teamMembers: storyWithDetails.teamMembers,
-      // Changelog for edit tracking
-      changeLog: storyWithDetails.changeLog,
       // Mapped fields
       authorName: storyWithDetails.authorName,
       authorUsername: storyWithDetails.authorUsername,
       authorImageUrl: storyWithDetails.authorImageUrl,
-      authorEmail: storyWithDetails.authorEmail,
       tags: storyWithDetails.tags,
       screenshotUrl: storyWithDetails.screenshotUrl,
       additionalImageUrls: storyWithDetails.additionalImageUrls,
@@ -2254,14 +2276,19 @@ export const _getStoryDetailsBatch = internalQuery({
         status: story.status,
         isHidden: story.isHidden,
         isPinned: story.isPinned,
-        customMessage: story.customMessage,
         isApproved: story.isApproved,
+        teamName: story.teamName,
+        teamMemberCount: story.teamMemberCount,
+        teamMembers: story.teamMembers,
+        selfReportedHarness: story.selfReportedHarness,
+        selfReportedModel: story.selfReportedModel,
+        customFormAnswers: story.customFormAnswers,
+        dynamicFormValues: story.dynamicFormValues,
 
         // Joined and calculated data, ensuring alignment with StoryWithDetailsPublic
         authorName: story.authorName,
         authorUsername: story.authorUsername,
         authorImageUrl: story.authorImageUrl,
-        authorEmail: story.authorEmail,
         tags: story.tags,
         screenshotUrl: story.screenshotUrl,
         additionalImageUrls: story.additionalImageUrls,
@@ -2554,14 +2581,18 @@ export const getRelatedStoriesByTags = query({
             ).then((urls) => urls.filter((url) => url !== ""))
           : [];
 
-        return {
+        return omitPublicStoryPii({
           ...story,
+          voteScore: story.votes,
+          commentsCount: story.commentCount ?? 0,
+          averageRating: 0,
+          votesCount: story.votes,
           authorUsername,
           authorName,
           tags: resolvedTags.filter((tag) => tag !== null) as Doc<"tags">[],
           screenshotUrl,
           additionalImageUrls,
-        };
+        } as StoryWithDetails);
       }),
     );
 

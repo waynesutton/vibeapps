@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Fixed] - 2026-08-14
+
+**Security remediation batch 3: judging passwords, story PII, and session gates**
+
+- Public story lists and detail no longer return submitter email, team emails, rejection/spam fields, customMessage, or changeLog. Pending-story and pending-comment admin queries require `moderation.view`. `listUserStories` is approved and visible only (2026-08-14).
+- Password-protected judging and AI results queries re-check the password on the server. The results pages store the real password in sessionStorage instead of a `"true"` flag. Public judge details omit email.
+- Judge APIs (`getGroupSubmissions`, `updateSubmissionStatus`, notes) require a judge `sessionId`. `registerJudge` re-checks the group password and issues session ids from `crypto.getRandomValues`.
+- Judging group passwords are SHA-256 hex. Existing `btoa` hashes still verify until the password is saved again. The Links event kit can decode legacy hashes only.
+- **Files**: `convex/stories.ts`, `convex/validators.ts`, `convex/users.ts`, `convex/comments.ts`, `convex/judgeScores.ts`, `convex/aiJudge.ts`, `convex/judgingGroupSubmissions.ts`, `convex/judges.ts`, `convex/judgingGroups.ts`, plus the public results, AI results, judging, and Judge Tracking pages. Tracked in `prds/security-review-2026-08-13.md`.
+
 ### [Fixed] - 2026-08-13
 
 **Security remediation batch 2: strip email and clerkId from public profile queries**

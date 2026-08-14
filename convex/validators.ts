@@ -67,7 +67,7 @@ export const baseStoryValidator = {
     v.array(
       v.object({
         name: v.string(),
-        email: v.string(),
+        email: v.optional(v.string()),
       }),
     ),
   ),
@@ -245,7 +245,7 @@ export type StoryWithDetailsPublic = {
   teamMemberCount?: number;
   teamMembers?: Array<{
     name: string;
-    email: string;
+    email?: string;
   }>;
   // Self-reported AI build attribution (metadata only)
   selfReportedHarness?: string;

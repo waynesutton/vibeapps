@@ -151,7 +151,10 @@ export function JudgeTracking({
   // Get submission notes when viewing notes for a score
   const submissionNotes = useQuery(
     api.judgingGroupSubmissions.getSubmissionNotes,
-    expandedScoreForNotes && judgeScores
+    expandedScoreForNotes &&
+      judgeScores &&
+      authIsLoading === false &&
+      isAuthenticated
       ? {
           groupId,
           storyId:

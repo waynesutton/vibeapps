@@ -18,11 +18,13 @@ import {
 interface PublicJudgingResultsDashboardProps {
   groupId: Id<"judgingGroups">;
   isValidated?: boolean; // Whether user has validated via password
+  password?: string; // Real password; server re-checks it
 }
 
 export function PublicJudgingResultsDashboard({
   groupId,
   isValidated = false,
+  password = "",
 }: PublicJudgingResultsDashboardProps) {
   // Track which ranking items have their judge breakdown expanded
   const [expandedRankings, setExpandedRankings] = useState<Set<string>>(
@@ -41,15 +43,15 @@ export function PublicJudgingResultsDashboard({
     });
   };
 
-  // Use validated query if user has entered password, otherwise use public query
-  const groupScores = useQuery(
-    isValidated
-      ? api.judgeScores.getValidatedGroupScores
-      : api.judgeScores.getPublicGroupScores,
-    {
-      groupId,
-    },
+  const publicScores = useQuery(
+    api.judgeScores.getPublicGroupScores,
+    isValidated ? "skip" : { groupId },
   );
+  const validatedScores = useQuery(
+    api.judgeScores.getValidatedGroupScores,
+    isValidated ? { groupId, password } : "skip",
+  );
+  const groupScores = isValidated ? validatedScores : publicScores;
 
   // If data is not ready
   if (groupScores === undefined) {
