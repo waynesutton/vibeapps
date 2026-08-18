@@ -9,6 +9,7 @@ import {
   Lock,
 } from "lucide-react";
 import { GroupDetails, SectionCard } from "./groupSection";
+import { GroupJoinQrCard } from "./GroupJoinQrCard";
 
 // One entry in the links ledger; rows and the markdown export both render
 // from this shape so they never drift apart. Exported so other sections
@@ -56,6 +57,9 @@ export function GroupLinksSection({ group }: { group: GroupDetails }) {
   // judge is enabled; disabling it hides them everywhere.
   const aiJudgeOn = !!group.aiJudgeEnabled;
   const agentApiEnabled = aiJudgeOn && group.agentKeysEnabled !== false;
+  // Target of this group's QR code. Short by design so the code stays low
+  // density and scans reliably from a screen or printed sign.
+  const joinUrl = `${window.location.origin}/judging/${group.slug}/join`;
 
   const shareLinks: Array<LinkEntry> = [
     {
@@ -92,6 +96,14 @@ export function GroupLinksSection({ group }: { group: GroupDetails }) {
             note: group.hasSubmissionPagePassword
               ? "Participants enter the submission password"
               : "Open: anyone with the link can submit",
+            password: decodeStoredPassword(group.submissionPagePassword),
+          },
+          {
+            label: "Participant join link",
+            url: joinUrl,
+            locked: group.hasSubmissionPagePassword,
+            passwordSet: group.hasSubmissionPagePassword,
+            note: "Behind the QR code: signs attendees in, then drops them on the submission form",
             password: decodeStoredPassword(group.submissionPagePassword),
           },
         ]
@@ -190,11 +202,13 @@ export function GroupLinksSection({ group }: { group: GroupDetails }) {
             <LinkLedgerRow key={entry.label} {...entry} />
           ))}
         </div>
-        {!group.hasCustomSubmissionPage && (
+        {group.hasCustomSubmissionPage ? (
+          <GroupJoinQrCard joinUrl={joinUrl} groupSlug={group.slug} />
+        ) : (
           <p className="text-xs text-soft mt-3">
-            Want a shareable submission link for participants? Enable the
-            custom submission page in the Submit page section and it will
-            appear here.
+            Want a shareable submission link and QR code for participants?
+            Enable the custom submission page in the Submit page section and
+            they will appear here.
           </p>
         )}
         {aiJudgeOn && (

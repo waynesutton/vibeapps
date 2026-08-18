@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  useParams,
+  useNavigate,
+  useSearchParams,
+  useLocation,
+} from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -10,6 +15,7 @@ import { Markdown } from "../components/Markdown";
 import { ChoiceFieldInput } from "../components/ui/ChoiceFieldInput";
 import { useAuth } from "@clerk/clerk-react";
 import { Link } from "react-router-dom";
+import { authUrlWithReturn } from "../lib/redirectPath";
 
 // Default required state for each configurable submission field.
 // Mirrors the admin defaults in EditJudgingGroupModal.
@@ -137,7 +143,13 @@ export function JudgingGroupSubmitPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const { isLoaded, isSignedIn } = useAuth();
+
+  // Signing in from this page must come back to this group's form. Most
+  // visitors arrive from a QR code or shared link while signed out, and
+  // without this they land on the homepage after authenticating.
+  const returnTo = `/judging/${slug}/submit${location.search}`;
 
   // Optional one-click prefill from the hackathon skill's submit link.
   // The form works exactly as before when no params are present.
@@ -312,14 +324,14 @@ export function JudgingGroupSubmitPage() {
               <p className="text-sm text-copy">
                 You need to{" "}
                 <Link
-                  to="/sign-up"
+                  to={authUrlWithReturn("/sign-up", returnTo)}
                   className="underline font-medium text-ink hover:text-copy"
                 >
                   sign up
                 </Link>{" "}
                 or{" "}
                 <Link
-                  to="/sign-in"
+                  to={authUrlWithReturn("/sign-in", returnTo)}
                   className="underline font-medium text-ink hover:text-copy"
                 >
                   sign in
@@ -362,10 +374,10 @@ export function JudgingGroupSubmitPage() {
                 hackathon.
               </p>
               <div className="flex items-center justify-center gap-3">
-                <Link to="/sign-up">
+                <Link to={authUrlWithReturn("/sign-up", returnTo)}>
                   <Button className="bg-cta hover:bg-cta-hover">Sign Up</Button>
                 </Link>
-                <Link to="/sign-in">
+                <Link to={authUrlWithReturn("/sign-in", returnTo)}>
                   <Button className="bg-cta hover:bg-cta-hover">Sign In</Button>
                 </Link>
               </div>

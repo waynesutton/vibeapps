@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Added] - 2026-08-17
+
+**QR codes and a join page for judging group submission forms**
+
+- Every judging group with a custom submission page now has its own QR code, shown inline in the group workspace under Shareable links. Admins can copy the join link, download a print-resolution PNG for signage, download a vector SVG, or preview the page (2026-08-17).
+- New public join page at `/judging/{slug}/join`, the QR target. Signed-in scanners go straight to that group's submission form. Signed-out scanners see the group name, header image, and description, then sign in or sign up and land back on the form.
+- Fixed a related dead end: the sign-in and sign-up links on `/judging/{slug}/submit` previously dropped users on the homepage after authenticating, because they carried no return URL. They now return to the group's form.
+- `/sign-in` and `/sign-up` accept a `redirect_url` query param and pass it to Clerk as `forceRedirectUrl`, carrying it across the switch between the two. Only rooted same-origin paths are accepted, so a crafted link cannot redirect a freshly signed-in user off-site.
+- QR codes render client side from the live join URL, so renaming a group slug updates them immediately and nothing is stored. Submission page passwords are unchanged: the gate still applies after authentication and no password is embedded in the code.
+- **Files**: `src/pages/JudgingGroupJoinPage.tsx` (new), `src/components/admin/judging/GroupJoinQrCard.tsx` (new), `src/lib/redirectPath.ts` (new), `src/pages/JudgingGroupSubmitPage.tsx`, `src/pages/SignInPage.tsx`, `src/pages/SignUpPage.tsx`, `src/components/admin/judging/GroupLinksSection.tsx`, `src/App.tsx`, `package.json`. Tracked in `prds/judging-group-qr-join.md`.
+
 ### [Fixed] - 2026-08-14
 
 **Security remediation batch 3: judging passwords, story PII, and session gates**

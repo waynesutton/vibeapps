@@ -41,6 +41,7 @@ import AIJudgeResultsPage from "./pages/AIJudgeResultsPage";
 import JudgeTrackingPage from "./pages/JudgeTrackingPage";
 import AdminJudgingGroupPage from "./pages/AdminJudgingGroupPage";
 import { JudgingGroupSubmitPage } from "./pages/JudgingGroupSubmitPage";
+import { JudgingGroupJoinPage } from "./pages/JudgingGroupJoinPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { LeaderboardPage } from "./pages/LeaderboardPage";
 import { Toaster } from "sonner";
@@ -190,6 +191,8 @@ function App() {
             path="/judging/:slug/submit"
             element={<JudgingGroupSubmitPage />}
           />
+          {/* QR code target: hands scanners off to the group's submit form */}
+          <Route path="/judging/:slug/join" element={<JudgingGroupJoinPage />} />
           <Route
             path="/judging/:slug/judge"
             element={<JudgingInterfacePage />}
