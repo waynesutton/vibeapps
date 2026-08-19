@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### [Added] - 2026-08-19
 
+**Convex team AI judging recap**
+
+- Every completed AI judging result now has a **Copy brief** action that packages the saved score, AI note, verified repository facts, components used in code, live app status, Git timeline flags, and hackathon log checks into privacy-safe markdown (2026-08-19).
+- New **Convex Recap** tab becomes available after the group review finishes. It generates one markdown handoff with cohort counts, verified Convex feature and component totals, and a concise brief for each completed submission, with copy and `.md` download.
+- Recaps are built locally from saved review results. They do not run another model, rescan repositories, change scores, or include submitter emails and team member details. Existing Results, Stats, and Hackathon Report tabs remain unchanged.
+- Component stats and organizer report details now prefer components verified as used in code, with installed components used only as a fallback for older review rows.
+- **Files**: `src/components/admin/AIJudgeResults.tsx`. Tracked in `prds/ai-judge-convex-team-recap.md`.
+
 **External Judging Process guide in Admin Docs**
 
 - New Docs sidebar section **External Judging Process** covers the full human judge flow: access codes vs public groups, name rules, session resume, criteria and comments, status (pending/completed/skip), multi judge completion, collaboration notes, filters, troubleshooting, and a first session checklist (2026-08-19).

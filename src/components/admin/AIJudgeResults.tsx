@@ -62,6 +62,7 @@ type StatsResult = {
   criteriaScores?: Array<CriteriaScore>;
   convexFeaturesDetected?: Array<string>;
   componentsDetected?: Array<string>;
+  componentsUsed?: Array<string>;
   urlCheck?: { isLive: boolean };
   sourcesUsed?: {
     github: boolean;
@@ -106,14 +107,16 @@ function computeStats(results: Array<StatsResult>) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 12);
 
-  // Components detected from package.json / convex.config.ts (new runs only);
-  // older results fall back to feature strings mentioning "component"
+  // Count components referenced in code. Older rows without componentsUsed
+  // fall back to installed component data for backwards-compatible stats.
   const usesComponents = (r: StatsResult) =>
-    (r.componentsDetected?.length ?? 0) > 0 ||
+    (r.componentsUsed?.length ??
+      r.componentsDetected?.length ??
+      0) > 0 ||
     (r.convexFeaturesDetected || []).some((f) => /component/i.test(f));
   const componentCounts = new Map<string, number>();
   for (const r of completed) {
-    for (const component of r.componentsDetected || []) {
+    for (const component of r.componentsUsed ?? r.componentsDetected ?? []) {
       const key = component.trim().toLowerCase();
       if (!key) continue;
       componentCounts.set(key, (componentCounts.get(key) || 0) + 1);
@@ -168,6 +171,9 @@ type ReportSubmission = {
   overallReasoning?: string;
   convexFeaturesDetected?: Array<string>;
   componentsDetected?: Array<string>;
+  componentsUsed?: Array<string>;
+  repoFacts?: RepoFactsSummary;
+  gitFacts?: GitFactsSummary;
   urlCheck?: {
     checkedUrl?: string;
     isLive: boolean;
@@ -185,6 +191,209 @@ type ReportSubmission = {
 // Escape pipes so titles and notes don't break markdown tables
 function mdCell(text: string): string {
   return text.replace(/\|/g, "\\|").replace(/\n+/g, " ").trim();
+}
+
+type RepoFactsSummary = {
+  convexFileCount: number;
+  hasSchema: boolean;
+  hasHttpRouter: boolean;
+  hasCrons: boolean;
+  tableCount: number;
+  indexCount: number;
+  searchIndexCount: number;
+  vectorIndexCount: number;
+  queryCount: number;
+  mutationCount: number;
+  actionCount: number;
+  httpActionCount: number;
+  usesScheduler: boolean;
+  usesStorage: boolean;
+  usesVectorSearch: boolean;
+  usesAuth: boolean;
+  usesPagination: boolean;
+  returnsValidatorCount: number;
+};
+
+type GitFactsSummary = {
+  firstCommitAt?: number;
+  lastCommitAt?: number;
+  builtDuringEvent: "in_window" | "started_before" | "no_window_set";
+  isFork: boolean;
+  parentRepo?: string;
+};
+
+type SubmissionBrief = {
+  storyTitle: string;
+  storySlug: string;
+  storyUrl?: string;
+  githubUrl?: string;
+  status: string;
+  averageScore?: number;
+  weightedScore?: number;
+  overallReasoning?: string;
+  convexFeaturesDetected?: Array<string>;
+  componentsUsed?: Array<string>;
+  repoFacts?: RepoFactsSummary;
+  gitFacts?: GitFactsSummary;
+  repoAccess?: "public" | "private_or_missing";
+  urlCheck?: {
+    checkedUrl?: string;
+    isLive: boolean;
+    statusCode?: number;
+    note: string;
+  };
+  frontendHosting?: { platform: string; evidence: string };
+  logDiscrepancies?: Array<string>;
+  sourcesUsed?: {
+    github: boolean;
+    liveUrl: boolean;
+    videoTranscript?: boolean;
+  };
+};
+
+// Copy text with a fallback for browsers that block the Clipboard API.
+async function copyText(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+  }
+}
+
+function submissionBriefLines(
+  submission: SubmissionBrief,
+  rank: number,
+  origin: string,
+  heading: "#" | "##",
+): Array<string> {
+  const lines: Array<string> = [
+    `${heading} ${rank}. ${mdCell(submission.storyTitle)}`,
+    "",
+  ];
+  const links = [`[Submission](${origin}/s/${submission.storySlug})`];
+  if (submission.storyUrl) links.push(`[Live app](${submission.storyUrl})`);
+  if (submission.githubUrl) links.push(`[GitHub](${submission.githubUrl})`);
+  lines.push(`- Links: ${links.join(" · ")}`);
+  lines.push(
+    `- AI review score: ${submission.averageScore !== undefined ? `${submission.averageScore.toFixed(1)}/10` : "not available"}${submission.weightedScore !== undefined ? ` (weighted total ${submission.weightedScore})` : ""}`,
+  );
+  if (submission.overallReasoning) {
+    lines.push(`- AI note: ${submission.overallReasoning}`);
+  }
+
+  lines.push("", `${heading}# Verified Convex evidence`, "");
+  if (submission.repoFacts) {
+    const facts = submission.repoFacts;
+    lines.push(
+      `- Repository facts: ${facts.convexFileCount} Convex files, ${facts.tableCount} tables, ${facts.indexCount} indexes, ${facts.queryCount} queries, ${facts.mutationCount} mutations, ${facts.actionCount} actions, ${facts.httpActionCount} HTTP actions, ${facts.returnsValidatorCount} return validators`,
+    );
+    const signals = [
+      facts.hasSchema && "schema",
+      facts.hasHttpRouter && "HTTP router",
+      facts.hasCrons && "crons",
+      facts.usesScheduler && "scheduler",
+      facts.usesStorage && "file storage",
+      facts.searchIndexCount > 0 && "full text search",
+      (facts.vectorIndexCount > 0 || facts.usesVectorSearch) && "vector search",
+      facts.usesAuth && "auth",
+      facts.usesPagination && "pagination",
+    ].filter((signal): signal is string => Boolean(signal));
+    lines.push(
+      `- Verified signals: ${signals.length > 0 ? signals.join(", ") : "none detected"}`,
+    );
+  } else {
+    lines.push("- Repository facts: not available");
+  }
+  lines.push(
+    `- Components used in code: ${submission.componentsUsed?.length ? submission.componentsUsed.join(", ") : "none verified"}`,
+  );
+  lines.push(
+    `- Detected Convex features: ${submission.convexFeaturesDetected?.length ? submission.convexFeaturesDetected.join(", ") : "none recorded"}`,
+  );
+
+  lines.push("", `${heading}# Review checks`, "");
+  if (submission.urlCheck) {
+    lines.push(
+      `- Live app: ${submission.urlCheck.isLive ? "live" : submission.urlCheck.statusCode === 404 ? "404" : "not working"} (${submission.urlCheck.note})`,
+    );
+  } else {
+    lines.push("- Live app: not checked");
+  }
+  if (submission.frontendHosting) {
+    lines.push(
+      `- Frontend hosting: ${FRONTEND_PLATFORM_LABELS[submission.frontendHosting.platform] ?? submission.frontendHosting.platform} (${submission.frontendHosting.evidence})`,
+    );
+  }
+  if (submission.repoAccess === "private_or_missing") {
+    lines.push("- Repository access: private, missing, or deleted");
+  }
+  if (submission.gitFacts?.isFork) {
+    lines.push(
+      `- Repository: fork${submission.gitFacts.parentRepo ? ` of ${submission.gitFacts.parentRepo}` : ""}`,
+    );
+  }
+  if (submission.gitFacts?.builtDuringEvent === "started_before") {
+    lines.push(
+      "- Build timeline: first commit predates the event window; organizer review recommended",
+    );
+  }
+  for (const discrepancy of submission.logDiscrepancies ?? []) {
+    lines.push(`- Hackathon log check: ${discrepancy}`);
+  }
+
+  return lines;
+}
+
+function buildSubmissionBrief(
+  submission: SubmissionBrief,
+  rank: number,
+  origin: string,
+): string {
+  return submissionBriefLines(submission, rank, origin, "#").join("\n");
+}
+
+// Build a privacy-safe handoff from stored review evidence. No team member or
+// submitter contact data is accepted by this function.
+function buildConvexTeamRecap(
+  groupName: string,
+  submissions: Array<SubmissionBrief>,
+  origin: string,
+): string {
+  const completed = submissions.filter((row) => row.status === "completed");
+  const stats = computeStats(submissions);
+  const lines: Array<string> = [
+    `# ${groupName} Convex AI review recap`,
+    "",
+    `Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} from saved AI judge results. This recap contains no submitter emails or team member details.`,
+    "",
+    "## Overview",
+    "",
+    `- ${completed.length} completed reviews from ${submissions.length} submissions`,
+    `- ${stats.usingConvex} apps with detected Convex usage`,
+    `- ${stats.advancedConvex} apps with advanced Convex usage`,
+    `- ${stats.liveApps} live apps from ${stats.urlChecked} checked URLs`,
+    `- ${stats.reposAnalyzed} repositories analyzed`,
+    `- ${stats.averageScore}/10 average AI review score`,
+    "",
+    "## Cohort signals",
+    "",
+    `- Components used in code: ${stats.componentsUsed.length > 0 ? stats.componentsUsed.map(([name, count]) => `${name} (${count})`).join(", ") : "none verified"}`,
+    `- Top Convex features: ${stats.topFeatures.length > 0 ? stats.topFeatures.map(([name, count]) => `${name} (${count})`).join(", ") : "none recorded"}`,
+  ];
+
+  for (const [index, submission] of completed.entries()) {
+    lines.push(
+      "",
+      ...submissionBriefLines(submission, index + 1, origin, "##"),
+    );
+  }
+
+  return lines.join("\n");
 }
 
 // Build the full hackathon report as markdown (pastes into Notion/Google Docs)
@@ -334,8 +543,9 @@ function buildHackathonReport(
     if (s.convexFeaturesDetected && s.convexFeaturesDetected.length > 0) {
       lines.push(`- Convex features: ${s.convexFeaturesDetected.join(", ")}`);
     }
-    if (s.componentsDetected && s.componentsDetected.length > 0) {
-      lines.push(`- Convex components: ${s.componentsDetected.join(", ")}`);
+    const reportComponents = s.componentsUsed ?? s.componentsDetected;
+    if (reportComponents && reportComponents.length > 0) {
+      lines.push(`- Convex components used: ${reportComponents.join(", ")}`);
     }
     if (s.criteriaScores && s.criteriaScores.length > 0) {
       lines.push(
@@ -470,15 +680,19 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
   const [editScores, setEditScores] = useState<Array<CriteriaScore>>([]);
   const [editOverall, setEditOverall] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
-  const [activeTab, setActiveTab] = useState<"results" | "stats" | "report">(
-    "results",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "results" | "stats" | "recap" | "report"
+  >("results");
   // Build-timeline filter (Phase 3): all / built in window / started before
   const [timelineFilter, setTimelineFilter] = useState<
     "all" | "in_window" | "started_before"
   >("all");
   const [reportMarkdown, setReportMarkdown] = useState<string | null>(null);
   const [reportCopied, setReportCopied] = useState(false);
+  const [recapMarkdown, setRecapMarkdown] = useState<string | null>(null);
+  const [recapCopied, setRecapCopied] = useState(false);
+  const [copiedBriefId, setCopiedBriefId] =
+    useState<Id<"aiJudgeResults"> | null>(null);
 
   const isRunning =
     (data?.counts.pending ?? 0) > 0 || (data?.counts.running ?? 0) > 0;
@@ -500,17 +714,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
 
   const handleCopyReport = async () => {
     if (!reportMarkdown) return;
-    try {
-      await navigator.clipboard.writeText(reportMarkdown);
-    } catch {
-      // Clipboard API unavailable: fall back to a temporary textarea
-      const textarea = document.createElement("textarea");
-      textarea.value = reportMarkdown;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-    }
+    await copyText(reportMarkdown);
     setReportCopied(true);
     setTimeout(() => setReportCopied(false), 2000);
   };
@@ -526,6 +730,44 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const handleGenerateRecap = () => {
+    if (!data) return;
+    setRecapMarkdown(
+      buildConvexTeamRecap(groupName, data.results, window.location.origin),
+    );
+  };
+
+  const handleCopyRecap = async () => {
+    if (!recapMarkdown) return;
+    await copyText(recapMarkdown);
+    setRecapCopied(true);
+    setTimeout(() => setRecapCopied(false), 2000);
+  };
+
+  const handleDownloadRecap = () => {
+    if (!recapMarkdown) return;
+    const blob = new Blob([recapMarkdown], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${groupName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "judging-group"}-convex-recap.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCopyBrief = async (
+    result: SubmissionBrief & { _id: Id<"aiJudgeResults"> },
+    rank: number,
+  ) => {
+    await copyText(
+      buildSubmissionBrief(result, rank, window.location.origin),
+    );
+    setCopiedBriefId(result._id);
+    setTimeout(() => setCopiedBriefId(null), 2000);
   };
 
   const handleStartReview = async () => {
@@ -726,8 +968,8 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
             ))}
           </div>
 
-          {/* Tabs: results / stats / hackathon report */}
-          <div className="flex items-center gap-1 border-b border-hairline">
+          {/* Tabs: results / stats / Convex recap / organizer report */}
+          <div className="flex flex-wrap items-center gap-1 border-b border-hairline">
             <button
               onClick={() => setActiveTab("results")}
               className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
@@ -759,6 +1001,25 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
               Stats
             </button>
             <button
+              onClick={() => reportReady && setActiveTab("recap")}
+              disabled={!reportReady}
+              title={
+                reportReady
+                  ? "Generate a privacy-safe recap for the Convex team"
+                  : "Available after every submission has been reviewed"
+              }
+              className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                activeTab === "recap"
+                  ? "border-ink text-ink"
+                  : reportReady
+                    ? "border-transparent text-soft hover:text-copy"
+                    : "border-transparent text-faint cursor-not-allowed"
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              Convex Recap
+            </button>
+            <button
               onClick={() => reportReady && setActiveTab("report")}
               disabled={!reportReady}
               title={
@@ -781,6 +1042,73 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
 
           {activeTab === "stats" && statsReady && (
             <StatsPanel groupName={groupName} results={data.results} />
+          )}
+
+          {activeTab === "recap" && reportReady && (
+            <div className="space-y-4">
+              <div className="bg-surface rounded-lg border border-hairline p-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-medium text-ink">
+                    Convex Team Recap
+                  </h3>
+                  <p className="text-xs text-soft mt-0.5">
+                    A privacy-safe markdown handoff built from saved review
+                    evidence. It contains no submitter emails or team member
+                    details and does not run another AI review.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    onClick={handleGenerateRecap}
+                    className="bg-cta hover:bg-cta-hover"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    {recapMarkdown ? "Regenerate Recap" : "Generate Recap"}
+                  </Button>
+                  {recapMarkdown && (
+                    <>
+                      <Button variant="outline" onClick={handleCopyRecap}>
+                        {recapCopied ? (
+                          <>
+                            <Check className="w-4 h-4 mr-2" />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-4 h-4 mr-2" />
+                            Copy Markdown
+                          </>
+                        )}
+                      </Button>
+                      <Button variant="outline" onClick={handleDownloadRecap}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Download .md
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {recapMarkdown ? (
+                <div className="bg-surface rounded-lg border border-hairline p-4">
+                  <pre className="whitespace-pre-wrap text-sm text-ink font-mono max-h-[36rem] overflow-y-auto">
+                    {recapMarkdown}
+                  </pre>
+                </div>
+              ) : (
+                <div className="text-center py-10 text-soft bg-surface rounded-lg border border-hairline">
+                  <FileText className="w-12 h-12 mx-auto mb-4 text-faint" />
+                  <p className="text-lg font-medium mb-2">
+                    Ready to build the Convex recap
+                  </p>
+                  <p className="text-sm max-w-md mx-auto">
+                    Generate one document with cohort signals, verified Convex
+                    usage, live app checks, and a concise brief for every
+                    completed submission.
+                  </p>
+                </div>
+              )}
+            </div>
           )}
 
           {activeTab === "report" && reportReady && (
@@ -1105,6 +1433,24 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                           >
                             <RefreshCw className="w-3.5 h-3.5" />
                             Retry
+                          </button>
+                        )}
+                        {result.status === "completed" && (
+                          <button
+                            onClick={() =>
+                              void handleCopyBrief(result, index + 1)
+                            }
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-colors font-medium"
+                            title="Copy a privacy-safe markdown brief for the Convex team"
+                          >
+                            {copiedBriefId === result._id ? (
+                              <Check className="w-3.5 h-3.5" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                            {copiedBriefId === result._id
+                              ? "Copied"
+                              : "Copy brief"}
                           </button>
                         )}
                         {result.status === "completed" && (
