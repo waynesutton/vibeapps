@@ -3,8 +3,12 @@ import {
   Award,
   BookOpen,
   Bot,
+  Check,
+  ClipboardCopy,
+  Download,
   KeyRound,
   ListChecks,
+  Scale,
   Shield,
   ShieldAlert,
   Sparkles,
@@ -13,6 +17,7 @@ import {
   FileText,
 } from "lucide-react";
 import { Markdown } from "../Markdown";
+import { Button } from "../ui/button";
 
 // In-admin documentation for the judging system, agent judging API,
 // AI spam check, and delegated access.
@@ -49,6 +54,263 @@ The judging system lets you run scored competitions (hackathons, demo days, cont
 - The **Judging** tab lists all groups with actions for settings, criteria, results, tracking, AI results, exports, and deletion.
 - **Judge Tracking** opens from a group row and shows per-judge activity with score editing.
 - The **Access** tab (full admins only) delegates judging management to organizers without making them full admins.`,
+  },
+  {
+    id: "external-judging",
+    title: "External Judging Process",
+    icon: Scale,
+    content: `# External judging process
+
+This guide is for human judges scoring a judging group. It covers login, passwords, criteria, comments, notes, status, filters, and how to finish each submission. It does not cover the AI judge or agent API.
+
+Use **Copy Markdown** or **Download .md** above this page to paste into Notion, Google Docs, email, or Slack.
+
+## Who this is for
+
+You are an invited judge for a competition, hackathon, or demo day. You do not need a site account to judge. Organizers give you a link and, when the group is private, an access code.
+
+## What you need before you start
+
+- The judging link from your organizer, shaped like \`https://yoursite.com/judging/your-slug\`
+- The access code, only if the group is private (organizers call this the judge password)
+- A modern browser (Chrome, Firefox, Safari, or Edge)
+- Enough time to open live demos, repos, and videos when they exist
+
+Bookmark the link. Use the same browser when you come back so your session continues.
+
+## How login works
+
+Judging does not use Clerk sign in. There is no username and password account for judges.
+
+1. Open the group URL: \`/judging/{slug}\`
+2. If the group is **private**, enter the **Access Code** and click **Continue**
+3. Enter your **name** (required) and **email** (optional)
+4. Click **Start Judging**
+5. The app stores a session id in your browser and sends you to \`/judging/{slug}/judge\`
+
+That is the full login. No email verification step. No account creation.
+
+## Password and access code
+
+| Group setting | What you see |
+| --- | --- |
+| **Public** group | No access code screen. You go straight to the name form. |
+| **Private** group | Lock screen asks for **Access Code**. Wrong code shows an error. Correct code unlocks the name form. |
+
+Details that matter:
+
+- The access code is the group's **judge password**, set by the organizer. It is separate from the submission page password and the results page password.
+- You only need the judge access code to enter judging. Submission and results passwords are for other links.
+- If judging is **paused** (group inactive), the group page is unavailable to judges until an organizer turns it back on.
+- Public groups with no password are reachable by anyone who has the URL. Treat the link as shared credentials when the event is invitation only; organizers should use a private group with an access code in that case.
+
+## Entering your name
+
+The name field is how the system identifies your scores.
+
+**Rules enforced by the form:**
+
+- Name is required (at least 2 characters after cleanup)
+- The field keeps **lowercase letters only** (a to z). Spaces, numbers, and punctuation are stripped as you type.
+- Example: typing \`Wayne Sutton\` becomes \`waynesutton\`
+- Pick one stable name and reuse it every time you return
+
+**Email** is optional. Organizers may use it to reach you about judging.
+
+**Returning later:**
+
+- Same browser: your session in local storage usually resumes when you open \`/judging/{slug}/judge\`
+- New browser or cleared storage: open the group link again, enter the access code if needed, and enter the **exact same name** to reconnect to your existing judge record and scores
+- Using a different name creates a different judge identity. Do not do that mid event.
+
+## Opening the judging interface
+
+After **Start Judging** you land on the two column judging UI:
+
+- **Left**: submission details, media, filters, status, collaboration notes
+- **Right**: scoring criteria, optional comments per criterion, your progress, complete action
+
+Header shows the group name, your judge name, and a progress bar for how many submissions in the group have been completed by any judge.
+
+If your session expires or the judging period ended, you see **Session Expired** with a link back to the group page. Register again with the same name.
+
+If the group has no submissions yet, you see **No Submissions**.
+
+## What you see on each submission
+
+For the current submission the interface can show:
+
+- Title and short description (tagline)
+- Current **status** (Pending, Completed, or Skip) and who completed it when relevant
+- **Project links**: Live App, GitHub, LinkedIn, X/Twitter, Chef links when present
+- **Tags**
+- **Visit Submission** (full public story page) and **View Change Log**
+- Originally submitted date and last modified when a change log exists
+- **Detailed description** (markdown)
+- **Video demo** (YouTube, Vimeo, Loom, Google Drive, or direct video when embeddable)
+- **Screenshot** and additional images
+- **Team info** (team name, size, member names when provided)
+- **Additional Answers** from the group's custom submit questions
+- **Additional Form Fields** from site wide dynamic form fields
+
+Open the live app and repo when they exist. Scores should reflect what you can verify, not only the writeup.
+
+## Scoring criteria
+
+Criteria are set by organizers for that group. Each criterion has a question and often a short description telling you what to look for.
+
+**Scale:**
+
+- Default is **1 to 10**
+- Some groups use **1 to 5** (set in group Settings)
+- Click a number button to save that score immediately
+- Scores must be whole numbers in range
+- Changing a score later updates the saved value
+
+**Completion rule:**
+
+A submission is not finished for you until you have scored **every** criterion with a value greater than 0. The complete button blocks you until that is true.
+
+Criteria text and weights are controlled by organizers. You score; you do not edit the criteria list.
+
+## Comments on criteria
+
+Under each criterion there is an optional **Comments** box.
+
+- Use it for short rationale tied to that score
+- Comments save when you leave the field (blur) if a score already exists
+- Comments are optional and do not replace scoring
+- When a submission is locked or completed by another judge (single judge mode), comments are read only
+
+These per criterion comments are different from collaboration notes (see below).
+
+## Submission status
+
+Each submission has a status for judging:
+
+| Status | Meaning |
+| --- | --- |
+| **Pending** | Ready to judge or in progress |
+| **Completed** | Judging finished for the required judge count |
+| **Skip** | Marked skipped so you can move on without scoring it |
+
+**Single judge groups** (default, one judge per submission):
+
+- **Skip** marks it skipped; **Resume** returns it to pending
+- **Mark Submission Complete** finishes it after all criteria are scored
+- After you complete it, **Edit Scores** reopens it as pending so you can change scores
+- If another judge already completed it, you can view their scores but cannot edit
+
+**Multi judge groups** (organizer set "judges per submission" above 1):
+
+- Several judges can score the same submission until the required count is reached
+- You see a counter like \`2 of 3 judges\`
+- Your action button is **Judged & Next** (saves your completion and advances)
+- After you submit, you wait for remaining judges; scores may show as locked for further edits
+- When the required number of judges finish, the submission locks for everyone
+- After you have submitted (or when locked), you can see an overall average and per judge score breakdown
+
+## How to finish a submission
+
+Recommended loop:
+
+1. Filter or search to the next open submission
+2. Read the writeup, open Live App and GitHub, watch the video when present
+3. Score every criterion
+4. Add optional criterion comments where useful
+5. Optionally leave a collaboration note
+6. Click **Mark Submission Complete** (single judge) or **Judged & Next** (multi judge)
+7. Move to the next pending submission
+
+Scores save as you click numbers. Completing is still required so progress and queue logic stay correct.
+
+## Judge collaboration notes
+
+**Judge Collaboration Notes** is a shared thread on the submission.
+
+- Notes are visible to other judges and to organizers in Judge Tracking
+- Notes **do not** change scores or rankings
+- Use \`@username\` to mention a site user (when that person has an account)
+- You can reply to an existing note
+- Good uses: conflict of interest flag, broken demo, repo access request, disagreement worth documenting
+
+Do not put private access credentials in notes.
+
+## Filters and navigation
+
+Tools above the submission help you move through large queues:
+
+- **Search submissions**: type a title; pick from the dropdown (shows completion state)
+- **Filter by tag**: limit to apps with a visible tag
+- **All Submissions / Not Judged**: Not Judged shows only submissions nobody has completed yet
+- **Filter by judge**: show submissions completed by a specific judge name
+- **Filter by answer**: when the group used radio, dropdown, or multi select fields, filter by a specific answer (for example track or category)
+- **Jump to #**: type a position number and click **Go**
+- **Previous / Next** chevrons move one submission at a time in the current filtered list
+
+Active filters show a count like \`Submission 3 of 12 (filtered from 40 total)\`. Clear filters if the list looks empty.
+
+## Progress and results
+
+- Header progress counts submissions completed by any judge against the group total
+- **Your Progress** on the right repeats that bar and the complete action
+- **View Results** opens \`/judging/{slug}/results\` (may ask for a results password if results are private)
+- **Back to Group Page** returns to \`/judging/{slug}\`
+
+Final rankings can use weighted criteria. Organizers control weights. Your job is consistent scoring on the published questions.
+
+## What organizers control (for context)
+
+You cannot change these from the judge UI. Knowing them avoids confusion:
+
+- Group public vs private and the judge access code
+- Whether judging is active
+- Criteria questions, descriptions, order, and weights
+- Score scale 1 to 5 or 1 to 10
+- How many judges must complete each submission
+- Which apps are in the group
+- Whether results are public or password protected
+
+If criteria look wrong or a submission is missing, contact the organizer. Do not invent your own rubric.
+
+## Troubleshooting
+
+| Problem | What to try |
+| --- | --- |
+| Incorrect access code | Confirm you have the **judge** password, not the submit or results password. Ask the organizer to resend it. |
+| Name keeps changing as you type | Expected: only lowercase letters stay. Plan a single word or combined name. |
+| Session expired | Return to the group URL, unlock if private, enter the same name again. |
+| Cannot mark complete | Score every criterion first. Zero or blank criteria block completion. |
+| Cannot edit scores | Another judge finished it (single judge), or the multi judge quota is full / you already submitted. Use Edit Scores only when the UI offers it on your own completion. |
+| No submissions match filters | Clear tag, Not Judged, judge, and answer filters. |
+| Demo or repo broken | Note it in collaboration notes and score based on what you can verify. Tell the organizer if access is required. |
+| Progress lost after new device | Re enter the **same** name. A new name starts a new judge. |
+
+Refresh the page if the UI stalls. Saved scores persist on the server once each click succeeds.
+
+## Best practices for judges
+
+- Use the full scale. Do not cluster everything at 7 or 8.
+- Be consistent across the queue. Score similar quality similarly.
+- Prefer evidence from the live app and repo over marketing copy alone.
+- Keep criterion comments short and specific.
+- Use collaboration notes for issues other judges should see.
+- Finish with Mark Complete or Judged & Next so organizers see real progress.
+- Recheck early scores after you have seen more of the field if time allows.
+
+## Checklist for your first session
+
+1. Open the judging link from the organizer
+2. Enter the access code if asked
+3. Enter your stable lowercase name and optional email
+4. Confirm criteria and scale match what the organizer described
+5. Score one test submission end to end including Mark Complete or Judged & Next
+6. Confirm it shows as completed in search or filters
+7. Continue through the queue
+
+## Sharing this guide
+
+Organizers: open **Admin → Docs → External Judging Process**, then **Copy Markdown** or **Download .md**. Paste into Notion or Google Docs, add your real \`/judging/{slug}\` link and access code in a short cover note, and send to every judge.`,
   },
   {
     id: "groups",
@@ -221,7 +483,9 @@ Removing a submission from a group also removes its scores in that group. The ap
    - marks it complete and moves on.
 5. When **judges per submission** is set, submissions completed by enough judges leave the remaining queues automatically.
 
-Judges do not need site accounts. Sessions can later be linked to real user accounts from Judge Tracking.`,
+Judges do not need site accounts. Sessions can later be linked to real user accounts from Judge Tracking.
+
+For the full external facing guide (login, passwords, criteria, notes, filters, multi judge, troubleshooting), see **External Judging Process** in this Docs sidebar. Use Copy Markdown or Download .md to send it to judges.`,
   },
   {
     id: "results",
@@ -543,8 +807,35 @@ The spam check falls back to a deterministic heuristic when no model key is set.
 
 export function AdminDocs() {
   const [activeId, setActiveId] = useState<string>(DOC_SECTIONS[0].id);
+  const [copied, setCopied] = useState(false);
   const active =
     DOC_SECTIONS.find((s) => s.id === activeId) ?? DOC_SECTIONS[0];
+
+  // Copy the active section's markdown for Notion, Google Docs, or email
+  const handleCopyMarkdown = async () => {
+    try {
+      await navigator.clipboard.writeText(active.content);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard blocked; download still works
+    }
+  };
+
+  // Download the active section as a .md file judges can open anywhere
+  const handleDownloadMarkdown = () => {
+    const blob = new Blob([active.content], {
+      type: "text/markdown;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${active.id}.md`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="flex flex-col md:flex-row gap-6">
@@ -583,6 +874,32 @@ export function AdminDocs() {
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="bg-surface rounded-lg border border-hairline p-6 md:p-8">
+          <div className="flex flex-wrap items-center justify-end gap-2 mb-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void handleCopyMarkdown()}
+              title="Copy this page as markdown"
+            >
+              {copied ? (
+                <Check className="w-3.5 h-3.5 mr-1.5" />
+              ) : (
+                <ClipboardCopy className="w-3.5 h-3.5 mr-1.5" />
+              )}
+              {copied ? "Copied" : "Copy Markdown"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadMarkdown}
+              title="Download this page as a .md file"
+            >
+              <Download className="w-3.5 h-3.5 mr-1.5" />
+              Download .md
+            </Button>
+          </div>
           <article className="prose prose-sm max-w-none prose-headings:text-ink prose-h1:text-xl prose-h1:font-medium prose-h2:text-base prose-h2:font-medium prose-p:text-copy prose-li:text-copy prose-strong:text-ink prose-a:text-ink prose-code:text-ink prose-code:bg-surface-alt prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-table:text-xs">
             <Markdown>{active.content}</Markdown>
           </article>

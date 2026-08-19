@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Latest Updates
 
+### [Added] - 2026-08-19
+
+**External Judging Process guide in Admin Docs**
+
+- New Docs sidebar section **External Judging Process** covers the full human judge flow: access codes vs public groups, name rules, session resume, criteria and comments, status (pending/completed/skip), multi judge completion, collaboration notes, filters, troubleshooting, and a first session checklist (2026-08-19).
+- Every Docs page now has **Copy Markdown** and **Download .md** so organizers can paste the guide into Notion, Google Docs, or email for external judges.
+- **Files**: `src/components/admin/AdminDocs.tsx`.
+
 ### [Added] - 2026-08-17
 
 **QR codes and a join page for judging group submission forms**
