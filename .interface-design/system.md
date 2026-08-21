@@ -1,6 +1,6 @@
 # VibeApps design system
 
-Last updated: 2026-08-11 20:05 UTC
+Last updated: 2026-08-21 17:20 UTC
 Source of truth for theming: `src/index.css` (CSS variables) + `tailwind.config.js` (semantic color names). This file documents the decisions so future sessions stay consistent.
 
 ## Direction and feel
@@ -80,7 +80,9 @@ Dark mode notes: no shadows (borders carry all definition), semantic reds/greens
 ## Spacing and radius
 
 - Base unit 4px (Tailwind scale). Component gaps 8–12px, section separation 16–24px, page sections 32–48px.
-- Radius scale: `rounded-md`/`rounded-lg` for buttons and inputs, `rounded-lg`/`rounded-xl` for cards and thumbnails, `rounded-full` for pills and avatars.
+- All non-pill radius utilities from `rounded-sm` through `rounded-3xl` resolve to `0.25rem`. This keeps cards, buttons, inputs, thumbnails, submit surfaces, dialogs, and admin panels compact and consistent.
+- `rounded-full` remains reserved for tag pills, avatars, notification dots, and round profile-adjacent icon controls.
+- The header notification and profile menus preserve their previous `0.375rem` radius as explicit local exceptions.
 
 ## Iconography
 

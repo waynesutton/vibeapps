@@ -613,6 +613,14 @@ export default defineSchema({
     // Supports a {{rubric}} placeholder; the JSON response contract is
     // always appended by the analysis action and is never editable.
     aiJudgeSystemPrompt: v.optional(v.string()),
+    // Optional privacy-safe cohort summary generated from saved AI results.
+    // The fingerprint lets admin UI identify summaries made stale by reruns
+    // or manual review edits without exposing this content publicly.
+    aiGroupSummary: v.optional(v.string()),
+    aiGroupSummaryGeneratedAt: v.optional(v.number()),
+    aiGroupSummaryFingerprint: v.optional(v.string()),
+    aiGroupSummaryProvider: v.optional(v.string()),
+    aiGroupSummaryModel: v.optional(v.string()),
     // When true (the default), scores written by agent judges are advisory:
     // shown with an agent badge but excluded from final rankings.
     agentScoresAdvisory: v.optional(v.boolean()),

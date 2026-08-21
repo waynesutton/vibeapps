@@ -1,4 +1,4 @@
-import { internalAction } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import {
@@ -1645,6 +1645,115 @@ async function callLlmWithFallback(
   }
   throw new Error(`All configured AI providers failed: ${errors.join(" | ")}`);
 }
+
+function parseGroupSummaryResponse(text: string): string {
+  let cleaned = text.trim();
+  const fenceMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenceMatch) cleaned = fenceMatch[1].trim();
+  if (!cleaned.startsWith("{")) {
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+    if (start === -1 || end === -1) {
+      throw new Error("Group summary response contained no JSON object");
+    }
+    cleaned = cleaned.slice(start, end + 1);
+  }
+  const parsed = JSON.parse(cleaned) as { summaryMarkdown?: unknown };
+  if (
+    typeof parsed.summaryMarkdown !== "string" ||
+    parsed.summaryMarkdown.trim().length === 0
+  ) {
+    throw new Error("Group summary response is missing summaryMarkdown");
+  }
+  return parsed.summaryMarkdown.trim().slice(0, 12000);
+}
+
+/**
+ * Generate a privacy-safe cohort summary from saved AI review evidence.
+ * This never rescans repositories and never writes or changes scores.
+ */
+export const generateGroupSummary = action({
+  args: { groupId: v.id("judgingGroups") },
+  returns: v.object({
+    markdown: v.string(),
+    generatedAt: v.number(),
+    provider: v.string(),
+    model: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const data = await ctx.runQuery(internal.aiJudge.getGroupSummaryInput, {
+      groupId: args.groupId,
+    });
+    if (!data) {
+      throw new Error("AI judging is not enabled for this group");
+    }
+    if (data.hasInFlightReviews) {
+      throw new Error(
+        "Wait for pending and running reviews to finish before generating the group summary",
+      );
+    }
+    if (data.submissions.length === 0) {
+      throw new Error("No completed AI reviews are available to summarize");
+    }
+
+    const maxEvidenceCharacters = 150000;
+    const evidenceRows: Array<string> = [];
+    let evidenceCharacters = 0;
+    let omittedCount = 0;
+    for (const submission of data.submissions) {
+      const serialized = JSON.stringify(submission);
+      if (
+        evidenceCharacters + serialized.length + 1 >
+        maxEvidenceCharacters
+      ) {
+        omittedCount += 1;
+        continue;
+      }
+      evidenceRows.push(serialized);
+      evidenceCharacters += serialized.length + 1;
+    }
+
+    const systemPrompt = `You write internal hackathon cohort summaries for the Convex team.
+
+Use only the saved AI review evidence provided by the organizer. Do not rescore, rank, or recommend winners. Do not infer participant identity, intent, or private information. Separate measured facts from AI judge observations. Mention app titles only when a concrete example improves clarity. Keep the summary useful to product, developer relations, and hackathon teams.
+
+Return one JSON object with exactly this shape:
+{"summaryMarkdown":"Markdown content"}
+
+The Markdown must be at most 700 words and use these H2 sections:
+## Executive summary
+## Shared patterns
+## Common gaps
+## Recommendations for the Convex team
+
+Use short paragraphs and concise bullet lists. Do not add an H1 title.`;
+    const userMessage = `Judging group: ${data.groupName}
+Completed reviews represented: ${evidenceRows.length} of ${data.submissions.length}
+${omittedCount > 0 ? `Evidence omitted because of the context limit: ${omittedCount} submissions. State this limitation in the executive summary.` : ""}
+
+Saved review evidence, one JSON object per submission:
+${evidenceRows.join("\n")}`;
+    const llm = await callLlmWithFallback(systemPrompt, userMessage);
+    const markdown = parseGroupSummaryResponse(llm.text);
+    const generatedAt = Date.now();
+
+    await ctx.runMutation(internal.aiJudge.saveGroupSummary, {
+      groupId: args.groupId,
+      markdown,
+      generatedAt,
+      fingerprint: data.fingerprint,
+      provider: llm.provider,
+      model: llm.model,
+    });
+
+    return {
+      markdown,
+      generatedAt,
+      provider: llm.provider,
+      model: llm.model,
+    };
+  },
+});
 
 type ParsedAnalysis = {
   criteriaScores: Array<{

@@ -1,4 +1,3 @@
-import React, { useMemo } from "react";
 import { useQuery, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Link } from "react-router-dom";
@@ -86,35 +85,6 @@ export function NumbersView() {
     api.adminFollowsQueries.getTopUsersByFollowing,
     skip ? "skip" : { limit: 100 },
   );
-  
-  // Get user growth data for chart
-  const userGrowthData = useQuery(
-    api.adminQueries.getUserGrowthData,
-    skip ? "skip" : {},
-  );
-
-  // Format data for display - show last 30 days or all data if less
-  const chartData = useMemo(() => {
-    if (!userGrowthData || userGrowthData.length === 0) return [];
-    
-    // Take last 30 data points or all if less than 30
-    const dataToShow = userGrowthData.slice(-30);
-    
-    return dataToShow.map(item => ({
-      ...item,
-      formattedDate: new Date(item.date).toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
-      }),
-    }));
-  }, [userGrowthData]);
-
-  // Calculate max value for scaling
-  const maxUsers = useMemo(() => {
-    if (chartData.length === 0) return 0;
-    return Math.max(...chartData.map(d => d.cumulative));
-  }, [chartData]);
-
   if (authIsLoading) {
     return (
       <div>
@@ -139,91 +109,6 @@ export function NumbersView() {
         <StatCard title="Total Bookmarks" value={totalBookmarksData} />
         <StatCard title="Total Ratings" value={totalRatingsData} />
         <StatCard title="Total Follows" value={totalFollowRelationships} />
-      </div>
-
-      {/* User Growth Chart */}
-      <div className="mt-10">
-        <h2 className="text-xl font-semibold text-ink mb-6">
-          User Growth Over Time
-        </h2>
-        {chartData.length === 0 && (
-          <div className="bg-surface border border-hairline rounded-lg p-8 text-center text-soft">
-            Loading growth data...
-          </div>
-        )}
-        {chartData.length > 0 && (
-          <div className="bg-surface border border-hairline rounded-lg p-6">
-            <div className="relative h-64 overflow-hidden">
-              {/* Bars */}
-              <div className="flex items-end justify-between h-full gap-1">
-                {chartData.map((item, index) => {
-                  const height = maxUsers > 0 ? (item.cumulative / maxUsers) * 100 : 0;
-                  
-                  return (
-                    <div
-                      key={item.date}
-                      className="flex-1 flex flex-col items-center group relative"
-                    >
-                      {/* Bar */}
-                      <div
-                        className="w-full bg-black hover:bg-cta-hover transition-colors rounded-t relative z-0"
-                        style={{ height: `${height}%` }}
-                      />
-                      
-                      {/* Tooltip */}
-                      <div className="absolute bottom-full mb-2 hidden group-hover:block bg-cta text-on-cta text-xs rounded py-1 px-2 whitespace-nowrap z-20">
-                        <div className="font-semibold">{item.cumulative} users</div>
-                        <div className="text-faint">{item.formattedDate}</div>
-                        <div className="text-faint">+{item.count} new</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              
-              {/* Growth Line */}
-              <svg 
-                className="absolute inset-0 pointer-events-none z-10" 
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
-                style={{ width: '100%', height: '100%' }}
-              >
-                <polyline
-                  points={chartData.map((item, index) => {
-                    const x = ((index + 0.5) / chartData.length) * 100;
-                    const y = 100 - (maxUsers > 0 ? (item.cumulative / maxUsers) * 100 : 0);
-                    return `${x},${y}`;
-                  }).join(' ')}
-                  fill="none"
-                  stroke="#EF4444"
-                  strokeWidth="0.5"
-                  vectorEffect="non-scaling-stroke"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
-            
-            {/* X-axis labels - show every few labels to avoid crowding */}
-            <div className="flex justify-between mt-2 text-xs text-soft">
-              <span>{chartData[0]?.formattedDate}</span>
-              {chartData.length > 2 && (
-                <span>{chartData[Math.floor(chartData.length / 2)]?.formattedDate}</span>
-              )}
-              <span>{chartData[chartData.length - 1]?.formattedDate}</span>
-            </div>
-            
-            {/* Y-axis label and stats */}
-            <div className="mt-4 pt-4 border-t border-hairline">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-copy">Total Users</span>
-                <span className="text-2xl font-semibold text-ink">
-                  {chartData[chartData.length - 1]?.cumulative || 0}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Section for Top 100 Most Followed Users */}

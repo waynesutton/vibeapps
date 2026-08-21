@@ -435,7 +435,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                       </button>
 
                       {showAlertsDropdown && (
-                        <div className="absolute right-0 mt-2 w-80 bg-surface rounded-md shadow-lg border border-hairline py-2 z-50">
+                        <div className="absolute right-0 mt-2 w-80 bg-surface [border-radius:0.375rem] shadow-lg border border-hairline py-2 z-50">
                           <div className="px-3 py-2 border-b border-hairline">
                             <h3 className="text-sm font-medium text-ink">
                               Notifications
@@ -514,7 +514,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                       </button>
 
                       {showProfileDropdown && (
-                        <div className="absolute right-0 mt-2 w-36 bg-surface rounded-md shadow-lg border border-hairline py-0.5 z-50">
+                        <div className="absolute right-0 mt-2 w-36 bg-surface [border-radius:0.375rem] shadow-lg border border-hairline py-0.5 z-50">
                           <Link
                             to={profileUrl}
                             className="block px-3 py-1.5 text-xs text-ink hover:bg-surface-hover transition-colors"

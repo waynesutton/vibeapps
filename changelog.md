@@ -5,7 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Change Log](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Closed per-submission AI **Brief** toggle with copy and `.md` save, plus an optional persisted AI cohort summary on Convex Recap generated only from saved review evidence (2026-08-21).
+- Stale-summary detection when a retry, edit, or complete/fail run no longer matches the stored cohort fingerprint (2026-08-21).
+
+### Changed
+
+- Shared non-pill corner radius is now `0.25rem` across cards, buttons, inputs, thumbnails, submit surfaces, dialogs, and admin panels. Tag pills and header notification/profile round controls stay full-round; header menus stay `0.375rem` (2026-08-21).
+
+### Removed
+
+- User Growth Over Time chart, its query subscription, and the unused `getUserGrowthData` aggregation (2026-08-21).
+
 ## Latest Updates
+
+### [Added] - 2026-08-21
+
+**AI review brief exports and optional cohort summary**
+
+- Each completed submission now has a closed **Brief** toggle. Organizers can inspect the privacy-safe markdown, copy it, or save that submission as a `.md` file.
+- The Convex Recap still builds a deterministic brief for every completed submission with copy and `.md` export. Organizers can now add an optional AI cohort summary generated only from saved review evidence, with no repository rescans, ranking changes, or score changes.
+- AI cohort summaries are admin-only, record the model and generated time, and show an update state when a rerun or admin edit makes the saved summary stale.
+- Cards, buttons, inputs, thumbnails, submit surfaces, dialogs, and admin panels now use `0.25rem` corners. Full tag pills, avatars, notification dots, and profile-adjacent round controls keep their shape.
+- Removed the User Growth Over Time chart, its query subscription, and the now-unused backend aggregation.
+- **Files**: `convex/schema.ts`, `convex/adminQueries.ts`, `convex/aiJudge.ts`, `convex/aiJudgeAnalysis.ts`, `src/components/admin/AIJudgeResults.tsx`, `src/components/admin/NumbersView.tsx`, `src/components/Layout.tsx`, `src/components/ui/dialog.tsx`, `src/index.css`, `tailwind.config.js`. Tracked in `prds/ai-review-briefs-radius-and-admin-cleanup.md`.
 
 ### [Added] - 2026-08-19
 

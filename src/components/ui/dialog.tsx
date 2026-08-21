@@ -32,7 +32,7 @@ const DialogComponent = ({
         style={{
           background: "white",
           padding: "20px",
-          borderRadius: "8px",
+          borderRadius: "4px",
           minWidth: "300px",
           maxWidth: "500px",
           boxShadow: "0 4px 6px rgba(0,0,0,0.1)",

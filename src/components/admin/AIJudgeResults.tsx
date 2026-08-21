@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useAction, useQuery, useMutation } from "convex/react";
 import {
   Sparkles,
   Loader2,
@@ -363,6 +363,7 @@ function buildConvexTeamRecap(
   groupName: string,
   submissions: Array<SubmissionBrief>,
   origin: string,
+  aiSummary?: string,
 ): string {
   const completed = submissions.filter((row) => row.status === "completed");
   const stats = computeStats(submissions);
@@ -385,6 +386,15 @@ function buildConvexTeamRecap(
     `- Components used in code: ${stats.componentsUsed.length > 0 ? stats.componentsUsed.map(([name, count]) => `${name} (${count})`).join(", ") : "none verified"}`,
     `- Top Convex features: ${stats.topFeatures.length > 0 ? stats.topFeatures.map(([name, count]) => `${name} (${count})`).join(", ") : "none recorded"}`,
   ];
+
+  if (aiSummary) {
+    lines.push(
+      "",
+      "## AI cohort summary",
+      "",
+      aiSummary.replace(/^## /gm, "### "),
+    );
+  }
 
   for (const [index, submission] of completed.entries()) {
     lines.push(
@@ -670,6 +680,9 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
   const startReview = useMutation(api.aiJudge.startReview);
   const retrySubmission = useMutation(api.aiJudge.retrySubmission);
   const updateResultScore = useMutation(api.aiJudge.updateResultScore);
+  const generateGroupSummary = useAction(
+    api.aiJudgeAnalysis.generateGroupSummary,
+  );
   const { showMessage, DialogComponents } = useDialog();
 
   const [isStarting, setIsStarting] = useState(false);
@@ -693,6 +706,13 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
   const [recapCopied, setRecapCopied] = useState(false);
   const [copiedBriefId, setCopiedBriefId] =
     useState<Id<"aiJudgeResults"> | null>(null);
+  const [openBriefId, setOpenBriefId] =
+    useState<Id<"aiJudgeResults"> | null>(null);
+  const [isGeneratingGroupSummary, setIsGeneratingGroupSummary] =
+    useState(false);
+  const [groupSummaryError, setGroupSummaryError] = useState<string | null>(
+    null,
+  );
 
   const isRunning =
     (data?.counts.pending ?? 0) > 0 || (data?.counts.running ?? 0) > 0;
@@ -735,7 +755,14 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
   const handleGenerateRecap = () => {
     if (!data) return;
     setRecapMarkdown(
-      buildConvexTeamRecap(groupName, data.results, window.location.origin),
+      buildConvexTeamRecap(
+        groupName,
+        data.results,
+        window.location.origin,
+        data.groupSummary?.isStale
+          ? undefined
+          : data.groupSummary?.markdown,
+      ),
     );
   };
 
@@ -768,6 +795,54 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
     );
     setCopiedBriefId(result._id);
     setTimeout(() => setCopiedBriefId(null), 2000);
+  };
+
+  const handleDownloadBrief = (
+    result: SubmissionBrief & { _id: Id<"aiJudgeResults"> },
+    rank: number,
+  ) => {
+    const markdown = buildSubmissionBrief(
+      result,
+      rank,
+      window.location.origin,
+    );
+    const blob = new Blob([markdown], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${result.storySlug || "submission"}-ai-brief.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleGenerateGroupSummary = async () => {
+    setIsGeneratingGroupSummary(true);
+    setGroupSummaryError(null);
+    try {
+      const summary = await generateGroupSummary({ groupId });
+      if (data) {
+        setRecapMarkdown(
+          buildConvexTeamRecap(
+            groupName,
+            data.results,
+            window.location.origin,
+            summary.markdown,
+          ),
+        );
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+              .replace(/^\[.*?\]\s*/, "")
+              .replace(/^Uncaught Error:\s*/, "")
+          : "Please try again.";
+      setGroupSummaryError(message);
+    } finally {
+      setIsGeneratingGroupSummary(false);
+    }
   };
 
   const handleStartReview = async () => {
@@ -1089,6 +1164,75 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                 </div>
               </div>
 
+              <div className="bg-surface rounded-lg border border-hairline p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-sm font-medium text-ink">
+                        AI Cohort Summary
+                      </h3>
+                      {data.groupSummary && (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs ${
+                            data.groupSummary.isStale
+                              ? "bg-amber-50 text-amber-700"
+                              : "bg-green-50 text-green-700"
+                          }`}
+                        >
+                          {data.groupSummary.isStale
+                            ? "Update available"
+                            : "Current"}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-soft mt-0.5 max-w-2xl">
+                      Optional AI-written patterns and recommendations from the
+                      saved reviews. It does not rescan repositories, rank
+                      submissions, or change scores.
+                    </p>
+                    {data.groupSummary && (
+                      <p className="text-xs text-faint mt-1">
+                        Generated{" "}
+                        {new Date(
+                          data.groupSummary.generatedAt,
+                        ).toLocaleString()}{" "}
+                        via {data.groupSummary.provider} (
+                        {data.groupSummary.model})
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => void handleGenerateGroupSummary()}
+                    disabled={isGeneratingGroupSummary}
+                  >
+                    {isGeneratingGroupSummary ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4 mr-2" />
+                    )}
+                    {isGeneratingGroupSummary
+                      ? "Generating"
+                      : data.groupSummary
+                        ? "Regenerate AI Summary"
+                        : "Generate AI Summary"}
+                  </Button>
+                </div>
+                {groupSummaryError && (
+                  <p
+                    className="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+                    role="alert"
+                  >
+                    {groupSummaryError}
+                  </p>
+                )}
+                {data.groupSummary && (
+                  <pre className="mt-4 max-h-80 overflow-y-auto whitespace-pre-wrap border-t border-hairline pt-4 font-sans text-sm text-copy">
+                    {data.groupSummary.markdown}
+                  </pre>
+                )}
+              </div>
+
               {recapMarkdown ? (
                 <div className="bg-surface rounded-lg border border-hairline p-4">
                   <pre className="whitespace-pre-wrap text-sm text-ink font-mono max-h-[36rem] overflow-y-auto">
@@ -1238,6 +1382,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
               {visibleResults.map((result) => {
                 const index = (rankById.get(result._id) ?? 1) - 1;
                 const isExpanded = expandedId === result._id;
+                const isBriefOpen = openBriefId === result._id;
                 const isEditing = editingId === result._id;
                 return (
                   <div
@@ -1438,19 +1583,26 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                         {result.status === "completed" && (
                           <button
                             onClick={() =>
-                              void handleCopyBrief(result, index + 1)
+                              setOpenBriefId(
+                                isBriefOpen ? null : result._id,
+                              )
                             }
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-colors font-medium"
-                            title="Copy a privacy-safe markdown brief for the Convex team"
+                            title={
+                              isBriefOpen
+                                ? "Close submission brief"
+                                : "Open a privacy-safe submission brief"
+                            }
+                            aria-expanded={isBriefOpen}
+                            aria-controls={`brief-${result._id}`}
                           >
-                            {copiedBriefId === result._id ? (
-                              <Check className="w-3.5 h-3.5" />
+                            <FileText className="w-3.5 h-3.5" />
+                            Brief
+                            {isBriefOpen ? (
+                              <ChevronUp className="w-3.5 h-3.5" />
                             ) : (
-                              <Copy className="w-3.5 h-3.5" />
+                              <ChevronDown className="w-3.5 h-3.5" />
                             )}
-                            {copiedBriefId === result._id
-                              ? "Copied"
-                              : "Copy brief"}
                           </button>
                         )}
                         {result.status === "completed" && (
@@ -1477,6 +1629,60 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                         <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md p-3">
                           {result.error}
                         </p>
+                      </div>
+                    )}
+
+                    {isBriefOpen && result.status === "completed" && (
+                      <div
+                        id={`brief-${result._id}`}
+                        className="border-t border-hairline bg-surface-alt p-4"
+                      >
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <h4 className="text-sm font-medium text-ink">
+                              Submission Brief
+                            </h4>
+                            <p className="text-xs text-soft">
+                              Privacy-safe markdown built from this saved
+                              review.
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                void handleCopyBrief(result, index + 1)
+                              }
+                            >
+                              {copiedBriefId === result._id ? (
+                                <Check className="mr-1.5 h-3.5 w-3.5" />
+                              ) : (
+                                <Copy className="mr-1.5 h-3.5 w-3.5" />
+                              )}
+                              {copiedBriefId === result._id
+                                ? "Copied"
+                                : "Copy Markdown"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                handleDownloadBrief(result, index + 1)
+                              }
+                            >
+                              <Download className="mr-1.5 h-3.5 w-3.5" />
+                              Save .md
+                            </Button>
+                          </div>
+                        </div>
+                        <pre className="max-h-96 overflow-y-auto whitespace-pre-wrap rounded-md border border-hairline bg-surface p-3 font-mono text-xs text-copy">
+                          {buildSubmissionBrief(
+                            result,
+                            index + 1,
+                            window.location.origin,
+                          )}
+                        </pre>
                       </div>
                     )}
 

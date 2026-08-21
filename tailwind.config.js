@@ -79,9 +79,13 @@ export default {
         },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        DEFAULT: "0.25rem",
+        sm: "0.25rem",
+        md: "0.25rem",
+        lg: "0.25rem",
+        xl: "0.25rem",
+        "2xl": "0.25rem",
+        "3xl": "0.25rem",
       },
       animation: {
         "fade-in": "fadeIn 0.2s ease-out",

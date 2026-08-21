@@ -286,6 +286,47 @@ const aiResultValidator = v.object({
   editedAt: v.optional(v.number()),
 });
 
+const groupSummaryInputValidator = v.object({
+  title: v.string(),
+  averageScore: v.optional(v.number()),
+  overallReasoning: v.optional(v.string()),
+  convexFeaturesDetected: v.optional(v.array(v.string())),
+  componentsUsed: v.optional(v.array(v.string())),
+  repoFacts: v.optional(repoFactsValidator),
+  gitFacts: v.optional(gitFactsValidator),
+  urlCheck: v.optional(urlCheckValidator),
+});
+
+// Stable, compact fingerprint of the evidence that can affect a group summary.
+function getGroupSummaryFingerprint(
+  rows: Array<Doc<"aiJudgeResults">>,
+): string {
+  const payload = JSON.stringify(
+    [...rows]
+      .sort((a, b) => a._id.localeCompare(b._id))
+      .map((row) => ({
+        id: row._id,
+        status: row.status,
+        criteriaScores: row.criteriaScores,
+        averageScore: row.averageScore,
+        overallReasoning: row.overallReasoning,
+        convexFeaturesDetected: row.convexFeaturesDetected,
+        componentsUsed: row.componentsUsed,
+        repoFacts: row.repoFacts,
+        gitFacts: row.gitFacts,
+        urlCheck: row.urlCheck,
+        error: row.error,
+        editedAt: row.editedAt,
+      })),
+  );
+  let hash = 2166136261;
+  for (let index = 0; index < payload.length; index += 1) {
+    hash ^= payload.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `v1:${rows.length}:${(hash >>> 0).toString(36)}`;
+}
+
 // Helper mirroring judgingGroups: exclude deleted/hidden/archived/rejected stories
 function isStoryValidForJudging(
   story: Doc<"stories"> | null,
@@ -901,6 +942,16 @@ export const getGroupAiResults = query({
     weights: v.optional(
       v.array(v.object({ key: v.string(), weight: v.number() })),
     ),
+    groupSummary: v.optional(
+      v.object({
+        markdown: v.string(),
+        generatedAt: v.number(),
+        provider: v.string(),
+        model: v.string(),
+        fingerprint: v.string(),
+        isStale: v.boolean(),
+      }),
+    ),
   }),
   handler: async (ctx, args) => {
     await requireJudgingGroupPermission(ctx, args.groupId, "judging.ai");
@@ -922,7 +973,29 @@ export const getGroupAiResults = query({
     for (const r of results) {
       counts[r.status]++;
     }
-    return { results, counts, weights: group?.aiRubricWeights };
+    const currentFingerprint = getGroupSummaryFingerprint(rows);
+    const groupSummary =
+      group?.aiGroupSummary &&
+      group.aiGroupSummaryGeneratedAt !== undefined &&
+      group.aiGroupSummaryProvider &&
+      group.aiGroupSummaryModel &&
+      group.aiGroupSummaryFingerprint
+        ? {
+            markdown: group.aiGroupSummary,
+            generatedAt: group.aiGroupSummaryGeneratedAt,
+            provider: group.aiGroupSummaryProvider,
+            model: group.aiGroupSummaryModel,
+            fingerprint: group.aiGroupSummaryFingerprint,
+            isStale:
+              group.aiGroupSummaryFingerprint !== currentFingerprint,
+          }
+        : undefined;
+    return {
+      results,
+      counts,
+      weights: group?.aiRubricWeights,
+      groupSummary,
+    };
   },
 });
 
@@ -1101,6 +1174,95 @@ export const getGroupAiReportData = query({
 });
 
 // --- Internal: used by the analysis action chain ---
+
+/**
+ * Privacy-safe saved result evidence for an on-demand group summary.
+ * The caller's identity is forwarded from the public action.
+ */
+export const getGroupSummaryInput = internalQuery({
+  args: { groupId: v.id("judgingGroups") },
+  returns: v.union(
+    v.null(),
+    v.object({
+      groupName: v.string(),
+      fingerprint: v.string(),
+      hasInFlightReviews: v.boolean(),
+      submissions: v.array(groupSummaryInputValidator),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.ai");
+
+    const group = await ctx.db.get(args.groupId);
+    if (!group || !group.aiJudgeEnabled) return null;
+
+    const rows = await ctx.db
+      .query("aiJudgeResults")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+    const stories = await Promise.all(
+      rows.map(async (row) => await ctx.db.get(row.storyId)),
+    );
+    const submissions: Array<{
+      title: string;
+      averageScore?: number;
+      overallReasoning?: string;
+      convexFeaturesDetected?: Array<string>;
+      componentsUsed?: Array<string>;
+      repoFacts?: Doc<"aiJudgeResults">["repoFacts"];
+      gitFacts?: Doc<"aiJudgeResults">["gitFacts"];
+      urlCheck?: Doc<"aiJudgeResults">["urlCheck"];
+    }> = [];
+
+    for (const [index, row] of rows.entries()) {
+      const story = stories[index];
+      if (row.status !== "completed" || !isStoryValidForJudging(story)) {
+        continue;
+      }
+      submissions.push({
+        title: story.title,
+        averageScore: row.averageScore,
+        overallReasoning: row.overallReasoning,
+        convexFeaturesDetected: row.convexFeaturesDetected,
+        componentsUsed: row.componentsUsed,
+        repoFacts: row.repoFacts,
+        gitFacts: row.gitFacts,
+        urlCheck: row.urlCheck,
+      });
+    }
+
+    return {
+      groupName: group.name,
+      fingerprint: getGroupSummaryFingerprint(rows),
+      hasInFlightReviews: rows.some(
+        (row) => row.status === "pending" || row.status === "running",
+      ),
+      submissions,
+    };
+  },
+});
+
+export const saveGroupSummary = internalMutation({
+  args: {
+    groupId: v.id("judgingGroups"),
+    markdown: v.string(),
+    generatedAt: v.number(),
+    fingerprint: v.string(),
+    provider: v.string(),
+    model: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.groupId, {
+      aiGroupSummary: args.markdown,
+      aiGroupSummaryGeneratedAt: args.generatedAt,
+      aiGroupSummaryFingerprint: args.fingerprint,
+      aiGroupSummaryProvider: args.provider,
+      aiGroupSummaryModel: args.model,
+    });
+    return null;
+  },
+});
 
 /**
  * Mark a result row as running before analysis begins.

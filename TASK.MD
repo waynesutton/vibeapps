@@ -2,8 +2,13 @@
 
 Brief description of the feature and its purpose.
 
+## Recently Completed
+
+- 2026-08-21 17:56 UTC - Closed per-submission AI briefs with copy and `.md` save, Convex Recap plus optional persisted AI cohort summary, shared `0.25rem` non-pill radius, and User Growth Over Time removed from admin Numbers. PRD: prds/ai-review-briefs-radius-and-admin-cleanup.md.
+
 ## Completed Tasks
 
+- [x] 2026-08-21 17:31 UTC: Added closed per-submission AI brief panels with copy and `.md` save, a full-group Convex Recap with the same exports and an optional persisted AI cohort summary, stale-summary detection, the shared `0.25rem` non-pill radius scale, and removed User Growth Over Time plus its backend aggregation from admin. Convex TypeScript, focused ESLint, and the production build passed. The full app TypeScript check retains existing unrelated errors and none in changed files. Browser verification confirmed `4px` cards and controls with full-round pills preserved. PRD: `prds/ai-review-briefs-radius-and-admin-cleanup.md`.
 - [x] 2026-08-19 19:58 UTC: Added privacy-safe per-submission Copy brief actions and a full judging-group Convex Recap tab with preview, copy, and markdown download. Both exports use saved AI judge evidence, prefer components verified as used in code, omit submitter emails and team member details, and do not rescan repositories or change scores. Existing Results, Stats, and Hackathon Report remain available. Focused ESLint and the production build passed; the full app TypeScript check has existing unrelated errors and none in the changed file. PRD: `prds/ai-judge-convex-team-recap.md`. Files: `src/components/admin/AIJudgeResults.tsx`, `prds/ai-judge-convex-team-recap.md`, `changelog.md`, `files.md`.
 
 - [x] 2026-08-19 03:19 UTC: External Judging Process guide in Admin Docs. New Docs sidebar section covers the full human (manual) judge flow for external judges: public vs private access codes, lowercase name rules and session resume, criteria scoring (1-5 or 1-10), per-criterion comments, Pending/Completed/Skip status, single vs multi judge completion (Mark Complete / Judged & Next), collaboration notes with @mentions, search/tag/not-judged/judge/answer filters, troubleshooting, and a first-session checklist. Every Docs page gained Copy Markdown and Download .md for Notion/Google Docs/email handoff. Judge flow section links to the new guide. Verified: zero lints on AdminDocs.tsx. Files: src/components/admin/AdminDocs.tsx, changelog.md, files.md.
