@@ -1,6 +1,6 @@
 # VibeApps design system
 
-Last updated: 2026-08-21 17:20 UTC
+Last updated: 2026-08-22 07:00 UTC
 Source of truth for theming: `src/index.css` (CSS variables) + `tailwind.config.js` (semantic color names). This file documents the decisions so future sessions stay consistent.
 
 ## Direction and feel
@@ -76,6 +76,7 @@ Dark mode notes: no shadows (borders carry all definition), semantic reds/greens
 1. Surface steps: `canvas` → `surface-alt` (inset) → `surface` (raised) → `surface-hover` (interactive).
 2. Border progression: `hairline` for standard separation, `hairline-strong` for emphasis/focus/selected.
 3. Scrims for modals stay black (`bg-black/50`-style overlays), not tokenized. Do not convert scrim blacks to `cta`.
+4. Hover is color-only. Cards and rows wash with `surface-hover`. They never scale, lift, or grow a shadow. Taken from the Open Analytics hover rule; it fits our borders-only depth. Apply the same on admin tables and plates when those get a pass. Do not import OA squircles, springs, Inter Tight, or a 500 weight cap. Our radius and Geist scale stay.
 
 ## Spacing and radius
 
@@ -105,16 +106,19 @@ Dark mode notes: no shadows (borders carry all definition), semantic reds/greens
 - Unselected: `border-hairline hover:bg-surface-hover` with `text-soft` icon.
 
 ### List view row (StoryList, Product Hunt / Digg style)
-Rank number (`text-faint tabular-nums`) + 48–56px `rounded-xl` thumbnail with `border-hairline bg-surface-alt` fallback initial block + title (`text-ink font-semibold`, hover underline) + tagline (`text-copy line-clamp-2`) + tag pills + meta row (`text-soft`) + right-aligned upvote box: `flex-col w-11 min-h-[52px] rounded-lg border-hairline bg-surface hover:border-hairline-strong hover:bg-surface-hover`.
+The ranked list sits in one sidebar-matching plate: `bg-surface rounded-lg border border-hairline overflow-hidden`, hairline dividers between rows. That plate is white on light, white on classic, charcoal on dark, so it lifts off `canvas` the same way Most Vibes / Recent Vibers / Top Categories do. Rows use `px-4 py-5`. Hover is color-only (`hover:bg-surface-hover`) clipped to the plate. Two-digit rank (`01`, `text-[15px] text-faint` tabular nums) + 16:9 `aspect-video` screenshot (`w-20` mobile / `w-[8.5rem]` from `sm`, `rounded-md border-hairline bg-surface-alt` letter fallback) + title (`.app-title`) + first visible tag as a `rounded-full` pill + one-line description + byline + `Nc` comments + vote pill (`h-8 rounded-full border-ink bg-surface`). The vote pill stays `bg-surface` so it remains a discrete island on the tinted row. Vibe view stays its own pattern.
 
 ### Vibe view card
 `bg-surface border border-hairline rounded-xl`, same vote module language as the list row, `text-soft` meta.
 
-### Grid view
-Structure frozen; token colors only.
+### Grid view (StoryList, catalog and `/tag/:slug`)
+`rounded-lg` card, `rounded-md` 16:9 thumbnail. Do not change those radii. Stack: screenshot on top (letter fallback), `.app-title`, `.app-desc` two-line clamp, small tag pills, footer with compact time plus comment/bookmark/repo icons on the left and a `rounded-full bg-brand-soft` vote pill (`▲` plus tabular count) on the right. `h-full` plus `mt-auto` pins the footer. Hover is color-only (`hover:bg-surface-hover`), no scale or shadow. List and vibe stay their own patterns.
 
 ### Tag chips
 DB-stored custom colors render as saved in ALL themes. Fallback (no stored color): `var(--th-surface-alt)` bg, `var(--th-copy)` text, `var(--th-hairline-strong)` border. Exception: `DEFAULT_TAG_*` constants in `TagManagement.tsx` stay hex because they feed `<input type="color">`.
+
+### Tag page header (`/tag/:slug`)
+One row, shared across list/grid/vibe. Icon-only `ChevronLeft` back (44px hit target, `aria-label="Back to all apps"`) plus "Apps tagged with" plus the tag as a `rounded-full` pill, count as `text-soft tabular-nums` on the right. No "Back to Apps" text: header "All" already returns to the catalog; the chevron is for deep links. No extra `max-w-4xl` or inner `px-4 py-8` so the results column matches the homepage.
 
 ### Notification dot
 `bg-brand` (never black; invisible in dark otherwise).

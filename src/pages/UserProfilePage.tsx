@@ -36,8 +36,6 @@ import {
 } from "lucide-react";
 import type { Story } from "../types"; // Import the Story type
 import AlertDialog from "../components/ui/AlertDialog"; // Corrected path
-import "@fontsource/inter/400.css";
-import "@fontsource/inter/500.css";
 import { NotFoundPage } from "./NotFoundPage"; // Added import for NotFoundPage
 import {
   Dialog,
@@ -957,7 +955,7 @@ export default function UserProfilePage() {
       <div className="max-w-4xl mx-auto p-4 sm:p-6 from-slate-50 to-gray-100 min-h-screen">
         <header
           className="mb-4 p-6 bg-surface rounded-lg border border-hairline"
-          style={{ fontFamily: "Inter, sans-serif" }}
+          style={{ fontFamily: "var(--th-font-sans)" }}
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-start">
             {/* Profile Image Section */}
@@ -1015,13 +1013,13 @@ export default function UserProfilePage() {
                     onChange={(e) => setNewName(e.target.value)}
                     className="text-xl font-normal text-ink w-full px-2 py-1 border border-hairline-strong rounded-md text-sm focus:outline-none focus:border-ink"
                     placeholder="Display Name"
-                    style={{ fontFamily: "Inter, sans-serif" }}
+                    style={{ fontFamily: "var(--th-font-sans)" }}
                   />
                   {/* Username Input */}
                   {/* <div className="flex items-center">
                   <span
                     className="text-lg text-soft mr-1"
-                    style={{ fontFamily: "Inter, sans-serif" }}>
+                    style={{ fontFamily: "var(--th-font-sans)" }}>
                     @
                   </span>
                   <input
@@ -1030,7 +1028,7 @@ export default function UserProfilePage() {
                     onChange={(e) => setNewUsername(e.target.value.toLowerCase())}
                     className="text-lg text-soft w-full px-2 py-1 border border-hairline-strong rounded-md text-sm focus:outline-none focus:border-ink"
                     placeholder="username"
-                    style={{ fontFamily: "Inter, sans-serif" }}
+                    style={{ fontFamily: "var(--th-font-sans)" }}
                   />
                 </div> */}
                 </div>
@@ -1038,7 +1036,7 @@ export default function UserProfilePage() {
                 <div className="flex items-baseline mb-1">
                   <h1
                     className="text-lg font-normal text-ink mr-2"
-                    style={{ fontFamily: "Inter, sans-serif" }}
+                    style={{ fontFamily: "var(--th-font-sans)" }}
                   >
                     {loadedProfileUser?.name || "Anonymous User"}
                     {!isEditing && loadedProfileUser?.isVerified && (
@@ -1047,7 +1045,7 @@ export default function UserProfilePage() {
                   </h1>
                   <p
                     className="text-lg text-copy"
-                    style={{ fontFamily: "Inter, sans-serif" }}
+                    style={{ fontFamily: "var(--th-font-sans)" }}
                   >
                     {/* @{loadedProfileUser?.username || "N/A"}{" "} */}
                     {typeof userNumber === "number" && (
@@ -1068,20 +1066,20 @@ export default function UserProfilePage() {
                     maxLength={200}
                     className="w-full px-2 py-1 border border-hairline-strong rounded-md text-sm focus:outline-none focus:border-ink"
                     placeholder="Add a short bio (max 200 chars)"
-                    style={{ fontFamily: "Inter, sans-serif" }}
+                    style={{ fontFamily: "var(--th-font-sans)" }}
                     rows={3}
                   />
                 ) : loadedProfileUser?.bio ? (
                   <p
                     className="text-sm text-copy w-full text-left"
-                    style={{ fontFamily: "Inter, sans-serif" }}
+                    style={{ fontFamily: "var(--th-font-sans)" }}
                   >
                     {loadedProfileUser.bio}
                   </p>
                 ) : (
                   <p
                     className="text-sm text-faint italic w-full text-left"
-                    style={{ fontFamily: "Inter, sans-serif" }}
+                    style={{ fontFamily: "var(--th-font-sans)" }}
                   >
                     No bio yet.
                   </p>
@@ -1098,7 +1096,7 @@ export default function UserProfilePage() {
                       onChange={(e) => setNewWebsite(e.target.value)}
                       className="flex-grow sm:w-auto px-2 py-1 border border-hairline-strong rounded-md text-sm focus:outline-none focus:border-ink"
                       placeholder="Website"
-                      style={{ fontFamily: "Inter, sans-serif" }}
+                      style={{ fontFamily: "var(--th-font-sans)" }}
                     />
                     <input
                       type="url"
@@ -1106,7 +1104,7 @@ export default function UserProfilePage() {
                       onChange={(e) => setNewTwitter(e.target.value)}
                       className="flex-grow sm:w-auto px-2 py-1 border border-hairline-strong rounded-md text-sm focus:outline-none focus:border-ink"
                       placeholder="Twitter"
-                      style={{ fontFamily: "Inter, sans-serif" }}
+                      style={{ fontFamily: "var(--th-font-sans)" }}
                     />
                     <input
                       type="url"
@@ -1114,7 +1112,7 @@ export default function UserProfilePage() {
                       onChange={(e) => setNewBluesky(e.target.value)}
                       className="flex-grow sm:w-auto px-2 py-1 border border-hairline-strong rounded-md text-sm focus:outline-none focus:border-ink"
                       placeholder="Bluesky"
-                      style={{ fontFamily: "Inter, sans-serif" }}
+                      style={{ fontFamily: "var(--th-font-sans)" }}
                     />
                     <input
                       type="url"
@@ -1122,7 +1120,7 @@ export default function UserProfilePage() {
                       onChange={(e) => setNewLinkedin(e.target.value)}
                       className="flex-grow  sm:w-auto px-2 py-1 border border-hairline-strong rounded-md text-sm focus:outline-none focus:border-ink"
                       placeholder="LinkedIn"
-                      style={{ fontFamily: "Inter, sans-serif" }}
+                      style={{ fontFamily: "var(--th-font-sans)" }}
                     />
                   </>
                 ) : (
@@ -1188,7 +1186,7 @@ export default function UserProfilePage() {
                         ? "bg-surface-hover text-copy hover:bg-surface-hover"
                         : "bg-cta text-on-cta hover:bg-cta-hover"
                     }`}
-                    style={{ fontFamily: "Inter, sans-serif" }}
+                    style={{ fontFamily: "var(--th-font-sans)" }}
                   >
                     {isLoadingFollowAction ? (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-surface mr-2"></div>
@@ -1219,7 +1217,7 @@ export default function UserProfilePage() {
                         ? "bg-surface-hover text-soft cursor-not-allowed"
                         : "bg-cta text-on-cta hover:bg-cta-hover"
                     }`}
-                    style={{ fontFamily: "Inter, sans-serif" }}
+                    style={{ fontFamily: "var(--th-font-sans)" }}
                     title={
                       recipientInboxEnabled === false
                         ? "This user's inbox is disabled"
@@ -1250,7 +1248,7 @@ export default function UserProfilePage() {
                         ? "bg-surface-hover text-soft cursor-not-allowed"
                         : "bg-cta text-on-cta hover:bg-surface-hover hover:text-ink"
                     }`}
-                    style={{ fontFamily: "Inter, sans-serif" }}
+                    style={{ fontFamily: "var(--th-font-sans)" }}
                     title={
                       ownInboxEnabled === false
                         ? "Enable your inbox to access messages"
@@ -1300,7 +1298,7 @@ export default function UserProfilePage() {
                   <button
                     onClick={handleEditToggle}
                     className="px-6 py-2 rounded-md bg-cta border border-hairline text-on-cta text-sm font-medium hover:bg-surface-hover hover:text-ink flex items-center justify-center transition-colors"
-                    style={{ fontFamily: "Inter, sans-serif" }}
+                    style={{ fontFamily: "var(--th-font-sans)" }}
                   >
                     <Edit3 className="w-4 h-4 mr-2 text-md" /> Edit my profile
                   </button>
@@ -1314,7 +1312,7 @@ export default function UserProfilePage() {
               {editError && (
                 <p
                   className="text-sm text-red-500 w-full sm:w-auto text-center sm:text-left"
-                  style={{ fontFamily: "Inter, sans-serif" }}
+                  style={{ fontFamily: "var(--th-font-sans)" }}
                 >
                   {editError}
                 </p>
@@ -1323,7 +1321,7 @@ export default function UserProfilePage() {
                 onClick={handleEditToggle} // This is cancel
                 disabled={isSaving}
                 className="px-4 py-2 bg-surface-hover text-copy rounded-md hover:bg-surface-hover transition-colors flex items-center justify-center"
-                style={{ fontFamily: "Inter, sans-serif" }}
+                style={{ fontFamily: "var(--th-font-sans)" }}
               >
                 <XCircle className="w-4 h-4 mr-2" /> Cancel
               </button>
@@ -1340,7 +1338,7 @@ export default function UserProfilePage() {
                     newLinkedin === (loadedProfileUser?.linkedin || ""))
                 }
                 className="px-4 py-2 bg-cta text-on-cta rounded-md hover:bg-cta-hover transition-colors flex items-center justify-center disabled:opacity-50"
-                style={{ fontFamily: "Inter, sans-serif" }}
+                style={{ fontFamily: "var(--th-font-sans)" }}
               >
                 <Save className="w-4 h-4 mr-2" />{" "}
                 {isSaving ? "Saving..." : "Save Changes"}
@@ -1352,7 +1350,7 @@ export default function UserProfilePage() {
         {/* Mini Dashboard Section */}
         <section
           className="mb-4 p-4 rounded-md border bg-surface border-hairline"
-          style={{ fontFamily: "Inter, sans-serif" }}
+          style={{ fontFamily: "var(--th-font-sans)" }}
         >
           <h2 className="text-lg font-normal text-ink mb-4 pb-2 border-b border-hairline-strong">
             My Vibes
@@ -1521,14 +1519,14 @@ export default function UserProfilePage() {
                   <div className="flex-grow mr-4">
                     <Link
                       to={`/s/${story.slug}`}
-                      className="text-lg font-semibold text-ink hover:underline"
+                      className="app-title text-ink hover:underline"
                     >
                       {story.title}
                     </Link>
-                    <p className="text-sm text-copy whitespace-normal break-words">
+                    <p className="app-desc text-copy whitespace-normal break-words mt-1">
                       {story.description}
                     </p>
-                    <p className="text-xs text-soft">
+                    <p className="text-[13px] text-soft mt-1">
                       Submitted by:{" "}
                       {story.authorName || story.authorUsername || "Anonymous"}
                       {story.authorIsVerified && <VerifiedBadge />}
@@ -1656,11 +1654,11 @@ export default function UserProfilePage() {
                         <div className="flex-grow mr-4">
                           <Link
                             to={`/s/${vote.storySlug}`}
-                            className="text-lg font-semibold text-ink hover:underline"
+                            className="app-title text-ink hover:underline"
                           >
                             {vote.storyTitle || "View Story"}
                           </Link>
-                          <p className="text-xs text-faint">
+                          <p className="text-[13px] text-faint mt-1">
                             Voted on:{" "}
                             {new Date(vote._creationTime).toLocaleDateString()}
                           </p>
@@ -1699,7 +1697,7 @@ export default function UserProfilePage() {
                         <div className="flex-grow mr-4">
                           <Link
                             to={`/s/${rating.storySlug}`}
-                            className="text-lg font-semibold text-ink hover:underline"
+                            className="app-title text-ink hover:underline"
                           >
                             {rating.storyTitle || "View Story"}
                           </Link>
@@ -1814,16 +1812,16 @@ export default function UserProfilePage() {
                             <div className="flex-grow mr-4">
                               <Link
                                 to={`/s/${bookmark.storySlug}`}
-                                className="text-lg font-semibold text-ink hover:underline"
+                                className="app-title text-ink hover:underline"
                               >
                                 {bookmark.storyTitle || "View Story"}
                               </Link>
                               {bookmark.storyDescription && (
-                                <p className="text-sm text-copy whitespace-normal break-words mt-1">
+                                <p className="app-desc text-copy whitespace-normal break-words mt-1">
                                   {bookmark.storyDescription}
                                 </p>
                               )}
-                              <p className="text-xs text-faint mt-1">
+                              <p className="text-[13px] text-faint mt-1">
                                 Bookmarked on:{" "}
                                 {new Date(
                                   bookmark._creationTime,
@@ -1968,7 +1966,7 @@ export default function UserProfilePage() {
           <section
             id="manage-profile"
             className="mb-4 p-6 bg-surface rounded-lg border border-hairline"
-            style={{ fontFamily: "Inter, sans-serif" }}
+            style={{ fontFamily: "var(--th-font-sans)" }}
           >
             <h2 className="text-lg font-normal text-ink mb-6 pb-3 border-b border-hairline-strong">
               Manage Profile & Account

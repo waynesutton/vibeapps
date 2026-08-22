@@ -69,16 +69,18 @@ function LeaderboardItem({ story, rank }: LeaderboardItemProps) {
         {/* Rank Number */}
         <div className="flex-shrink-0">
           <div className="w-8 h-8 rounded-full bg-cta flex items-center justify-center">
-            <span className="text-on-cta text-sm font-medium">{rank}</span>
+            <span className="text-on-cta text-sm font-medium tabular-nums">
+              {rank}
+            </span>
           </div>
         </div>
 
         {/* Story Content */}
         <div className="flex-1 min-w-0">
-          <div className="text-sm text-ink">
+          <div className="text-ink">
             <Link
               to={`/s/${story.slug}`}
-              className="font-medium hover:underline block"
+              className="app-title-sm hover:underline block"
             >
               {story.title}
             </Link>

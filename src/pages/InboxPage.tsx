@@ -14,8 +14,6 @@ import {
   Ban,
   Smile,
 } from "lucide-react";
-import "@fontsource/inter/400.css";
-import "@fontsource/inter/500.css";
 import { useDialog } from "../hooks/useDialog";
 import { useEscapeKey } from "../hooks/useEscapeKey";
 
@@ -372,7 +370,7 @@ export default function InboxPage() {
       <DialogComponents />
       <div
         className="container mx-auto "
-        style={{ fontFamily: "Inter, sans-serif" }}
+        style={{ fontFamily: "var(--th-font-sans)" }}
       >
         <div className="flex gap-6 h-[calc(100vh-12rem)]">
           {/* Conversations List */}

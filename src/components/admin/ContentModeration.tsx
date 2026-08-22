@@ -903,7 +903,7 @@ export function ContentModeration() {
                 <Link
                   to={`/s/${item.slug}`}
                   target="_blank"
-                  className="font-medium text-copy hover:text-ink block truncate"
+                  className="app-title-sm text-copy hover:text-ink block truncate"
                 >
                   {item.title}
                 </Link>
@@ -1529,7 +1529,7 @@ export function ContentModeration() {
               </div>
             ) : (
               <p
-                className={`text-sm ${item.type === "comment" ? "text-copy" : "text-soft"} mt-1 break-words`}
+                className={`app-desc-sm ${item.type === "comment" ? "text-copy" : "text-soft"} mt-1 break-words`}
               >
                 {item.type === "story" ? item.description : item.content}
               </p>

@@ -1403,7 +1403,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                               href={`/s/${result.storySlug}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="font-medium text-ink hover:underline truncate"
+                              className="app-title-sm text-ink hover:underline truncate"
                             >
                               {result.storyTitle}
                             </a>

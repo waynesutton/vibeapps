@@ -804,7 +804,7 @@ export function JudgeTracking({
                                     <div className="flex items-center gap-2 mb-1">
                                       <Link
                                         to={`/s/${score.story.slug}`}
-                                        className="font-medium text-blue-600 hover:text-blue-800 truncate"
+                                        className="app-title-sm text-blue-600 hover:text-blue-800 truncate"
                                       >
                                         {score.story.title}
                                       </Link>
@@ -1172,7 +1172,7 @@ export function JudgeTracking({
                           >
                             {/* Submission Header */}
                             <div className="flex items-center justify-between mb-3 pb-2 border-b border-hairline">
-                              <h5 className="font-semibold text-ink">
+                              <h5 className="app-title-sm font-semibold text-ink">
                                 {submissionData.storyTitle}
                               </h5>
                               <div className="text-right">

@@ -1071,7 +1071,7 @@ export function SpamCheck() {
                     <div className="flex flex-wrap items-center gap-2">
                       <Link
                         to={`/s/${result.storySlug}`}
-                        className="text-sm font-medium text-ink hover:underline truncate"
+                        className="app-title-sm text-ink hover:underline truncate"
                       >
                         {result.storyTitle}
                       </Link>
@@ -1413,7 +1413,7 @@ export function SpamCheck() {
                     <div className="flex flex-wrap items-center gap-2">
                       <Link
                         to={`/s/${row.storySlug}`}
-                        className="text-sm font-medium text-ink hover:underline truncate"
+                        className="app-title-sm text-ink hover:underline truncate"
                       >
                         {row.storyTitle}
                       </Link>

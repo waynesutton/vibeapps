@@ -38,18 +38,18 @@ export function WeeklyLeaderboard() {
       <ul className="space-y-3">
         {topStories.map((story, index) => (
           <li key={story._id} className="flex items-start gap-3">
-            <span className="text-sm font-medium text-faint pt-0.5">
+            <span className="text-[15px] font-medium text-faint tabular-nums">
               {index + 1}.
             </span>
             <div className="flex-grow min-w-0">
               <Link
                 to={`/s/${story.slug}`}
-                className="text-sm text-ink hover:text-copy hover:underline font-medium break-words line-clamp-2"
+                className="app-title-sm text-ink hover:text-copy hover:underline break-words line-clamp-2"
                 title={story.title}
               >
                 {story.title}
               </Link>
-              <div className="text-xs text-faint flex items-center gap-2 mt-0.5">
+              <div className="text-[13px] text-faint flex items-center gap-2 mt-0.5">
                 {story.authorUsername ? (
                   <ProfileHoverCard username={story.authorUsername}>
                     <Link

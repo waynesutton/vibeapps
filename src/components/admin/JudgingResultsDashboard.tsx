@@ -241,7 +241,7 @@ export function JudgingResultsDashboard({
                         </td>
                         <td className="p-4">
                           <div>
-                            <p className="font-medium text-ink">
+                            <p className="app-title-sm text-ink">
                               {submission.storyTitle}
                             </p>
                             <p className="text-xs text-soft">
@@ -461,7 +461,7 @@ export function JudgingResultsDashboard({
                                   >
                                     {/* Submission Header */}
                                     <div className="flex items-center justify-between mb-3 pb-2 border-b border-hairline">
-                                      <h5 className="font-semibold text-ink">
+                                      <h5 className="app-title-sm font-semibold text-ink">
                                         {submissionData.storyTitle}
                                       </h5>
                                       <div className="text-right">

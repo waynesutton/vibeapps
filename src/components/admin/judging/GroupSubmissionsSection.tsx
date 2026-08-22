@@ -263,7 +263,7 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
                 className="flex items-center justify-between gap-3 px-3 py-2"
               >
                 <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-ink truncate">
+                  <p className="app-title-sm text-ink truncate">
                     {story.title}
                   </p>
                   <p className="text-xs text-soft truncate">

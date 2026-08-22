@@ -5,8 +5,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Inter var", "sans-serif"],
-        "alfa-slab-one": ['"Alfa Slab One"', "cursive"],
+        sans: ["var(--th-font-sans)"],
+        mono: ["var(--th-font-mono)"],
       },
       colors: {
         // Theme tokens driven by CSS variables (light / classic / dark)

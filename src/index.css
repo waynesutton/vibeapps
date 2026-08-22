@@ -1,16 +1,28 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Mono:wght@700&display=swap");
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  /* Type families. Geist for UI, Geist Mono for data and code.
+     Loaded from Google Fonts in index.html as variable faces (100-900). */
+  :root {
+    --th-font-sans:
+      "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --th-font-mono:
+      "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+      "Liberation Mono", monospace;
+  }
+
   html {
-    /* font-family: "Inter", sans-serif; */
-    font-family: "Eudoxus Sans", sans-serif;
+    font-family: var(--th-font-sans);
+    /* Grayscale antialiasing keeps Geist stems even and thin on light
+       surfaces. Deliberately no text-rendering override: optimizeLegibility
+       turns on discretionary ligatures and softens UI type at small sizes. */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
+    -webkit-text-size-adjust: 100%;
+    font-feature-settings: normal;
+    font-variation-settings: normal;
   }
 
   /* ------------------------------------------------------------------
@@ -147,8 +159,56 @@
 }
 
 .title-font {
-  font-family: "Eudoxus Sans", system-ui, sans-serif;
-  font-weight: 500;
+  font-family: var(--th-font-sans);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* ------------------------------------------------------------------
+   Submission type scale
+
+   One place to tune how app titles and descriptions read across every
+   view: list, grid, vibe, story detail, profile tabs, and the admin
+   dashboard. Fixed px, no clamp.
+
+   These sit in the components layer, so a Tailwind size utility on the
+   same element still wins. If you add `text-sm` next to `.app-title`,
+   the utility overrides the size and the scale breaks. Remove the
+   size utility instead.
+   ------------------------------------------------------------------ */
+@layer components {
+  /* Primary app title. Negative tracking is what keeps Geist from
+     reading like default browser type at this size. */
+  .app-title {
+    font-size: 18px;
+    line-height: 1.35;
+    letter-spacing: -0.015em;
+    font-weight: 600;
+  }
+
+  /* Primary app description / tagline. 1.55 leaves a comfortable
+     25px line for two and three line clamps. */
+  .app-desc {
+    font-size: 16px;
+    line-height: 1.55;
+    letter-spacing: 0;
+  }
+
+  /* Compact title for dense contexts: admin tables, search result
+     rows, leaderboards, sidebar widgets. */
+  .app-title-sm {
+    font-size: 16px;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+    font-weight: 500;
+  }
+
+  /* Compact description for the same dense contexts. */
+  .app-desc-sm {
+    font-size: 15px;
+    line-height: 1.5;
+    letter-spacing: 0;
+  }
 }
 
 @layer base {

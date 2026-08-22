@@ -906,7 +906,7 @@ export default function JudgingInterfacePage() {
                                   className="w-full text-left px-3 py-2 hover:bg-surface-hover border-b border-hairline last:border-b-0"
                                 >
                                   <div className="flex items-center justify-between gap-2">
-                                    <span className="text-sm font-medium text-ink truncate">
+                                    <span className="app-title-sm text-ink truncate">
                                       {submission.title}
                                     </span>
                                     <div className="flex items-center gap-1 flex-shrink-0">
@@ -1067,12 +1067,12 @@ export default function JudgingInterfacePage() {
 
                 <div className="space-y-3">
                   <div>
-                    <h3 className="font-medium text-ink mb-2">
+                    <h3 className="app-title text-ink mb-2">
                       {currentSubmission.title}
                     </h3>
 
                     {/* App/Project Tagline Description */}
-                    <p className="text-copy text-sm leading-relaxed mb-3">
+                    <p className="app-desc text-copy mb-3">
                       {currentSubmission.description}
                     </p>
 

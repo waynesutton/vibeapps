@@ -7,7 +7,7 @@
 - `package.json`: Project dependencies and scripts configuration
 - `tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json`: TypeScript configuration files
 - `vite.config.ts`: `Vite` build tool configuration
-- `tailwind.config.js`: Tailwind CSS styling configuration, including the shared `0.25rem` non-pill corner radius scale
+- `tailwind.config.js`: Tailwind CSS styling configuration, including the shared `0.25rem` non-pill corner radius scale and the Geist `font-sans` / `font-mono` token mappings
 - `postcss.config.js`: PostCSS configuration for CSS processing
 - `eslint.config.js`: ESLint code quality and style configuration (flat config; includes `@convex-dev/eslint-plugin` recommended rules for Convex best practices)
 - `components.json`: `shadcn/ui` components configuration
@@ -36,8 +36,12 @@
 
 All PRD files are now organized in the `prds/` folder for better project structure:
 
+- `prds/list-view-ranked-rows.md`: Ranked editorial list view (two-digit rank, 16:9 screenshot, title plus one tag pill, Vibe it vote pill) inside one `bg-surface` plate. Grid and vibe stay as they are
+- `prds/grid-view-cards.md`: Grid card restack (screenshot on top, title, description, compact time left, vote pill right)
+- `prds/tag-page-header.md`: One-row tag page header (back chevron, tag pill, count) shared by list, grid, and vibe
 - `prds/ai-judge-convex-team-recap.md`: Privacy-safe per-submission AI review briefs and a full judging-group Convex team recap generated from saved review evidence
 - `prds/ai-review-briefs-radius-and-admin-cleanup.md`: Collapsible submission brief exports, optional persisted AI cohort summaries, the shared compact radius update, and removal of the admin user growth chart
+- `prds/geist-type-system.md`: Geist and Geist Mono migration, the 18px title and 16px description type scale, and removal of the Eudoxus, Inter, Space Mono, and Alfa Slab One font stack
 - `prds/security-review-2026-08-13.md`: Full-app `/sec-check` security review across all 341 public Convex functions (auth enforcement, data exposure, integrations) with 22 ungated findings, a verified-OK list, dependency audit results, and a prioritized remediation plan
 - `prds/per-submission-llms-and-md.md`: Per-app `/s/{slug}/llms.txt` and `/s/{slug}.md` files, story sidebar links, and listings in the site-wide directory files
 - `prds/judging-group-editable-slug.md`: Editable judging group URL slug after create, warning dialog, judging.slug access permission, uniqueness, and public URL follow-through
@@ -192,7 +196,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 - `src/main.tsx`: React application entry point, wraps the app in ThemeProvider and themes Clerk per active theme
 - `src/App.tsx`: Main app component with routing configuration and the global themed sonner Toaster
-- `src/index.css`: Global CSS styles, Tailwind imports, three-theme CSS variable definitions, and the shared `0.25rem` radius token
+- `src/index.css`: Global CSS styles, Tailwind imports, three-theme CSS variable definitions, the shared `0.25rem` radius token, the Geist font tokens, and the `.app-title` / `.app-desc` type scale classes
 - `src/vite-env.d.ts`: `Vite` environment type definitions
 - `src/lib/ThemeContext.tsx`: Theme provider and useTheme hook (light/classic/dark, persisted to localStorage, syncs data-theme on html)
 - `src/components/ThemeToggle.tsx`: Header theme switcher button cycling light, classic, dark with Phosphor icons
@@ -211,7 +215,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/components/ResendForm.tsx`: Resend integration form for email collection
 - `src/components/YCHackForm.tsx`: YC AI Hackathon submission form with team information support
 - `src/components/StoryDetail.tsx`: Detailed app view with comments, ratings, voting, image gallery, sticky sidebar for project links and tags, and per-app `llms.txt` plus `{slug}.md` links above View Change Log
-- `src/components/StoryList.tsx`: Story rendering in three view modes: ranked Product Hunt style list rows, grid cards, and refreshed vibe cards
+- `src/components/StoryList.tsx`: Story rendering in three view modes: ranked editorial list rows inside one `bg-surface` plate, grid cards (screenshot on top, title, description, time left / vote pill right), and vibe cards
 - `src/components/ImageGallery.tsx`: Multi-image gallery component with thumbnail navigation and modal Lightbox
 
 ### User Interaction Components
@@ -317,7 +321,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/pages/SignOutPage.tsx`: User sign-out confirmation
 - `src/pages/SetUsernamePage.tsx`: Username setup for new users
 - `src/pages/UserProfilePage.tsx`: User profile display and management with email preferences and unsubscribe functionality
-- `src/pages/TagPage.tsx`: Tag-specific app listings
+- `src/pages/TagPage.tsx`: Tag-filtered app listings with a one-row header (back chevron, tag pill, count) shared by list, grid, and vibe
 - `src/pages/JudgingGroupPage.tsx`: Judge interface for scoring submissions with session management
 - `src/pages/JudgingGroupJoinPage.tsx`: Public join landing page for a judging group at `/judging/:slug/join`, the target of the group's QR code. Reads the existing public `getSubmissionPage` query, redirects signed-in scanners straight to `/judging/:slug/submit` (forwarding any prefill query params), and shows signed-out scanners the group name, header image, and description with sign-in and sign-up links that return them to that form. Notes when a submission password will also be required; renders the shared not-found state when the slug is unknown or the custom submission page is disabled
 - `src/pages/JudgingGroupSubmitPage.tsx`: Public custom submission page for a judging group with password gating, sign-in and sign-up links that return the visitor to this form after authenticating, three admin-selectable layouts (two column, one third, single column with centered hero), sectioned form, locked required tag, admin-selectable field visibility and required status (including required form sections and per-group overrides for admin-added form fields), and per-group custom questions (hidden ones removed) whose answers save to the story; supports query-param prefill (`?url=&title=&tagline=&github=`) for skill-generated submit links and shows Convex errors (like the duplicate project URL guard) without the server prefix
@@ -358,7 +362,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 ## Build & Development Files
 
-- `index.html`: Main HTML template for the SPA
+- `index.html`: Main HTML template for the SPA, loading Geist and Geist Mono from Google Fonts
 - Various TypeScript path configurations for different environments
 
 ## What's needed (pointers)

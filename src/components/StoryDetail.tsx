@@ -986,12 +986,12 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 >
                   <ChevronUp className="w-5 h-5" />
                 </button>
-                <span className="text-copy font-medium text-sm">
+                <span className="text-copy font-medium text-[15px] tabular-nums">
                   {story.votes}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <h1 className="text-xl lg:text-1xl font-bold  text-transform: capitalize text-ink mb-2">
+                <h1 className="text-[26px] sm:text-[30px] leading-[1.2] tracking-[-0.02em] font-semibold capitalize text-ink mb-2">
                   <a
                     href={story.url}
                     className="hover:text-copy break-words"
@@ -1006,7 +1006,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     {story.customMessage}
                   </div>
                 )}
-                <p className="text-ink mb-4 prose prose-base max-w-none">
+                <p className="app-desc text-ink mb-4 max-w-none">
                   {story.description}
                 </p>
                 <ImageGallery
@@ -2904,7 +2904,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     />
                   </Link>
                 )}
-                <h3 className="text-lg font-semibold text-ink mb-1 truncate">
+                <h3 className="app-title text-ink mb-1 truncate">
                   <Link
                     to={`/s/${relatedStory.slug}`}
                     className="hover:text-copy hover:underline"
@@ -2913,7 +2913,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   </Link>
                 </h3>
                 {relatedStory.description && (
-                  <p className="text-sm text-soft mb-2 line-clamp-2 flex-grow">
+                  <p className="app-desc-sm text-soft mb-2 line-clamp-2 flex-grow">
                     {relatedStory.description}
                   </p>
                 )}

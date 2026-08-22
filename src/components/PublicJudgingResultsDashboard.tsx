@@ -188,7 +188,7 @@ export function PublicJudgingResultsDashboard({
                         <div className="flex items-center gap-2">
                           <Link
                             to={`/s/${submission.storySlug}`}
-                            className="font-medium text-ink hover:text-blue-600 hover:underline"
+                            className="app-title-sm text-ink hover:text-blue-600 hover:underline"
                           >
                             {submission.storyTitle}
                           </Link>

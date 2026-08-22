@@ -1,21 +1,32 @@
 import { useParams, Link } from "react-router-dom";
 import { usePaginatedQuery, useQuery } from "convex/react";
+import { ChevronLeft } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { StoryList } from "../components/StoryList";
 import { useLayoutContext } from "../components/Layout";
 import type { Story } from "../types";
 
+function BackToAppsLink() {
+  return (
+    <Link
+      to="/"
+      aria-label="Back to all apps"
+      className="inline-flex items-center justify-center size-11 -ml-2 shrink-0 rounded-md text-soft hover:text-ink hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+    >
+      <ChevronLeft className="size-5" aria-hidden="true" />
+    </Link>
+  );
+}
+
 export function TagPage() {
   const { tagSlug } = useParams<{ tagSlug: string }>();
   const { viewMode } = useLayoutContext();
 
-  // Get the tag by slug
   const tag = useQuery(
     api.tags.getBySlug,
     tagSlug ? { slug: tagSlug } : "skip",
   );
 
-  // Get stories for this tag
   const {
     results: stories,
     status,
@@ -31,7 +42,6 @@ export function TagPage() {
     { initialNumItems: 20 },
   );
 
-  // Get total count of stories for this tag
   const totalCount = useQuery(
     api.stories.getApprovedCountByTag,
     tag && tag._id
@@ -44,85 +54,71 @@ export function TagPage() {
 
   if (tag === undefined) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="text-center">Loading tag...</div>
+      <div className="pt-1 pb-4">
+        <p className="text-sm text-soft">Loading tag...</p>
       </div>
     );
   }
 
   if (tag === null) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <Link
-          to="/"
-          className="text-soft hover:text-copy inline-block mb-6"
-        >
-          ← Back to Apps
-        </Link>
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-ink mb-4">
-            Tag Not Found
-          </h1>
-          <p className="text-soft">
-            The tag "{tagSlug}" doesn't exist or has been removed.
-          </p>
+      <div className="pt-1 pb-4">
+        <div className="flex items-center gap-1">
+          <BackToAppsLink />
+          <h1 className="text-[15px] font-medium text-ink">Tag not found</h1>
         </div>
+        <p className="mt-2 text-sm text-soft">
+          The tag "{tagSlug}" does not exist or has been removed.
+        </p>
       </div>
     );
   }
 
-  const getTagDisplay = () => {
-    const baseStyle = {
-      backgroundColor: tag.backgroundColor || "var(--th-surface-alt)",
-      color: tag.textColor || "var(--th-copy)",
-      border: `1px solid ${tag.borderColor || (tag.backgroundColor ? "transparent" : "var(--th-hairline-strong)")}`,
-    };
-
-    return (
-      <span
-        className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium"
-        style={baseStyle}
-      >
-        {tag.emoji && <span className="mr-1">{tag.emoji}</span>}
-        {tag.iconUrl && !tag.emoji && (
-          <img
-            src={tag.iconUrl}
-            alt=""
-            className="w-4 h-4 mr-1 rounded-sm object-cover"
-          />
-        )}
-        {tag.name}
-      </span>
-    );
-  };
+  const countLabel =
+    totalCount === undefined
+      ? null
+      : `${totalCount} ${totalCount === 1 ? "app" : "apps"}`;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <Link
-        to="/"
-        className="text-soft hover:text-copy inline-block mb-6"
-      >
-        ← Back to Apps
-      </Link>
-
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-4">
-          <h1 className="text-2xl font-bold text-ink">
-            Apps tagged with
-          </h1>
-          {getTagDisplay()}
-        </div>
-        <p className="text-soft">
-          {totalCount === undefined
-            ? "Loading..."
-            : `${totalCount || 0} ${totalCount === 1 ? "app" : "apps"} found`}
-        </p>
-      </div>
+    <div className="pt-1 pb-2">
+      {/* One-row identity: back, tag, count. Shared across list/grid/vibe. */}
+      <header className="flex items-center gap-1.5 sm:gap-2 mb-4 min-h-11">
+        <BackToAppsLink />
+        <h1 className="flex items-center gap-2 min-w-0 flex-1 text-[15px] font-medium text-copy">
+          <span className="sr-only sm:not-sr-only shrink-0">Apps tagged with </span>
+          <span
+            className="inline-flex items-center min-w-0 max-w-full px-3 py-1 rounded-full text-xs font-medium truncate"
+            style={{
+              backgroundColor: tag.backgroundColor || "var(--th-surface-alt)",
+              color: tag.textColor || "var(--th-copy)",
+              border: `1px solid ${
+                tag.borderColor ||
+                (tag.backgroundColor
+                  ? "transparent"
+                  : "var(--th-hairline-strong)")
+              }`,
+            }}
+          >
+            {tag.emoji && <span className="mr-1">{tag.emoji}</span>}
+            {tag.iconUrl && !tag.emoji && (
+              <img
+                src={tag.iconUrl}
+                alt=""
+                width={16}
+                height={16}
+                className="w-4 h-4 mr-1 rounded-sm object-cover"
+              />
+            )}
+            {tag.name}
+          </span>
+        </h1>
+        {countLabel && (
+          <p className="shrink-0 text-sm text-soft tabular-nums">{countLabel}</p>
+        )}
+      </header>
 
       {stories === undefined ? (
-        <div className="text-center py-12">
-          <div className="text-soft">Loading apps...</div>
-        </div>
+        <div className="py-12 text-center text-soft">Loading apps...</div>
       ) : stories.length > 0 ? (
         <StoryList
           stories={stories as Story[]}
@@ -132,20 +128,16 @@ export function TagPage() {
           itemsPerPage={20}
         />
       ) : totalCount === undefined ? (
-        <div className="text-center py-12">
-          <div className="text-soft">Loading apps...</div>
-        </div>
+        <div className="py-12 text-center text-soft">Loading apps...</div>
       ) : (
-        <div className="text-center py-12">
-          <h2 className="text-xl font-medium text-ink mb-2">
-            No apps found
-          </h2>
+        <div className="py-12 text-center">
+          <h2 className="text-xl font-medium text-ink mb-2">No apps found</h2>
           <p className="text-soft mb-6">
             There are no apps with the tag "{tag.name}" yet.
           </p>
           <Link
             to="/submit"
-            className="inline-flex items-center px-4 py-2 bg-cta text-on-cta rounded-md hover:bg-cta-hover transition-colors"
+            className="inline-flex items-center px-4 py-2 bg-cta text-on-cta rounded-md hover:bg-cta-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
           >
             Submit an App
           </Link>
