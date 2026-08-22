@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalQuery } from "../_generated/server";
+import { standardEmailFooter } from "./render";
 
 /**
  * Generate daily admin email template with platform metrics
@@ -92,20 +93,7 @@ export const generateDailyAdminEmail = internalQuery({
               This is an automated report from VibeApps admin system.
             </p>
             
-            <div style="text-align: center; margin: 30px 0; padding: 20px; border-top: 1px solid #eee;">
-              <a href="${args.userUsername ? `https://vibeapps.dev/${args.userUsername}` : args.userId ? "https://vibeapps.dev/set-username" : "https://vibeapps.dev/sign-in?redirect_url=" + encodeURIComponent("https://vibeapps.dev/profile")}" style="color: #666; font-size: 12px;">Manage email preferences</a>${args.unsubscribeToken ? ` | <a href="https://vibeapps.dev/api/unsubscribe?token=${args.unsubscribeToken}" style="color: #666; font-size: 12px;">Unsubscribe</a>` : ""}
-              
-              <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; font-size: 11px; color: #666; line-height: 1.4;">
-                <p style="margin: 5px 0;">If you have any questions, feedback, ideas or problems <a href="https://github.com/waynesutton/vibeapps/issues" style="color: #666;">contact us!</a></p>
-                <p style="margin: 5px 0;">You can manage which email notifications you receive and unsubscribe from your profile page.</p>
-                <p style="margin: 5px 0;">VibeApps is an <a href="https://github.com/waynesutton/vibeapps" style="color: #666;">open-source project</a>.</p>
-                <p style="margin: 5px 0;">Convex, 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
-                <p style="margin: 5px 0;">
-                  Follow us on <a href="https://twitter.com/convex" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
-                  <a href="https://github.com/get-convex/convex-backend" style="color: #666;">Star on Github</a>
-                </p>
-              </div>
-            </div>
+            ${standardEmailFooter({ userId: args.userId, username: args.userUsername, unsubscribeToken: args.unsubscribeToken })}
           </div>
         </body>
       </html>
@@ -181,20 +169,7 @@ export const generateWelcomeEmail = internalQuery({
             
             <p>Happy building!<br>VibeApps.dev</p>
 
-            <div style="text-align: center; margin: 30px 0; padding: 20px; border-top: 1px solid #eee;">
-              <a href="${args.userUsername ? `https://vibeapps.dev/${args.userUsername}` : args.userId ? "https://vibeapps.dev/set-username" : "https://vibeapps.dev/sign-in?redirect_url=" + encodeURIComponent("https://vibeapps.dev/profile")}" style="color: #666; font-size: 12px;">Manage email preferences in the Manage Profile & Account section on your profile page.</a>${args.unsubscribeToken ? ` | <a href="https://vibeapps.dev/api/unsubscribe?token=${args.unsubscribeToken}" style="color: #666; font-size: 12px;">Unsubscribe</a>` : ""}
-              
-              <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; font-size: 11px; color: #666; line-height: 1.4;">
-                <p style="margin: 5px 0;">If you have any questions, feedback, ideas or problems <a href="https://github.com/waynesutton/vibeapps/issues" style="color: #666;">contact us!</a></p>
-                <p style="margin: 5px 0;">You can manage which email notifications you receive and unsubscribe from your profile page.</p>
-                <p style="margin: 5px 0;">VibeApps is an <a href="https://github.com/waynesutton/vibeapps" style="color: #666;">open-source project</a>.</p>
-                <p style="margin: 5px 0;">Convex, 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
-                <p style="margin: 5px 0;">
-                  Follow us on <a href="https://twitter.com/convex" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
-                  <a href="https://github.com/get-convex/convex-backend" style="color: #666;">Star on Github</a>
-                </p>
-              </div>
-            </div>
+            ${standardEmailFooter({ userId: args.userId, username: args.userUsername, unsubscribeToken: args.unsubscribeToken })}
           </div>
         </body>
       </html>
@@ -463,26 +438,13 @@ export const generateEngagementEmail = internalQuery({
             ${inboxSection}
 
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${args.userUsername ? `https://vibeapps.dev/${args.userUsername}` : args.userId ? "https://vibeapps.dev/set-username" : "https://vibeapps.dev/profile"}" style="background: #292929; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">View Your Profile</a>
+              <a href="${args.userUsername ? `https://vibeapps.dev/${args.userUsername}` : "https://vibeapps.dev/set-username"}" style="background: #292929; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">View Your Profile</a>
             </div>
 
             <p>Keep shipping amazing things!</p>
             <p>VibeApps.dev. </p>
 
-            <div style="text-align: center; margin: 30px 0; padding: 20px; border-top: 1px solid #eee;">
-              <a href="${args.userUsername ? `https://vibeapps.dev/${args.userUsername}` : args.userId ? "https://vibeapps.dev/set-username" : "https://vibeapps.dev/sign-in?redirect_url=" + encodeURIComponent("https://vibeapps.dev/profile")}" style="color: #666; font-size: 12px;">Manage email preferences</a>${args.unsubscribeToken ? ` | <a href="https://vibeapps.dev/api/unsubscribe?token=${args.unsubscribeToken}" style="color: #666; font-size: 12px;">Unsubscribe</a>` : ""}
-              
-              <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; font-size: 11px; color: #666; line-height: 1.4;">
-                <p style="margin: 5px 0;">If you have any questions, feedback, ideas or problems <a href="https://github.com/waynesutton/vibeapps/issues" style="color: #666;">contact us!</a></p>
-                <p style="margin: 5px 0;">You can manage which email notifications you receive and unsubscribe from your profile page.</p>
-                <p style="margin: 5px 0;">VibeApps is an <a href="https://github.com/waynesutton/vibeapps" style="color: #666;">open-source project</a>.</p>
-                <p style="margin: 5px 0;">Convex, 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
-                <p style="margin: 5px 0;">
-                  Follow us on <a href="https://twitter.com/convex" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
-                  <a href="https://github.com/get-convex/convex-backend" style="color: #666;">Star on Github</a>
-                </p>
-              </div>
-            </div>
+            ${standardEmailFooter({ userId: args.userId, username: args.userUsername, unsubscribeToken: args.unsubscribeToken })}
           </div>
         </body>
       </html>
@@ -555,20 +517,7 @@ export const generateWeeklyDigest = internalQuery({
 
             <p>VibeApps.dev</p>
 
-            <div style="text-align: center; margin: 30px 0; padding: 20px; border-top: 1px solid #eee;">
-              <a href="${args.userUsername ? `https://vibeapps.dev/${args.userUsername}` : args.userId ? "https://vibeapps.dev/set-username" : "https://vibeapps.dev/sign-in?redirect_url=" + encodeURIComponent("https://vibeapps.dev/profile")}" style="color: #666; font-size: 12px;">Manage email preferences</a>${args.unsubscribeToken ? ` | <a href="https://vibeapps.dev/api/unsubscribe?token=${args.unsubscribeToken}" style="color: #666; font-size: 12px;">Unsubscribe</a>` : ""}
-              
-              <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; font-size: 11px; color: #666; line-height: 1.4;">
-                <p style="margin: 5px 0;">If you have any questions, feedback, ideas or problems <a href="https://github.com/waynesutton/vibeapps/issues" style="color: #666;">contact us!</a></p>
-                <p style="margin: 5px 0;">You can manage which email notifications you receive and unsubscribe from your profile page.</p>
-                <p style="margin: 5px 0;">VibeApps is an <a href="https://github.com/waynesutton/vibeapps" style="color: #666;">open-source project</a>.</p>
-                <p style="margin: 5px 0;">Convex, 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
-                <p style="margin: 5px 0;">
-                  Follow us on <a href="https://twitter.com/convex" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
-                  <a href="https://github.com/get-convex/convex-backend" style="color: #666;">Star on Github</a>
-                </p>
-              </div>
-            </div>
+            ${standardEmailFooter({ userId: args.userId, username: args.userUsername, unsubscribeToken: args.unsubscribeToken })}
           </div>
         </body>
       </html>
@@ -620,23 +569,10 @@ export const generateBroadcastEmail = internalQuery({
               <a href="https://vibeapps.dev" style="background: #292929; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">Visit VibeApps</a>
             </div>
 
-            <div style="text-align: center; margin: 30px 0; padding: 20px; border-top: 1px solid #eee;">
-              <p style="color: #666; font-size: 12px; margin: 0 0 10px 0;">
-                This message was sent by the VibeApps team to keep you updated on platform news and features.
-              </p>
-              <a href="${args.userUsername ? `https://vibeapps.dev/${args.userUsername}` : args.userId ? "https://vibeapps.dev/set-username" : "https://vibeapps.dev/sign-in?redirect_url=" + encodeURIComponent("https://vibeapps.dev/profile")}" style="color: #666; font-size: 12px;">Manage email preferences</a>${args.unsubscribeToken ? ` | <a href="https://vibeapps.dev/api/unsubscribe?token=${args.unsubscribeToken}" style="color: #666; font-size: 12px;">Unsubscribe</a>` : ""}
-              
-              <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; font-size: 11px; color: #666; line-height: 1.4;">
-                <p style="margin: 5px 0;">If you have any questions, feedback, ideas or problems <a href="https://github.com/waynesutton/vibeapps/issues" style="color: #666;">contact us!</a></p>
-                <p style="margin: 5px 0;">You can manage which email notifications you receive and unsubscribe from your profile page.</p>
-                <p style="margin: 5px 0;">VibeApps is an <a href="https://github.com/waynesutton/vibeapps" style="color: #666;">open-source project</a>.</p>
-                <p style="margin: 5px 0;">Convex, 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
-                <p style="margin: 5px 0;">
-                  Follow us on <a href="https://twitter.com/convex" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
-                  <a href="https://github.com/get-convex/convex-backend" style="color: #666;">Star on Github</a>
-                </p>
-              </div>
-            </div>
+            <p style="color: #666; font-size: 12px; margin: 0 0 10px 0; text-align: center;">
+              This message was sent by the VibeApps team to keep you updated on platform news and features.
+            </p>
+            ${standardEmailFooter({ userId: args.userId, username: args.userUsername, unsubscribeToken: args.unsubscribeToken })}
           </div>
         </body>
       </html>
@@ -692,20 +628,7 @@ export const generateMentionEmail = internalQuery({
 
             <p>- The VibeApps Team</p>
 
-            <div style="text-align: center; margin: 30px 0; padding: 20px; border-top: 1px solid #eee;">
-              <a href="${args.userUsername ? `https://vibeapps.dev/${args.userUsername}` : args.userId ? "https://vibeapps.dev/set-username" : "https://vibeapps.dev/sign-in?redirect_url=" + encodeURIComponent("https://vibeapps.dev/profile")}" style="color: #666; font-size: 12px;">Manage email preferences</a>${args.unsubscribeToken ? ` | <a href="https://vibeapps.dev/api/unsubscribe?token=${args.unsubscribeToken}" style="color: #666; font-size: 12px;">Unsubscribe</a>` : ""}
-              
-              <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; font-size: 11px; color: #666; line-height: 1.4;">
-                <p style="margin: 5px 0;">If you have any questions, feedback, ideas or problems <a href="https://github.com/waynesutton/vibeapps/issues" style="color: #666;">contact us!</a></p>
-                <p style="margin: 5px 0;">You can manage which email notifications you receive and unsubscribe from your profile page.</p>
-                <p style="margin: 5px 0;">VibeApps is an <a href="https://github.com/waynesutton/vibeapps" style="color: #666;">open-source project</a>.</p>
-                <p style="margin: 5px 0;">Convex, 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
-                <p style="margin: 5px 0;">
-                  Follow us on <a href="https://twitter.com/convex" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
-                  <a href="https://github.com/get-convex/convex-backend" style="color: #666;">Star on Github</a>
-                </p>
-              </div>
-            </div>
+            ${standardEmailFooter({ userId: args.userId, username: args.userUsername, unsubscribeToken: args.unsubscribeToken })}
           </div>
         </body>
       </html>
@@ -831,15 +754,11 @@ export const generateAdminUserReportEmail = internalQuery({
               </p>
             </div>
 
-            <div style="text-align: center; margin: 30px 0; padding: 20px; border-top: 1px solid #eee;">
-              <p style="color: #666; font-size: 12px; margin: 5px 0;">
-                You received this email because you are an administrator at VibeApps.
-              </p>
-              <p style="color: #666; font-size: 12px; margin: 5px 0;">
-                <a href="${args.adminUsername ? `https://vibeapps.dev/${args.adminUsername}` : args.adminUserId ? "https://vibeapps.dev/set-username" : "https://vibeapps.dev/sign-in?redirect_url=" + encodeURIComponent("https://vibeapps.dev/profile")}" style="color: #666;">Manage email preferences</a> | 
-                <a href="https://vibeapps.dev/admin" style="color: #666;">Admin Dashboard</a>
-              </p>
-            </div>
+            <p style="color: #666; font-size: 12px; margin: 5px 0; text-align: center;">
+              You received this email because you are an administrator at VibeApps.
+              <a href="https://vibeapps.dev/admin" style="color: #666;">Admin Dashboard</a>
+            </p>
+            ${standardEmailFooter({ userId: args.adminUserId, username: args.adminUsername, unsubscribeToken: args.unsubscribeToken })}
           </div>
         </body>
       </html>
@@ -937,15 +856,11 @@ export const generateReportNotificationEmail = internalQuery({
               </p>
             </div>
 
-            <div style="text-align: center; margin: 30px 0; padding: 20px; border-top: 1px solid #eee;">
-              <p style="color: #666; font-size: 12px; margin: 5px 0;">
-                You received this email because you are an administrator at VibeApps.
-              </p>
-              <p style="color: #666; font-size: 12px; margin: 5px 0;">
-                <a href="${args.adminUsername ? `https://vibeapps.dev/${args.adminUsername}` : args.adminUserId ? "https://vibeapps.dev/set-username" : "https://vibeapps.dev/sign-in?redirect_url=" + encodeURIComponent("https://vibeapps.dev/profile")}" style="color: #666;">Manage email preferences</a> | 
-                <a href="https://vibeapps.dev/admin" style="color: #666;">Admin Dashboard</a>
-              </p>
-            </div>
+            <p style="color: #666; font-size: 12px; margin: 5px 0; text-align: center;">
+              You received this email because you are an administrator at VibeApps.
+              <a href="https://vibeapps.dev/admin" style="color: #666;">Admin Dashboard</a>
+            </p>
+            ${standardEmailFooter({ userId: args.adminUserId, username: args.adminUsername, unsubscribeToken: args.unsubscribeToken })}
           </div>
         </body>
       </html>

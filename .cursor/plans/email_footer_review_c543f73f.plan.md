@@ -4,25 +4,25 @@ overview: Point production unsubscribe at the prod Convex site, share one email 
 todos:
   - id: prd
     content: Write prds/email-footer-unsubscribe-spam-review.md
-    status: pending
+    status: completed
   - id: proxy-idempotent
     content: Point /api/unsubscribe at prod Convex site; make token handler idempotent
-    status: pending
+    status: completed
   - id: unified-footer
     content: Add standardEmailFooter + emailPreferencesUrl; use in templates, submissions, spam, judging shell
-    status: pending
+    status: completed
   - id: profile-hash
     content: "Add #email-preferences hash scroll on own profile; do not add a /profile route"
-    status: pending
+    status: completed
   - id: spam-review-email
     content: New spam_review_request type, admin email + in-app alert from requestSpamReview
-    status: pending
+    status: completed
   - id: spam-tab-count
     content: Review-requested count chip/filter on SpamCheck; header/notifications copy
-    status: pending
+    status: completed
   - id: docs-sync
     content: Update task.md, changelog.md, files.md and print commit message
-    status: pending
+    status: completed
 isProject: false
 ---
 

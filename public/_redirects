@@ -15,7 +15,7 @@
 # Email unsubscribe (GET link clicks and RFC 8058 one-click POST).
 # Must proxy to the same Convex deployment that sends the emails,
 # since unsubscribe tokens live in that deployment's database.
-/api/unsubscribe https://acoustic-goldfinch-461.convex.site/api/unsubscribe 200
+/api/unsubscribe https://whimsical-dalmatian-205.convex.site/api/unsubscribe 200
 
 # All routes go to the SPA (including /s/:slug)
 /* /index.html 200

@@ -23,6 +23,7 @@ export default defineSchema({
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_username", ["username"]) // Index for fetching by username
+    .index("by_email", ["email"]) // Judging group sends match recipients to accounts by email
     .searchIndex("search_users", {
       searchField: "name",
       filterFields: ["isBanned"],
@@ -1037,6 +1038,7 @@ export default defineSchema({
       v.literal("message"), // Direct message alert
       v.literal("dm_report"), // DM report alert for admins
       v.literal("spam"), // Submission marked as spam by an admin
+      v.literal("spam_review"), // Submitter requested review of a spam mark (admins)
     ),
     storyId: v.optional(v.id("stories")), // Related story for vote, comment, rating, judged alerts
     commentId: v.optional(v.id("comments")), // Specific comment for comment alerts
@@ -1075,6 +1077,7 @@ export default defineSchema({
       v.literal("admin_report_notification"),
       v.literal("admin_user_report_notification"),
       v.literal("spam_notification"),
+      v.literal("spam_review_request"),
       v.literal("submission_confirmation"),
       v.literal("submission_admin_alert"),
       v.literal("results_live"),
@@ -1368,7 +1371,7 @@ export default defineSchema({
     lastSyncError: v.optional(v.string()),
   }).index("by_identifier", ["identifier"]),
 
-  // Cached Luma events. Admin picks which to list and where they appear.
+  // Cached Luma events. Admin adds by URL; only listed rows appear on the site.
   lumaEvents: defineTable({
     lumaEventId: v.string(),
     name: v.string(),

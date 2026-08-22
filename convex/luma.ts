@@ -133,13 +133,13 @@ function parseLumaEvent(entry: unknown): ParsedLumaEvent | null {
     pickString(nested, ["api_id", "id"]) ?? pickString(row, ["api_id", "id"]);
   const name = pickString(nested, ["name", "title"]);
   if (!lumaEventId || !name) return null;
-  const url =
+  const rawUrl =
     pickString(nested, ["url", "event_url"]) ??
-    `https://lu.ma/${lumaEventId.replace(/^evt-/, "")}`;
+    `https://luma.com/${lumaEventId.replace(/^evt-/, "")}`;
   return {
     lumaEventId,
     name,
-    url,
+    url: absoluteLumaUrl(rawUrl),
     coverUrl: pickString(nested, ["cover_url", "coverUrl", "thumbnail_url"]),
     description: oneLineDescription(
       pickString(nested, ["description", "description_short", "one_liner"]),
@@ -155,7 +155,7 @@ function lumaErrorMessage(status: number, bodyText: string): string {
     return "LUMA_API_KEY is invalid. Paste the secret key value, not the name you gave it, then run npx convex env set LUMA_API_KEY.";
   }
   if (status === 403) {
-    return "This API key cannot read that event. Create the key on the same calendar that lists it (select that calendar at luma.com/calendar/manage/api-keys), then click Sync calendar. Keys only see events on the calendar they were created for, including events listed there but hosted by someone else.";
+    return "This API key cannot read that event. Create the key on the same calendar that lists it (select that calendar at luma.com/calendar/manage/api-keys). Keys only see events on the calendar they were created for, including events listed there but hosted by someone else.";
   }
   return `Luma API ${status}: ${bodyText.slice(0, 280)}`;
 }
@@ -204,14 +204,90 @@ function eventSlug(raw: string): string {
   return raw.replace(/\/$/, "").split("/").pop()?.toLowerCase() ?? "";
 }
 
-async function listCalendarEvents(): Promise<Array<ParsedLumaEvent>> {
+function absoluteLumaUrl(url: string, fallback?: string): string {
+  const trimmed = url.trim();
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (fallback && /^https?:\/\//i.test(fallback)) return fallback;
+  const slug = trimmed.replace(/^\/+/, "");
+  if (!slug) return fallback ?? trimmed;
+  return `https://luma.com/${slug}`;
+}
+
+function parseFromLumaPayload(payload: unknown): ParsedLumaEvent | null {
+  return (
+    parseLumaEvent(payload) ??
+    parseLumaEvent(asRecord(payload)?.event) ??
+    parseLumaEvent(asRecord(payload)?.entry)
+  );
+}
+
+async function getEventById(eventId: string): Promise<ParsedLumaEvent | null> {
+  const attempts: Array<{ path: string; params: Record<string, string> }> = [
+    { path: "/v1/events/get", params: { event_id: eventId } },
+    { path: "/v1/event/get", params: { id: eventId } },
+  ];
+  for (const attempt of attempts) {
+    try {
+      const parsed = parseFromLumaPayload(await lumaGet(attempt.path, attempt.params));
+      if (parsed) return parsed;
+    } catch {
+      // Get Event is manage-only. View-listed events 403.
+    }
+  }
+  return null;
+}
+
+function parseLumaPublicHtml(html: string, pageUrl: string): ParsedLumaEvent | null {
+  const match = html.match(
+    /<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/,
+  );
+  if (!match?.[1]) return null;
+  let parsedJson: unknown;
+  try {
+    parsedJson = JSON.parse(match[1]);
+  } catch {
+    return null;
+  }
+  const pageProps = asRecord(asRecord(parsedJson)?.props)?.pageProps;
+  const dataRecord = asRecord(
+    asRecord(asRecord(pageProps)?.initialData)?.data,
+  );
+  if (!dataRecord) return null;
+  const nested = asRecord(dataRecord.event) ?? dataRecord;
+  const parsed = parseLumaEvent(nested) ?? parseLumaEvent(dataRecord);
+  if (!parsed) return null;
+  parsed.url = absoluteLumaUrl(parsed.url, pageUrl);
+  if (!parsed.coverUrl) {
+    parsed.coverUrl = pickString(nested, ["cover_url", "social_image_url"]);
+  }
+  if (!parsed.description) {
+    parsed.description = oneLineDescription(
+      pickString(nested, ["description", "description_md", "description_short"]),
+    );
+  }
+  return parsed;
+}
+
+async function fetchPublicLumaEvent(url: string): Promise<ParsedLumaEvent | null> {
+  try {
+    const response = await fetch(url, { headers: { Accept: "text/html" } });
+    if (!response.ok) return null;
+    return parseLumaPublicHtml(await response.text(), url);
+  } catch {
+    return null;
+  }
+}
+
+async function listCalendarEvents(
+  sortDirection: "asc" | "desc" = "desc",
+): Promise<Array<ParsedLumaEvent>> {
   const events: Array<ParsedLumaEvent> = [];
   let cursor: string | undefined;
   for (let page = 0; page < 5; page += 1) {
     const params: Record<string, string | Array<string>> = {
       pagination_limit: "50",
       sort_column: "start_at",
-      sort_direction: "asc",
+      sort_direction: sortDirection,
       status: "approved",
       // Include events listed on this calendar but hosted by another calendar
       access: ["manage", "view"],
@@ -220,7 +296,7 @@ async function listCalendarEvents(): Promise<Array<ParsedLumaEvent>> {
     const body = asRecord(await lumaGet("/v1/calendars/events/list", params));
     const entries = Array.isArray(body?.entries) ? body.entries : [];
     for (const entry of entries) {
-      const parsed = parseLumaEvent(entry);
+      const parsed = parseFromLumaPayload(entry);
       if (parsed) events.push(parsed);
     }
     const hasMore = body?.has_more === true;
@@ -230,6 +306,19 @@ async function listCalendarEvents(): Promise<Array<ParsedLumaEvent>> {
     cursor = next;
   }
   return events;
+}
+
+function matchCalendarEvent(
+  events: Array<ParsedLumaEvent>,
+  url: string,
+): ParsedLumaEvent | null {
+  const slug = eventSlug(url);
+  if (!slug) return null;
+  return (
+    events.find((event) => eventSlug(event.url) === slug) ??
+    events.find((event) => event.url.toLowerCase().includes(slug)) ??
+    null
+  );
 }
 
 export const getPublicConfig = query({
@@ -330,7 +419,10 @@ export const getAdminState = query({
       .query("lumaConfig")
       .withIndex("by_identifier", (q) => q.eq("identifier", CONFIG_ID))
       .unique();
-    const events = await ctx.db.query("lumaEvents").take(MAX_EVENTS);
+    const events = await ctx.db
+      .query("lumaEvents")
+      .withIndex("by_isListed_and_order", (q) => q.eq("isListed", true))
+      .take(MAX_EVENTS);
     events.sort((a, b) => a.order - b.order);
     return {
       config: {
@@ -514,34 +606,33 @@ export const upsertSyncedEvents = internalMutation({
       lastSyncError: args.error,
     });
 
+    const existing = await ctx.db.query("lumaEvents").take(MAX_EVENTS);
+    // Drop calendar-dump rows the admin never added by URL.
+    await Promise.all(
+      existing
+        .filter((row) => !row.isListed)
+        .map((row) => ctx.db.delete(row._id)),
+    );
     if (args.error) return 0;
 
-    const existing = await ctx.db.query("lumaEvents").take(MAX_EVENTS);
-    const byId = new Map(existing.map((row) => [row.lumaEventId, row]));
-    let nextOrder =
-      existing.reduce((max, row) => Math.max(max, row.order), -1) + 1;
+    const byId = new Map(
+      existing
+        .filter((row) => row.isListed)
+        .map((row) => [row.lumaEventId, row]),
+    );
 
     for (const incoming of args.events) {
       const current = byId.get(incoming.lumaEventId);
-      if (current) {
-        await ctx.db.patch(current._id, {
-          name: incoming.name,
-          url: incoming.url,
-          coverUrl: incoming.coverUrl,
-          description: incoming.description,
-          startAt: incoming.startAt,
-          endAt: incoming.endAt,
-          timezone: incoming.timezone,
-        });
-      } else {
-        await ctx.db.insert("lumaEvents", {
-          ...incoming,
-          isListed: false,
-          order: nextOrder,
-          placements: DEFAULT_PLACEMENTS,
-        });
-        nextOrder += 1;
-      }
+      if (!current) continue;
+      await ctx.db.patch(current._id, {
+        name: incoming.name,
+        url: incoming.url,
+        coverUrl: incoming.coverUrl,
+        description: incoming.description,
+        startAt: incoming.startAt,
+        endAt: incoming.endAt,
+        timezone: incoming.timezone,
+      });
     }
     return args.events.length;
   },
@@ -586,6 +677,28 @@ export const insertLookedUpEvent = internalMutation({
       order: maxOrder + 1,
       placements: DEFAULT_PLACEMENTS,
     });
+  },
+});
+
+export const listListedIds = internalQuery({
+  args: {},
+  returns: v.array(v.object({ lumaEventId: v.string() })),
+  handler: async (ctx) => {
+    const listed = await ctx.db
+      .query("lumaEvents")
+      .withIndex("by_isListed_and_order", (q) => q.eq("isListed", true))
+      .take(MAX_EVENTS);
+    return listed.map((row) => ({ lumaEventId: row.lumaEventId }));
+  },
+});
+
+export const removeEvent = mutation({
+  args: { eventId: v.id("lumaEvents") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requirePermission(ctx, "settings.manage");
+    await ctx.db.delete(args.eventId);
+    return null;
   },
 });
 
@@ -666,31 +779,35 @@ export const addByUrl = action({
             platform: "luma",
             url: candidate,
           });
-          parsed =
-            parseLumaEvent(payload) ??
-            parseLumaEvent(asRecord(payload)?.event) ??
-            parseLumaEvent(asRecord(payload)?.entry);
-          if (parsed) break;
+          const eventRec = asRecord(asRecord(payload)?.event);
+          const eventId = eventRec
+            ? pickString(eventRec, ["id", "api_id"])
+            : undefined;
+          if (eventId) {
+            parsed = await getEventById(eventId);
+            if (parsed) break;
+          }
         } catch {
           // Lookup is calendar-scoped; listed-but-hosted-elsewhere events 403.
         }
       }
       if (!parsed) {
-        const slug = eventSlug(url);
-        const listed = await listCalendarEvents();
-        parsed =
-          listed.find((event) => eventSlug(event.url) === slug) ??
-          listed.find((event) => event.url.toLowerCase().includes(slug)) ??
-          null;
+        for (const candidate of eventUrlVariants(url)) {
+          parsed = await fetchPublicLumaEvent(candidate);
+          if (parsed) break;
+        }
+      }
+      if (!parsed) {
+        parsed = matchCalendarEvent(await listCalendarEvents("desc"), url);
       }
       if (!parsed) {
         return {
           ok: false,
           error:
-            "That event is not on the calendar this API key belongs to. Create the key on the calendar that lists the event, then Sync calendar.",
+            "Could not load that event. Check the URL, or create LUMA_API_KEY on the calendar that lists it.",
         };
       }
-      if (!parsed.url.startsWith("http")) parsed.url = url;
+      parsed.url = absoluteLumaUrl(parsed.url, url);
       await ctx.runMutation(internal.luma.insertLookedUpEvent, {
         event: parsed,
       });
@@ -730,13 +847,35 @@ export const syncFromApi = internalAction({
           pickString(asRecord(calendar.calendar) ?? {}, ["name"])
         : undefined;
 
-      const events = await listCalendarEvents();
-
-      const count: number = await ctx.runMutation(
-        internal.luma.upsertSyncedEvents,
-        { calendarName, events: events.slice(0, MAX_EVENTS) },
+      const listed: Array<{ lumaEventId: string }> = await ctx.runQuery(
+        internal.luma.listListedIds,
+        {},
       );
-      return { ok: true, count, calendarName };
+      const events: Array<ParsedLumaEvent> = [];
+      const found = new Set<string>();
+      for (const row of listed) {
+        const parsed = await getEventById(row.lumaEventId);
+        if (parsed) {
+          events.push(parsed);
+          found.add(row.lumaEventId);
+        }
+      }
+      if (found.size < listed.length) {
+        const calendar = await listCalendarEvents("desc");
+        for (const item of calendar) {
+          if (found.has(item.lumaEventId)) continue;
+          if (listed.some((row) => row.lumaEventId === item.lumaEventId)) {
+            events.push(item);
+            found.add(item.lumaEventId);
+          }
+        }
+      }
+
+      await ctx.runMutation(internal.luma.upsertSyncedEvents, {
+        calendarName,
+        events,
+      });
+      return { ok: true, count: listed.length, calendarName };
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Luma sync failed";

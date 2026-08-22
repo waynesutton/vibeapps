@@ -25,7 +25,8 @@ type AlertType = {
     | "admin_message"
     | "message"
     | "dm_report"
-    | "spam";
+    | "spam"
+    | "spam_review";
   isRead: boolean;
   actorUserId?: Id<"users">;
   storyId?: Id<"stories">;
@@ -196,6 +197,8 @@ function NotificationItem({ alert }: NotificationItemProps) {
         return "reported a message";
       case "spam":
         return "Your post has been marked as spam and has been removed. Check your email for the reason.";
+      case "spam_review":
+        return "requested a review of a spam mark on";
       default:
         return "interacted with your content";
     }
@@ -305,6 +308,18 @@ function NotificationItem({ alert }: NotificationItemProps) {
               <span>Someone {getNotificationText()}</span>
             )}
           </div>
+
+          {/* Admin-only alert: jump straight to the disputed row */}
+          {alert.type === "spam_review" && (
+            <div className="mt-2">
+              <Link
+                to="/admin?tab=spam"
+                className="inline-block px-3 py-1 bg-cta text-on-cta text-xs rounded hover:bg-cta-hover transition-colors"
+              >
+                Review in spam dashboard
+              </Link>
+            </div>
+          )}
 
           {/* In-app dispute: only shown to the owner while the mark stands */}
           {alert.type === "spam" && spamStatus?.isSpam && (

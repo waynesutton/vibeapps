@@ -249,6 +249,8 @@ export function SpamCheck() {
     Set<Id<"stories">>
   >(new Set());
   const [showMarkedReview, setShowMarkedReview] = useState(false);
+  // Filters the marked-spam list down to rows the submitter disputed
+  const [showDisputedOnly, setShowDisputedOnly] = useState(false);
   const [expandedId, setExpandedId] = useState<Id<"spamCheckResults"> | null>(
     null,
   );
@@ -355,12 +357,18 @@ export function SpamCheck() {
     });
   };
 
+  // Disputed rows carry reviewRequestedAt; the amber chip filters to them
+  const markedRows = markedSpam ?? [];
+  const disputedRows = markedRows.filter(
+    (r) => r.reviewRequestedAt !== undefined,
+  );
+  const visibleMarkedRows = showDisputedOnly ? disputedRows : markedRows;
+
   const toggleMarkedSelectAll = () => {
-    const rows = markedSpam ?? [];
-    if (markedSelectedIds.size === rows.length) {
+    if (markedSelectedIds.size === visibleMarkedRows.length) {
       setMarkedSelectedIds(new Set());
     } else {
-      setMarkedSelectedIds(new Set(rows.map((r) => r.storyId)));
+      setMarkedSelectedIds(new Set(visibleMarkedRows.map((r) => r.storyId)));
     }
   };
 
@@ -1358,17 +1366,35 @@ export function SpamCheck() {
                   onChange={setMarkedRange}
                   placeholder="Filter by marked date"
                 />
+                {disputedRows.length > 0 && (
+                  <button
+                    type="button"
+                    aria-pressed={showDisputedOnly}
+                    title={
+                      showDisputedOnly
+                        ? "Show all marked spam"
+                        : "Show only rows with a review request"
+                    }
+                    onClick={() => setShowDisputedOnly((prev) => !prev)}
+                    className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-amber-800 bg-amber-100 border border-amber-200 rounded-full transition-shadow cursor-pointer hover:shadow-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-ink ${
+                      showDisputedOnly ? "ring-1 ring-current shadow-sm" : ""
+                    }`}
+                  >
+                    <Flag className="w-3 h-3" />
+                    {disputedRows.length} review requested
+                  </button>
+                )}
                 <label className="flex items-center gap-2 text-sm text-soft cursor-pointer">
                   <input
                     type="checkbox"
                     checked={
-                      markedSelectedIds.size === markedSpam.length &&
-                      markedSpam.length > 0
+                      markedSelectedIds.size === visibleMarkedRows.length &&
+                      visibleMarkedRows.length > 0
                     }
                     onChange={toggleMarkedSelectAll}
                     className="rounded border-hairline-strong"
                   />
-                  Select all ({markedSpam.length})
+                  Select all ({visibleMarkedRows.length})
                 </label>
                 {markedSelectedIds.size > 0 && (
                   <>
@@ -1397,8 +1423,13 @@ export function SpamCheck() {
                 )}
               </div>
 
-              {/* Marked spam rows */}
-              {markedSpam.map((row) => (
+              {/* Marked spam rows (optionally narrowed to disputed ones) */}
+              {showDisputedOnly && visibleMarkedRows.length === 0 && (
+                <div className="text-sm text-soft py-4 text-center border border-dashed border-hairline rounded-lg">
+                  No open review requests in this list.
+                </div>
+              )}
+              {visibleMarkedRows.map((row) => (
                 <div
                   key={row.storyId}
                   className="flex items-start gap-3 p-3 border border-red-200 rounded-lg bg-surface"

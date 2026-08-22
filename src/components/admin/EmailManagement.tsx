@@ -87,6 +87,11 @@ const EMAIL_TYPE_GROUPS: Array<{
         label: "Spam notifications",
         description: "Tells a submitter their post was marked as spam",
       },
+      {
+        key: "spam_review_request",
+        label: "Spam review requests",
+        description: "Notifies admins when a submitter disputes a spam mark",
+      },
     ],
   },
   {

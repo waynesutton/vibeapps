@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import {
   internalAction,
   internalMutation,
+  internalQuery,
   mutation,
   query,
   type MutationCtx,
@@ -655,6 +656,30 @@ export const sendGroupTestEmail = mutation({
 });
 
 /**
+ * Match a recipient email to a VibeApps account so the shared footer can
+ * link their preferences and carry an unsubscribe token. Judges often have
+ * no account, so null is a normal result.
+ */
+export const getAccountByEmail = internalQuery({
+  args: { email: v.string() },
+  returns: v.union(
+    v.null(),
+    v.object({
+      userId: v.id("users"),
+      username: v.optional(v.string()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email.trim()))
+      .first();
+    if (!user) return null;
+    return { userId: user._id, username: user.username };
+  },
+});
+
+/**
  * Delivery: substitute per-recipient variables, render markdown-lite to
  * HTML, wrap in the branded shell, and send through the core email action
  * (which enforces the master switch and per-type toggle and logs the send).
@@ -709,11 +734,32 @@ export const deliverGroupEmails = internalAction({
             ? renderMarkdownLite(applyTemplateVars(args.signature, vars))
             : undefined;
 
+          // Recipients are { name, email } only: match to an account when
+          // one exists so the footer links preferences and List-Unsubscribe
+          // is set. Unmatched recipients get the signed-in fallback links.
+          const account = await ctx.runQuery(
+            internal.emails.judgingGroupEmails.getAccountByEmail,
+            { email: recipient.email },
+          );
+          let unsubscribeToken: string | undefined;
+          if (account) {
+            unsubscribeToken = await ctx.runMutation(
+              internal.emails.linkHelpers.generateUnsubscribeToken,
+              { userId: account.userId, purpose: "all" },
+            );
+          }
+
           const result = await ctx.runAction(internal.emails.resend.sendEmail, {
             to: recipient.email,
             subject,
-            html: templateEmailShell(bodyHtml, signatureHtml),
+            html: templateEmailShell(bodyHtml, signatureHtml, {
+              userId: account?.userId,
+              username: account?.username,
+              unsubscribeToken,
+            }),
             emailType: "judging_group" as const,
+            userId: account?.userId,
+            unsubscribeToken,
             replyTo: args.replyTo,
             metadata: {
               groupId: args.groupId,

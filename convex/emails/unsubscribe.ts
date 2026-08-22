@@ -19,8 +19,29 @@ export const handleUnsubscribeToken = internalMutation({
         return { success: false };
       }
 
-      // Check if token is expired or already consumed
-      if (tokenRecord.expiresAt < Date.now() || tokenRecord.consumedAt) {
+      const existing = await ctx.db
+        .query("emailSettings")
+        .withIndex("by_user", (q) => q.eq("userId", tokenRecord.userId))
+        .unique();
+
+      // Idempotent success: a consumed token whose owner already turned off
+      // the emails it covers (e.g. Gmail's one-click POST fired before the
+      // user's GET, or a repeat click) shows the confirmation page instead
+      // of "expired". Unknown or truly expired tokens still fail below.
+      if (tokenRecord.consumedAt) {
+        const alreadyApplied =
+          tokenRecord.purpose === "all"
+            ? existing?.unsubscribedAt !== undefined
+            : tokenRecord.purpose === "daily_engagement"
+              ? existing?.dailyEngagementEmails === false
+              : tokenRecord.purpose === "weekly_digest"
+                ? existing?.weeklyDigestEmails === false
+                : existing?.marketingEmails === false;
+        return { success: alreadyApplied };
+      }
+
+      // Check if token is expired (never consumed)
+      if (tokenRecord.expiresAt < Date.now()) {
         return { success: false };
       }
 
@@ -28,12 +49,6 @@ export const handleUnsubscribeToken = internalMutation({
       await ctx.db.patch(tokenRecord._id, {
         consumedAt: Date.now(),
       });
-
-      // Update user's email settings based on token purpose
-      const existing = await ctx.db
-        .query("emailSettings")
-        .withIndex("by_user", (q) => q.eq("userId", tokenRecord.userId))
-        .unique();
 
       const updates: any = {};
 

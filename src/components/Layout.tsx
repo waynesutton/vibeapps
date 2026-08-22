@@ -967,6 +967,8 @@ function DropdownNotificationItem({
         return "reported a submission";
       case "spam":
         return "Your post has been marked as spam and has been removed. Check your email for details.";
+      case "spam_review":
+        return "requested a review of a spam mark";
       default:
         return "interacted with your content";
     }

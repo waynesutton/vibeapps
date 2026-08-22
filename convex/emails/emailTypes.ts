@@ -16,6 +16,7 @@ export const EMAIL_TYPES = [
   "admin_report_notification",
   "admin_user_report_notification",
   "spam_notification",
+  "spam_review_request",
   "submission_confirmation",
   "submission_admin_alert",
   "results_live",
@@ -37,6 +38,7 @@ export const emailTypeValidator = v.union(
   v.literal("admin_report_notification"),
   v.literal("admin_user_report_notification"),
   v.literal("spam_notification"),
+  v.literal("spam_review_request"),
   v.literal("submission_confirmation"),
   v.literal("submission_admin_alert"),
   v.literal("results_live"),
@@ -56,6 +58,9 @@ export const EMAIL_TYPE_DEFAULTS: Record<EmailType, boolean> = {
   admin_report_notification: true,
   admin_user_report_notification: true,
   spam_notification: true,
+  // Admin alert when a submitter disputes a spam mark; on by default like
+  // the other admin notifications
+  spam_review_request: true,
   submission_confirmation: false,
   submission_admin_alert: false,
   results_live: false,

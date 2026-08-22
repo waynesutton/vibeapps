@@ -123,13 +123,73 @@ export function renderMarkdownLite(markdown: string): string {
   return html.join("\n");
 }
 
+// Recipient context for the shared footer links. userId is a plain string
+// here (not Id<"users">) so this module stays dependency-free for the
+// frontend previews that import it.
+export type EmailFooterOpts = {
+  userId?: string;
+  username?: string;
+  unsubscribeToken?: string;
+};
+
+/**
+ * Where "Manage email preferences" points. Never `/profile` (not a real SPA
+ * route): known usernames land on the public profile with the
+ * #email-preferences fragment, account holders without a username go to
+ * /set-username, and unknown recipients sign in first with a relative
+ * redirect path (sanitizeRedirectPath rejects absolute URLs).
+ */
+export function emailPreferencesUrl(opts: {
+  userId?: string;
+  username?: string;
+}): string {
+  if (opts.username) {
+    return `https://vibeapps.dev/${opts.username}#email-preferences`;
+  }
+  if (opts.userId) {
+    return "https://vibeapps.dev/set-username";
+  }
+  return (
+    "https://vibeapps.dev/sign-in?redirect_url=" +
+    encodeURIComponent("/set-username")
+  );
+}
+
+/**
+ * The one legal/preferences footer every VibeApps email uses: contact link,
+ * clickable Manage email preferences and Unsubscribe, open-source credit,
+ * CAN-SPAM address, and the social line.
+ */
+export function standardEmailFooter(opts: EmailFooterOpts = {}): string {
+  const prefsUrl = emailPreferencesUrl(opts);
+  const unsubscribeLink = opts.unsubscribeToken
+    ? ` | <a href="https://vibeapps.dev/api/unsubscribe?token=${opts.unsubscribeToken}" style="color: #666; font-size: 12px;">Unsubscribe</a>`
+    : "";
+  return `
+            <div style="text-align: center; margin: 30px 0; padding: 20px; border-top: 1px solid #eee;">
+              <a href="${prefsUrl}" style="color: #666; font-size: 12px;">Manage email preferences</a>${unsubscribeLink}
+              <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; font-size: 11px; color: #666; line-height: 1.4;">
+                <p style="margin: 5px 0;">If you have any questions, feedback, ideas or problems <a href="https://github.com/waynesutton/vibeapps/issues" style="color: #666;">contact us!</a></p>
+                <p style="margin: 5px 0;">VibeApps is an <a href="https://github.com/waynesutton/vibeapps" style="color: #666;">open-source project</a> maintained by <a href="https://waynesutton.ai/" style="color: #666;">WayneSutton.ai</a>.</p>
+                <p style="margin: 5px 0;">Convex, 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
+                <p style="margin: 5px 0;">
+                  Follow us on <a href="https://twitter.com/convex" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
+                  <a href="https://github.com/get-convex/convex-backend" style="color: #666;">Star on Github</a>
+                </p>
+              </div>
+            </div>`;
+}
+
 /**
  * Branded VibeApps email wrapper (same look as the submission emails).
- * The optional signature renders below the body above the footer.
+ * The optional signature renders below the body above the footer. Pass
+ * footerOpts so the shared footer can link preferences/unsubscribe for the
+ * recipient; previews omit it and render the signed-out fallback links.
  */
 export function templateEmailShell(
   bodyHtml: string,
   signatureHtml?: string,
+  footerOpts?: EmailFooterOpts,
 ): string {
   const signatureBlock = signatureHtml
     ? `<div style="margin-top: 28px; padding-top: 16px; border-top: 1px solid #e9ecef;">${signatureHtml}</div>`
@@ -147,6 +207,7 @@ export function templateEmailShell(
             <p style="color: #999; font-size: 13px; margin-top: 40px;">
               VibeApps - The place to share and discover new apps built with AI.
             </p>
+            ${standardEmailFooter(footerOpts)}
           </div>
         </body>
       </html>

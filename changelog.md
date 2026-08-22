@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Admins now get an in-app alert and a `spam_review_request` email when a submitter disputes a spam mark from the notifications page. First request only; gated by the global master switch, a new "Spam review requests" toggle in the Email dashboard, and each admin's own unsubscribe (2026-08-22).
+- Amber "N review requested" chip on the admin Marked spam list that filters to disputed rows, matching the existing count pill pattern (2026-08-22).
+- Shared `standardEmailFooter` and `emailPreferencesUrl` helpers so every email (templates, submissions, spam, judging group sends, and the admin preview) renders one footer with a clickable Manage email preferences link, a per-recipient Unsubscribe link, the open-source credit maintained by WayneSutton.ai, and the CAN-SPAM address (2026-08-22).
+- Judging group sends now match recipients to accounts by email (new `users.by_email` index) so their footers carry a working unsubscribe token and List-Unsubscribe header (2026-08-22).
+- `#email-preferences` deep link on the profile page: email footers land on the Email Preferences card via a fragment, with no new SPA route so `/:username` routing is untouched (2026-08-22).
 - Luma row in Admin Settings Sidebar widgets, including App page (below View Change Log on `/s/:slug`). Entire app stays in sync with Show listed Luma events (2026-08-22).
 - Per judging group Luma hide on submit, join, and judging landing pages. Independent of the other sidebar widgets (2026-08-22).
 - Admin Settings matrix to show or hide Most Vibes This Week, Recent Vibers, and Top Categories This Week per surface (entire app, list, grid, vibe, submit, categories). Entire-app off greys out the rest and wins over judging pages (2026-08-22).
@@ -38,6 +43,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Shared non-pill corner radius is now `0.25rem` across cards, buttons, inputs, thumbnails, submit surfaces, dialogs, and admin panels. Tag pills and header notification/profile round controls stay full-round; header menus stay `0.375rem` (2026-08-21).
 
 ### Fixed
+
+- Unsubscribe links in production emails always showed "expired" because the Netlify `/api/unsubscribe` proxy pointed at the dev Convex deployment, so prod tokens were never found. The proxy now targets the prod `.convex.site` host, and the token handler is idempotent so a Gmail one-click POST followed by the user's GET (or a repeat click) shows the confirmation page instead of an error (2026-08-22).
+- Manage email preferences links no longer point at `/profile`, which is not a real route. They now go to `/{username}#email-preferences`, `/set-username` for accounts without a username, or sign-in with a safe relative redirect (2026-08-22).
+- Add a Luma event URL treated lookup `{ id, status }` as a full event, so names never parsed and future events like https://luma.com/abstract-convex-26 never listed. Lookup now fetches `/v1/events/get`, then the public Luma page (2026-08-22).
 
 - Luma add-by-URL used the wrong lookup param and guessed `evt-{slug}`, which returned 403 for listed Convex calendar events. Lookup now uses `url`, sync includes listed-but-hosted-elsewhere events, and calendar-scoped key errors are spelled out (2026-08-22).
 - Email footers now link to `twitter.com/convex` instead of the old `@convex_dev` handle (2026-08-22).

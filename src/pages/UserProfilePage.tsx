@@ -351,6 +351,18 @@ export default function UserProfilePage() {
     }
   }, [activeTab]);
 
+  // Deep link from email footers: /:username#email-preferences scrolls to
+  // the Email Preferences card once it exists (rendered for the profile
+  // owner after email settings load). Hash is a fragment only; the server
+  // and OG crawlers never see it.
+  useEffect(() => {
+    if (location.hash !== "#email-preferences") return;
+    const el = document.getElementById("email-preferences");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [location.hash, emailSettingsData]);
+
   const handleMiniDashboardClick = (targetTabOrSection: string) => {
     if (targetTabOrSection === "submissions") {
       submissionsSectionRef.current?.scrollIntoView({
@@ -2003,7 +2015,10 @@ export default function UserProfilePage() {
                     etc.)
                   </Link>
                   {/* Email Preferences */}
-                  <div className="mt-4 p-4 bg-surface border border-hairline rounded-md">
+                  <div
+                    id="email-preferences"
+                    className="mt-4 p-4 bg-surface border border-hairline rounded-md"
+                  >
                     <div className="flex items-center justify-between mb-3">
                       <div>
                         <h4 className="text-sm font-medium text-ink">

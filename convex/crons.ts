@@ -48,7 +48,7 @@ crons.cron(
   {},
 );
 
-// Refresh Luma event titles, dates, and covers without waiting for a manual sync.
+// Refresh listed Luma event titles, dates, and covers. Does not import the calendar.
 crons.interval(
   "sync luma calendar events",
   { hours: 1 },

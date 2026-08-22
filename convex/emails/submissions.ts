@@ -9,24 +9,18 @@ import { internal } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
 import { requireJudgingGroupPermission } from "../adminAccess";
 import { EMAIL_TYPE_DEFAULTS, emailTypeSettingKey } from "./emailTypes";
+import { standardEmailFooter, type EmailFooterOpts } from "./render";
 
 // Submission emails: submitter confirmation on submit, per-group organizer
 // alert, and the results-live blast. All sends route through
 // emails/resend.sendEmail, which enforces the global master switch and the
 // per-type toggles from the admin Email dashboard, so triggers stay simple.
 
-// Shared footer for submitter-facing emails, matching the preferences link
-// other templates use. One-click unsubscribe rides on the List-Unsubscribe
-// header added by sendEmail when an unsubscribeToken is passed.
-const FOOTER = `
-            <p style="color: #999; font-size: 13px; margin-top: 40px;">
-              VibeApps - The place to share and discover new apps built with AI.
-            </p>
-            <p style="margin-top: 8px;">
-              <a href="https://vibeapps.dev/profile" style="color: #666; font-size: 12px;">Manage email preferences</a>
-            </p>`;
-
-function emailShell(body: string): string {
+// Branded shell with the shared footer. footerOpts carries the recipient's
+// user context so Manage email preferences and Unsubscribe link correctly;
+// one-click unsubscribe rides on the List-Unsubscribe header added by
+// sendEmail when an unsubscribeToken is passed.
+function emailShell(body: string, footerOpts: EmailFooterOpts = {}): string {
   return `
       <!DOCTYPE html>
       <html>
@@ -36,7 +30,10 @@ function emailShell(body: string): string {
               <img src="https://vibeapps.dev/android-chrome-512x512.png" alt="VibeApps" style="width: 48px; height: 48px;">
             </div>
             ${body}
-            ${FOOTER}
+            <p style="color: #999; font-size: 13px; margin-top: 40px;">
+              VibeApps - The place to share and discover new apps built with AI.
+            </p>
+            ${standardEmailFooter(footerOpts)}
           </div>
         </body>
       </html>
@@ -59,6 +56,7 @@ export const getSubmissionEmailContext = internalQuery({
       recipientEmail: v.optional(v.string()),
       recipientName: v.string(),
       userId: v.optional(v.id("users")),
+      username: v.optional(v.string()),
       groupName: v.optional(v.string()),
       groupSlug: v.optional(v.string()),
       notificationEmails: v.array(v.string()),
@@ -71,11 +69,13 @@ export const getSubmissionEmailContext = internalQuery({
     // Prefer the account email; fall back to the email typed on the form
     let recipientEmail: string | undefined = story.email;
     let recipientName = story.submitterName || "there";
+    let username: string | undefined;
     if (story.userId) {
       const author = await ctx.db.get(story.userId);
       if (author) {
         recipientEmail = author.email || recipientEmail;
         recipientName = author.name || author.username || recipientName;
+        username = author.username;
       }
     }
 
@@ -87,6 +87,7 @@ export const getSubmissionEmailContext = internalQuery({
       recipientEmail,
       recipientName,
       userId: story.userId,
+      username,
       groupName: group?.name,
       groupSlug: group?.slug,
       notificationEmails: group?.notificationEmails ?? [],
@@ -150,7 +151,11 @@ export const sendSubmissionConfirmationEmail = internalAction({
             <p style="color: #666; margin-bottom: 20px;">
               You can view your submission here:
               <a href="${storyUrl}" style="color: #292929;">${storyUrl}</a>
-            </p>`);
+            </p>`, {
+      userId: context.userId,
+      username: context.username,
+      unsubscribeToken,
+    });
 
     await ctx.runAction(internal.emails.resend.sendEmail, {
       to: context.recipientEmail,
@@ -221,6 +226,7 @@ export const getResultsLiveRecipients = internalQuery({
       email: v.string(),
       name: v.string(),
       userId: v.optional(v.id("users")),
+      username: v.optional(v.string()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -234,6 +240,7 @@ export const getResultsLiveRecipients = internalQuery({
       email: string;
       name: string;
       userId?: Id<"users">;
+      username?: string;
     }> = [];
 
     for (const submission of submissions) {
@@ -244,12 +251,14 @@ export const getResultsLiveRecipients = internalQuery({
 
       let email: string | undefined = story.email;
       let name = story.submitterName || "there";
+      let username: string | undefined;
       const userId = story.userId;
       if (story.userId) {
         const author = await ctx.db.get(story.userId);
         if (author) {
           email = author.email || email;
           name = author.name || author.username || name;
+          username = author.username;
         }
       }
       if (!email) continue;
@@ -257,7 +266,7 @@ export const getResultsLiveRecipients = internalQuery({
       const key = email.trim().toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
-      recipients.push({ email: email.trim(), name, userId });
+      recipients.push({ email: email.trim(), name, userId, username });
     }
 
     return recipients;
@@ -302,7 +311,11 @@ export const sendResultsLiveEmails = internalAction({
             <p style="color: #666; margin-bottom: 20px;">
               See how everyone did:
               <a href="${resultsUrl}" style="color: #292929;">${resultsUrl}</a>
-            </p>`);
+            </p>`, {
+        userId: recipient.userId,
+        username: recipient.username,
+        unsubscribeToken,
+      });
 
       await ctx.runAction(internal.emails.resend.sendEmail, {
         to: recipient.email,

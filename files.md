@@ -36,7 +36,8 @@
 
 All PRD files are now organized in the `prds/` folder for better project structure:
 
-- `prds/luma-app-page-and-judging-hide.md`: Luma below View Change Log, Sidebar widgets Luma row, per judging group hide
+- `prds/luma-listed-events-only.md`: Admin list is URL-added events only; add-by-URL lookup then get
+- `prds/email-footer-unsubscribe-spam-review.md`: Prod unsubscribe proxy fix, one shared email footer with working preference links, and admin alerts plus email when a submitter requests a spam review
 - `prds/sidebar-widgets-and-luma-events.md`: Catalog sidebar widget visibility, Luma event listings, compact back chevrons
 - `prds/list-view-ranked-rows.md`: Ranked editorial list view (two-digit rank, 16:9 screenshot, title plus one tag pill, Vibe it vote pill) inside one `bg-surface` plate. Grid and vibe stay as they are
 - `prds/grid-view-cards.md`: Grid card restack (screenshot on top, title, description, compact time left, vote pill right)
@@ -131,7 +132,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `convex/adminQueries.ts`: General admin dashboard queries for current totals and content metrics (user growth time series removed)
 - `convex/adminFollowsQueries.ts`: Admin Numbers follow rankings gated by numbers.view, returning name/username/counts only
 - `convex/reports.ts`: User reporting system for content moderation
-- `convex/luma.ts`: Luma calendar config, event cache, public list-by-placement, admin sync/test/add-by-URL (API key from `LUMA_API_KEY` env). Entire-app flag stays in sync with `settings.sidebarWidgets.lumaEvents`
+- `convex/luma.ts`: Luma config, listed-only admin list, add-by-URL (lookup then get, public page fallback), refresh listed events, remove (API key from `LUMA_API_KEY` env). Entire-app flag stays in sync with `settings.sidebarWidgets.lumaEvents`
 - `convex/settings.ts`: Site-wide settings including sidebar widget matrix and Luma entire-app sync
 
 ### Custom Forms System
@@ -162,15 +163,15 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `convex/emails/templates.ts`: Email templates for all email types (admin, welcome, engagement, weekly, mentions, admin reports)
 - `convex/emails/resend.ts`: Core email sending with Resend API, logging, the global kill switch, and per-email-type toggle enforcement from the admin Email dashboard
 - `convex/emails/emailTypes.ts`: Shared email type registry: the EMAIL_TYPES union, Convex validator, per-type toggle defaults, and the appSettings key helper used by sendEmail and the settings functions
-- `convex/emails/render.ts`: Dependency-free template rendering shared by backend sends and the admin UI preview: {{variable}} substitution (firstname, name, email, groupname, plus judgingurl/resultsurl/submissionurl group links via the judgingGroupUrls helper), HTML escaping, markdown-lite to email HTML (bold, italic, links, bare URL autolinking, lists, paragraphs), the branded email shell with optional signature block, and reply-to email validation
-- `convex/emails/judgingGroupEmails.ts`: Judging group emails to judges or submission owners: send-status query (master switch, judging_group toggle, recipient count, rolling 24h usage against the 200-recipient daily cap), deduplicated judge and submission-owner recipient lists, per-send delivery stats grouped by sendId (delivered, opened, bounced, failed), send and test-send mutations gated by the judging.emails permission with recipientType (judges or submission_owners), optional scheduled sends (runAt, cancellable, tracked in groupScheduledEmails), and the internal delivery action that renders per-recipient variables and routes through emails/resend.sendEmail with reply-to
+- `convex/emails/render.ts`: Dependency-free template rendering shared by backend sends and the admin UI preview: {{variable}} substitution (firstname, name, email, groupname, plus judgingurl/resultsurl/submissionurl group links via the judgingGroupUrls helper), HTML escaping, markdown-lite to email HTML (bold, italic, links, bare URL autolinking, lists, paragraphs), the branded email shell with optional signature block and footer recipient context, reply-to email validation, and the shared footer helpers (`emailPreferencesUrl` for the /{username}#email-preferences destination and `standardEmailFooter` with Manage email preferences, Unsubscribe, WayneSutton.ai credit, and the CAN-SPAM address)
+- `convex/emails/judgingGroupEmails.ts`: Judging group emails to judges or submission owners: send-status query (master switch, judging_group toggle, recipient count, rolling 24h usage against the 200-recipient daily cap), deduplicated judge and submission-owner recipient lists, per-send delivery stats grouped by sendId (delivered, opened, bounced, failed), send and test-send mutations gated by the judging.emails permission with recipientType (judges or submission_owners), optional scheduled sends (runAt, cancellable, tracked in groupScheduledEmails), and the internal delivery action that renders per-recipient variables, matches each recipient to a VibeApps account by email (users `by_email` index) so the shared footer carries a working unsubscribe token, and routes through emails/resend.sendEmail with reply-to
 - `convex/emailTemplates.ts`: Reusable email template CRUD (name, subject, markdown body, optional markdown signature) for the admin Templates sub tab; editing requires emails.send, reading also allows judging.emails so group organizers can pick templates when composing
 - `convex/emails/submissions.ts`: Submission emails: submitter confirmation after submit, per-group organizer alert (judgingGroups.notificationEmails), and the admin-triggered results-live blast with de-duplicated recipients
 - `convex/emails/daily.ts`: Daily metrics calculation and user engagement processing with fixed validators
 - `convex/emails/weekly.ts`: Weekly digest computation and sending functionality
 - `convex/emails/welcome.ts`: Welcome email integration for new user onboarding
 - `convex/emails/reports.ts`: Admin report notification emails with immediate delivery for content moderation
-- `convex/emails/spam.ts`: Spam notification email to submitters when their submission is marked as spam: includes the reason, prefers the account email over the form email, sets reply-to to `ADMIN_EMAIL` when configured, and skips silently for anonymous submissions without an email
+- `convex/emails/spam.ts`: Spam notification email to submitters when their submission is marked as spam (includes the reason, prefers the account email over the form email, sets reply-to to `ADMIN_EMAIL` when configured, skips silently for anonymous submissions without an email) plus the `spam_review_request` admin emails sent when a submitter disputes a mark, which skip unsubscribed admins and deep-link to the spam dashboard
 - `convex/emails/queries.ts`: V8 runtime queries and mutations for email data, including the Resend onEmailEvent callback that syncs emailLogs delivery statuses and records first-open timestamps into log metadata (separated from Node.js actions)
 - `convex/emails/helpers.ts`: Helper queries for email processing and data fetching
 - `convex/emails/broadcast.ts`: Admin broadcast email system with user search, tag-based targeting (send to everyone who used a tag, filterable by submission status), recipient counts, and batch processing

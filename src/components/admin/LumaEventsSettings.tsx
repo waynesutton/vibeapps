@@ -35,6 +35,7 @@ export function LumaEventsSettings() {
   const updateConfig = useMutation(api.luma.updateConfig);
   const updateSettings = useMutation(api.settings.update);
   const updateEvent = useMutation(api.luma.updateEvent);
+  const removeEvent = useMutation(api.luma.removeEvent);
   const testConnection = useAction(api.luma.testConnection);
   const syncNow = useAction(api.luma.syncNow);
   const addByUrl = useAction(api.luma.addByUrl);
@@ -254,7 +255,7 @@ export function LumaEventsSettings() {
               const result = await syncNow({});
               if (result.ok) {
                 setStatus(
-                  `Synced ${result.count} event${result.count === 1 ? "" : "s"}${
+                  `Refreshed ${result.count} listed event${result.count === 1 ? "" : "s"}${
                     result.calendarName ? ` from ${result.calendarName}` : ""
                   }`,
                 );
@@ -267,7 +268,7 @@ export function LumaEventsSettings() {
           disabled={busy !== null}
         >
           {busy === "sync" && <Loader2 className="size-3.5 animate-spin" />}
-          Sync calendar
+          Refresh listed events
         </button>
       </div>
 
@@ -285,13 +286,18 @@ export function LumaEventsSettings() {
         >
           Add a Luma event URL
         </label>
+        <p className="text-xs text-soft mb-1">
+          Only events you add here show in the list below and on the site.
+          Refresh updates their titles and dates. It does not import the rest of
+          the calendar.
+        </p>
         <div className="flex flex-col sm:flex-row gap-2">
           <input
             id="lumaEventUrl"
             type="url"
             value={eventUrl}
             onChange={(e) => setEventUrl(e.target.value)}
-            placeholder="https://lu.ma/your-event"
+            placeholder="https://luma.com/abstract-convex-26"
             className="flex-1 px-3 py-2 bg-surface border border-hairline rounded-md text-copy text-sm focus:outline-none focus:ring-1 focus:ring-ink"
           />
           <button
@@ -319,10 +325,11 @@ export function LumaEventsSettings() {
       {error && <p className="text-sm text-red-700">{error}</p>}
 
       <div className="space-y-2">
-        <h4 className="text-sm font-medium text-ink">Calendar events</h4>
+        <h4 className="text-sm font-medium text-ink">Listed events</h4>
         {state.events.length === 0 ? (
           <p className="text-sm text-soft">
-            Sync the calendar or paste an event URL to get started.
+            Paste a Luma event URL above. The rest of the calendar stays out of
+            this list.
           </p>
         ) : (
           state.events.map((event, index) => {
@@ -333,20 +340,6 @@ export function LumaEventsSettings() {
                 className="rounded-md border border-hairline bg-surface p-3"
               >
                 <div className="flex items-start gap-3">
-                  <label className="mt-0.5">
-                    <input
-                      type="checkbox"
-                      checked={event.isListed}
-                      onChange={(e) => {
-                        void updateEvent({
-                          eventId: event._id,
-                          isListed: e.target.checked,
-                        });
-                      }}
-                      className="rounded border-hairline-strong text-ink focus:ring-ink"
-                      aria-label={`List ${event.name}`}
-                    />
-                  </label>
                   {event.coverUrl && (
                     <img
                       src={event.coverUrl}
@@ -404,6 +397,19 @@ export function LumaEventsSettings() {
                       className="text-xs text-soft hover:text-ink px-2 py-1"
                     >
                       {open ? "Hide" : "Places"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void run("save", async () => {
+                          await removeEvent({ eventId: event._id });
+                          if (openId === event._id) setOpenId(null);
+                          setStatus("Event removed");
+                        });
+                      }}
+                      className="text-xs text-soft hover:text-ink px-2 py-1"
+                    >
+                      Remove
                     </button>
                   </div>
                 </div>

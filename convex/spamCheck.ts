@@ -13,6 +13,7 @@ import { Workpool } from "@convex-dev/workpool";
 import { requirePermission } from "./adminAccess";
 import { getAuthenticatedUserId, getAuthenticatedUserDoc } from "./users";
 import { logActivity } from "./activityLog";
+import { getAdminUserIds } from "./alerts";
 
 // Spam scans run through their own workpool so batch scans never queue
 // behind (or starve) the AI judge pool.
@@ -909,6 +910,32 @@ export const requestSpamReview = mutation({
         autoMarked: story.spamMarkedByAgent === true,
       },
     });
+
+    // Ping admins the same way content reports do: an in-app alert per
+    // admin/manager plus a scheduled email (first request only, so repeat
+    // clicks never re-notify). Skip alerting the requester if they are
+    // themselves an admin.
+    const adminUserIds = await getAdminUserIds(ctx);
+    for (const adminUserId of adminUserIds) {
+      if (adminUserId === userId) continue;
+      await ctx.db.insert("alerts", {
+        recipientUserId: adminUserId,
+        actorUserId: userId,
+        type: "spam_review",
+        storyId: args.storyId,
+        isRead: false,
+      });
+    }
+    await ctx.scheduler.runAfter(
+      0,
+      internal.emails.spam.sendSpamReviewRequestEmails,
+      {
+        storyId: args.storyId,
+        requesterUserId: userId,
+        adminUserIds,
+      },
+    );
+
     return { status: "requested" as const };
   },
 });
