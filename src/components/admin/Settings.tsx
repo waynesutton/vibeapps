@@ -4,7 +4,16 @@ import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { SiteSettings } from "../../types";
 import { ConvexBoxSettingsForm } from "./ConvexBoxSettingsForm";
+import { LumaEventsSettings } from "./LumaEventsSettings";
 import { SimpleSelect } from "../ui/SimpleSelect";
+import {
+  DEFAULT_SIDEBAR_WIDGETS,
+  mergeSidebarWidgets,
+  type LumaWidgetSurface,
+  type SidebarWidgetKey,
+  type SidebarWidgetSurface,
+  type SidebarWidgets,
+} from "../../lib/sidebarWidgets";
 
 // Define SortPeriod locally for type casting, mirroring Layout.tsx
 type SortPeriod =
@@ -36,6 +45,7 @@ const DEFAULT_SETTINGS_FRONTEND = {
   showSubmissionLimit: true,
   submissionLimitCount: 10,
   hideSubmitPageSidebar: false,
+  sidebarWidgets: DEFAULT_SIDEBAR_WIDGETS,
 };
 
 export function Settings() {
@@ -139,6 +149,10 @@ export function Settings() {
       // Submit page layout setting
       if (localSettings.hideSubmitPageSidebar !== undefined)
         updates.hideSubmitPageSidebar = localSettings.hideSubmitPageSidebar;
+      if (localSettings.sidebarWidgets !== undefined)
+        updates.sidebarWidgets = mergeSidebarWidgets(
+          localSettings.sidebarWidgets,
+        );
 
       await updateSettings(updates);
       setShowSuccess(true);
@@ -503,14 +517,53 @@ export function Settings() {
               </div>
             )}
           </div>
+        </div>
 
-          {/* --- Submit Page Layout Settings --- */}
+          {/* Sidebar widgets + submit layout */}
           <div className="pt-6 mt-6 border-t border-hairline">
-            <h3 className="text-lg font-medium text-copy mb-4">
-              Submit Page Layout
+            <h3 className="text-lg font-medium text-copy mb-1">
+              Sidebar widgets
             </h3>
+            <p className="text-xs text-soft mb-4">
+              Entire app off hides Most Vibes, Recent Vibers, and Top Categories
+              everywhere. Luma is different: judging groups can hide events on
+              their own submit, join, and judging pages even when Luma is on
+              here. App page only applies to Luma (below View Change Log). Grid
+              stays off by default.
+            </p>
 
-            <div>
+            <SidebarWidgetMatrix
+              widgets={mergeSidebarWidgets(localSettings.sidebarWidgets)}
+              disabled={isSaving}
+              onChange={(key, surface, value) => {
+                setLocalSettings((prev) => {
+                  const current = mergeSidebarWidgets(prev.sidebarWidgets);
+                  if (key === "lumaEvents") {
+                    return {
+                      ...prev,
+                      sidebarWidgets: {
+                        ...current,
+                        lumaEvents: {
+                          ...current.lumaEvents,
+                          [surface]: value,
+                        },
+                      },
+                    };
+                  }
+                  return {
+                    ...prev,
+                    sidebarWidgets: {
+                      ...current,
+                      [key]: { ...current[key], [surface]: value },
+                    },
+                  };
+                });
+                setShowSuccess(false);
+                setError(null);
+              }}
+            />
+
+            <div className="mt-5">
               <label className="flex items-center gap-2">
                 <input
                   name="hideSubmitPageSidebar"
@@ -521,20 +574,147 @@ export function Settings() {
                   disabled={isSaving}
                 />
                 <span className="text-sm font-medium text-copy">
-                  Hide right sidebar on the default submit page
+                  Hide the entire right sidebar on /submit
                 </span>
               </label>
               <p className="text-xs text-soft mt-1 ml-6">
-                When enabled, the /submit page hides the right sidebar
-                (leaderboard, recent vibers, top categories) and the form
-                becomes wider for all users
+                Turns off Most Vibes, Recent Vibers, Top Categories, and Luma
+                events on the default submit page and widens the form. This
+                still wins even if a widget is on for Submit. Judging group
+                submit pages are separate and use that group's Luma hide
+                toggle.
               </p>
             </div>
           </div>
-        </div>
       </div>
 
+      <LumaEventsSettings />
       <ConvexBoxSettingsForm />
+    </div>
+  );
+}
+
+const WIDGET_ROWS: Array<{ key: SidebarWidgetKey; label: string }> = [
+  { key: "mostVibes", label: "Most Vibes This Week" },
+  { key: "recentVibers", label: "Recent Vibers" },
+  { key: "topCategories", label: "Top Categories This Week" },
+];
+
+const SURFACES: Array<{
+  key: SidebarWidgetSurface | "entireApp" | "storyDetail";
+  label: string;
+}> = [
+  { key: "entireApp", label: "Entire app" },
+  { key: "listView", label: "List" },
+  { key: "gridView", label: "Grid" },
+  { key: "vibeView", label: "Vibe" },
+  { key: "submitPage", label: "Submit" },
+  { key: "tagPage", label: "Categories" },
+  { key: "storyDetail", label: "App page" },
+];
+
+function SidebarWidgetMatrix({
+  widgets,
+  disabled,
+  onChange,
+}: {
+  widgets: SidebarWidgets;
+  disabled: boolean;
+  onChange: (
+    key: SidebarWidgetKey | "lumaEvents",
+    surface: SidebarWidgetSurface | "entireApp" | LumaWidgetSurface,
+    value: boolean,
+  ) => void;
+}) {
+  const luma = widgets.lumaEvents;
+  const lumaLocked = !luma.entireApp;
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm text-left">
+        <thead>
+          <tr className="text-xs text-soft">
+            <th className="py-2 pr-3 font-medium">Widget</th>
+            {SURFACES.map((surface) => (
+              <th key={surface.key} className="py-2 px-2 font-medium text-center">
+                {surface.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {WIDGET_ROWS.map((row) => {
+            const values = widgets[row.key];
+            const locked = !values.entireApp;
+            return (
+              <tr key={row.key} className="border-t border-hairline">
+                <td className="py-2 pr-3 text-copy font-medium">{row.label}</td>
+                {SURFACES.map((surface) => {
+                  if (surface.key === "storyDetail") {
+                    return (
+                      <td
+                        key={surface.key}
+                        className="py-2 px-2 text-center text-faint"
+                        title="App page is a Luma placement"
+                      >
+                        —
+                      </td>
+                    );
+                  }
+                  const isMaster = surface.key === "entireApp";
+                  const greyed = !isMaster && locked;
+                  return (
+                    <td key={surface.key} className="py-2 px-2 text-center">
+                      <input
+                        type="checkbox"
+                        checked={values[surface.key]}
+                        disabled={disabled || greyed}
+                        onChange={(e) =>
+                          onChange(row.key, surface.key, e.target.checked)
+                        }
+                        className="rounded border-hairline-strong text-ink focus:ring-ink disabled:opacity-40"
+                        aria-label={`${row.label} on ${surface.label}`}
+                        title={
+                          greyed
+                            ? "Hidden site-wide. Turn Entire app on to change this surface."
+                            : undefined
+                        }
+                      />
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
+          <tr className="border-t border-hairline">
+            <td className="py-2 pr-3 text-copy font-medium">Luma events</td>
+            {SURFACES.map((surface) => {
+              const isMaster = surface.key === "entireApp";
+              const greyed = !isMaster && lumaLocked;
+              return (
+                <td key={surface.key} className="py-2 px-2 text-center">
+                  <input
+                    type="checkbox"
+                    checked={luma[surface.key]}
+                    disabled={disabled || greyed}
+                    onChange={(e) =>
+                      onChange("lumaEvents", surface.key, e.target.checked)
+                    }
+                    className="rounded border-hairline-strong text-ink focus:ring-ink disabled:opacity-40"
+                    aria-label={`Luma events on ${surface.label}`}
+                    title={
+                      greyed
+                        ? "Hidden site-wide. Turn Entire app on to change this surface."
+                        : surface.key === "storyDetail"
+                          ? "Shows listed events below View Change Log on app pages"
+                          : undefined
+                    }
+                  />
+                </td>
+              );
+            })}
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }

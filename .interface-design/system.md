@@ -1,6 +1,6 @@
 # VibeApps design system
 
-Last updated: 2026-08-22 07:00 UTC
+Last updated: 2026-08-22 07:55 UTC
 Source of truth for theming: `src/index.css` (CSS variables) + `tailwind.config.js` (semantic color names). This file documents the decisions so future sessions stay consistent.
 
 ## Direction and feel
@@ -118,7 +118,10 @@ The ranked list sits in one sidebar-matching plate: `bg-surface rounded-lg borde
 DB-stored custom colors render as saved in ALL themes. Fallback (no stored color): `var(--th-surface-alt)` bg, `var(--th-copy)` text, `var(--th-hairline-strong)` border. Exception: `DEFAULT_TAG_*` constants in `TagManagement.tsx` stay hex because they feed `<input type="color">`.
 
 ### Tag page header (`/tag/:slug`)
-One row, shared across list/grid/vibe. Icon-only `ChevronLeft` back (44px hit target, `aria-label="Back to all apps"`) plus "Apps tagged with" plus the tag as a `rounded-full` pill, count as `text-soft tabular-nums` on the right. No "Back to Apps" text: header "All" already returns to the catalog; the chevron is for deep links. No extra `max-w-4xl` or inner `px-4 py-8` so the results column matches the homepage.
+One row, shared across list/grid/vibe. Use shared `BackToAppsLink` (44px hit target, `aria-label="Back to all apps"`) plus "Apps tagged with" plus the tag as a `rounded-full` pill, count as `text-soft tabular-nums` on the right. Same chevron pattern on submit, admin, search, leaderboard, events, and story detail. No stacked "Back to Apps" text.
+
+### Catalog sidebar
+Most Vibes, Recent Vibers, and Top Categories are gated by `settings.sidebarWidgets`. Entire-app off hides the widget everywhere. Luma events have their own row (including App page, below View Change Log). Judging groups can hide Luma on their pages without changing site widgets. Luma stacks above those widgets with hairline dividers. Hide the catalog sidebar on `/admin`, `/notifications`, `/inbox`, `/leaderboard`, and `/events`.
 
 ### Notification dot
 `bg-brand` (never black; invisible in dark otherwise).

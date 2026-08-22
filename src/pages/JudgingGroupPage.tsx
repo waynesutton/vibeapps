@@ -7,6 +7,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { useDialog } from "../hooks/useDialog";
 import { Label } from "../components/ui/label";
+import { LumaEventList } from "../components/LumaEventList";
 
 export default function JudgingGroupPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -107,7 +108,8 @@ export default function JudgingGroupPage() {
   if (!group.isPublic && !isRegistering) {
     return (
       <div className="min-h-screen bg-canvas] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-surface rounded-lg border border-hairline p-6 shadow-sm">
+        <div className="max-w-md w-full space-y-4">
+        <div className="bg-surface rounded-lg border border-hairline p-6 shadow-sm">
           <div className="text-center mb-6">
             <Lock className="w-12 h-12 text-faint mx-auto mb-4" />
             <h1 className="text-xl font-medium text-ink mb-2">
@@ -153,6 +155,10 @@ export default function JudgingGroupPage() {
             </Link>
           </div>
         </div>
+        {group.hideLumaEvents !== true && (
+          <LumaEventList placement="submit_page" compact />
+        )}
+        </div>
       </div>
     );
   }
@@ -162,7 +168,8 @@ export default function JudgingGroupPage() {
     <>
       <DialogComponents />
       <div className="min-h-screen bg-canvas] flex items-center justify-center p-4">
-        <div className="max-w-lg w-full bg-surface rounded-lg border border-hairline p-6 shadow-sm">
+        <div className="max-w-lg w-full space-y-4">
+        <div className="bg-surface rounded-lg border border-hairline p-6 shadow-sm">
           <div className="text-center mb-6">
             <h1 className="text-2xl font-medium text-ink mb-2">
               {group.name}
@@ -253,6 +260,10 @@ export default function JudgingGroupPage() {
               Back to Home
             </Link>
           </div>
+        </div>
+        {group.hideLumaEvents !== true && (
+          <LumaEventList placement="submit_page" compact />
+        )}
         </div>
       </div>
     </>

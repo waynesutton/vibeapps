@@ -101,7 +101,7 @@ export const generateDailyAdminEmail = internalQuery({
                 <p style="margin: 5px 0;">VibeApps is an <a href="https://github.com/waynesutton/vibeapps" style="color: #666;">open-source project</a>.</p>
                 <p style="margin: 5px 0;">Convex, 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
                 <p style="margin: 5px 0;">
-                  Follow us on <a href="https://twitter.com/convex_dev" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
+                  Follow us on <a href="https://twitter.com/convex" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
                   <a href="https://github.com/get-convex/convex-backend" style="color: #666;">Star on Github</a>
                 </p>
               </div>
@@ -190,7 +190,7 @@ export const generateWelcomeEmail = internalQuery({
                 <p style="margin: 5px 0;">VibeApps is an <a href="https://github.com/waynesutton/vibeapps" style="color: #666;">open-source project</a>.</p>
                 <p style="margin: 5px 0;">Convex, 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
                 <p style="margin: 5px 0;">
-                  Follow us on <a href="https://twitter.com/convex_dev" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
+                  Follow us on <a href="https://twitter.com/convex" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
                   <a href="https://github.com/get-convex/convex-backend" style="color: #666;">Star on Github</a>
                 </p>
               </div>
@@ -223,7 +223,7 @@ export const generateEngagementEmail = internalQuery({
           ratings: v.number(),
           comments: v.number(),
           bookmarks: v.number(),
-        }),
+        })
       ),
     }),
     newFollowers: v.optional(v.array(v.string())),
@@ -234,8 +234,8 @@ export const generateEngagementEmail = internalQuery({
           author: v.string(),
           storyId: v.id("stories"),
           storySlug: v.optional(v.string()),
-        }),
-      ),
+        })
+      )
     ),
     mentions: v.optional(
       v.array(
@@ -244,8 +244,8 @@ export const generateEngagementEmail = internalQuery({
           storyTitle: v.string(),
           contentExcerpt: v.string(),
           context: v.union(v.literal("comment"), v.literal("judge_note")),
-        }),
-      ),
+        })
+      )
     ),
     replies: v.optional(
       v.array(
@@ -253,22 +253,22 @@ export const generateEngagementEmail = internalQuery({
           replierName: v.string(),
           storyTitle: v.string(),
           contentExcerpt: v.string(),
-        }),
-      ),
+        })
+      )
     ),
     pinnedStories: v.optional(
       v.array(
         v.object({
           storyTitle: v.string(),
-        }),
-      ),
+        })
+      )
     ),
     adminMessages: v.optional(
       v.array(
         v.object({
           storyTitle: v.string(),
-        }),
-      ),
+        })
+      )
     ),
     inboxMessages: v.optional(
       v.array(
@@ -276,8 +276,8 @@ export const generateEngagementEmail = internalQuery({
           senderId: v.id("users"),
           senderName: v.string(),
           messageCount: v.number(),
-        }),
-      ),
+        })
+      )
     ), // Inbox messages received today with sender info
     unsubscribeToken: v.optional(v.string()),
   },
@@ -290,20 +290,13 @@ export const generateEngagementEmail = internalQuery({
 
     const generateAppSection = (app: any) => {
       const engagements = [];
-      if (app.votes > 0)
-        engagements.push(`${app.votes} new vote${app.votes !== 1 ? "s" : ""}`);
+      if (app.votes > 0) engagements.push(`${app.votes} new vote${app.votes !== 1 ? "s" : ""}`);
       if (app.ratings > 0)
-        engagements.push(
-          `${app.ratings} new rating${app.ratings !== 1 ? "s" : ""}`,
-        );
+        engagements.push(`${app.ratings} new rating${app.ratings !== 1 ? "s" : ""}`);
       if (app.comments > 0)
-        engagements.push(
-          `${app.comments} new comment${app.comments !== 1 ? "s" : ""}`,
-        );
+        engagements.push(`${app.comments} new comment${app.comments !== 1 ? "s" : ""}`);
       if (app.bookmarks > 0)
-        engagements.push(
-          `${app.bookmarks} new bookmark${app.bookmarks !== 1 ? "s" : ""}`,
-        );
+        engagements.push(`${app.bookmarks} new bookmark${app.bookmarks !== 1 ? "s" : ""}`);
 
       return `
         <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 10px 0;">
@@ -354,7 +347,7 @@ export const generateEngagementEmail = internalQuery({
               <strong>${mention.authorName}</strong> mentioned you in a ${mention.context === "comment" ? "comment" : "judge note"} on "${mention.storyTitle}"
               <br><em style="color: #666; font-size: 12px;">"${mention.contentExcerpt.slice(0, 100)}${mention.contentExcerpt.length > 100 ? "..." : ""}"</em>
             </li>
-          `,
+          `
             )
             .join("")}
         </ul>
@@ -377,7 +370,7 @@ export const generateEngagementEmail = internalQuery({
               <strong>${reply.replierName}</strong> replied on "${reply.storyTitle}"
               <br><em style="color: #666; font-size: 12px;">"${reply.contentExcerpt.slice(0, 100)}${reply.contentExcerpt.length > 100 ? "..." : ""}"</em>
             </li>
-          `,
+          `
             )
             .join("")}
         </ul>
@@ -426,7 +419,7 @@ export const generateEngagementEmail = internalQuery({
             <li style="margin: 8px 0; padding: 8px; background: #ffffff; border-radius: 4px;">
               <strong>${dm.senderName}</strong> sent you ${dm.messageCount} message${dm.messageCount !== 1 ? "s" : ""}
             </li>
-          `,
+          `
             )
             .join("")}
         </ul>
@@ -485,7 +478,7 @@ export const generateEngagementEmail = internalQuery({
                 <p style="margin: 5px 0;">VibeApps is an <a href="https://github.com/waynesutton/vibeapps" style="color: #666;">open-source project</a>.</p>
                 <p style="margin: 5px 0;">Convex, 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
                 <p style="margin: 5px 0;">
-                  Follow us on <a href="https://twitter.com/convex_dev" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
+                  Follow us on <a href="https://twitter.com/convex" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
                   <a href="https://github.com/get-convex/convex-backend" style="color: #666;">Star on Github</a>
                 </p>
               </div>
@@ -513,7 +506,7 @@ export const generateWeeklyDigest = internalQuery({
         storySlug: v.optional(v.string()),
         title: v.string(),
         vibes: v.number(),
-      }),
+      })
     ),
     unsubscribeToken: v.optional(v.string()),
   },
@@ -550,7 +543,7 @@ export const generateWeeklyDigest = internalQuery({
                       <strong>${app.title}</strong>
                     </a> — ${app.vibes} vibes
                   </li>
-                `,
+                `
                   )
                   .join("")}
               </ol>
@@ -571,7 +564,7 @@ export const generateWeeklyDigest = internalQuery({
                 <p style="margin: 5px 0;">VibeApps is an <a href="https://github.com/waynesutton/vibeapps" style="color: #666;">open-source project</a>.</p>
                 <p style="margin: 5px 0;">Convex, 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
                 <p style="margin: 5px 0;">
-                  Follow us on <a href="https://twitter.com/convex_dev" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
+                  Follow us on <a href="https://twitter.com/convex" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
                   <a href="https://github.com/get-convex/convex-backend" style="color: #666;">Star on Github</a>
                 </p>
               </div>
@@ -639,7 +632,7 @@ export const generateBroadcastEmail = internalQuery({
                 <p style="margin: 5px 0;">VibeApps is an <a href="https://github.com/waynesutton/vibeapps" style="color: #666;">open-source project</a>.</p>
                 <p style="margin: 5px 0;">Convex, 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
                 <p style="margin: 5px 0;">
-                  Follow us on <a href="https://twitter.com/convex_dev" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
+                  Follow us on <a href="https://twitter.com/convex" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
                   <a href="https://github.com/get-convex/convex-backend" style="color: #666;">Star on Github</a>
                 </p>
               </div>
@@ -708,7 +701,7 @@ export const generateMentionEmail = internalQuery({
                 <p style="margin: 5px 0;">VibeApps is an <a href="https://github.com/waynesutton/vibeapps" style="color: #666;">open-source project</a>.</p>
                 <p style="margin: 5px 0;">Convex, 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA</p>
                 <p style="margin: 5px 0;">
-                  Follow us on <a href="https://twitter.com/convex_dev" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
+                  Follow us on <a href="https://twitter.com/convex" style="color: #666;">Twitter</a> or <a href="https://www.linkedin.com/company/convex-dev/" style="color: #666;">LinkedIn</a>. 
                   <a href="https://github.com/get-convex/convex-backend" style="color: #666;">Star on Github</a>
                 </p>
               </div>

@@ -3,6 +3,7 @@ import {
   mutation,
   internalQuery,
   internalMutation,
+  type MutationCtx,
 } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
@@ -39,10 +40,122 @@ const DEFAULT_SETTINGS = {
   showHackathonTeamInfo: false,
   // Default /submit page layout: hide right sidebar and widen the form
   hideSubmitPageSidebar: false,
+  // Catalog sidebar widgets. entireApp off hides the block everywhere
+  // except Luma on judging group pages (those use hideLumaEvents).
+  sidebarWidgets: {
+    mostVibes: {
+      entireApp: true,
+      listView: true,
+      gridView: false,
+      vibeView: true,
+      submitPage: true,
+      tagPage: true,
+    },
+    recentVibers: {
+      entireApp: true,
+      listView: true,
+      gridView: false,
+      vibeView: true,
+      submitPage: true,
+      tagPage: true,
+    },
+    topCategories: {
+      entireApp: true,
+      listView: true,
+      gridView: false,
+      vibeView: true,
+      submitPage: true,
+      tagPage: true,
+    },
+    lumaEvents: {
+      entireApp: true,
+      listView: true,
+      gridView: false,
+      vibeView: true,
+      submitPage: true,
+      tagPage: true,
+      storyDetail: true,
+    },
+  },
   // Tag limit settings (managed from Tags admin section)
   maxTagsPerSubmission: 6,
   maxTagLength: 20,
 };
+
+export const sidebarWidgetSurfacesValidator = v.object({
+  entireApp: v.boolean(),
+  listView: v.boolean(),
+  gridView: v.boolean(),
+  vibeView: v.boolean(),
+  submitPage: v.boolean(),
+  tagPage: v.boolean(),
+});
+
+export const lumaWidgetSurfacesValidator = v.object({
+  entireApp: v.boolean(),
+  listView: v.boolean(),
+  gridView: v.boolean(),
+  vibeView: v.boolean(),
+  submitPage: v.boolean(),
+  tagPage: v.boolean(),
+  storyDetail: v.boolean(),
+});
+
+export const sidebarWidgetsValidator = v.object({
+  mostVibes: sidebarWidgetSurfacesValidator,
+  recentVibers: sidebarWidgetSurfacesValidator,
+  topCategories: sidebarWidgetSurfacesValidator,
+  lumaEvents: v.optional(lumaWidgetSurfacesValidator),
+});
+
+type SidebarWidgets = typeof DEFAULT_SETTINGS.sidebarWidgets;
+
+function mergeSidebarWidgets(
+  widgets: Partial<SidebarWidgets> | undefined,
+): SidebarWidgets {
+  const defaults = DEFAULT_SETTINGS.sidebarWidgets;
+  return {
+    mostVibes: { ...defaults.mostVibes, ...widgets?.mostVibes },
+    recentVibers: { ...defaults.recentVibers, ...widgets?.recentVibers },
+    topCategories: { ...defaults.topCategories, ...widgets?.topCategories },
+    lumaEvents: { ...defaults.lumaEvents, ...widgets?.lumaEvents },
+  };
+}
+
+const LUMA_CONFIG_ID = "global";
+
+export async function patchLumaWidgetEntireApp(
+  ctx: { db: MutationCtx["db"] },
+  enabled: boolean,
+): Promise<void> {
+  const settings = await ctx.db.query("settings").first();
+  if (!settings) return;
+  const widgets = mergeSidebarWidgets(settings.sidebarWidgets);
+  widgets.lumaEvents.entireApp = enabled;
+  await ctx.db.patch(settings._id, { sidebarWidgets: widgets });
+}
+
+async function patchLumaConfigEnabled(
+  ctx: MutationCtx,
+  enabled: boolean,
+): Promise<void> {
+  const existing = await ctx.db
+    .query("lumaConfig")
+    .withIndex("by_identifier", (q) => q.eq("identifier", LUMA_CONFIG_ID))
+    .unique();
+  if (existing) {
+    await ctx.db.patch(existing._id, { enabled });
+    return;
+  }
+  await ctx.db.insert("lumaConfig", {
+    identifier: LUMA_CONFIG_ID,
+    enabled,
+    showThumbnail: true,
+    showName: true,
+    showDates: true,
+    showDescription: true,
+  });
+}
 
 // Type for settings data returned by the 'get' query.
 // This should encompass all fields from DEFAULT_SETTINGS and actual Doc<"settings"> fields.
@@ -88,6 +201,7 @@ export const get = query({
       hideSubmitPageSidebar:
         settingsDoc.hideSubmitPageSidebar ??
         DEFAULT_SETTINGS.hideSubmitPageSidebar,
+      sidebarWidgets: mergeSidebarWidgets(settingsDoc.sidebarWidgets),
       maxTagsPerSubmission:
         settingsDoc.maxTagsPerSubmission ??
         DEFAULT_SETTINGS.maxTagsPerSubmission,
@@ -201,6 +315,7 @@ export const update = mutation({
     showHackathonTeamInfo: v.optional(v.boolean()),
     // Default /submit page layout: hide right sidebar and widen the form
     hideSubmitPageSidebar: v.optional(v.boolean()),
+    sidebarWidgets: v.optional(sidebarWidgetsValidator),
     // Tag limit settings
     maxTagsPerSubmission: v.optional(v.number()),
     maxTagLength: v.optional(v.number()),
@@ -212,7 +327,15 @@ export const update = mutation({
     if (!settings) {
       throw new Error("Settings not initialized. Cannot update.");
     }
-    await ctx.db.patch(settings._id, args);
+    const { sidebarWidgets, ...rest } = args;
+    const patch: Record<string, unknown> = { ...rest };
+    if (sidebarWidgets !== undefined) {
+      patch.sidebarWidgets = mergeSidebarWidgets(sidebarWidgets);
+    }
+    await ctx.db.patch(settings._id, patch);
+    if (sidebarWidgets?.lumaEvents?.entireApp !== undefined) {
+      await patchLumaConfigEnabled(ctx, sidebarWidgets.lumaEvents.entireApp);
+    }
     const changedFields = Object.keys(args);
     await logActivity(ctx, {
       category: "settings",
@@ -220,6 +343,7 @@ export const update = mutation({
       message: `Updated site settings (${changedFields.join(", ")})`,
       metadata: { fields: changedFields },
     });
+    return null;
   },
 });
 

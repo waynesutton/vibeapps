@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { ThumbsUp, UserCircle } from "lucide-react";
 import { ProfileHoverCard } from "../components/ui/ProfileHoverCard";
+import { BackToAppsLink } from "../components/BackToAppsLink";
 
 export function LeaderboardPage() {
   // Get top stories for the leaderboard
@@ -13,13 +14,14 @@ export function LeaderboardPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <header className="flex items-center gap-1.5 mb-4 min-h-11">
+          <BackToAppsLink />
           <h1 className="text-xl font-medium text-ink">Leaderboard</h1>
-          <p className="text-copy mt-2">
-            Top apps with the most vibes this week.
-          </p>
-        </div>
+        </header>
+        <p className="text-copy mb-6">
+          Top apps with the most vibes this week.
+        </p>
 
         <div className="bg-surface rounded-lg border border-hairline">
           {topStories === undefined ? (

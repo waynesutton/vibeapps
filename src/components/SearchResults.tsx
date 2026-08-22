@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { User } from "lucide-react";
+import { BackToAppsLink } from "./BackToAppsLink";
 
 interface SearchResultsProps {
   query: string;
@@ -20,13 +21,13 @@ export function SearchResults({ query, stories, viewMode }: SearchResultsProps) 
 
   return (
     <div>
-      <div className="mb-4">
-        <Link to="/" className="text-ink hover:underline text-sm">
-          ← Back to Apps
-        </Link>
-      </div>
+      <header className="flex items-center gap-1.5 mb-4 min-h-11">
+        <BackToAppsLink />
+        <h2 className="text-xl font-medium text-ink min-w-0 truncate">
+          Search results for "{query}"
+        </h2>
+      </header>
       <div className="mb-6">
-        <h2 className="text-xl text-copy mb-2">Search Results for "{query}"</h2>
         <p className="text-soft">
           Found {totalResults} {totalResults === 1 ? "result" : "results"}
           {stories.length > 0 && users && users.length > 0 && (

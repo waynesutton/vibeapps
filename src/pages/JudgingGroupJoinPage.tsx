@@ -5,6 +5,7 @@ import { Lock } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { Button } from "../components/ui/button";
 import { authUrlWithReturn } from "../lib/redirectPath";
+import { LumaEventList } from "../components/LumaEventList";
 
 // Landing page behind a judging group's QR code. Its only job is to survive a
 // phone scan: signed-in scanners go straight to the group's submission form,
@@ -114,6 +115,11 @@ export function JudgingGroupJoinPage() {
             </p>
           )}
         </div>
+        {group.hideLumaEvents !== true && (
+          <div className="mt-6">
+            <LumaEventList placement="submit_page" compact />
+          </div>
+        )}
       </div>
     </div>
   );

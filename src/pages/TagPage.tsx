@@ -1,22 +1,10 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { usePaginatedQuery, useQuery } from "convex/react";
-import { ChevronLeft } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { StoryList } from "../components/StoryList";
+import { BackToAppsLink } from "../components/BackToAppsLink";
 import { useLayoutContext } from "../components/Layout";
 import type { Story } from "../types";
-
-function BackToAppsLink() {
-  return (
-    <Link
-      to="/"
-      aria-label="Back to all apps"
-      className="inline-flex items-center justify-center size-11 -ml-2 shrink-0 rounded-md text-soft hover:text-ink hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
-    >
-      <ChevronLeft className="size-5" aria-hidden="true" />
-    </Link>
-  );
-}
 
 export function TagPage() {
   const { tagSlug } = useParams<{ tagSlug: string }>();

@@ -1,6 +1,7 @@
 import React from "react";
 import { Markdown } from "./Markdown";
 import { Link, useNavigate } from "react-router-dom";
+import { BackToAppsLink } from "./BackToAppsLink";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
@@ -412,14 +413,14 @@ export function StoryForm() {
     <div
       className={`${settings?.hideSubmitPageSidebar ? "max-w-4xl" : "max-w-2xl"} mx-auto`}
     >
-      <Link to="/" className="text-soft hover:text-copy inline-block mb-6">
-        ← Back to Apps
-      </Link>
+      <header className="flex items-center gap-1.5 mb-4 min-h-11">
+        <BackToAppsLink />
+        <h2 className="text-xl font-medium text-ink">Submit your app</h2>
+      </header>
 
       <div className="bg-surface p-6 rounded-lg border border-hairline">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <h2 className="text-xl font-medium text-ink">Submit your app</h2>{" "}
-          <span className="ml-2 text-sm text-copy">What did you build?</span>
+          <p className="text-sm text-copy">What did you build?</p>
           <div>
             <label
               htmlFor="title"

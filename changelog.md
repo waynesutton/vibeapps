@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Luma row in Admin Settings Sidebar widgets, including App page (below View Change Log on `/s/:slug`). Entire app stays in sync with Show listed Luma events (2026-08-22).
+- Per judging group Luma hide on submit, join, and judging landing pages. Independent of the other sidebar widgets (2026-08-22).
+- Admin Settings matrix to show or hide Most Vibes This Week, Recent Vibers, and Top Categories This Week per surface (entire app, list, grid, vibe, submit, categories). Entire-app off greys out the rest and wins over judging pages (2026-08-22).
+- Luma events: connect a calendar URL in Settings, pick events, choose thumbnail/name/dates/description, and place them in catalog sidebars, submit, app detail, categories, and `/events`. Hourly Convex sync. API key stays in Convex env as `LUMA_API_KEY` (2026-08-22).
+- Footer Events link to `/events` (2026-08-22).
+- Public `/events` page listing selected Luma events with links out to Luma (2026-08-22).
+- Shared 44px `BackToAppsLink` chevron used on submit, admin, search, tags, leaderboard, events, and story detail (2026-08-22).
 - Geist and Geist Mono as the site typefaces, exposed as `--th-font-sans` and `--th-font-mono` theme tokens and wired into Tailwind `font-sans` / `font-mono` (2026-08-22).
 - Four shared type classes in `@layer components` so the scale lives in one place: `.app-title` (18px), `.app-desc` (16px), `.app-title-sm` (16px), `.app-desc-sm` (15px). All fixed pixel sizes, no fluid `clamp()` (2026-08-22).
 - Closed per-submission AI **Brief** toggle with copy and `.md` save, plus an optional persisted AI cohort summary on Convex Recap generated only from saved review evidence (2026-08-21).
@@ -16,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Upcoming Luma events on app pages render under View Change Log instead of next to the back chevron (2026-08-22).
+- Admin Dashboard header is one row (chevron plus title) with tighter vertical padding (2026-08-22).
+- Catalog sidebar stays off on `/admin`, `/notifications`, `/inbox`, `/leaderboard`, and `/events` so those pages do not waste a column (2026-08-22).
+- Grid view can show the sidebar when a widget or Luma placement is turned on (still off by default) (2026-08-22).
 - Tag page (`/tag/:slug`) header is now one row in list, grid, and vibe: icon-only back chevron, "Apps tagged with" plus the tag pill, and the app count on the right. The stacked "Back to Apps" text and extra page padding are gone so the results column matches the homepage (2026-08-22).
 - List view now sits in one sidebar-matching plate (`bg-surface rounded-lg border border-hairline`) so the ranked rows lift off canvas the same way Most Vibes and Recent Vibers do. Hairline dividers stay inside the plate. Row hover still uses `surface-hover` in light, classic, and dark (2026-08-22).
 - List view rows restyled to match the ranked editorial mockup: two-digit rank, 16:9 screenshot, title plus one tag pill, one-line description, compact byline, `Nc` comment count, and a pill "Vibe it" vote button. Rank type is 15px (under the 18px title) and the vote pill is 32px tall. Hovering a row fills it with `surface-hover` so the wash follows light, classic, and dark (2026-08-22).
@@ -25,6 +36,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Meta rows, tag pills, rank numbers, and pin icons scaled one step up so the hierarchy still reads against the larger titles (2026-08-22).
 - Story detail header now sizes correctly at 26px on mobile and 30px from `sm` up. It previously carried an invalid Tailwind class and rendered flat at 20px (2026-08-22).
 - Shared non-pill corner radius is now `0.25rem` across cards, buttons, inputs, thumbnails, submit surfaces, dialogs, and admin panels. Tag pills and header notification/profile round controls stay full-round; header menus stay `0.375rem` (2026-08-21).
+
+### Fixed
+
+- Luma add-by-URL used the wrong lookup param and guessed `evt-{slug}`, which returned 403 for listed Convex calendar events. Lookup now uses `url`, sync includes listed-but-hosted-elsewhere events, and calendar-scoped key errors are spelled out (2026-08-22).
+- Email footers now link to `twitter.com/convex` instead of the old `@convex_dev` handle (2026-08-22).
 
 ### Removed
 

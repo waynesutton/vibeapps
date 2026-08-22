@@ -101,6 +101,11 @@ const SITE_PAGES: Array<{ title: string; path: string; description: string }> =
       description:
         "Top apps and builders ranked by community votes and engagement.",
     },
+    {
+      title: "Events",
+      path: "/events",
+      description: "Upcoming hackathons and community events from Luma.",
+    },
   ];
 
 export function buildRobotsTxt(baseUrl: string): string {
@@ -282,6 +287,12 @@ export function buildSitemapXml(
       lastmod: homepageLastmod,
       changefreq: "daily",
       priority: "0.7",
+    },
+    {
+      loc: `${baseUrl}/events`,
+      lastmod: homepageLastmod,
+      changefreq: "daily",
+      priority: "0.6",
     },
     {
       loc: `${baseUrl}/vibeapps.md`,

@@ -36,6 +36,8 @@
 
 All PRD files are now organized in the `prds/` folder for better project structure:
 
+- `prds/luma-app-page-and-judging-hide.md`: Luma below View Change Log, Sidebar widgets Luma row, per judging group hide
+- `prds/sidebar-widgets-and-luma-events.md`: Catalog sidebar widget visibility, Luma event listings, compact back chevrons
 - `prds/list-view-ranked-rows.md`: Ranked editorial list view (two-digit rank, 16:9 screenshot, title plus one tag pill, Vibe it vote pill) inside one `bg-surface` plate. Grid and vibe stay as they are
 - `prds/grid-view-cards.md`: Grid card restack (screenshot on top, title, description, compact time left, vote pill right)
 - `prds/tag-page-header.md`: One-row tag page header (back chevron, tag pill, count) shared by list, grid, and vibe
@@ -95,7 +97,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
   - `api.d.ts` & `api.js`: Generated API definitions for all functions
   - `dataModel.d.ts`: Generated TypeScript types for database schema
   - `server.d.ts` & `server.js`: Generated server-side definitions
-- `convex/schema.ts`: Database schema definition with all tables and indexes (includes `submissionJudgeCompletions` table for multi-judge OCC-safe completion tracking, `aiJudgeResults` table for AI Judge scores, reasoning, run status, and detected `frontendHosting` per group+story, `aiFrontendWeights` per-platform frontend checker weights and persisted AI group summary metadata on `judgingGroups`, `videoTranscripts` table for scraped video demo transcripts used by the AI judge, `stories.hackathonLog` for pasted hackathon.md content (capped and secret-redacted), `aiJudgeResults.logDiscrepancies` cross-check notes and `hackathonLogEvent` parsed from the repo or pasted hackathon.md header, and deprecated hackathon skill API fields on `judgingGroups` plus the deprecated `hackathonRegistrations` table kept only so existing rows stay valid)
+- `convex/schema.ts`: Database schema definition with all tables and indexes (includes `lumaEvents` plus `settings.sidebarWidgets` / `lumaConfig`, `judgingGroups.hideLumaEvents`, `submissionJudgeCompletions` table for multi-judge OCC-safe completion tracking, `aiJudgeResults` table for AI Judge scores, reasoning, run status, and detected `frontendHosting` per group+story, `aiFrontendWeights` per-platform frontend checker weights and persisted AI group summary metadata on `judgingGroups`, `videoTranscripts` table for scraped video demo transcripts used by the AI judge, `stories.hackathonLog` for pasted hackathon.md content (capped and secret-redacted), `aiJudgeResults.logDiscrepancies` cross-check notes and `hackathonLogEvent` parsed from the repo or pasted hackathon.md header, and deprecated hackathon skill API fields on `judgingGroups` plus the deprecated `hackathonRegistrations` table kept only so existing rows stay valid)
 - `convex/auth.config.js` & `convex/auth.ts`: Convex authentication configuration
 - `convex/tsconfig.json`: TypeScript configuration for Convex functions
 - `convex/README.md`: Convex-specific documentation
@@ -129,7 +131,8 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `convex/adminQueries.ts`: General admin dashboard queries for current totals and content metrics (user growth time series removed)
 - `convex/adminFollowsQueries.ts`: Admin Numbers follow rankings gated by numbers.view, returning name/username/counts only
 - `convex/reports.ts`: User reporting system for content moderation
-- `convex/settings.ts`: Site-wide settings and configuration management
+- `convex/luma.ts`: Luma calendar config, event cache, public list-by-placement, admin sync/test/add-by-URL (API key from `LUMA_API_KEY` env). Entire-app flag stays in sync with `settings.sidebarWidgets.lumaEvents`
+- `convex/settings.ts`: Site-wide settings including sidebar widget matrix and Luma entire-app sync
 
 ### Custom Forms System
 
@@ -139,7 +142,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 ### Comprehensive Judging System
 
-- `convex/judgingGroups.ts`: Judging group management with public/private access, SHA-256 password hashing (legacy btoa hashes still verify), configurable `judgesPerSubmission` for multi-judge mode, `updateGroupSlug` (judging.slug, unique sanitized slug, activity log), required-tag backfill in `updateGroup` (stories carrying a newly set required tag are auto-included for judging), auto-include backfill by multiple tags + submission date range (`autoIncludeTagIds`/`autoIncludeMatchMode` any|all/`autoIncludeStartDate`/`autoIncludeEndDate`, also returned from `getGroupWithDetails` along with `aiFrontendWeights`), and AI Judge settings (`aiJudgeEnabled`/`aiResultsIsPublic`/`aiResultsPassword` on create/update, `aiJudgeResults` cascade delete in `deleteGroup`, exported `hashPassword`/`verifyPassword` helpers)
+- `convex/judgingGroups.ts`: Judging group management with public/private access, SHA-256 password hashing (legacy btoa hashes still verify), optional `hideLumaEvents` for that group's submit/join/judging pages, configurable `judgesPerSubmission` for multi-judge mode, `updateGroupSlug` (judging.slug, unique sanitized slug, activity log), required-tag backfill in `updateGroup` (stories carrying a newly set required tag are auto-included for judging), auto-include backfill by multiple tags + submission date range (`autoIncludeTagIds`/`autoIncludeMatchMode` any|all/`autoIncludeStartDate`/`autoIncludeEndDate`, also returned from `getGroupWithDetails` along with `aiFrontendWeights`), and AI Judge settings (`aiJudgeEnabled`/`aiResultsIsPublic`/`aiResultsPassword` on create/update, `aiJudgeResults` cascade delete in `deleteGroup`, exported `hashPassword`/`verifyPassword` helpers)
 - `convex/judgingCriteria.ts`: Judging criteria and scoring questions management with 1-10 star ratings
 - `convex/judgingGroupSubmissions.ts`: Submission assignment within judging groups with @mentions in notes, search functionality, status tracking, `markJudgeCompleted` mutation for multi-judge OCC-safe completion, required-tag inclusion (`ensureStoryInGroup`/`syncStoryToTaggedGroups` helpers + `syncRequiredTagSubmissions` admin mutation) so any story carrying a group's required tag is judged and counted, multi-tag + date-range auto-include (`storyMatchesAutoInclude` helper supporting any/all match modes, `syncStoryToTaggedGroups` honors auto-include criteria, `syncAutoIncludeSubmissions` admin mutation), and `exportGroupSubmissions` admin query that returns flattened submission rows (custom form info, links, tags, hackathon team info; no images) for CSV download; `getGroupSubmissions` requires a judge `sessionId` and returns `customFormAnswers` and `dynamicFormValues` so judges see per-group answers and admin-added field values; its "judged" author notification is only triggered by human judging and never by the AI Judge flow
 - `convex/judges.ts`: Judge registration (group password re-checked server-side), session ids from crypto.getRandomValues, and group-wide progress tracking with canEdit/completedBy flags for multi-judge transparency and edit permission enforcement
@@ -174,7 +177,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `convex/sendEmails.ts`: Convex Resend Component client (onEmailEvent callback registered) with subject prefix and from address enforcement
 - `convex/emailSettings.ts`: User email preferences management with unsubscribe functionality
 - `convex/testDailyEmail.ts`: Admin testing functions for daily/weekly email triggers with clear logs utility
-- `convex/crons.ts`: Email cron jobs (daily admin, engagement processing, weekly digest) plus a daily rebuild of cached discovery files
+- `convex/crons.ts`: Email cron jobs (daily admin, engagement processing, weekly digest), daily rebuild of cached discovery files, and hourly Luma calendar sync
 
 ### Utilities & Configuration
 
@@ -199,22 +202,27 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/index.css`: Global CSS styles, Tailwind imports, three-theme CSS variable definitions, the shared `0.25rem` radius token, the Geist font tokens, and the `.app-title` / `.app-desc` type scale classes
 - `src/vite-env.d.ts`: `Vite` environment type definitions
 - `src/lib/ThemeContext.tsx`: Theme provider and useTheme hook (light/classic/dark, persisted to localStorage, syncs data-theme on html)
+- `src/lib/sidebarWidgets.ts`: Catalog sidebar and Luma visibility helpers (`entireApp`, per-surface flags, App page)
+- `src/lib/lumaDates.ts`: One-line Luma event date range formatter
 - `src/components/ThemeToggle.tsx`: Header theme switcher button cycling light, classic, dark with Phosphor icons
 
 ### Core Components
 
-- `src/components/Layout.tsx`: Main layout wrapper with navigation and structure, including preserved round header controls and local menu radius exceptions
+- `src/components/Layout.tsx`: Main layout wrapper with navigation, catalog sidebar widget/Luma gating, and preserved round header controls
+- `src/components/BackToAppsLink.tsx`: Shared 44px icon-only back chevron to the app catalog
+- `src/components/LumaEventCard.tsx`: Public Luma event card (thumbnail, name, dates, one-line description)
+- `src/components/LumaEventList.tsx`: Stacked Luma events with hairline dividers for sidebars and `/events`
 - `src/components/ProtectedLayout.tsx`: Authentication-protected layout wrapper
-- `src/components/Footer.tsx`: Site footer with About, Leaderboard, live `/llms.txt` and `/vibeapps.md` directory links
+- `src/components/Footer.tsx`: Site footer with About, Leaderboard, Events, live `/llms.txt` and `/vibeapps.md` directory links
 - `src/components/UserSyncer.tsx`: Clerk-Convex user synchronization component
 - `src/components/DynamicSubmitForm.tsx`: Public dynamic submit form renderer
 
 ### Story/App Submission Features
 
-- `src/components/StoryForm.tsx`: Main app submission form with validation, enhanced tag search dropdown, and multi-image upload support
+- `src/components/StoryForm.tsx`: Main app submission form with a one-row chevron header, validation, enhanced tag search dropdown, and multi-image upload support
 - `src/components/ResendForm.tsx`: Resend integration form for email collection
 - `src/components/YCHackForm.tsx`: YC AI Hackathon submission form with team information support
-- `src/components/StoryDetail.tsx`: Detailed app view with comments, ratings, voting, image gallery, sticky sidebar for project links and tags, and per-app `llms.txt` plus `{slug}.md` links above View Change Log
+- `src/components/StoryDetail.tsx`: Detailed app view with comments, ratings, voting, image gallery, sticky sidebar for project links, tags, compact back, upcoming Luma events below View Change Log, and per-app `llms.txt` plus `{slug}.md` links above View Change Log
 - `src/components/StoryList.tsx`: Story rendering in three view modes: ranked editorial list rows inside one `bg-surface` plate, grid cards (screenshot on top, title, description, time left / vote pill right), and vibe cards
 - `src/components/ImageGallery.tsx`: Multi-image gallery component with thumbnail navigation and modal Lightbox
 
@@ -242,7 +250,8 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/components/admin/SpamCheck.tsx`: AI Spam admin tab in two steps: a "Run a scan" card (own date range picker with presets, Scan and Re-scan buttons that scope to the picked range or the 100 most recent, inline help copy) and a "Scan results" section with view-only filters (verdict, sort, submission date range), live counts strip, editable AI system prompt panel with reset to default, select all with bulk mark-as-spam (optional custom reason sent to submitters), bulk hide and delete, per-row mark/unmark/re-scan, verdict badges with confidence, inline URL/repo/duplicate signals, and expandable rows with full AI reasoning and scan metadata; both date ranges persist in localStorage across tab switches and reloads, and the counts strip pills are clickable quick filters synced with the verdict dropdown; plus an Automation card (auto-scan toggle, confirm-gated agent auto-mark with confidence threshold input, notify-on-auto-mark toggle) and a collapsed "Marked spam" review section listing everything currently marked (even without a scan row) with a marked-date range filter, select all, chunked bulk delete (50 per call), per-row unmark, and Auto-marked robot badges on agent-marked rows
 - `src/components/admin/UserModeration.tsx`: User management, verification, and ban/pause functionality
 - `src/components/admin/TagManagement.tsx`: Tag creation and customization with colors, emojis, and ordering. Per-tag toggles control visibility in the header, on the app detail page, and on app card lists, plus archive. Save and drag-and-drop reorder persist only changed tags in parallel (fast with large tag sets); includes paginated list with selectable page size (5-200), synced top and bottom pagination controls, search across all tags, a Tag limits card (max tags per submission, max tag name length), and bulk selection with Archive/Unarchive/Delete actions and inline delete confirm
-- `src/components/admin/Settings.tsx`: Site-wide settings configuration with view mode controls, submission limits, and submit page layout (hide /submit sidebar)
+- `src/components/admin/Settings.tsx`: Site-wide settings including sidebar widget visibility, submit page layout, and Luma events
+- `src/components/admin/LumaEventsSettings.tsx`: Admin Luma manager: calendar URL, field defaults, surface toggles synced with Sidebar widgets, test/sync, add-by-URL, list/reorder/placements
 - `src/components/admin/NumbersView.tsx`: Analytics and metrics dashboard with key totals plus follower and following rankings
 - `src/components/admin/ReportManagement.tsx`: User report review and resolution with status tracking and email notification integration
 - `src/components/admin/EmailManagement.tsx`: Complete email system management with Send & Settings and Templates sub tabs: global toggle, per-type send options (including the judging group emails toggle), broadcast emails (all users, selected users, or everyone who used a tag), user search, testing tools, and admin alert configuration
@@ -267,7 +276,7 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/pages/AdminJudgingGroupPage.tsx`: Full-page docs-style workspace for one judging group with a collapsible sticky sidebar (icon-only mode via a PanelLeft toggle, persisted in localStorage) and `?section=` deep links (Overview, Links, Settings, Access, Criteria, Submissions, Submit page, AI judge, Results, AI results, Judge tracking); header slug shows a pencil (judging.slug) to change the URL; sections are hidden when the caller lacks the mapped delegated permission and embed the existing criteria/results/AI/tracking components without their standalone headers
 - `src/components/admin/judging/groupSection.tsx`: Shared utilities for group workspace sections: `GroupDetails` type, submission field/section/visibility definitions, custom question types and key generation (`makeQuestionKey`, `mergeVisibility`), AI rubric definitions, date input helpers, and UI primitives (`SectionCard` with optional `headerAction` slot, `SaveFooter`, `HeaderSaveButton`, `UrlRow`, `TogglePill`, `useSaveState`)
 - `src/components/admin/judging/GroupSlugEditor.tsx`: Pencil and Settings button that open a warning dialog to change a judging group's URL slug, then replace-navigate to the new admin path
-- `src/components/admin/judging/GroupOverviewSection.tsx`: Group stats, active/public status toggles, and copyable public URLs (judging, results, submit page)
+- `src/components/admin/judging/GroupOverviewSection.tsx`: Group stats, active/public status toggles, Luma hide toggle, and copyable public URLs (judging, results, submit page)
 - `src/components/admin/judging/GroupSettingsSection.tsx`: Name, URL slug (read-only plus Change slug when judging.slug is granted), description, active status, judges per submission, scoring scale (1-5 or 1-10), and permission-gated danger zone delete
 - `src/components/admin/judging/GroupAccessSection.tsx`: Judge access, submission page access, and results visibility passwords (blank input keeps the existing password)
 - `src/components/admin/judging/GroupSubmissionsSection.tsx`: Search-and-add any site submission to the group, auto-include tags/date range/match rule config, sync matching submissions action, and CSV export
@@ -321,10 +330,12 @@ All PRD files are now organized in the `prds/` folder for better project structu
 - `src/pages/SignOutPage.tsx`: User sign-out confirmation
 - `src/pages/SetUsernamePage.tsx`: Username setup for new users
 - `src/pages/UserProfilePage.tsx`: User profile display and management with email preferences and unsubscribe functionality
-- `src/pages/TagPage.tsx`: Tag-filtered app listings with a one-row header (back chevron, tag pill, count) shared by list, grid, and vibe
+- `src/pages/TagPage.tsx`: Tag-filtered app listings with a one-row header (shared back chevron, tag pill, count) for list, grid, and vibe
+- `src/pages/EventsPage.tsx`: Public `/events` list of listed Luma events with outbound links
+- `src/pages/LeaderboardPage.tsx`: Weekly vibes leaderboard with a compact back chevron header
 - `src/pages/JudgingGroupPage.tsx`: Judge interface for scoring submissions with session management
 - `src/pages/JudgingGroupJoinPage.tsx`: Public join landing page for a judging group at `/judging/:slug/join`, the target of the group's QR code. Reads the existing public `getSubmissionPage` query, redirects signed-in scanners straight to `/judging/:slug/submit` (forwarding any prefill query params), and shows signed-out scanners the group name, header image, and description with sign-in and sign-up links that return them to that form. Notes when a submission password will also be required; renders the shared not-found state when the slug is unknown or the custom submission page is disabled
-- `src/pages/JudgingGroupSubmitPage.tsx`: Public custom submission page for a judging group with password gating, sign-in and sign-up links that return the visitor to this form after authenticating, three admin-selectable layouts (two column, one third, single column with centered hero), sectioned form, locked required tag, admin-selectable field visibility and required status (including required form sections and per-group overrides for admin-added form fields), and per-group custom questions (hidden ones removed) whose answers save to the story; supports query-param prefill (`?url=&title=&tagline=&github=`) for skill-generated submit links and shows Convex errors (like the duplicate project URL guard) without the server prefix
+- `src/pages/JudgingGroupSubmitPage.tsx`: Public custom submission page for a judging group with password gating, sign-in and sign-up links that return the visitor to this form after authenticating, three admin-selectable layouts (two column, one third, single column with centered hero), optional upcoming Luma events (hidden per group), sectioned form, locked required tag, admin-selectable field visibility and required status (including required form sections and per-group overrides for admin-added form fields), and per-group custom questions (hidden ones removed) whose answers save to the story; supports query-param prefill (`?url=&title=&tagline=&github=`) for skill-generated submit links and shows Convex errors (like the duplicate project URL guard) without the server prefix
 - `src/pages/JudgingInterfacePage.tsx`: Individual submission judging interface with comprehensive filtering (tag dropdown, judged status filter, choice-answer filter over dynamic form fields and custom questions), search functionality, group-wide progress tracking, edit permissions based on completion status, read-only views of others' completed submissions, @mention autocomplete in notes, and cards showing per-group custom question answers (Additional Answers) and admin-added form field values (Additional Form Fields). Filters work together to help judges find specific submissions efficiently.
 - `src/pages/PublicJudgingResultsPage.tsx`: Public judging results page with password protection
 - `src/pages/AIJudgeResultsPage.tsx`: Public "Best Use of Convex — AI Review" results page at `/judging/:slug/ai-results` with the same public/password/admin-bypass gate as human results, ranked AI scores with expandable per-criterion reasoning, detected Convex features, a live app URL status badge per submission, and clear AI-generated labeling

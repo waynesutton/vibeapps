@@ -1,7 +1,8 @@
 import { useState } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { NotFoundPage } from "../../pages/NotFoundPage";
+import { BackToAppsLink } from "../BackToAppsLink";
 import { TagManagement } from "./TagManagement";
 import { ContentModeration } from "./ContentModeration";
 import { Settings } from "./Settings";
@@ -164,20 +165,12 @@ export function AdminDashboard() {
 
   return (
     <AdminAccessProvider access={access}>
-      <div className="max-w-6xl mx-auto px-4 py-5">
-        <Link
-          to="/"
-          className="text-[13px] text-soft hover:text-ink inline-block mb-2"
-        >
-          ← Back to Apps Home
-        </Link>
-
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-medium text-ink">
-            Admin Dashboard
-          </h1>
+      <div className="max-w-6xl mx-auto px-4 py-3">
+        <div className="flex items-center gap-1.5 mb-4 min-h-11">
+          <BackToAppsLink label="Back to apps home" />
+          <h1 className="text-xl font-medium text-ink">Admin Dashboard</h1>
           {!access.isAdmin && (
-            <span className="text-xs font-medium text-soft bg-surface-alt border border-hairline rounded-full px-3 py-1">
+            <span className="ml-auto text-xs font-medium text-soft bg-surface-alt border border-hairline rounded-full px-3 py-1">
               Delegated access
             </span>
           )}

@@ -37,11 +37,7 @@ const endOfDay = new Date(today.setHours(23, 59, 59, 999)).getTime();
 // Only emails sent between these timestamps count as "already sent today"
 const alreadySent = await ctx.db
   .query("emailLogs")
-  .filter(
-    (q) =>
-      q.gte(q.field("sentAt"), startOfDay) &&
-      q.lte(q.field("sentAt"), endOfDay),
-  );
+  .filter((q) => q.gte(q.field("sentAt"), startOfDay) && q.lte(q.field("sentAt"), endOfDay));
 ```
 
 **Key Points**:
@@ -122,18 +118,21 @@ All email functions include detailed logging for debugging and monitoring:
 #### Test Unsubscribe Flow:
 
 1. **Navigate to Profile**:
+
    - Sign in to your account
    - Go to your user profile page
    - Scroll to "Manage Profile & Account" section
    - Locate "Email Preferences" card
 
 2. **Unsubscribe**:
+
    - Click "Unsubscribe" button
    - Confirm action in dialog
    - Verify UI updates to show "Currently unsubscribed from all emails"
    - Button changes to "Resubscribe"
 
 3. **Verify in Database** (Convex Dashboard):
+
    - Open `emailSettings` table
    - Find your user's record
    - Confirm `unsubscribedAt` has a timestamp
@@ -149,12 +148,14 @@ All email functions include detailed logging for debugging and monitoring:
 #### Test Resubscribe Flow:
 
 1. **Resubscribe**:
+
    - Click "Resubscribe" button
    - Confirm action in dialog
    - Verify UI updates to show "Receiving email notifications"
    - Button changes back to "Unsubscribe"
 
 2. **Verify in Database**:
+
    - Check `emailSettings` table
    - Confirm `unsubscribedAt` is cleared/undefined
    - All email flags should be `true`
@@ -211,43 +212,52 @@ VibeApps sends the following types of emails:
 ## Chronological Implementation Plan
 
 1. Environment & Dependencies
+
    - Create Resend account and set `RESEND_API_KEY`.
    - Confirm Convex deployment environment variables are set (Convex URL, Clerk webhook secret).
    - Use the Convex Resend Component (@convex-dev/resend) per `https://github.com/get-convex/resend`, including event webhooks.
 
 2. Schema & Settings
+
    - Add `emailSettings` (with `weeklyDigestEmails`), `emailLogs`, `dailyEngagementSummary`, `dailyMetrics`.
    - Add `emailUnsubscribeTokens`, `broadcastEmails`, and `appSettings` with `emailsEnabled` flag.
    - Ensure existing domain tables have needed indexes (see Schema section); prefer `withIndex` over `filter`.
 
 3. Email Templates & Style
+
    - Implement HTML templates in `convex/emails/templates.ts` matching app style (black/white, no emojis).
    - Standardize footer: settings link + one‑click unsubscribe link.
 
 4. Core Email Sender
+
    - Use Convex Resend Component wrapper in `convex/sendEmails.ts` and route `/resend-webhook` in `convex/http.ts` for event intake.
    - Enforce from `VibeApps Updates <alerts@updates.vibeapps.dev>` and subject prefix `VibeApps Updates:` via helper.
    - Read global `emailsEnabled` kill‑switch before sending. Log results in `emailLogs`.
 
 5. Unsubscribe
+
    - Create token generation + storage in `emailUnsubscribeTokens`.
    - Add HTTP GET endpoint `/api/unsubscribe?token=...` to consume token and update `emailSettings`.
    - Add unsubscribe link to all templates.
 
 6. Daily Flows
+
    - Implement daily admin metrics pipeline and email.
    - Implement user daily engagement pipeline: compute summary (engagement, new followers, followed submissions) and send one digest if active in last 24h.
    - Add crons: 9:00 admin, 17:30 compute engagement, 18:00 send user emails (PST).
 
 7. Weekly Digest
+
    - Implement weekly "Most Vibes This Week" computation and template.
    - Add cron: Monday 9:00 AM PST. Respect `weeklyDigestEmails` and global kill‑switch.
 
 8. Admin Controls
+
    - Admin Settings: add UI toggle to set `emailsEnabled` via `appSettings`.
    - Admin Broadcast: compose email to all users; create `broadcastEmails` record; scheduler batches sends respecting rate limits and per‑user preferences.
 
 9. Frontend Settings UI
+
    - Profile settings to manage: daily engagement, message notifications, marketing, weekly digest, timezone, unsubscribe all.
 
 10. Monitoring & Cleanup
@@ -563,14 +573,10 @@ Integration Hook (outline):
 
 ```typescript
 // In convex/reports.ts after creating a report and generating alerts via alerts.createReportNotifications
-await ctx.scheduler.runAfter(
-  0,
-  internal.emails.notifications.sendAdminReportEmail,
-  {
-    storyId: args.storyId,
-    reportId: newReportId,
-  },
-);
+await ctx.scheduler.runAfter(0, internal.emails.notifications.sendAdminReportEmail, {
+  storyId: args.storyId,
+  reportId: newReportId,
+});
 
 // internal.emails.notifications.sendAdminReportEmail should:
 // - fetch admin user ids via internal.alerts.getAdminUserIds or a settings source
@@ -611,16 +617,12 @@ export default defineSchema({
       v.literal("weekly_digest"),
       v.literal("mention_notification"),
       v.literal("admin_broadcast"),
-      v.literal("admin_report_notification"),
+      v.literal("admin_report_notification")
     ),
     recipientEmail: v.string(),
     sentAt: v.number(),
     resendMessageId: v.optional(v.string()), // Store Resend message ID
-    status: v.union(
-      v.literal("sent"),
-      v.literal("failed"),
-      v.literal("delivered"),
-    ),
+    status: v.union(v.literal("sent"), v.literal("failed"), v.literal("delivered")),
     metadata: v.optional(v.any()), // Store email-specific data
   })
     .index("by_user_type_date", ["userId", "emailType", "sentAt"])
@@ -644,7 +646,7 @@ export default defineSchema({
         ratings: v.number(),
         comments: v.number(),
         bookmarks: v.number(),
-      }),
+      })
     ),
   })
     .index("by_user_date", ["userId", "date"])
@@ -674,7 +676,7 @@ export default defineSchema({
       v.literal("all"),
       v.literal("daily_engagement"),
       v.literal("weekly_digest"),
-      v.literal("marketing"),
+      v.literal("marketing")
     ),
     expiresAt: v.number(),
     consumedAt: v.optional(v.number()),
@@ -693,7 +695,7 @@ export default defineSchema({
       v.literal("queued"),
       v.literal("sending"),
       v.literal("completed"),
-      v.literal("cancelled"),
+      v.literal("cancelled")
     ),
     totalRecipients: v.optional(v.number()),
     sentCount: v.optional(v.number()),
@@ -994,7 +996,7 @@ export const generateEngagementEmail = internalQuery({
           ratings: v.number(),
           comments: v.number(),
           bookmarks: v.number(),
-        }),
+        })
       ),
     }),
   },
@@ -1007,20 +1009,13 @@ export const generateEngagementEmail = internalQuery({
 
     const generateAppSection = (app: any) => {
       const engagements = [];
-      if (app.votes > 0)
-        engagements.push(`${app.votes} new vote${app.votes !== 1 ? "s" : ""}`);
+      if (app.votes > 0) engagements.push(`${app.votes} new vote${app.votes !== 1 ? "s" : ""}`);
       if (app.ratings > 0)
-        engagements.push(
-          `${app.ratings} new rating${app.ratings !== 1 ? "s" : ""}`,
-        );
+        engagements.push(`${app.ratings} new rating${app.ratings !== 1 ? "s" : ""}`);
       if (app.comments > 0)
-        engagements.push(
-          `${app.comments} new comment${app.comments !== 1 ? "s" : ""}`,
-        );
+        engagements.push(`${app.comments} new comment${app.comments !== 1 ? "s" : ""}`);
       if (app.bookmarks > 0)
-        engagements.push(
-          `${app.bookmarks} new bookmark${app.bookmarks !== 1 ? "s" : ""}`,
-        );
+        engagements.push(`${app.bookmarks} new bookmark${app.bookmarks !== 1 ? "s" : ""}`);
 
       return `
         <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 10px 0;">
@@ -1152,8 +1147,7 @@ export const calculateDailyMetrics = internalQuery({
       .query("stories")
       .filter(
         (q) =>
-          q.gte(q.field("_creationTime"), startOfDay) &&
-          q.lte(q.field("_creationTime"), endOfDay),
+          q.gte(q.field("_creationTime"), startOfDay) && q.lte(q.field("_creationTime"), endOfDay)
       )
       .collect();
 
@@ -1161,8 +1155,7 @@ export const calculateDailyMetrics = internalQuery({
       .query("users")
       .filter(
         (q) =>
-          q.gte(q.field("_creationTime"), startOfDay) &&
-          q.lte(q.field("_creationTime"), endOfDay),
+          q.gte(q.field("_creationTime"), startOfDay) && q.lte(q.field("_creationTime"), endOfDay)
       )
       .collect();
 
@@ -1172,8 +1165,7 @@ export const calculateDailyMetrics = internalQuery({
       .query("votes")
       .filter(
         (q) =>
-          q.gte(q.field("_creationTime"), startOfDay) &&
-          q.lte(q.field("_creationTime"), endOfDay),
+          q.gte(q.field("_creationTime"), startOfDay) && q.lte(q.field("_creationTime"), endOfDay)
       )
       .collect();
 
@@ -1181,8 +1173,7 @@ export const calculateDailyMetrics = internalQuery({
       .query("comments")
       .filter(
         (q) =>
-          q.gte(q.field("_creationTime"), startOfDay) &&
-          q.lte(q.field("_creationTime"), endOfDay),
+          q.gte(q.field("_creationTime"), startOfDay) && q.lte(q.field("_creationTime"), endOfDay)
       )
       .collect();
 
@@ -1190,8 +1181,7 @@ export const calculateDailyMetrics = internalQuery({
       .query("storyRatings")
       .filter(
         (q) =>
-          q.gte(q.field("_creationTime"), startOfDay) &&
-          q.lte(q.field("_creationTime"), endOfDay),
+          q.gte(q.field("_creationTime"), startOfDay) && q.lte(q.field("_creationTime"), endOfDay)
       )
       .collect();
 
@@ -1199,8 +1189,7 @@ export const calculateDailyMetrics = internalQuery({
       .query("bookmarks")
       .filter(
         (q) =>
-          q.gte(q.field("_creationTime"), startOfDay) &&
-          q.lte(q.field("_creationTime"), endOfDay),
+          q.gte(q.field("_creationTime"), startOfDay) && q.lte(q.field("_creationTime"), endOfDay)
       )
       .collect();
 
@@ -1208,8 +1197,7 @@ export const calculateDailyMetrics = internalQuery({
       .query("follows")
       .filter(
         (q) =>
-          q.gte(q.field("_creationTime"), startOfDay) &&
-          q.lte(q.field("_creationTime"), endOfDay),
+          q.gte(q.field("_creationTime"), startOfDay) && q.lte(q.field("_creationTime"), endOfDay)
       )
       .collect();
 
@@ -1224,10 +1212,10 @@ export const calculateDailyMetrics = internalQuery({
         (q) =>
           q.or(
             q.eq(q.field("status"), "resolved_hidden"),
-            q.eq(q.field("status"), "resolved_deleted"),
+            q.eq(q.field("status"), "resolved_deleted")
           ) &&
           q.gte(q.field("_creationTime"), startOfDay) &&
-          q.lte(q.field("_creationTime"), endOfDay),
+          q.lte(q.field("_creationTime"), endOfDay)
       )
       .collect();
 
@@ -1281,7 +1269,7 @@ export const processUserEngagement = internalMutation({
           .filter(
             (q) =>
               q.gte(q.field("_creationTime"), startOfDay) &&
-              q.lte(q.field("_creationTime"), endOfDay),
+              q.lte(q.field("_creationTime"), endOfDay)
           )
           .collect();
 
@@ -1291,7 +1279,7 @@ export const processUserEngagement = internalMutation({
           .filter(
             (q) =>
               q.gte(q.field("_creationTime"), startOfDay) &&
-              q.lte(q.field("_creationTime"), endOfDay),
+              q.lte(q.field("_creationTime"), endOfDay)
           )
           .collect();
 
@@ -1301,7 +1289,7 @@ export const processUserEngagement = internalMutation({
           .filter(
             (q) =>
               q.gte(q.field("_creationTime"), startOfDay) &&
-              q.lte(q.field("_creationTime"), endOfDay),
+              q.lte(q.field("_creationTime"), endOfDay)
           )
           .collect();
 
@@ -1311,12 +1299,11 @@ export const processUserEngagement = internalMutation({
           .filter(
             (q) =>
               q.gte(q.field("_creationTime"), startOfDay) &&
-              q.lte(q.field("_creationTime"), endOfDay),
+              q.lte(q.field("_creationTime"), endOfDay)
           )
           .collect();
 
-        const storyEngagement =
-          votes.length + ratings.length + comments.length + bookmarks.length;
+        const storyEngagement = votes.length + ratings.length + comments.length + bookmarks.length;
         totalEngagement += storyEngagement;
 
         if (storyEngagement > 0) {
@@ -1336,18 +1323,9 @@ export const processUserEngagement = internalMutation({
           userId,
           date: args.date,
           votesReceived: storyEngagements.reduce((sum, s) => sum + s.votes, 0),
-          ratingsReceived: storyEngagements.reduce(
-            (sum, s) => sum + s.ratings,
-            0,
-          ),
-          commentsReceived: storyEngagements.reduce(
-            (sum, s) => sum + s.comments,
-            0,
-          ),
-          bookmarksReceived: storyEngagements.reduce(
-            (sum, s) => sum + s.bookmarks,
-            0,
-          ),
+          ratingsReceived: storyEngagements.reduce((sum, s) => sum + s.ratings, 0),
+          commentsReceived: storyEngagements.reduce((sum, s) => sum + s.comments, 0),
+          bookmarksReceived: storyEngagements.reduce((sum, s) => sum + s.bookmarks, 0),
           totalEngagement,
           storyEngagements,
         });
@@ -1377,7 +1355,7 @@ export const computeWeeklyMostVibes = internalQuery({
       storyId: v.id("stories"),
       title: v.string(),
       vibes: v.number(),
-    }),
+    })
   ),
   handler: async (ctx, args) => {
     // NOTE: Replace with indexed queries as available in schema
@@ -1386,7 +1364,7 @@ export const computeWeeklyMostVibes = internalQuery({
       .filter(
         (q) =>
           q.gte(q.field("_creationTime"), args.weekStartMs) &&
-          q.lte(q.field("_creationTime"), args.weekEndMs),
+          q.lte(q.field("_creationTime"), args.weekEndMs)
       )
       .collect();
 
@@ -1404,8 +1382,7 @@ export const computeWeeklyMostVibes = internalQuery({
     const results = [] as Array<{ storyId: any; title: string; vibes: number }>;
     for (const e of entries) {
       const doc = await ctx.db.get(e.storyId as any);
-      if (doc)
-        results.push({ storyId: doc._id, title: doc.title, vibes: e.vibes });
+      if (doc) results.push({ storyId: doc._id, title: doc.title, vibes: e.vibes });
     }
     return results;
   },
@@ -1430,40 +1407,20 @@ import { internal } from "./_generated/api";
 const crons = cronJobs();
 
 // Daily admin email at 9:00 AM PST
-crons.cron(
-  "daily admin email",
-  "0 9 * * *",
-  internal.emails.daily.sendDailyAdminEmail,
-  {},
-);
+crons.cron("daily admin email", "0 9 * * *", internal.emails.daily.sendDailyAdminEmail, {});
 
 // Process daily engagement at 5:30 PM PST (before user emails)
-crons.cron(
-  "process daily engagement",
-  "30 17 * * *",
-  internal.emails.daily.processUserEngagement,
-  {
-    date: new Date().toISOString().split("T")[0],
-  },
-);
+crons.cron("process daily engagement", "30 17 * * *", internal.emails.daily.processUserEngagement, {
+  date: new Date().toISOString().split("T")[0],
+});
 
 // Send user engagement emails at 6:00 PM PST
-crons.cron(
-  "daily user emails",
-  "0 18 * * *",
-  internal.emails.daily.sendDailyUserEmails,
-  {},
-);
+crons.cron("daily user emails", "0 18 * * *", internal.emails.daily.sendDailyUserEmails, {});
 
 // Weekly digest Monday 9:00 AM PST
-crons.cron(
-  "weekly most vibes",
-  "0 9 * * MON",
-  internal.emails.weekly.sendWeeklyDigest,
-  {
-    date: new Date().toISOString().split("T")[0],
-  },
-);
+crons.cron("weekly most vibes", "0 9 * * MON", internal.emails.weekly.sendWeeklyDigest, {
+  date: new Date().toISOString().split("T")[0],
+});
 
 // Optional: cleanup resend component data hourly (see Convex Resend component docs)
 // crons.interval("cleanup resend", { hours: 1 }, internal.crons.cleanupResend, {});
@@ -1490,7 +1447,7 @@ export const getEmailSettings = query({
       marketingEmails: v.boolean(),
       timezone: v.optional(v.string()),
       unsubscribedAt: v.optional(v.number()),
-    }),
+    })
   ),
   handler: async (ctx) => {
     const { user } = await requireAuth(ctx);
@@ -1598,10 +1555,7 @@ http.route({
     const url = new URL(req.url);
     const token = url.searchParams.get("token");
     if (!token) return new Response("Missing token", { status: 400 });
-    const ok: boolean = await ctx.runMutation(
-      internal.emails.unsubscribe.handleToken,
-      { token },
-    );
+    const ok: boolean = await ctx.runMutation(internal.emails.unsubscribe.handleToken, { token });
     if (!ok) return new Response("Invalid or expired token", { status: 400 });
     return new Response("You have been unsubscribed.", { status: 200 });
   }),
@@ -1636,8 +1590,7 @@ export const handleToken = internalMutation({
         patch.messageNotifications = false;
         patch.marketingEmails = false;
         patch.weeklyDigestEmails = false;
-      } else if (purpose === "daily_engagement")
-        patch.dailyEngagementEmails = false;
+      } else if (purpose === "daily_engagement") patch.dailyEngagementEmails = false;
       else if (purpose === "weekly_digest") patch.weeklyDigestEmails = false;
       else if (purpose === "marketing") patch.marketingEmails = false;
       await ctx.db.patch(settings._id, patch);
@@ -1662,13 +1615,9 @@ if (!existingUser) {
   });
 
   // Trigger welcome email
-  await ctx.scheduler.runAfter(
-    0,
-    internal.emails.notifications.sendWelcomeEmail,
-    {
-      userId: userId,
-    },
-  );
+  await ctx.scheduler.runAfter(0, internal.emails.notifications.sendWelcomeEmail, {
+    userId: userId,
+  });
 
   return userId;
 }
@@ -1710,15 +1659,11 @@ export const sendMessage = mutation({
       .unique();
 
     if (recipientSettings?.messageNotifications !== false) {
-      await ctx.scheduler.runAfter(
-        0,
-        internal.emails.notifications.sendMessageNotification,
-        {
-          recipientId: args.recipientId,
-          senderId: args.senderId,
-          messagePreview: args.content.substring(0, 150),
-        },
-      );
+      await ctx.scheduler.runAfter(0, internal.emails.notifications.sendMessageNotification, {
+        recipientId: args.recipientId,
+        senderId: args.senderId,
+        messagePreview: args.content.substring(0, 150),
+      });
     }
   },
 });
@@ -1735,17 +1680,13 @@ export const createComment = mutation({
       /* ... */
     });
     // Mention fanout (non-blocking):
-    await ctx.scheduler.runAfter(
-      0,
-      internal.emails.mentions.sendMentionNotifications,
-      {
-        context: "comment",
-        storyId: args.storyId,
-        authorId: args.authorId,
-        rawText: args.content,
-        permalink: `https://vibeapps.dev/s/${args.storySlug}#c-${String(commentId)}`,
-      },
-    );
+    await ctx.scheduler.runAfter(0, internal.emails.mentions.sendMentionNotifications, {
+      context: "comment",
+      storyId: args.storyId,
+      authorId: args.authorId,
+      rawText: args.content,
+      permalink: `https://vibeapps.dev/s/${args.storySlug}#c-${String(commentId)}`,
+    });
     return commentId;
   },
 });
@@ -1758,23 +1699,16 @@ export const createComment = mutation({
 export const addSubmissionNote = mutation({
   // ...existing impl
   handler: async (ctx, args) => {
-    const noteId = await /* existing insert */ ctx.db.insert(
-      "submissionNotes",
-      {
-        /*...*/
-      },
-    );
-    await ctx.scheduler.runAfter(
-      0,
-      internal.emails.mentions.sendMentionNotifications,
-      {
-        context: "judge_note",
-        storyId: args.storyId,
-        authorId: args.judgeId as any, // judge as user id or mapped
-        rawText: args.content,
-        permalink: `https://vibeapps.dev/judging/${args.groupSlug}?story=${String(args.storyId)}#n-${String(noteId)}`,
-      },
-    );
+    const noteId = await /* existing insert */ ctx.db.insert("submissionNotes", {
+      /*...*/
+    });
+    await ctx.scheduler.runAfter(0, internal.emails.mentions.sendMentionNotifications, {
+      context: "judge_note",
+      storyId: args.storyId,
+      authorId: args.judgeId as any, // judge as user id or mapped
+      rawText: args.content,
+      permalink: `https://vibeapps.dev/judging/${args.groupSlug}?story=${String(args.storyId)}#n-${String(noteId)}`,
+    });
     return noteId;
   },
 });
@@ -1808,7 +1742,7 @@ CLERK_WEBHOOK_SECRET=whsec_xxx
 - **CTA Buttons**: Consistent styling with #292929 background
 - **Footer**: Standard unsubscribe and settings links plus comprehensive contact/social footer with:
   - Contact link to GitHub issues (https://github.com/waynesutton/vibeapps/issues)
-  - Social media links (Twitter: @convex_dev, LinkedIn: convex-dev)
+  - Social media links (Twitter: @convex, LinkedIn: convex-dev)
   - Open source project information
   - Legal address: Convex 444 De Haro St Ste 218, San Francisco, CA 94107-2398 USA
 - **Icons/Emojis**: Do not use emojis to keep consistent with app and deliverability
@@ -1934,6 +1868,7 @@ CLERK_WEBHOOK_SECRET=whsec_xxx
 ### Phase 11: Daily Email Inbox Messages & Date Range Fixes ✅ COMPLETED
 
 - [x] **Inbox Messages in Daily Engagement Emails**: Added DM notifications to user daily emails
+
   - **Problem**: Users were not receiving daily emails when they received inbox messages
   - **Solution**: Enhanced `convex/emails/daily.ts` to check for inbox messages received today
   - **Implementation**: Added `getDMsReceivedByUser` helper in `convex/emails/helpers.ts`
@@ -1943,6 +1878,7 @@ CLERK_WEBHOOK_SECRET=whsec_xxx
   - **Integration**: Daily emails now trigger if user has engagement OR mentions OR replies OR inbox messages
 
 - [x] **Critical Date Range Bug Fix**: Fixed date mutation issues in daily email calculations
+
   - **Problem**: Daily and weekly emails were showing zero activity due to incorrect date range calculations
   - **Root Cause**: `setHours()` method mutates Date objects in place, causing `startOfDay` and `endOfDay` to be incorrect
   - **Example**: `new Date(today.setHours(0,0,0,0))` modified `today` itself, breaking subsequent `setHours` calls

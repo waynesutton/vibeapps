@@ -39,6 +39,9 @@ import { ImageGallery } from "./ImageGallery";
 import { ProfileHoverCard } from "./ui/ProfileHoverCard";
 import { Markdown } from "./Markdown";
 import { useDialog } from "../hooks/useDialog";
+import { BackToAppsLink } from "./BackToAppsLink";
+import { LumaEventList } from "./LumaEventList";
+import { isLumaWidgetVisible } from "../lib/sidebarWidgets";
 
 // Removed MOCK_COMMENTS
 
@@ -1056,7 +1059,9 @@ export function StoryDetail({ story }: StoryDetailProps) {
         </div>
 
         {/* Project Links & Tags Sidebar */}
-        {(story.url ||
+          <div className="w-80 flex-shrink-0 hidden lg:block self-start">
+            <div className="sticky top-8 space-y-4">
+            {(story.url ||
           story.videoUrl ||
           story.githubUrl ||
           enabledFormFields?.some(
@@ -1064,8 +1069,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
           ) ||
           (story.dynamicFormValues?.length ?? 0) > 0 ||
           story.tags?.length > 0) && (
-          <div className="w-80 flex-shrink-0 hidden lg:block self-start">
-            <div className="bg-surface-alt rounded-lg p-4 border border-hairline sticky top-8">
+            <div className="bg-surface-alt rounded-lg p-4 border border-hairline">
               <h2 className="text-base font-medium text-copy mb-3">
                 Project Links & Tags
               </h2>
@@ -1250,7 +1254,6 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   </div>
                 )}
               </div>
-            </div>
             {/* Agent files and changelog */}
             <div className="mt-4 pt-3 border-t border-hairline space-y-2">
               {isPublicDirectoryStory(story) && (
@@ -1275,15 +1278,21 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 </svg>
                 View Change Log
               </a>
+              {isLumaWidgetVisible(settings?.sidebarWidgets, "storyDetail") && (
+                <div className="pt-3">
+                  <LumaEventList placement="story_detail" compact />
+                </div>
+              )}
             </div>
-            <Link
-              to="/"
-              className="text-soft hover:text-copy inline-block mb-6 text-sm mt-[1.5625rem]"
-            >
-              ← Back to Apps List
-            </Link>
+            </div>
+            )}
+            <div className="space-y-3">
+              <div className="flex items-center min-h-11">
+                <BackToAppsLink label="Back to apps list" />
+              </div>
+            </div>
+            </div>
           </div>
-        )}
       </div>
 
       {/* Edit Form Section */}
@@ -2346,10 +2355,21 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   </svg>
                   View Change Log
                 </a>
+                {isLumaWidgetVisible(settings?.sidebarWidgets, "storyDetail") && (
+                  <div className="pt-3">
+                    <LumaEventList placement="story_detail" compact />
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
+
+      <div className="lg:hidden mt-6 space-y-3">
+        <div className="flex items-center min-h-11">
+          <BackToAppsLink label="Back to apps list" />
+        </div>
+      </div>
 
       {/* Video demo start */}
       {story.videoUrl && story.videoUrl.trim() && (

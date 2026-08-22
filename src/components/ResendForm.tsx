@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { BackToAppsLink } from "./BackToAppsLink";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
@@ -174,12 +175,10 @@ export function ResendForm() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <Link
-        to="/"
-        className="text-soft hover:text-copy inline-block mb-6"
-      >
-        ← Back to Apps
-      </Link>
+      <header className="flex items-center gap-1.5 mb-4 min-h-11">
+        <BackToAppsLink />
+        <h2 className="text-xl font-medium text-ink">Resend Hackathon</h2>
+      </header>
 
       <div className="bg-surface p-6 rounded-lg border border-hairline">
         <div className="text-center py-12">

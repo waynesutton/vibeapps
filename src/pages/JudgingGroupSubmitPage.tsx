@@ -16,6 +16,7 @@ import { ChoiceFieldInput } from "../components/ui/ChoiceFieldInput";
 import { useAuth } from "@clerk/clerk-react";
 import { Link } from "react-router-dom";
 import { authUrlWithReturn } from "../lib/redirectPath";
+import { LumaEventList } from "../components/LumaEventList";
 
 // Default required state for each configurable submission field.
 // Mirrors the admin defaults in EditJudgingGroupModal.
@@ -435,10 +436,16 @@ export function JudgingGroupSubmitPage() {
                       <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
                       {link.label}
                     </a>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
           </header>
+
+          {submissionPage.hideLumaEvents !== true && (
+            <div className="mb-10">
+              <LumaEventList placement="submit_page" compact />
+            </div>
+          )}
 
           {formCard}
         </div>
@@ -516,6 +523,10 @@ export function JudgingGroupSubmitPage() {
                   </div>
                 </div>
               )}
+
+            {submissionPage.hideLumaEvents !== true && (
+              <LumaEventList placement="submit_page" compact />
+            )}
           </div>
 
           {/* Right Column - Submission Form */}

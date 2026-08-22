@@ -124,6 +124,35 @@ export function GroupOverviewSection({
             </span>
           )}
         </div>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[13px] font-medium text-ink">
+              Luma events
+            </p>
+            <p className="text-xs text-soft">
+              {group.hideLumaEvents === true
+                ? "Hidden on this group's submit, join, and judging pages"
+                : "Shown on this group's submit, join, and judging pages"}
+            </p>
+          </div>
+          {canManage ? (
+            <TogglePill
+              enabled={group.hideLumaEvents !== true}
+              onToggle={() =>
+                void updateGroup({
+                  groupId: group._id,
+                  hideLumaEvents: group.hideLumaEvents !== true,
+                })
+              }
+              onLabel="Shown"
+              offLabel="Hidden"
+            />
+          ) : (
+            <span className="px-2.5 py-1 text-xs rounded-full bg-surface-alt text-copy">
+              {group.hideLumaEvents === true ? "Hidden" : "Shown"}
+            </span>
+          )}
+        </div>
       </SectionCard>
 
       <SectionCard

@@ -35,9 +35,16 @@ import { ThemeToggle } from "./ThemeToggle";
 import { WeeklyLeaderboard } from "./WeeklyLeaderboard";
 import { TopCategoriesOfWeek } from "./TopCategoriesOfWeek";
 import { RecentVibers } from "./RecentVibers";
+import { LumaEventList } from "./LumaEventList";
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
 import { SimpleSelect } from "./ui/SimpleSelect";
 import { formatDistanceToNow } from "date-fns";
+import {
+  isLumaWidgetVisible,
+  isSidebarWidgetVisible,
+  type LumaWidgetSurface,
+  type SidebarWidgetSurface,
+} from "../lib/sidebarWidgets";
 
 interface LayoutContextType {
   viewMode: "list" | "grid" | "vibe";
@@ -360,10 +367,80 @@ export function Layout({ children }: { children?: ReactNode }) {
   const isCustomFormPage = location.pathname.startsWith("/f/");
   const isPublicResultsPage = location.pathname.startsWith("/results/");
   const isAdminFormPage = location.pathname.startsWith("/admin/forms/");
-  // Admin setting: hide the right sidebar on the default /submit page for everyone
+  const isAdminPage = location.pathname.startsWith("/admin");
+  const isInboxPage = location.pathname.startsWith("/inbox");
+  const isNotificationsPage = location.pathname.startsWith("/notifications");
+  const isLeaderboardPage = location.pathname === "/leaderboard";
+  const isEventsPage = location.pathname === "/events";
+  const isUsernameSetup = location.pathname === "/set-username";
+  const isTagPage = location.pathname.startsWith("/tag/");
   const isDefaultSubmitPage = location.pathname === "/submit";
   const hideSubmitSidebar =
     isDefaultSubmitPage && (settings?.hideSubmitPageSidebar ?? false);
+
+  const widgetSurface: SidebarWidgetSurface = isDefaultSubmitPage
+    ? "submitPage"
+    : isTagPage
+      ? "tagPage"
+      : viewMode === "grid"
+        ? "gridView"
+        : viewMode === "vibe"
+          ? "vibeView"
+          : "listView";
+
+  const lumaPlacement =
+    isDefaultSubmitPage
+      ? "submit_page"
+      : isTagPage
+        ? "tag_page"
+        : viewMode === "grid"
+          ? "grid_view"
+          : viewMode === "vibe"
+            ? "vibe_view"
+            : "list_view";
+
+  const lumaWidgetSurface: LumaWidgetSurface = widgetSurface;
+  const widgets = settings?.sidebarWidgets;
+  const showMostVibes = isSidebarWidgetVisible(
+    widgets,
+    "mostVibes",
+    widgetSurface,
+  );
+  const showRecentVibers = isSidebarWidgetVisible(
+    widgets,
+    "recentVibers",
+    widgetSurface,
+  );
+  const showTopCategories = isSidebarWidgetVisible(
+    widgets,
+    "topCategories",
+    widgetSurface,
+  );
+  const lumaSurfaceOn = isLumaWidgetVisible(widgets, lumaWidgetSurface);
+  const lumaEvents = useQuery(
+    api.luma.listForPlacement,
+    hideSubmitSidebar ||
+      !lumaSurfaceOn ||
+      isStoryDetailPage ||
+      isJudgingPage ||
+      isYCHackFormPage ||
+      isDynamicSubmitFormPage ||
+      isCustomFormPage ||
+      isPublicResultsPage ||
+      isAdminFormPage ||
+      isAdminPage ||
+      isInboxPage ||
+      isNotificationsPage ||
+      isLeaderboardPage ||
+      isEventsPage ||
+      isUsernameSetup
+      ? "skip"
+      : { placement: lumaPlacement },
+  );
+  const showLumaEvents = (lumaEvents?.length ?? 0) > 0;
+  const hasSidebarContent =
+    showMostVibes || showRecentVibers || showTopCategories || showLumaEvents;
+
   const showSidebar =
     settings &&
     !hideSubmitSidebar &&
@@ -374,8 +451,17 @@ export function Layout({ children }: { children?: ReactNode }) {
     !isCustomFormPage &&
     !isPublicResultsPage &&
     !isAdminFormPage &&
-    (viewMode === "vibe" || viewMode === "list") &&
-    (settings.showListView || settings.showVibeView);
+    !isAdminPage &&
+    !isInboxPage &&
+    !isNotificationsPage &&
+    !isLeaderboardPage &&
+    !isEventsPage &&
+    !isUsernameSetup &&
+    hasSidebarContent &&
+    (viewMode === "vibe" ||
+      viewMode === "list" ||
+      viewMode === "grid") &&
+    (settings.showListView || settings.showVibeView || settings.showGridView);
 
   return (
     <>
@@ -815,12 +901,17 @@ export function Layout({ children }: { children?: ReactNode }) {
             </div>
             {showSidebar && (
               <aside className="lg:w-1/4 space-y-6">
-                <WeeklyLeaderboard />
-                <RecentVibers />
-                <TopCategoriesOfWeek
-                  selectedTagId={selectedTagId}
-                  setSelectedTagId={setSelectedTagId}
-                />
+                {showLumaEvents && (
+                  <LumaEventList placement={lumaPlacement} compact />
+                )}
+                {showMostVibes && <WeeklyLeaderboard />}
+                {showRecentVibers && <RecentVibers />}
+                {showTopCategories && (
+                  <TopCategoriesOfWeek
+                    selectedTagId={selectedTagId}
+                    setSelectedTagId={setSelectedTagId}
+                  />
+                )}
               </aside>
             )}
           </div>

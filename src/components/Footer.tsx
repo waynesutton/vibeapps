@@ -10,18 +10,15 @@ export function Footer() {
     <footer className="mt-12">
       <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col items-start md:flex-row md:items-center gap-2 md:gap-4 text-xs text-soft">
-          <span className="text-soft">
-            {" "}
-            © {new Date().getFullYear()}{" "}
-          </span>
-          <button
-            onClick={() => setShowAboutModal(true)}
-            className="hover:text-copy"
-          >
+          <span className="text-soft"> © {new Date().getFullYear()} </span>
+          <button onClick={() => setShowAboutModal(true)} className="hover:text-copy">
             About
           </button>
           <Link to="/leaderboard" className="hover:text-copy">
             Leaderboard
+          </Link>
+          <Link to="/events" className="hover:text-copy">
+            Events
           </Link>
           <a href="/llms.txt" className="hover:text-copy">
             llms.txt
@@ -36,8 +33,7 @@ export function Footer() {
             href="https://convex.dev?utm_source=vibeapps-dev"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-copy"
-          >
+            className="hover:text-copy">
             Powered by Convex
           </a>
 
@@ -45,8 +41,7 @@ export function Footer() {
             href="https://github.com/waynesutton/vibeapps"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-copy"
-          >
+            className="hover:text-copy">
             Open-Source Project
           </a>
 
@@ -54,8 +49,7 @@ export function Footer() {
             href="https://www.convex.dev/legal/tos/v2022-03-02"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-copy"
-          >
+            className="hover:text-copy">
             Privacy Policy | Terms
           </a>
         </div>
@@ -66,9 +60,7 @@ export function Footer() {
           <Dialog.Overlay className="fixed inset-0 bg-black/50 z-40" />
           <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface p-6 rounded-lg shadow-xl w-[90vw] max-w-md z-50">
             <div className="flex justify-between items-start mb-4">
-              <Dialog.Title className="text-lg font-medium text-ink">
-                About Vibe Apps
-              </Dialog.Title>
+              <Dialog.Title className="text-lg font-medium text-ink">About Vibe Apps</Dialog.Title>
               <Dialog.Close className="text-soft hover:text-copy">
                 <X className="w-5 h-5" />
               </Dialog.Close>
@@ -77,14 +69,13 @@ export function Footer() {
               <p>Vibe Apps – The place to share and discover new apps.</p>
 
               <p>
-                Welcome to VibeApps, the community where you go to show off what
-                you've built, and see what others are building.{" "}
+                Welcome to VibeApps, the community where you go to show off what you've built, and
+                see what others are building.{" "}
                 <a
                   href="https://convex.dev?utm_source=vibeapps-dev"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-copy"
-                >
+                  className="hover:text-copy">
                   Powered by Convex
                 </a>
                 , the site runs fast, syncs in real time, and makes it easy to:
@@ -95,8 +86,8 @@ export function Footer() {
                 <li>Leave feedback or get inspired</li>
               </ul>
               <p>
-                Whether it's a weekend build, for a hackathon, or just vibe
-                coding, drop it here.{" "}
+                Whether it's a weekend build, for a hackathon, or just vibe coding, drop it
+                here.{" "}
               </p>
               <p></p>
 
@@ -105,19 +96,17 @@ export function Footer() {
                   href="https://github.com/waynesutton/vibeapps"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-copy"
-                >
+                  className="hover:text-copy">
                   Vibe Apps is Open-Source on GitHub.
                 </a>
               </p>
               <p>
                 Built and maintained by{" "}
                 <a
-                  href="https://www.linkedin.com/in/waynesutton/"
+                  href="https://waynesutton.ai/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-copy"
-                >
+                  className="hover:text-copy">
                   Wayne Sutton
                 </a>{" "}
                 <br />
@@ -126,8 +115,7 @@ export function Footer() {
                   href="https://github.com/waynesutton"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-copy"
-                >
+                  className="hover:text-copy">
                   waynesutton
                 </a>{" "}
                 Twitter:
@@ -135,8 +123,15 @@ export function Footer() {
                   href="https://twitter.com/waynesutton"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-copy"
-                >
+                  className="hover:text-copy">
+                  @waynesutton
+                </a>{" "}
+                LinkedIn:
+                <a
+                  href="https://www.linkedin.com/in/waynesutton/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-copy">
                   @waynesutton
                 </a>
               </p>

@@ -4,6 +4,8 @@ Brief description of the feature and its purpose.
 
 ## Recently Completed
 
+- 2026-08-22 08:46 UTC - Upcoming Luma events on app pages sit below View Change Log, gated by a Luma row in Sidebar widgets (synced with the Luma section). Each judging group can hide Luma on submit, join, and judging landing. Luma lookup/sync now uses `url` and listed calendar access. PRD: prds/luma-app-page-and-judging-hide.md.
+- 2026-08-22 07:55 UTC - Admin Settings can hide Most Vibes, Recent Vibers, and Top Categories per surface, connect a Luma calendar, and compact back chevrons replace stacked "Back to Apps" text. PRD: prds/sidebar-widgets-and-luma-events.md.
 - 2026-08-22 07:00 UTC - List view sits in one sidebar-matching plate (`bg-surface rounded-lg border border-hairline`) so it lifts off canvas in light, classic, and dark. Row hover still uses `surface-hover`. Grid and vibe unchanged. PRD: prds/list-view-ranked-rows.md.
 - 2026-08-22 06:45 UTC - Grid cards restacked: 16:9 screenshot on top, title then description, compact time on the left, `▲` vote pill on the bottom right. Card `rounded-lg` and thumb `rounded-md` unchanged. Tag pages pick this up through `StoryList`. PRD: prds/grid-view-cards.md.
 - 2026-08-22 06:28 UTC - Tag page header collapsed to one row: icon-only back chevron, "Apps tagged with" plus the tag pill, count on the right. Dropped the stacked "Back to Apps" text and extra page padding so list/grid/vibe match the homepage column. PRD: prds/tag-page-header.md.
@@ -13,6 +15,10 @@ Brief description of the feature and its purpose.
 - 2026-08-21 17:56 UTC - Closed per-submission AI briefs with copy and `.md` save, Convex Recap plus optional persisted AI cohort summary, shared `0.25rem` non-pill radius, and User Growth Over Time removed from admin Numbers. PRD: prds/ai-review-briefs-radius-and-admin-cleanup.md.
 
 ## Completed Tasks
+
+- [x] 2026-08-22 08:24 UTC: Luma App page placement under View Change Log; Sidebar widgets Luma row synced with Luma settings; judging group `hideLumaEvents` on submit/join/judging landing. Other catalog widgets unchanged (no per-group hide). Verified: Convex functions ready; eslint clean on touched UI files. PRD: prds/luma-app-page-and-judging-hide.md. Files: convex/schema.ts, convex/settings.ts, convex/luma.ts, convex/judgingGroups.ts, src/lib/sidebarWidgets.ts, src/components/admin/Settings.tsx, src/components/admin/LumaEventsSettings.tsx, src/components/StoryDetail.tsx, src/components/Layout.tsx, src/pages/JudgingGroupSubmitPage.tsx, src/pages/JudgingGroupJoinPage.tsx, src/pages/JudgingGroupPage.tsx, src/components/admin/judging/GroupOverviewSection.tsx.
+
+- [x] 2026-08-22 07:55 UTC: Sidebar widget matrix in Admin Settings (entire app wins over judging pages; per-surface greys out). Luma events via `LUMA_API_KEY` env, calendar URL, sync, placements, and `/events`. Compact `BackToAppsLink` on submit, admin, search, tags, leaderboard, events, story detail. Catalog sidebar hidden on admin/inbox/notifications/leaderboard/events. Verified: eslint 0 errors on StoryDetail, Settings, Luma files, Layout. Not verified locally: live Luma API sync until the env key is set. PRD: prds/sidebar-widgets-and-luma-events.md. Files: convex/schema.ts, convex/settings.ts, convex/luma.ts, convex/crons.ts, convex/siteDirectory.ts, src/components/Layout.tsx, src/components/admin/Settings.tsx, src/components/admin/LumaEventsSettings.tsx, src/pages/EventsPage.tsx, src/components/BackToAppsLink.tsx.
 
 - [x] 2026-08-22 07:00 UTC: List view surface plate. Ranked rows wrap in one sidebar-matching `bg-surface rounded-lg border border-hairline` container with inner hairline dividers and `surface-hover` row wash clipped to the plate. Grid and vibe untouched. Verified: tokens resolve per theme (light white on `#f7f7f7`, classic white on `#f4f2ee`, dark `#1a1a1a` on `#0f0f0f`). PRD: prds/list-view-ranked-rows.md. Files: src/components/StoryList.tsx, .interface-design/system.md.
 

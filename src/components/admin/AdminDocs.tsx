@@ -800,8 +800,9 @@ Set these on the Convex deployment (Dashboard, Settings, Environment Variables),
 | \`FIRECRAWL_API_KEY\` | AI judge, spam check | Website content fetching. Optional for the AI judge; the spam check scans still complete without it. |
 | \`CONTEXT_DEV_API_KEY\` | AI judge | Video demo transcript fetching via Context.dev (YouTube captions plus video host pages). Optional; reviews run without it. |
 | \`ADMIN_EMAIL\` | Spam check | Optional. Reply-to address on spam notification emails so submitters can reach the admins. |
+| \`LUMA_API_KEY\` | Luma events | Calendar-scoped key from luma.com/calendar/manage/api-keys. Set with \`npx convex env set LUMA_API_KEY your-key\` (add \`--prod\` for production). The admin Settings tab stores the calendar URL and event placements; the key never goes in the database. |
 
-The spam check falls back to a deterministic heuristic when no model key is set. Everything else in the judging system (groups, criteria, human judges, agent keys, results) works without any environment variables.`,
+The spam check falls back to a deterministic heuristic when no model key is set. Everything else in the judging system (groups, criteria, human judges, agent keys, results) works without any environment variables. Luma listings stay hidden until the key is set and an admin syncs events.`,
   },
 ];
 

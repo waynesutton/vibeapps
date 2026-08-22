@@ -301,6 +301,51 @@ export default defineSchema({
     showHackathonTeamInfo: v.optional(v.boolean()),
     // Default /submit page layout: hide right sidebar and widen the form
     hideSubmitPageSidebar: v.optional(v.boolean()),
+    // Catalog sidebar widgets. entireApp false hides that widget everywhere
+    // and wins over judging group pages for Most Vibes / Recent Vibers /
+    // Top Categories. Luma is different: judging groups have their own hide
+    // flag. Per-surface flags only apply when entireApp is true.
+    // Missing object = all shown except grid (legacy).
+    sidebarWidgets: v.optional(
+      v.object({
+        mostVibes: v.object({
+          entireApp: v.boolean(),
+          listView: v.boolean(),
+          gridView: v.boolean(),
+          vibeView: v.boolean(),
+          submitPage: v.boolean(),
+          tagPage: v.boolean(),
+        }),
+        recentVibers: v.object({
+          entireApp: v.boolean(),
+          listView: v.boolean(),
+          gridView: v.boolean(),
+          vibeView: v.boolean(),
+          submitPage: v.boolean(),
+          tagPage: v.boolean(),
+        }),
+        topCategories: v.object({
+          entireApp: v.boolean(),
+          listView: v.boolean(),
+          gridView: v.boolean(),
+          vibeView: v.boolean(),
+          submitPage: v.boolean(),
+          tagPage: v.boolean(),
+        }),
+        // Optional so older settings docs keep validating
+        lumaEvents: v.optional(
+          v.object({
+            entireApp: v.boolean(),
+            listView: v.boolean(),
+            gridView: v.boolean(),
+            vibeView: v.boolean(),
+            submitPage: v.boolean(),
+            tagPage: v.boolean(),
+            storyDetail: v.boolean(),
+          }),
+        ),
+      }),
+    ),
     // Tag limit settings (managed from Tags admin section)
     maxTagsPerSubmission: v.optional(v.number()), // Max visible tags per submission (hidden tags exempt)
     maxTagLength: v.optional(v.number()), // Max characters for a new tag name
@@ -452,6 +497,9 @@ export default defineSchema({
     startDate: v.optional(v.number()), // Optional start date timestamp for judging period
     endDate: v.optional(v.number()), // Optional end date timestamp for judging period
     createdBy: v.id("users"), // Admin who created the group
+    // Hide listed Luma events on this group's public pages (submit, join,
+    // judging landing). Unset = show. Independent of site sidebar widgets.
+    hideLumaEvents: v.optional(v.boolean()),
     // Custom submission page settings
     hasCustomSubmissionPage: v.optional(v.boolean()), // Enable custom submission page
     submissionPageImageId: v.optional(v.id("_storage")), // Header image for submission page
@@ -1305,4 +1353,49 @@ export default defineSchema({
     .index("by_storyId", ["storyId"])
     .index("by_status", ["status"])
     .index("by_verdict", ["verdict"]),
+
+  // Luma calendar connection (API key lives in Convex env, not here)
+  lumaConfig: defineTable({
+    identifier: v.string(),
+    enabled: v.boolean(),
+    calendarUrl: v.optional(v.string()),
+    calendarName: v.optional(v.string()),
+    showThumbnail: v.boolean(),
+    showName: v.boolean(),
+    showDates: v.boolean(),
+    showDescription: v.boolean(),
+    lastSyncedAt: v.optional(v.number()),
+    lastSyncError: v.optional(v.string()),
+  }).index("by_identifier", ["identifier"]),
+
+  // Cached Luma events. Admin picks which to list and where they appear.
+  lumaEvents: defineTable({
+    lumaEventId: v.string(),
+    name: v.string(),
+    url: v.string(),
+    coverUrl: v.optional(v.string()),
+    description: v.optional(v.string()),
+    startAt: v.optional(v.number()),
+    endAt: v.optional(v.number()),
+    timezone: v.optional(v.string()),
+    isListed: v.boolean(),
+    order: v.number(),
+    showThumbnail: v.optional(v.boolean()),
+    showName: v.optional(v.boolean()),
+    showDates: v.optional(v.boolean()),
+    showDescription: v.optional(v.boolean()),
+    placements: v.array(
+      v.union(
+        v.literal("list_view"),
+        v.literal("grid_view"),
+        v.literal("vibe_view"),
+        v.literal("submit_page"),
+        v.literal("story_detail"),
+        v.literal("tag_page"),
+        v.literal("events_page"),
+      ),
+    ),
+  })
+    .index("by_lumaEventId", ["lumaEventId"])
+    .index("by_isListed_and_order", ["isListed", "order"]),
 });

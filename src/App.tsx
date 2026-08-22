@@ -44,6 +44,7 @@ import { JudgingGroupSubmitPage } from "./pages/JudgingGroupSubmitPage";
 import { JudgingGroupJoinPage } from "./pages/JudgingGroupJoinPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { LeaderboardPage } from "./pages/LeaderboardPage";
+import { EventsPage } from "./pages/EventsPage";
 import { Toaster } from "sonner";
 import { useTheme } from "./lib/ThemeContext";
 import InboxPage from "./pages/InboxPage";
@@ -186,6 +187,7 @@ function App() {
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/inbox" element={<InboxPage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
+          <Route path="/events" element={<EventsPage />} />
           <Route path="/judging/:slug" element={<JudgingGroupPage />} />
           <Route
             path="/judging/:slug/submit"
