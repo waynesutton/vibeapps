@@ -46,12 +46,12 @@ The judging system lets you run scored competitions (hackathons, demo days, cont
 - **Criteria**: the questions judges score, each on a 1 to 5 or 1 to 10 scale (set per group in Settings), with optional weights.
 - **Submissions**: apps pulled into the group manually, by tag sync, or through a custom submission page.
 - **Judges**: humans who sign in with a name (and optional password), or AI agents using API keys.
-- **Results**: live score dashboards, public results pages, CSV exports, and judge tracking.
+- **Results**: live score dashboards, public results pages, submission downloads, and judge tracking.
 - **AI judge**: an optional automated reviewer that reads each submission (including its GitHub repo) and scores it against a fixed rubric.
 
 **Where things live in this dashboard:**
 
-- The **Judging** tab lists all groups with actions for settings, criteria, results, tracking, AI results, exports, and deletion.
+- The **Judging** tab lists all groups. Open a group to manage it; submission downloads are in **View submissions**.
 - **Judge Tracking** opens from a group row and shows per-judge activity with score editing.
 - The **Access** tab (full admins only) delegates judging management to organizers without making them full admins.`,
   },
@@ -498,9 +498,9 @@ For the full external facing guide (login, passwords, criteria, notes, filters, 
 - **Public results page**: \`/judging/your-slug/results\`. Public when the group marks results public, otherwise protected by the results password.
 - **Admin results**: the same dashboard inside the admin (visible when results are not public), showing rankings, weighted totals, per-criterion averages, and per-judge detail.
 
-## CSV exports
+## Submission downloads
 
-- **Export CSV** on a group row downloads every submission with tags, links, team info, submitter, and vote counts.
+- The **Download** dropdown in a group's View submissions toolbar exports the same submission details as the existing CSV in CSV, JSON, or Markdown format. Markdown downloads are packaged as a ZIP with one file per submission.
 - Judge Tracking has its own export with per-judge scores.
 
 ## Judge Tracking

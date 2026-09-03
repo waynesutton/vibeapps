@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { useConvex, useMutation, useQuery } from "convex/react";
-import { Check, Download, Loader2, Plus, RefreshCw, Search, X } from "lucide-react";
+import { useMutation, useQuery } from "convex/react";
+import { Check, Loader2, Plus, RefreshCw, Search, X } from "lucide-react";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { Input } from "../../ui/input";
@@ -15,18 +15,9 @@ import {
   useSaveState,
 } from "./groupSection";
 
-// Escape a CSV cell value (handles commas, quotes, newlines)
-function escapeCsv(value: string): string {
-  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
-}
-
 // Submission sources: multi-tag auto-include with optional date range,
-// backfill sync actions, and CSV export of everything in the group.
+// plus backfill sync actions for existing matching submissions.
 export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
-  const convex = useConvex();
   const updateGroup = useMutation(api.judgingGroups.updateGroup);
   const syncAutoIncludeSubmissions = useMutation(
     api.judgingGroupSubmissions.syncAutoIncludeSubmissions,
@@ -55,8 +46,6 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
   const [addMessage, setAddMessage] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportMessage, setExportMessage] = useState<string | null>(null);
 
   // Live story search for the manual add card (skipped until 2+ characters)
   const trimmedStorySearch = storySearch.trim();
@@ -137,95 +126,6 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
       setSyncMessage("Failed to sync submissions. Please try again.");
     } finally {
       setIsSyncing(false);
-    }
-  };
-
-  // Fetch submissions on demand and download as CSV (same columns as before)
-  const handleExportCsv = async () => {
-    setExportMessage(null);
-    setIsExporting(true);
-    try {
-      const rows = await convex.query(
-        api.judgingGroupSubmissions.exportGroupSubmissions,
-        { groupId: group._id },
-      );
-      if (!rows || rows.length === 0) {
-        setExportMessage("This judging group has no submissions to export.");
-        return;
-      }
-      const headers = [
-        "App Title",
-        "App/Project Tagline",
-        "Description",
-        "App Website Link",
-        "Video Demo URL",
-        "GitHub",
-        "LinkedIn",
-        "Twitter/X",
-        "Chef Show URL",
-        "Chef App URL",
-        "Tags",
-        "Team Name",
-        "Team Member Count",
-        "Team Members",
-        "Submitter Name",
-        "Email",
-        "Slug",
-        "Votes",
-      ];
-      const csvLines = [headers.map(escapeCsv).join(",")];
-      for (const row of rows) {
-        csvLines.push(
-          [
-            row.title,
-            row.tagline,
-            row.longDescription || "",
-            row.url,
-            row.videoUrl || "",
-            row.githubUrl || "",
-            row.linkedinUrl || "",
-            row.twitterUrl || "",
-            row.chefShowUrl || "",
-            row.chefAppUrl || "",
-            row.tags,
-            row.teamName || "",
-            row.teamMemberCount !== undefined
-              ? String(row.teamMemberCount)
-              : "",
-            row.teamMembers,
-            row.submitterName || "",
-            row.email || "",
-            row.slug,
-            String(row.votes),
-          ]
-            .map(escapeCsv)
-            .join(","),
-        );
-      }
-      const blob = new Blob([csvLines.join("\n")], {
-        type: "text/csv;charset=utf-8;",
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      const timestamp = new Date().toISOString().split("T")[0];
-      link.setAttribute("href", url);
-      link.setAttribute(
-        "download",
-        `judging-${group.name.toLowerCase().replace(/\s+/g, "-")}-submissions-${timestamp}.csv`,
-      );
-      link.style.visibility = "hidden";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      setExportMessage(
-        err instanceof Error
-          ? err.message
-          : "Could not export submissions. Please try again.",
-      );
-    } finally {
-      setIsExporting(false);
     }
   };
 
@@ -468,29 +368,6 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
         </div>
       </SectionCard>
 
-      <SectionCard
-        title="Export"
-        description="Download all submissions in this group as a CSV, including custom form fields."
-      >
-        <div className="flex items-center gap-3 flex-wrap">
-          <button
-            type="button"
-            onClick={() => void handleExportCsv()}
-            disabled={isExporting}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[13px] font-medium rounded-md border border-hairline text-copy hover:bg-surface-hover transition-colors disabled:opacity-50"
-          >
-            {isExporting ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Download className="w-3.5 h-3.5" />
-            )}
-            {isExporting ? "Exporting..." : "Export CSV"}
-          </button>
-          {exportMessage && (
-            <span className="text-[13px] text-copy">{exportMessage}</span>
-          )}
-        </div>
-      </SectionCard>
     </div>
   );
 }
