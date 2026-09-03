@@ -12,6 +12,7 @@ type ExportGroup = {
 };
 
 const MARKDOWN_SPECIAL_CHARACTERS = "\\`*_{}[]()#+-.!|<>~";
+const MAX_SAFE_FILENAME_LENGTH = 180;
 
 export function escapeCsv(value: string): string {
   let firstVisibleCharacter = 0;
@@ -39,12 +40,13 @@ export function escapeCsv(value: string): string {
 }
 
 export function safeFilename(value: string): string {
-  return (
-    value
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "") || "submission"
-  );
+  const sanitized = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, MAX_SAFE_FILENAME_LENGTH)
+    .replace(/-$/, "");
+  return sanitized || "submission";
 }
 
 function escapeMarkdown(value: string): string {
@@ -60,14 +62,15 @@ function escapeMarkdown(value: string): string {
 
 function markdownLink(label: string, url?: string): string | null {
   if (!url) return null;
+  const prefix = `- **${escapeMarkdown(label)}:**`;
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-      return null;
+      return `${prefix} ${escapeMarkdown(url)}`;
     }
-    return `- **${escapeMarkdown(label)}:** <${parsed.toString()}>`;
+    return `${prefix} <${parsed.toString()}>`;
   } catch {
-    return null;
+    return `${prefix} ${escapeMarkdown(url)}`;
   }
 }
 
