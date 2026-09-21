@@ -194,6 +194,16 @@
     letter-spacing: 0;
   }
 
+  /* Grid card title. A step above .app-title so the card reads as a poster
+     rather than a list row: the blurb underneath needs something to sit
+     beneath. Same negative tracking as the rest of the scale. */
+  .app-card-title {
+    font-size: 20px;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+    font-weight: 600;
+  }
+
   /* Compact title for dense contexts: admin tables, search result
      rows, leaderboards, sidebar widgets. */
   .app-title-sm {

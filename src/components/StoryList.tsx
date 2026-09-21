@@ -1,7 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import {
-  ChevronUp,
   MessageSquare,
   ArrowDown,
   Github,
@@ -457,114 +456,163 @@ export function StoryList({
     </article>
   );
 
-  // GRID VIEW: screenshot first, title, blurb, time left / vote pill right
-  const renderGridCard = (story: Story, index: number) => (
-    <article
-      key={story._id}
-      className="flex flex-col h-full bg-surface rounded-lg p-4 border border-hairline hover:bg-surface-hover transition-colors motion-reduce:transition-none"
-    >
-      {/* 16:9 screenshot. Aspect box reserved so missing images do not collapse the card. */}
-      <Link
-        to={`/s/${story.slug}`}
-        className="flex-shrink-0 w-full aspect-video rounded-md overflow-hidden border border-hairline bg-surface-alt block mb-3"
-        tabIndex={-1}
-        aria-hidden="true"
+  // GRID VIEW: poster card — screenshot, title, byline, blurb, two stat
+  // tiles, then a full-width primary action.
+  //
+  // The radii here are arbitrary values on purpose: tailwind.config.js
+  // flattens the whole radius scale to 0.25rem, so rounded-2xl et al. would
+  // render square. Scoping the soft corners to this card keeps that global
+  // scale untouched.
+  const renderGridCard = (story: Story, index: number) => {
+    const averageRating =
+      story.ratingCount > 0
+        ? (story.ratingSum / story.ratingCount).toFixed(1)
+        : null;
+
+    return (
+      <article
+        key={story._id}
+        className="flex flex-col h-full bg-surface rounded-[22px] p-3 border border-hairline shadow-sm hover:shadow-md transition-shadow motion-reduce:transition-none"
       >
-        {story.screenshotUrl ? (
-          <img
-            src={story.screenshotUrl}
-            alt=""
-            className="w-full h-full object-cover"
-            loading={index < 3 ? "eager" : "lazy"}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-lg font-semibold text-soft">
-            {story.title.charAt(0).toUpperCase()}
-          </div>
-        )}
-      </Link>
-
-      {story.customMessage && (
-        <div className="mb-2 text-[13px] text-on-cta bg-cta border border-hairline rounded-md p-2 italic">
-          {story.customMessage}
-        </div>
-      )}
-
-      <h2 className="app-title text-ink flex items-center gap-1.5 min-w-0 mb-1">
-        {story.isPinned && (
-          <Pin
-            className="w-4 h-4 text-faint flex-shrink-0"
-            aria-label="Pinned Story"
-          />
-        )}
+        {/* 16:9 screenshot. Aspect box reserved so missing images do not collapse the card. */}
         <Link
           to={`/s/${story.slug}`}
-          className="truncate hover:underline underline-offset-2"
+          className="flex-shrink-0 w-full aspect-video rounded-[16px] overflow-hidden bg-surface-alt block"
+          tabIndex={-1}
+          aria-hidden="true"
         >
-          {story.title}
-        </Link>
-      </h2>
-
-      {story.description && (
-        <p className="app-desc text-copy mb-2 line-clamp-2">{story.description}</p>
-      )}
-
-      {story.tags && story.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-3">
-          <TagPills tags={story.tags} size="sm" shape="pill" />
-        </div>
-      )}
-
-      {/* Footer stays on the bottom of short cards. Time left, vote pill right. */}
-      <div className="mt-auto pt-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0 text-[13px] text-soft">
-          <span className="tabular-nums">
-            {compactTimeAgo(story._creationTime)}
-          </span>
-          <Link
-            to={`/s/${story.slug}#comments`}
-            className="flex items-center gap-1 hover:text-copy"
-            aria-label={`${story.commentCount} ${story.commentCount === 1 ? "comment" : "comments"}`}
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            <span className="tabular-nums">{story.commentCount}</span>
-          </Link>
-          <BookmarkButton
-            storyId={story._id}
-            showMessage={showMessage}
-            onAuthRequired={() => {
-              setAuthDialogAction("bookmark");
-              setShowAuthDialog(true);
-            }}
-          />
-          {story.githubUrl && (
-            <a
-              href={story.githubUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-soft hover:text-copy"
-              title="View GitHub Repo"
-            >
-              <Github className="w-3.5 h-3.5" />
-            </a>
+          {story.screenshotUrl ? (
+            <img
+              src={story.screenshotUrl}
+              alt=""
+              className="w-full h-full object-cover"
+              loading={index < 3 ? "eager" : "lazy"}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-lg font-semibold text-soft">
+              {story.title.charAt(0).toUpperCase()}
+            </div>
           )}
+        </Link>
+
+        <div className="flex flex-col flex-1 px-2 pt-4">
+          {story.customMessage && (
+            <div className="mb-2 text-[13px] text-on-cta bg-cta rounded-[10px] p-2 italic">
+              {story.customMessage}
+            </div>
+          )}
+
+          <h2 className="app-card-title text-ink flex items-start gap-1.5 min-w-0">
+            {story.isPinned && (
+              <Pin
+                className="w-4 h-4 mt-1 text-faint flex-shrink-0"
+                aria-label="Pinned Story"
+              />
+            )}
+            <Link
+              to={`/s/${story.slug}`}
+              className="line-clamp-2 hover:underline underline-offset-2"
+            >
+              {story.title}
+            </Link>
+          </h2>
+
+          <p className="mt-1 text-[14px] text-soft truncate">
+            by{" "}
+            {story.submitterName ||
+              story.authorName ||
+              story.authorUsername ||
+              "Anonymous User"}
+            <span className="mx-1.5">·</span>
+            <span className="tabular-nums">
+              {compactTimeAgo(story._creationTime)}
+            </span>
+          </p>
+
+          {story.description && (
+            <p className="mt-3 text-[15px] leading-relaxed text-copy line-clamp-3">
+              {story.description}
+            </p>
+          )}
+
+          {story.tags && story.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-3">
+              <TagPills tags={story.tags} size="sm" shape="pill" />
+            </div>
+          )}
+
+          {/* Everything below is pinned to the bottom so cards in a row line up. */}
+          <div className="mt-auto pt-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-surface-alt rounded-[16px] py-3 px-2 text-center">
+                <div className="text-[12px] text-soft leading-none">Vibes</div>
+                <div className="mt-1.5 text-[20px] font-semibold text-ink tabular-nums leading-none">
+                  {story.votes}
+                </div>
+              </div>
+              <Link
+                to={`/s/${story.slug}#comments`}
+                className="bg-surface-alt rounded-[16px] py-3 px-2 text-center block hover:bg-surface-hover transition-colors motion-reduce:transition-none"
+                aria-label={
+                  averageRating
+                    ? `Rated ${averageRating} out of 5`
+                    : `${story.commentCount} ${story.commentCount === 1 ? "comment" : "comments"}`
+                }
+              >
+                <div className="text-[12px] text-soft leading-none">
+                  {averageRating ? "Rating" : "Comments"}
+                </div>
+                <div className="mt-1.5 text-[20px] font-semibold text-ink tabular-nums leading-none">
+                  {averageRating ?? story.commentCount}
+                </div>
+              </Link>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleVote(story._id)}
+              disabled={!isClerkLoaded}
+              className="w-full mt-3 rounded-[16px] bg-cta text-on-cta py-3 text-[15px] font-semibold hover:bg-cta-hover active:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas transition-colors motion-reduce:transition-none disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label={`Vibe it, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
+            >
+              Vibe it
+            </button>
+
+            {/* Secondary affordances stay available but quiet. */}
+            <div className="mt-3 flex items-center justify-center gap-4 text-[13px] text-soft">
+              <Link
+                to={`/s/${story.slug}#comments`}
+                className="flex items-center gap-1 hover:text-copy"
+                aria-label={`${story.commentCount} ${story.commentCount === 1 ? "comment" : "comments"}`}
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span className="tabular-nums">{story.commentCount}</span>
+              </Link>
+              <BookmarkButton
+                storyId={story._id}
+                showMessage={showMessage}
+                onAuthRequired={() => {
+                  setAuthDialogAction("bookmark");
+                  setShowAuthDialog(true);
+                }}
+              />
+              {story.githubUrl && (
+                <a
+                  href={story.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-copy"
+                  title="View GitHub Repo"
+                >
+                  <Github className="w-3.5 h-3.5" />
+                </a>
+              )}
+            </div>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={() => handleVote(story._id)}
-          disabled={!isClerkLoaded}
-          className="inline-flex items-center justify-center gap-1 h-8 px-2.5 flex-shrink-0 rounded-full bg-brand-soft border border-hairline text-ink whitespace-nowrap hover:bg-surface-alt active:bg-surface-alt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Vibe it"
-          aria-label={`Vibe it, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
-        >
-          <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
-          <span className="text-[13px] font-semibold tabular-nums">
-            {story.votes}
-          </span>
-        </button>
-      </div>
-    </article>
-  );
+      </article>
+    );
+  };
 
   const containerClass =
     viewMode === "grid"
