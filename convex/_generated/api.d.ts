@@ -59,6 +59,7 @@ import type * as judgingCriteria from "../judgingCriteria.js";
 import type * as judgingGroupSubmissions from "../judgingGroupSubmissions.js";
 import type * as judgingGroups from "../judgingGroups.js";
 import type * as lib_llm from "../lib/llm.js";
+import type * as lib_reactionEmojis from "../lib/reactionEmojis.js";
 import type * as luma from "../luma.js";
 import type * as mentions from "../mentions.js";
 import type * as migrations from "../migrations.js";
@@ -141,6 +142,7 @@ declare const fullApi: ApiFromModules<{
   judgingGroupSubmissions: typeof judgingGroupSubmissions;
   judgingGroups: typeof judgingGroups;
   "lib/llm": typeof lib_llm;
+  "lib/reactionEmojis": typeof lib_reactionEmojis;
   luma: typeof luma;
   mentions: typeof mentions;
   migrations: typeof migrations;
