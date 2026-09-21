@@ -519,6 +519,54 @@ export function StoryDetail({ story }: StoryDetailProps) {
     setReplyToId(null);
   };
 
+  // Replies nest under their parent instead of rendering as separate top-level
+  // comments. The backend already stored parentId and already alerted the
+  // parent's author with a "reply" alert; only the rendering was flat.
+  // Indentation stops after a few levels so a long back-and-forth does not walk
+  // off the right edge on a phone — deeper replies stay in the thread, just not
+  // pushed further across.
+  const MAX_THREAD_INDENT = 3;
+  const commentsByParent = React.useMemo(() => {
+    const map = new Map<string, CommentType[]>();
+    (comments ?? []).forEach((c) => {
+      const comment = c as CommentType;
+      const key = (comment.parentId as string | undefined) ?? "root";
+      const bucket = map.get(key);
+      if (bucket) bucket.push(comment);
+      else map.set(key, [comment]);
+    });
+    return map;
+  }, [comments]);
+
+  const renderCommentThread = (
+    parentKey: string,
+    depth: number,
+  ): React.ReactNode =>
+    (commentsByParent.get(parentKey) ?? []).map((comment) => (
+      <div
+        key={comment._id}
+        className={
+          depth > 0 && depth <= MAX_THREAD_INDENT
+            ? "border-l border-hairline pl-4 sm:pl-6 space-y-6"
+            : "space-y-6"
+        }
+      >
+        <Comment
+          comment={comment}
+          onReply={(parentId) => setReplyToId(parentId)}
+        />
+        {replyToId === comment._id && (
+          <div className="pl-4 sm:pl-6">
+            <CommentForm
+              onSubmit={handleCommentSubmit}
+              parentId={comment._id}
+            />
+          </div>
+        )}
+        {renderCommentThread(comment._id as unknown as string, depth + 1)}
+      </div>
+    ));
+
   const handleOpenReportModal = () => {
     setReportModalError(null);
     setReportReason("");
@@ -2910,27 +2958,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
           <CommentForm onSubmit={handleCommentSubmit} />
           <div className="mt-8 space-y-6 border-t border-hairline pt-6">
             {comments === undefined && <div>Loading comments...</div>}
-            {comments?.map((commentData) => {
-              // Rename variable to avoid conflict
-              // Ensure commentData conforms to CommentType, though validation should happen in backend
-              const comment = commentData as CommentType;
-              return (
-                <React.Fragment key={comment._id}>
-                  <Comment
-                    comment={comment}
-                    onReply={(parentId) => setReplyToId(parentId)}
-                  />
-                  {replyToId === comment._id && (
-                    <div className="pl-8 pt-4">
-                      <CommentForm
-                        onSubmit={handleCommentSubmit}
-                        parentId={comment._id}
-                      />
-                    </div>
-                  )}
-                </React.Fragment>
-              );
-            })}
+            {renderCommentThread("root", 0)}
             {comments && comments.length === 0 && (
               <div className="text-soft">
                 No comments yet. Be the first!
