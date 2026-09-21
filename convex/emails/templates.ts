@@ -31,7 +31,7 @@ export const generateDailyAdminEmail = internalQuery({
     subject: v.string(),
     html: v.string(),
   }),
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const { metrics, previousMetrics } = args;
 
     const calculateChange = (current: number, previous?: number) => {
@@ -118,7 +118,7 @@ export const generateWelcomeEmail = internalQuery({
     subject: v.string(),
     html: v.string(),
   }),
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const subject = "Welcome to VibeApps! Let's get you started";
 
     const html = `
@@ -260,7 +260,7 @@ export const generateEngagementEmail = internalQuery({
     subject: v.string(),
     html: v.string(),
   }),
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const subject = "VibeApps Updates: Your apps received engagement today";
 
     const generateAppSection = (app: any) => {
@@ -476,7 +476,7 @@ export const generateWeeklyDigest = internalQuery({
     subject: v.string(),
     html: v.string(),
   }),
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const subject = "VibeApps Updates: Most Vibes This Week";
 
     const html = `
@@ -499,7 +499,7 @@ export const generateWeeklyDigest = internalQuery({
               <ol style="padding-left: 20px;">
                 ${args.topApps
                   .map(
-                    (app, index) => `
+                    (app) => `
                   <li style="margin: 10px 0;">
                     <a href="https://vibeapps.dev/s/${app.storySlug || app.storyId}" style="color: #292929; text-decoration: none;">
                       <strong>${app.title}</strong>
@@ -543,7 +543,7 @@ export const generateBroadcastEmail = internalQuery({
     subject: v.string(),
     html: v.string(),
   }),
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const subject = `VibeApps Updates: ${args.subject}`;
 
     const html = `
@@ -598,7 +598,7 @@ export const generateMentionEmail = internalQuery({
     subject: v.string(),
     html: v.string(),
   }),
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const contextText = args.context === "comment" ? "comment" : "judge note";
     const subject = `VibeApps Updates: You were mentioned by ${args.mentionAuthor}`;
 
@@ -664,7 +664,7 @@ export const generateAdminUserReportEmail = internalQuery({
     subject: v.string(),
     html: v.string(),
   }),
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const subject = `User Report - ${args.reportedUserName}`;
 
     const formatDate = (timestamp: number) => {
@@ -790,7 +790,7 @@ export const generateReportNotificationEmail = internalQuery({
     subject: v.string(),
     html: v.string(),
   }),
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const subject = `Story Report - ${args.storyTitle}`;
 
     const formatDate = (timestamp: number) => {

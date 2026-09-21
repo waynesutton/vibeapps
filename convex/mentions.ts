@@ -8,7 +8,7 @@ import { v } from "convex/values";
 export const extractHandles = internalQuery({
   args: { text: v.string() },
   returns: v.array(v.string()),
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     const handles = new Set<string>();
     // Match @username patterns with allowed characters: letters, numbers, underscore, dot
     const regex = /(^|\s)@([a-zA-Z0-9_.]+)/g;

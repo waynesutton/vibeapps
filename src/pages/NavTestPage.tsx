@@ -40,7 +40,7 @@ const NavTestPage: React.FC = () => {
   const { showMessage, DialogComponents } = useDialog();
 
   // Mimic state and props from Layout.tsx needed for the header
-  const [siteTitle, setSiteTitle] = useState("Test Site Title");
+  const [siteTitle] = useState("Test Site Title");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);

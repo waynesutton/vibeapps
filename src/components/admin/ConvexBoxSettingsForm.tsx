@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner"; // Assuming you use sonner for toasts
 
 export function ConvexBoxSettingsForm() {
-  const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
+  const { isLoading: authIsLoading } = useConvexAuth();
 
   const currentSettings = useQuery(api.convexBoxConfig.get);
   const updateSettings = useMutation(api.convexBoxConfig.update);

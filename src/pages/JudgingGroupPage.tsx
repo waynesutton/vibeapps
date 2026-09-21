@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Lock, Calendar, ExternalLink, ArrowLeft, LogIn } from "lucide-react";
+import { Lock, Calendar, ArrowLeft, LogIn } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { useDialog } from "../hooks/useDialog";

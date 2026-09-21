@@ -1,5 +1,4 @@
 import { QueryCtx, MutationCtx } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
 
 /**
  * Ensures the user is authenticated and retrieves their document from the database.

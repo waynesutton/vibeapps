@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query, internalQuery } from "./_generated/server";
-import { Id, Doc } from "./_generated/dataModel";
+import { mutation, query } from "./_generated/server";
+import { Doc } from "./_generated/dataModel";
 import { requireAuth } from "./utils"; // Helper to check authentication
 import { internal } from "./_generated/api";
 
@@ -83,7 +83,7 @@ export const isStoryBookmarked = query({
  */
 export const countUserBookmarks = query({
   args: {},
-  handler: async (ctx, args) => {
+  handler: async (ctx, _args) => {
     const { user } = await requireAuth(ctx);
     if (!user) {
       return 0;
@@ -103,7 +103,7 @@ export const countUserBookmarks = query({
  */
 export const getUserBookmarksWithStoryDetails = query({
   args: {},
-  handler: async (ctx, args) => {
+  handler: async (ctx, _args) => {
     const { user } = await requireAuth(ctx);
     if (!user) {
       return [];

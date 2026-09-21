@@ -1,7 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { requireAdminRole, isUserAdmin } from "./users";
+import { requireAdminRole } from "./users";
 
 /**
  * Test that email system fetches fresh data from database
@@ -312,7 +312,7 @@ export const compareEmailDataWithDatabase = query({
     dataIsFresh: v.boolean(),
     notes: v.array(v.string()),
   }),
-  handler: async (ctx, args) => {
+  handler: async (ctx, _args) => {
     // Check admin permission using Clerk JWT token
     await requireAdminRole(ctx);
 

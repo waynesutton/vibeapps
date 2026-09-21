@@ -262,19 +262,6 @@ export async function ensureUserNotBanned(ctx: MutationCtx): Promise<void> {
   // If isBanned is false or undefined, the user is not banned.
 }
 
-// After getAuthenticatedUserDoc and before getUserRole or at the end of user-related queries
-
-const userDocValidator = v.object({
-  // Re-using/defining for clarity, ensure it matches Doc<"users">
-  _id: v.id("users"),
-  _creationTime: v.number(),
-  name: v.string(),
-  clerkId: v.string(),
-  // role: v.optional(v.string()), // Role is no longer on the user document in Convex DB
-  email: v.optional(v.string()),
-  username: v.optional(v.string()),
-});
-
 /**
  * Query to get the currently authenticated user's full document from Convex.
  */
@@ -2037,18 +2024,6 @@ export const getRecentVibers = query({
     return recentActiveUsers;
   },
 });
-
-/**
- * Define allowed emoji themes
- */
-const ALLOWED_EMOJI_THEMES = [
-  "default",
-  "red",
-  "blue",
-  "green",
-  "purple",
-  "orange",
-] as const;
 
 export const emojiThemeValidator = v.union(
   v.literal("default"),

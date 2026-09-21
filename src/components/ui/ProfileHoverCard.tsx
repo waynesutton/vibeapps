@@ -2,10 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Id } from "../../../convex/_generated/dataModel";
 import {
   ExternalLink,
-  MapPin,
   Calendar,
   Globe,
   Twitter,
@@ -15,14 +13,12 @@ import { formatDistanceToNow } from "date-fns";
 
 interface ProfileHoverCardProps {
   username?: string;
-  userId?: Id<"users">;
   children: React.ReactNode;
   className?: string;
 }
 
 export function ProfileHoverCard({
   username,
-  userId,
   children,
   className = "",
 }: ProfileHoverCardProps) {
@@ -100,7 +96,7 @@ export function ProfileHoverCard({
   return (
     <div
       ref={containerRef}
-      className="relative inline-block"
+      className={`relative inline-block ${className}`.trim()}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >

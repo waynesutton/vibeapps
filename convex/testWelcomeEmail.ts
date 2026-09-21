@@ -12,7 +12,7 @@ export const testWelcomeEmail = mutation({
     success: v.boolean(),
     message: v.string(),
   }),
-  handler: async (ctx, args) => {
+  handler: async (ctx, _args) => {
     // Verify admin role
     await requireAdminRole(ctx);
 

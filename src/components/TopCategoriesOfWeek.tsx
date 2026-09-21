@@ -1,8 +1,6 @@
-import React from "react";
 import { useQuery } from "convex/react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
-import type { WeeklyTopCategory } from "../../convex/tags"; // Import the type
 import { Hash } from "lucide-react"; // Example icon
 import type { Id } from "../../convex/_generated/dataModel";
 
