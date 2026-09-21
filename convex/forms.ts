@@ -1,5 +1,5 @@
 import { query, mutation } from "./_generated/server";
-import { v } from "convex/values";
+import { Infer, v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { requirePermission } from "./adminAccess";
 
@@ -193,6 +193,16 @@ const fieldValidator = v.object({
   options: v.optional(v.array(v.string())),
   placeholder: v.optional(v.string()),
 });
+
+/**
+ * The field types saveFields accepts.
+ *
+ * The `formFields.fieldType` column is only `v.string()` in the schema, so
+ * `Doc<"formFields">["fieldType"]` is too loose to catch a bad value. Export
+ * the narrow type from the validator instead so the admin form builder is
+ * checked against what this mutation will actually accept.
+ */
+export type FormFieldType = Infer<typeof fieldValidator>["fieldType"];
 
 // Mutation to save/update fields for a form
 export const saveFields = mutation({

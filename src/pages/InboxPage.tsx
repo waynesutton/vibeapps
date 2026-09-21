@@ -551,7 +551,7 @@ export default function InboxPage() {
                   ) : (
                     messages?.map((message) => {
                       const isOwnMessage =
-                        currentUser && message.senderId === currentUser._id;
+                        !!currentUser && message.senderId === currentUser._id;
                       return (
                         <div
                           key={message._id}

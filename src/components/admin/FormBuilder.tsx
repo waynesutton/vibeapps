@@ -7,10 +7,11 @@ import { api } from "../../../convex/_generated/api";
 import { useAdminAccessQuery } from "./useAdminAccess";
 import { Id } from "../../../convex/_generated/dataModel";
 import type { FormField } from "../../types";
+import type { FormFieldType } from "../../../convex/forms";
 import { SimpleSelect } from "../ui/SimpleSelect";
 
 // Define field types allowed by Convex schema
-const FIELD_TYPES: FormField["fieldType"][] = [
+const FIELD_TYPES: FormFieldType[] = [
   "shortText",
   "longText",
   "url",
@@ -20,12 +21,20 @@ const FIELD_TYPES: FormField["fieldType"][] = [
   "multiSelect",
 ];
 
+/**
+ * `formFields.fieldType` is only `v.string()` in the schema, so a stored row
+ * may hold a value `saveFields` would reject. Narrow on the way in rather than
+ * trusting the column.
+ */
+const isFormFieldType = (value: string): value is FormFieldType =>
+  (FIELD_TYPES as readonly string[]).includes(value);
+
 // Interface for editable fields in local state
 interface EditableFormField extends Partial<FormField> {
   _id?: Id<"formFields">; // Existing ID from Convex
   localId: string; // Local temporary ID for React key
   options?: string[];
-  fieldType?: FormField["fieldType"];
+  fieldType?: FormFieldType;
   label?: string;
   required?: boolean;
   placeholder?: string;
@@ -80,7 +89,15 @@ export function FormBuilder() {
       setSlug(existingFormData.slug);
       setIsPublic(existingFormData.isPublic);
       setResultsArePublic(existingFormData.resultsArePublic ?? false);
-      setFields(existingFormData.fields.map((f) => ({ ...f, localId: f._id })));
+      setFields(
+        existingFormData.fields.map((f) => ({
+          ...f,
+          localId: f._id,
+          // An unrecognised stored value is cleared so the admin re-picks it,
+          // instead of failing opaquely inside saveFields on the next save.
+          fieldType: isFormFieldType(f.fieldType) ? f.fieldType : undefined,
+        })),
+      );
     } else if (!formId) {
       // Reset state if creating a new form (no formId)
       setTitle("");
@@ -92,7 +109,7 @@ export function FormBuilder() {
     }
   }, [existingFormData, formId]);
 
-  const addField = (type: FormField["fieldType"]) => {
+  const addField = (type: FormFieldType) => {
     const newField: EditableFormField = {
       localId: `new-${Date.now()}`,
       fieldType: type,
@@ -223,10 +240,10 @@ export function FormBuilder() {
         />
         {/* Field Type Selector */}
         <SimpleSelect
-          value={field.fieldType}
+          value={field.fieldType ?? ""}
           onChange={(value) =>
             updateField(field.localId, {
-              fieldType: value as FormField["fieldType"],
+              fieldType: value as FormFieldType,
             })
           }
           aria-label="Field type"
