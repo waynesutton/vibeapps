@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
-import { useQuery } from "convex/react";
+import React from "react";
+import { useQuery, useMutation } from "convex/react";
+import { useUser } from "@clerk/clerk-react";
 import { api } from "../../convex/_generated/api";
-import { ThumbsUp, UserCircle } from "lucide-react";
+import { UserCircle } from "lucide-react";
 import { ProfileHoverCard } from "../components/ui/ProfileHoverCard";
 import { BackToAppsLink } from "../components/BackToAppsLink";
 
@@ -53,7 +55,7 @@ export function LeaderboardPage() {
 
 interface LeaderboardItemProps {
   story: {
-    _id: string;
+    _id: any;
     title: string;
     slug: string;
     votes: number;
@@ -64,10 +66,27 @@ interface LeaderboardItemProps {
 }
 
 function LeaderboardItem({ story, rank }: LeaderboardItemProps) {
+  const { isSignedIn, isLoaded } = useUser();
+  const voteStory = useMutation(api.stories.voteStory);
+  const [justVoted, setJustVoted] = React.useState(false);
+  const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  React.useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
+
+  const handleVote = () => {
+    if (!isLoaded || !isSignedIn) return;
+    setJustVoted(true);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setJustVoted(false), 950);
+    voteStory({ storyId: story._id });
+  };
+
   return (
     <div className="px-3 sm:px-4 py-3 hover:bg-surface-hover transition-colors motion-reduce:transition-none">
-      {/* Rank, then the app, then the count pinned right — the same left-to-right
-          order the feed cards and list rows use. */}
       <div className="flex items-center gap-3">
         <span className="flex-shrink-0 w-7 h-7 rounded-full bg-cta flex items-center justify-center text-on-cta text-[13px] font-medium tabular-nums">
           {rank}
@@ -100,13 +119,35 @@ function LeaderboardItem({ story, rank }: LeaderboardItemProps) {
           ) : null}
         </div>
 
-        <div className="flex-shrink-0 flex items-center gap-1.5 text-ink">
-          <ThumbsUp className="w-4 h-4 text-soft" aria-hidden="true" />
-          <span className="text-sm font-semibold tabular-nums">
-            {story.votes}
-          </span>
-          <span className="hidden sm:inline text-xs text-soft">
-            {story.votes === 1 ? "vibe" : "vibes"}
+        {/* Count reads as a figure, not a footnote, and the row can be voted on
+            directly rather than only from the feed. */}
+        <div className="flex-shrink-0 flex items-center gap-3">
+          <div className="text-right leading-none">
+            <div className="text-[20px] font-semibold text-ink tabular-nums">
+              {story.votes}
+            </div>
+            <div className="text-[11px] text-soft mt-0.5">
+              {story.votes === 1 ? "vibe" : "vibes"}
+            </div>
+          </div>
+          <span className="relative">
+            {justVoted && (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 rounded-lg bg-cta animate-vibe-halo motion-reduce:hidden"
+              />
+            )}
+            <button
+              type="button"
+              onClick={handleVote}
+              disabled={!isLoaded}
+              className={`relative inline-flex items-center justify-center h-9 px-3 rounded-lg bg-cta text-on-cta text-[13px] font-semibold whitespace-nowrap hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas transition-colors motion-reduce:transition-none disabled:opacity-50 disabled:cursor-not-allowed ${
+                justVoted ? "animate-vibe-pop motion-reduce:animate-none" : ""
+              }`}
+              aria-label={`Vibe it, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
+            >
+              Vibe it
+            </button>
           </span>
         </div>
       </div>
