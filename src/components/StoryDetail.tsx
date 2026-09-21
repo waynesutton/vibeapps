@@ -1372,6 +1372,27 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   <LumaEventList placement="story_detail" compact />
                 </div>
               )}
+
+              {/* The owner's edit action lives with the other project controls
+                  rather than in a banner far below the fold. */}
+              {!isEditing &&
+                isClerkLoaded &&
+                isSignedIn &&
+                currentUser &&
+                story.userId === currentUser._id && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newSearchParams = new URLSearchParams(searchParams);
+                      newSearchParams.set("edit", "true");
+                      setSearchParams(newSearchParams);
+                    }}
+                    className="mt-3 w-full inline-flex items-center justify-center gap-1.5 h-9 rounded-md border border-hairline bg-surface text-sm font-medium text-copy hover:bg-surface-hover hover:text-ink transition-colors motion-reduce:transition-none"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" aria-hidden="true" />
+                    Edit submission
+                  </button>
+                )}
             </div>
             </div>
             )}
@@ -3023,34 +3044,6 @@ export function StoryDetail({ story }: StoryDetailProps) {
           </div>
         </div>
       )}
-
-      {/* Edit Submission Section */}
-      {!isEditing &&
-        isClerkLoaded &&
-        isSignedIn &&
-        currentUser &&
-        story.userId === currentUser._id && (
-          <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200 flex items-center justify-between text-sm text-blue-600">
-            <div className="flex items-center gap-3">
-              <Edit3 className="w-4 h-4 text-blue-500 flex-shrink-0" />
-              <span className="font-medium text-blue-700">
-                Want to update your submission?
-              </span>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs border-blue-200 text-blue-600 hover:bg-blue-100"
-              onClick={() => {
-                const newSearchParams = new URLSearchParams(searchParams);
-                newSearchParams.set("edit", "true");
-                setSearchParams(newSearchParams);
-              }}
-            >
-              Edit Submission
-            </Button>
-          </div>
-        )}
 
       {/* Flag/Report Section */}
       {!isEditing && (
