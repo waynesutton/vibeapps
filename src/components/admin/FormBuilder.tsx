@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Plus, Save, Trash2, Eye, ArrowLeft } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
@@ -6,7 +6,7 @@ import { NotFoundPage } from "../../pages/NotFoundPage";
 import { api } from "../../../convex/_generated/api";
 import { useAdminAccessQuery } from "./useAdminAccess";
 import { Id } from "../../../convex/_generated/dataModel";
-import type { CustomForm, FormField } from "../../types";
+import type { FormField } from "../../types";
 import { SimpleSelect } from "../ui/SimpleSelect";
 
 // Define field types allowed by Convex schema

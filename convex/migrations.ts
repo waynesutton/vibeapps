@@ -196,7 +196,10 @@ export const migrateYCHackForm = internalMutation({
     ];
 
     // Insert all the form fields
-    // TODO: Update this to use the new submitFormToStoryFields approach
+    // TODO: Update this to use the new submitFormToStoryFields approach.
+    // Until then both bindings are deliberately unused.
+    void formId;
+    void defaultFields;
     // for (const field of defaultFields) {
     //   await ctx.db.insert("submitFormFields", {
     //     formId,

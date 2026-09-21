@@ -1,4 +1,3 @@
-import React from "react";
 import { StoryList } from "./StoryList";
 import type { Story } from "../types";
 import { Link } from "react-router-dom";

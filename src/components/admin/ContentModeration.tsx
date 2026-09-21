@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from "react";
-import { formatDistanceToNow, format } from "date-fns";
+import { format } from "date-fns";
 import {
   MessageSquare,
   Check,
@@ -9,7 +9,6 @@ import {
   Trash2,
   Search,
   Pin,
-  Send,
   Tag,
   Plus,
   Scale,
@@ -20,7 +19,6 @@ import {
   User,
   Edit,
 } from "lucide-react";
-import * as Tabs from "@radix-ui/react-tabs";
 import {
   usePaginatedQuery,
   useMutation,
@@ -32,9 +30,8 @@ import { Id } from "../../../convex/_generated/dataModel";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
 import type { StoryWithDetails } from "../../../convex/stories";
 import { Doc } from "../../../convex/_generated/dataModel";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -74,7 +71,6 @@ type StatusFilter =
   | "archived";
 
 export function ContentModeration() {
-  const navigate = useNavigate();
   const { showMessage, showConfirm, DialogComponents } = useDialog();
   const [activeItemType, setActiveItemType] = useState<
     "submissions" | "comments"
@@ -651,15 +647,6 @@ export function ContentModeration() {
       console.error("Failed to update story:", error);
       toast.error(cleanMutationError(error, "Failed to update story"));
     }
-  };
-
-  // Tag management helpers
-  const toggleTag = (tagId: Id<"tags">) => {
-    setSelectedTagIds((prev) =>
-      prev.includes(tagId)
-        ? prev.filter((id) => id !== tagId)
-        : [...prev, tagId],
-    );
   };
 
   // Tag management helpers for inline editing

@@ -16,9 +16,10 @@ import {
 } from "lucide-react";
 import { useDialog } from "../hooks/useDialog";
 import { useEscapeKey } from "../hooks/useEscapeKey";
-
-// Define predefined emoji reactions
-const REACTION_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "👏"];
+import {
+  ALLOWED_EMOJIS,
+  type ReactionEmoji,
+} from "../../convex/lib/reactionEmojis";
 
 // Helper function to parse @mentions and create links
 const parseMessageWithMentions = (content: string, isOwnMessage: boolean) => {
@@ -87,9 +88,6 @@ export default function InboxPage() {
       ? { userId: selectedConversation.otherUser._id }
       : "skip",
   );
-
-  // Emoji theme query (always use default)
-  const userEmojiTheme = "default";
 
   // Mutations
   const sendMessageMutation = useMutation(api.dm.sendMessage);
@@ -330,7 +328,10 @@ export default function InboxPage() {
   };
 
   // Handle emoji reaction
-  const handleReaction = async (messageId: Id<"dmMessages">, emoji: string) => {
+  const handleReaction = async (
+    messageId: Id<"dmMessages">,
+    emoji: ReactionEmoji,
+  ) => {
     try {
       await addReactionMutation({ messageId, emoji });
       setShowReactionPicker(null);
@@ -605,7 +606,7 @@ export default function InboxPage() {
                                 } bg-surface border border-hairline rounded-lg p-2 flex gap-1 z-10`}
                                 onMouseLeave={() => setShowReactionPicker(null)}
                               >
-                                {REACTION_EMOJIS.map((emoji) => (
+                                {ALLOWED_EMOJIS.map((emoji) => (
                                   <button
                                     key={emoji}
                                     onClick={() =>

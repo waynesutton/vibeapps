@@ -457,7 +457,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
       return;
     }
     voteStory({ storyId: story._id })
-      .then((result) => {
+      .then(() => {
         // Optionally, update UI based on result.action and result.newVoteCount
       })
       .catch((error) => {
@@ -480,7 +480,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
       return;
     }
     rateStory({ storyId: story._id, rating: value })
-      .then((result) => {
+      .then(() => {
         // Optimistically update UI or refetch currentUserRating might be needed here
         // For now, a simple alert.
       })

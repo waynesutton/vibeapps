@@ -1,6 +1,4 @@
-import React from "react";
 import { formatDistanceToNow } from "date-fns";
-import { MessageSquare } from "lucide-react";
 import type { Comment as CommentType } from "../types";
 import ReactMarkdown from "react-markdown";
 import { Id } from "../../convex/_generated/dataModel";

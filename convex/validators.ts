@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { Doc, Id } from "./_generated/dataModel";
+import { Id } from "./_generated/dataModel";
 
 // Validator for Doc<"tags"> for use in other validators
 export const tagDocValidator = v.object({

@@ -5,34 +5,6 @@ import { Webhook } from "svix";
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 
-// Type for the Clerk user object within the webhook payload
-// Add all fields you expect to use from the Clerk User object
-// See: https://clerk.com/docs/reference/backend-api#tag/Users/operation/GetUser
-const clerkUserPayload = v.object({
-  id: v.string(), // Clerk User ID
-  first_name: v.optional(v.union(v.string(), v.null())),
-  last_name: v.optional(v.union(v.string(), v.null())),
-  image_url: v.optional(v.union(v.string(), v.null())),
-  email_addresses: v.array(
-    v.object({
-      email_address: v.string(),
-      id: v.string(),
-      // Add other fields if needed like 'verification'
-    })
-  ),
-  primary_email_address_id: v.optional(v.union(v.string(), v.null())),
-  public_metadata: v.optional(v.any()), // Using v.any() for flexibility, or define a stricter object
-  // Add other fields like 'username', 'created_at', 'updated_at' as needed
-});
-
-// Type for the overall webhook event payload from Clerk
-const clerkWebhookEvent = v.object({
-  data: clerkUserPayload, // For user.* events, data is the user object
-  object: v.literal("event"),
-  type: v.string(), // e.g., "user.created", "user.updated"
-  // Add 'instance_id' and 'timestamp' if needed from the outer Svix envelope, though svix library handles envelope.
-});
-
 export const handleClerkWebhook = internalAction({
   args: {
     headers: v.object({

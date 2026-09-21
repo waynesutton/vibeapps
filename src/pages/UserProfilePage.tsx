@@ -14,29 +14,20 @@ import {
   Camera,
   Save,
   XCircle,
-  Globe,
-  Twitter,
-  Linkedin,
   LogOut,
-  Lock,
   Mail,
   UserPlus,
   UserMinus,
   Users,
-  AlertTriangle,
   Settings,
   Bookmark,
-  BookmarkCheck,
   BookmarkMinus,
   BookKey,
   BookOpen,
-  Award,
   Flag,
   Inbox,
-  Send,
   ChevronDown,
 } from "lucide-react";
-import type { Story } from "../types"; // Import the Story type
 import AlertDialog from "../components/ui/AlertDialog"; // Corrected path
 import { NotFoundPage } from "./NotFoundPage"; // Added import for NotFoundPage
 import {
@@ -284,7 +275,6 @@ export default function UserProfilePage() {
 
   const generateUploadUrl = useAction(api.users.generateUploadUrl);
   const setUserProfileImage = useMutation(api.users.setUserProfileImage);
-  const updateUsernameMutation = useMutation(api.users.updateUsername);
   const updateProfileDetails = useMutation(api.users.updateProfileDetails);
 
   const userBookmarksCount = useQuery(
@@ -303,7 +293,6 @@ export default function UserProfilePage() {
   );
 
   const [isEditing, setIsEditing] = useState(false);
-  const [newUsername, setNewUsername] = useState("");
   const [newProfileImageFile, setNewProfileImageFile] = useState<File | null>(
     null,
   );
@@ -319,7 +308,7 @@ export default function UserProfilePage() {
   const [newBluesky, setNewBluesky] = useState("");
   const [newLinkedin, setNewLinkedin] = useState("");
   const [activeTab, setActiveTab] = useState<string | null>(null);
-  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isRedirecting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isLoadingFollowAction, setIsLoadingFollowAction] = useState(false);
   const [isEmailUpdating, setIsEmailUpdating] = useState(false);
@@ -780,7 +769,7 @@ export default function UserProfilePage() {
   // --- Action Handlers with Confirmation ---
   const confirmAndExecute = (
     actionFn: () => Promise<void>,
-    successMsg: string,
+    _successMsg: string,
     errorMsg: string,
     itemContext?: any,
   ) => {
@@ -919,6 +908,7 @@ export default function UserProfilePage() {
     });
   };
 
+  // TODO: not wired up yet — the Account Actions column only renders Sign Out.
   const handleDeleteAccount = () => {
     setDialogState({
       isOpen: true,
@@ -950,6 +940,8 @@ export default function UserProfilePage() {
         ),
     });
   };
+
+  void handleDeleteAccount;
 
   const handleUnsubscribeAllEmails = async () => {
     try {

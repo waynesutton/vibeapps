@@ -49,7 +49,7 @@ const DEFAULT_SETTINGS_FRONTEND = {
 };
 
 export function Settings() {
-  const { isLoading: authIsLoading, isAuthenticated } = useConvexAuth();
+  const { isLoading: authIsLoading } = useConvexAuth();
 
   const currentSettings = useQuery(api.settings.get);
   const updateSettings = useMutation(api.settings.update);

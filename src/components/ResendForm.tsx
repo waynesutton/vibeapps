@@ -4,7 +4,7 @@ import { BackToAppsLink } from "./BackToAppsLink";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
-import { Github, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { SignUpButton } from "@clerk/clerk-react";
 import { ChoiceFieldInput } from "./ui/ChoiceFieldInput";
 

@@ -1,10 +1,9 @@
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { usePaginatedQuery, useMutation, useConvexAuth } from "convex/react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../../convex/_generated/api";
-import { Id, Doc } from "../../../convex/_generated/dataModel";
+import { Id } from "../../../convex/_generated/dataModel";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,

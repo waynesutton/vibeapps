@@ -1,4 +1,3 @@
-import React from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, LogIn } from "lucide-react";
 import { SignInButton } from "@clerk/clerk-react";

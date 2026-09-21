@@ -1,19 +1,17 @@
-import React, { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { formatDistanceToNow } from "date-fns";
 import {
   EyeOff,
   Trash2,
-  CheckCircle,
   XCircle,
   AlertTriangle,
   ArrowDown,
   ArrowUp,
-  RefreshCw,
   Eye,
 } from "lucide-react";
 import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { Id, Doc } from "../../../convex/_generated/dataModel";
+import { Id } from "../../../convex/_generated/dataModel";
 import type { ReportWithDetails } from "../../../convex/reports"; // Import the type
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";

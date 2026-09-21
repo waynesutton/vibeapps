@@ -26,7 +26,7 @@ export function UserSyncer() {
     // Effect for ensuring user record in Convex DB
     if (isClerkLoaded && isSignedIn && clerkUser && !isSyncedAndChecked) {
       ensureUserMutation()
-        .then((userId) => {
+        .then(() => {
           // After ensuring user, convexUserDoc query will refetch or update.
           // The next useEffect will handle username check.
         })
