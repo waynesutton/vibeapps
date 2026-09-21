@@ -9,9 +9,35 @@ import { BackToAppsLink } from "../components/BackToAppsLink";
 
 export function LeaderboardPage() {
   // Get top stories for the leaderboard
-  const topStories = useQuery(api.stories.getWeeklyLeaderboardStories, {
+  const liveStories = useQuery(api.stories.getWeeklyLeaderboardStories, {
     limit: 20, // Show more stories on the dedicated page
   });
+
+  // Voting bumps the count, the reactive query re-sorts, and the row jumps to a
+  // new rank while its animation is still playing — which reads as the feedback
+  // firing on somebody else's app. Hold the order still until it finishes, then
+  // let the new ranking land.
+  const [votingId, setVotingId] = React.useState<string | null>(null);
+  const frozen = React.useRef<typeof liveStories>(undefined);
+  const voteTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  if (!votingId) {
+    frozen.current = liveStories;
+  }
+  const topStories = votingId ? frozen.current : liveStories;
+
+  React.useEffect(
+    () => () => {
+      if (voteTimer.current) clearTimeout(voteTimer.current);
+    },
+    [],
+  );
+
+  const handleVoted = (storyId: string) => {
+    setVotingId(storyId);
+    if (voteTimer.current) clearTimeout(voteTimer.current);
+    voteTimer.current = setTimeout(() => setVotingId(null), 950);
+  };
 
   return (
     <div className="min-h-screen">
@@ -43,6 +69,8 @@ export function LeaderboardPage() {
                   key={story._id}
                   story={story}
                   rank={index + 1}
+                  justVoted={votingId === story._id}
+                  onVoted={handleVoted}
                 />
               ))}
             </div>
@@ -59,29 +87,28 @@ interface LeaderboardItemProps {
     title: string;
     slug: string;
     votes: number;
+    description: string;
+    screenshotUrl: string | null;
     authorUsername?: string;
     authorName?: string;
   };
   rank: number;
+  justVoted: boolean;
+  onVoted: (storyId: string) => void;
 }
 
-function LeaderboardItem({ story, rank }: LeaderboardItemProps) {
+function LeaderboardItem({
+  story,
+  rank,
+  justVoted,
+  onVoted,
+}: LeaderboardItemProps) {
   const { isSignedIn, isLoaded } = useUser();
   const voteStory = useMutation(api.stories.voteStory);
-  const [justVoted, setJustVoted] = React.useState(false);
-  const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  React.useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
 
   const handleVote = () => {
     if (!isLoaded || !isSignedIn) return;
-    setJustVoted(true);
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setJustVoted(false), 950);
+    onVoted(story._id);
     voteStory({ storyId: story._id });
   };
 
@@ -92,6 +119,26 @@ function LeaderboardItem({ story, rank }: LeaderboardItemProps) {
           {rank}
         </span>
 
+        <Link
+          to={`/s/${story.slug}`}
+          className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-hairline bg-surface-alt block"
+          tabIndex={-1}
+          aria-hidden="true"
+        >
+          {story.screenshotUrl ? (
+            <img
+              src={story.screenshotUrl}
+              alt=""
+              className="w-full h-full object-cover"
+              loading={rank <= 6 ? "eager" : "lazy"}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-sm font-semibold text-soft">
+              {story.title.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </Link>
+
         <div className="flex-1 min-w-0">
           <Link
             to={`/s/${story.slug}`}
@@ -99,6 +146,11 @@ function LeaderboardItem({ story, rank }: LeaderboardItemProps) {
           >
             {story.title}
           </Link>
+          {story.description && (
+            <p className="text-[13px] text-copy line-clamp-1 mt-0.5">
+              {story.description}
+            </p>
+          )}
           {story.authorUsername ? (
             <ProfileHoverCard username={story.authorUsername}>
               <Link

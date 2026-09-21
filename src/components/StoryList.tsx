@@ -285,6 +285,12 @@ export function StoryList({
             )}
           </div>
 
+          {story.description && (
+            <p className="text-[13px] text-copy line-clamp-1 mt-0.5">
+              {story.description}
+            </p>
+          )}
+
           {/* Everything secondary on one line so the row stays two lines tall. */}
           <div className="mt-1 flex items-center gap-2 min-w-0 text-[13px] text-soft">
             <span className="truncate">
@@ -370,8 +376,8 @@ export function StoryList({
       className="flex flex-col sm:flex-row items-stretch gap-3 sm:gap-4 bg-surface rounded-lg border border-hairline p-3 sm:p-4 hover:bg-surface-hover transition-colors motion-reduce:transition-none"
     >
       {/* Vibe block. Deliberately the heaviest thing in the row. */}
-      <div className="flex sm:flex-col items-stretch gap-2 sm:w-[84px] flex-shrink-0 order-2 sm:order-1">
-        <div className="flex-1 sm:flex-none flex flex-col items-center justify-center rounded-lg bg-brand-soft border border-hairline py-2 px-3">
+      <div className="flex sm:flex-col items-stretch gap-2 w-full sm:w-[84px] flex-shrink-0 order-3">
+        <div className="hidden sm:flex flex-col items-center justify-center rounded-lg bg-brand-soft border border-hairline py-2 px-3">
           <span className="text-[24px] font-semibold tracking-[-0.02em] tabular-nums text-ink leading-none">
             {story.votes}
           </span>
@@ -379,7 +385,7 @@ export function StoryList({
             {story.votes === 1 ? "Vibe" : "Vibes"}
           </span>
         </div>
-        <span className="relative flex-1 sm:flex-none">
+        <span className="relative w-full sm:flex-none">
           {justVoted === story._id && (
             <span
               aria-hidden="true"
@@ -398,6 +404,9 @@ export function StoryList({
             aria-label={`Vibe it, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
           >
             Vibe it
+            <span className="sm:hidden ml-1.5 tabular-nums opacity-70">
+              {story.votes}
+            </span>
           </button>
         </span>
       </div>
@@ -405,7 +414,7 @@ export function StoryList({
       {/* Screenshot */}
       <Link
         to={`/s/${story.slug}`}
-        className="w-full sm:w-[190px] sm:flex-shrink-0 aspect-video block overflow-hidden rounded-lg border border-hairline bg-surface-alt order-1 sm:order-2"
+        className="w-full sm:w-[190px] sm:flex-shrink-0 aspect-video block overflow-hidden rounded-lg border border-hairline bg-surface-alt order-1"
         tabIndex={-1}
         aria-hidden="true"
       >
@@ -424,7 +433,7 @@ export function StoryList({
       </Link>
 
       {/* Copy */}
-      <div className="flex-1 min-w-0 order-3">
+      <div className="flex-1 min-w-0 order-2">
         {story.customMessage && (
           <div className="mb-2 text-[13px] text-on-cta bg-cta rounded-lg px-2 py-1 italic inline-block">
             {story.customMessage}

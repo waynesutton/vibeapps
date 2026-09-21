@@ -274,10 +274,34 @@ export function Layout({ children }: { children?: ReactNode }) {
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery("");
       setIsSearchExpanded(false);
     }
   };
+
+  // Search as you type, 350ms after the last keystroke. Results replace the
+  // middle column, so this updates in place rather than pushing a history entry
+  // per character — hence replace: true, which also keeps Back meaning "the
+  // page before I started searching".
+  React.useEffect(() => {
+    const term = searchQuery.trim();
+    const onSearchPage = location.pathname === "/search";
+    if (!term) {
+      // Clearing the box on the results page returns to the feed.
+      if (onSearchPage) {
+        const t = setTimeout(() => navigate("/", { replace: true }), 350);
+        return () => clearTimeout(t);
+      }
+      return;
+    }
+    const currentTerm = new URLSearchParams(location.search).get("q") ?? "";
+    if (onSearchPage && currentTerm === term) return;
+    const t = setTimeout(() => {
+      navigate(`/search?q=${encodeURIComponent(term)}`, {
+        replace: onSearchPage,
+      });
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchQuery, location.pathname, location.search, navigate]);
 
   // ⌘K on Apple platforms, Ctrl+K elsewhere.
   const isAppleDevice = React.useMemo(
@@ -425,9 +449,12 @@ export function Layout({ children }: { children?: ReactNode }) {
   const isPublicResultsPage = location.pathname.startsWith("/results/");
   const isAdminFormPage = location.pathname.startsWith("/admin/forms/");
   const isAdminPage = location.pathname.startsWith("/admin");
-  // View and filters only mean something against the story list, so they are
-  // scoped to it rather than following the user onto profiles, inbox, admin…
-  const isStoryListPage = location.pathname === "/";
+  // Pages that render the story list, so the view/filter controls apply. Search
+  // is included: its results go through StoryList with the same view mode, so
+  // searching swaps the middle column and leaves the rail and sidebar in place
+  // rather than feeling like a different page.
+  const isStoryListPage =
+    location.pathname === "/" || location.pathname === "/search";
   const isInboxPage = location.pathname.startsWith("/inbox");
   const isNotificationsPage = location.pathname.startsWith("/notifications");
   const isLeaderboardPage = location.pathname === "/leaderboard";
@@ -1147,7 +1174,8 @@ export function Layout({ children }: { children?: ReactNode }) {
               )}
             </div>
             {showSidebar && (
-              <aside className="lg:w-1/4 space-y-6">
+              <aside className="lg:w-1/4 lg:flex-shrink-0">
+                <div className="space-y-6 lg:sticky lg:top-[60px] lg:max-h-[calc(100vh-72px)] lg:overflow-y-auto lg:pb-4">
                 {showLumaEvents && (
                   <LumaEventList placement={lumaPlacement} compact />
                 )}
@@ -1159,6 +1187,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                     setSelectedTagId={setSelectedTagId}
                   />
                 )}
+                </div>
               </aside>
             )}
           </div>

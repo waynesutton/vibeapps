@@ -75,6 +75,15 @@ export function WeeklyLeaderboard() {
           </li>
         ))}
       </ul>
+
+      {/* The full board is reachable from here rather than only from a footer
+          link, which is where people actually look for it. */}
+      <Link
+        to="/leaderboard"
+        className="mt-4 w-full inline-flex items-center justify-center h-9 rounded-md border border-hairline bg-surface text-sm font-medium text-copy hover:bg-surface-hover hover:text-ink transition-colors motion-reduce:transition-none"
+      >
+        View leaderboard
+      </Link>
     </div>
   );
 }

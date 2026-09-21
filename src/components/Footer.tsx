@@ -14,9 +14,6 @@ export function Footer() {
           <button onClick={() => setShowAboutModal(true)} className="hover:text-copy">
             About
           </button>
-          <Link to="/leaderboard" className="hover:text-copy">
-            Leaderboard
-          </Link>
           <Link to="/events" className="hover:text-copy">
             Events
           </Link>

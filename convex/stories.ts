@@ -2459,6 +2459,8 @@ export const leaderboardStoryValidator = v.object({
   title: v.string(),
   slug: v.string(),
   votes: v.number(),
+  description: v.string(),
+  screenshotUrl: v.union(v.string(), v.null()),
   authorUsername: v.optional(v.string()),
   authorName: v.optional(v.string()),
   // Add _creationTime if you plan to display it
@@ -2503,6 +2505,10 @@ export const getWeeklyLeaderboardStories = query({
         title: story.title,
         slug: story.slug,
         votes: story.votes,
+        description: story.description,
+        screenshotUrl: story.screenshotId
+          ? await ctx.storage.getUrl(story.screenshotId)
+          : null,
         authorUsername: authorUsername,
         authorName: authorName,
       });
