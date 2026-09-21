@@ -106,16 +106,6 @@ const VerifiedBadge = () => (
 
 // Explicitly define types for the items in arrays if not perfectly inferred
 // These should align with what api.users.getUserProfileByUsername returns for these arrays
-type StoryInProfile = Doc<"stories"> & {
-  slug: string;
-  title: string;
-  description: string;
-  status: string;
-  authorName?: string | null;
-  authorUsername?: string | null;
-  authorIsVerified?: boolean;
-};
-
 type VoteInProfile = Doc<"votes"> & {
   storySlug?: string;
   storyTitle?: string;
@@ -1607,7 +1597,7 @@ export default function UserProfilePage() {
           )}
           {stories.length > 0 && (
             <ul className="space-y-4">
-              {stories.map((story: StoryInProfile) => (
+              {stories.map((story) => (
                 <li
                   key={story._id}
                   className="p-4 bg-surface-alt border border-hairline rounded-md flex justify-between items-center transition-shadow"
