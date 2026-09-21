@@ -378,6 +378,9 @@ export function Layout({ children }: { children?: ReactNode }) {
   const isPublicResultsPage = location.pathname.startsWith("/results/");
   const isAdminFormPage = location.pathname.startsWith("/admin/forms/");
   const isAdminPage = location.pathname.startsWith("/admin");
+  // View and filters only mean something against the story list, so they are
+  // scoped to it rather than following the user onto profiles, inbox, admin…
+  const isStoryListPage = location.pathname === "/";
   const isInboxPage = location.pathname.startsWith("/inbox");
   const isNotificationsPage = location.pathname.startsWith("/notifications");
   const isLeaderboardPage = location.pathname === "/leaderboard";
@@ -701,98 +704,102 @@ export function Layout({ children }: { children?: ReactNode }) {
                     <PlusCircle className="w-4 h-4" />
                     Submit
                   </button>
-                  {/* View and filters are dropdowns rather than a row of
-                      toggles plus a row of selects: two controls instead of
-                      five, and the toolbar fits one line on a phone. */}
-                  <SimpleSelect
-                    value={viewMode ?? ""}
-                    onChange={(value) => {
-                      setViewMode(value as NonNullable<typeof viewMode>);
-                      setUserChangedViewMode(true);
-                      navigate("/");
-                    }}
-                    aria-label="View layout"
-                    className="w-auto h-9 py-0 pl-3 pr-2 text-sm gap-1"
-                    options={[
-                      ...(settings?.showListView
-                        ? [{ value: "list", label: "List" }]
-                        : []),
-                      ...(settings?.showGridView
-                        ? [{ value: "grid", label: "Grid" }]
-                        : []),
-                      ...(settings?.showVibeView
-                        ? [{ value: "vibe", label: "Vibe" }]
-                        : []),
-                    ]}
-                  />
+                  {isStoryListPage && (
+                    <>
+                    {/* View and filters are dropdowns rather than a row of
+                        toggles plus a row of selects: two controls instead of
+                        five, and the toolbar fits one line on a phone. */}
+                    <SimpleSelect
+                      value={viewMode ?? ""}
+                      onChange={(value) => {
+                        setViewMode(value as NonNullable<typeof viewMode>);
+                        setUserChangedViewMode(true);
+                        navigate("/");
+                      }}
+                      aria-label="View layout"
+                      className="w-auto h-9 py-0 pl-3 pr-2 text-sm gap-1"
+                      options={[
+                        ...(settings?.showListView
+                          ? [{ value: "list", label: "List" }]
+                          : []),
+                        ...(settings?.showGridView
+                          ? [{ value: "grid", label: "Grid" }]
+                          : []),
+                        ...(settings?.showVibeView
+                          ? [{ value: "vibe", label: "Vibe" }]
+                          : []),
+                      ]}
+                    />
 
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-hairline bg-surface text-sm text-copy hover:bg-surface-hover transition-colors"
-                        aria-label="Filters"
-                      >
-                        <SlidersHorizontal className="w-4 h-4 text-soft" />
-                        Filters
-                        {hasActiveFilters && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-brand" />
-                        )}
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent align="start" className="w-64 p-3">
-                      <div className="space-y-3">
-                  {/* Categories Dropdown (themed, replaces native select) */}
-                  <SimpleSelect
-                    value={selectedTagId || ""}
-                    onChange={(value) =>
-                      setSelectedTagId(
-                        value ? (value as Id<"tags">) : undefined,
-                      )
-                    }
-                    aria-label="Filter by category"
-                    className="w-full h-9 py-0 pl-3 pr-2 text-sm gap-1"
-                    options={[
-                      { value: "", label: "All Categories" },
-                      ...(headerTags
-                        ?.filter(
-                          (tag) =>
-                            !tag.isHidden &&
-                            tag.name !== "resendhackathon" &&
-                            tag.name !== "ychackathon",
-                        ) // Filter hidden tags and hackathon tracking tags
-                        .map((tag) => ({
-                          value: tag._id as string,
-                          label: tag.name,
-                        })) ?? []),
-                    ]}
-                  />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-hairline bg-surface text-sm text-copy hover:bg-surface-hover transition-colors"
+                          aria-label="Filters"
+                        >
+                          <SlidersHorizontal className="w-4 h-4 text-soft" />
+                          Filters
+                          {hasActiveFilters && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-brand" />
+                          )}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent align="start" className="w-64 p-3">
+                        <div className="space-y-3">
+                    {/* Categories Dropdown (themed, replaces native select) */}
+                    <SimpleSelect
+                      value={selectedTagId || ""}
+                      onChange={(value) =>
+                        setSelectedTagId(
+                          value ? (value as Id<"tags">) : undefined,
+                        )
+                      }
+                      aria-label="Filter by category"
+                      className="w-full h-9 py-0 pl-3 pr-2 text-sm gap-1"
+                      options={[
+                        { value: "", label: "All Categories" },
+                        ...(headerTags
+                          ?.filter(
+                            (tag) =>
+                              !tag.isHidden &&
+                              tag.name !== "resendhackathon" &&
+                              tag.name !== "ychackathon",
+                          ) // Filter hidden tags and hackathon tracking tags
+                          .map((tag) => ({
+                            value: tag._id as string,
+                            label: tag.name,
+                          })) ?? []),
+                      ]}
+                    />
 
-                  {/* Sort Dropdown (themed, replaces native select) */}
-                  <SimpleSelect
-                    value={sortPeriod ?? ""}
-                    onChange={(value) => {
-                      setSortPeriod(value as SortPeriod);
-                      setUserChangedSortPeriod(true); // User has made a selection
-                    }}
-                    aria-label="Sort submissions"
-                    className="w-full h-9 py-0 pl-3 pr-2 text-sm gap-1"
-                    options={[
-                      { value: "today", label: "Today" },
-                      { value: "week", label: "This Week" },
-                      { value: "month", label: "This Month" },
-                      { value: "year", label: "This Year" },
-                      { value: "all", label: "Most Recent" },
-                      { value: "votes_today", label: "Most Vibes (Today)" },
-                      { value: "votes_week", label: "Most Vibes (Week)" },
-                      { value: "votes_month", label: "Most Vibes (Month)" },
-                      { value: "votes_year", label: "Most Vibes (Year)" },
-                      { value: "votes_all", label: "Most Vibes (All Time)" },
-                    ]}
-                  />
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                    {/* Sort Dropdown (themed, replaces native select) */}
+                    <SimpleSelect
+                      value={sortPeriod ?? ""}
+                      onChange={(value) => {
+                        setSortPeriod(value as SortPeriod);
+                        setUserChangedSortPeriod(true); // User has made a selection
+                      }}
+                      aria-label="Sort submissions"
+                      className="w-full h-9 py-0 pl-3 pr-2 text-sm gap-1"
+                      options={[
+                        { value: "today", label: "Today" },
+                        { value: "week", label: "This Week" },
+                        { value: "month", label: "This Month" },
+                        { value: "year", label: "This Year" },
+                        { value: "all", label: "Most Recent" },
+                        { value: "votes_today", label: "Most Vibes (Today)" },
+                        { value: "votes_week", label: "Most Vibes (Week)" },
+                        { value: "votes_month", label: "Most Vibes (Month)" },
+                        { value: "votes_year", label: "Most Vibes (Year)" },
+                        { value: "votes_all", label: "Most Vibes (All Time)" },
+                      ]}
+                    />
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                    </>
+                  )}
 
                 </div>
 
