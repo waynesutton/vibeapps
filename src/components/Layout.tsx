@@ -1,4 +1,12 @@
 import React, { ReactNode } from "react";
+import { SunIcon } from "@phosphor-icons/react";
+import { useTheme } from "../lib/ThemeContext";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "./ui/popover";
+import { SlidersHorizontal } from "lucide-react";
 import {
   Link,
   Outlet,
@@ -7,11 +15,8 @@ import {
   useLocation,
 } from "react-router-dom";
 import {
-  LayoutGrid,
-  List,
   PlusCircle,
   Search,
-  ThumbsUp,
   Menu,
   User,
   Bell,
@@ -68,6 +73,7 @@ export function Layout({ children }: { children?: ReactNode }) {
   const navigate = useNavigate();
   const { user: clerkUser, isSignedIn, isLoaded: isClerkLoaded } = useUser();
   const clerk = useClerk();
+  const { theme, cycleTheme } = useTheme();
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -85,6 +91,10 @@ export function Layout({ children }: { children?: ReactNode }) {
   const [selectedTagId, setSelectedTagId] = React.useState<
     Id<"tags"> | undefined
   >(undefined);
+  // Drives the dot on the Filters trigger, so a collapsed filter is still
+  // visible as being set.
+  const hasActiveFilters =
+    Boolean(selectedTagId) || Boolean(sortPeriod && sortPeriod !== "all");
 
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);
@@ -468,10 +478,10 @@ export function Layout({ children }: { children?: ReactNode }) {
       {/* <div className="absolute top-0 z-[-2] h-screen w-screen bg-surface bg-[radial-gradient(100%_50%_at_50%_0%,rgba(0,163,255,0.13)_0,rgba(0,163,255,0)_50%,rgba(0,163,255,0)_100%)]"></div> */}
 
       <div className="flex flex-col min-h-screen bg-canvas">
-        <header className="pt-5 pb-0 bg-canvas sticky top-0 z-50">
+        <header className="pt-3 pb-1 bg-canvas sticky top-0 z-50">
           <div className="container mx-auto px-4">
             {/* Responsive header layout */}
-            <div className="flex flex-col gap-y-2 lg:flex-row lg:justify-between lg:items-center">
+            <div className="flex flex-col gap-y-1.5 lg:flex-row lg:justify-between lg:items-center">
               {/* Row 1: Site Title & Profile Icon (Mobile) / Desktop: SiteTitle order-1, ProfileIcon order-3 */}
               <div className="flex w-full justify-between items-center lg:contents">
                 {/* Left: Site Title */}
@@ -483,8 +493,11 @@ export function Layout({ children }: { children?: ReactNode }) {
                 </Link>
                 {/* Right: User/Sign-in */}
                 <div className="flex items-center gap-2 lg:order-3">
-                  {/* Theme switcher (always visible, desktop + mobile) */}
-                  <ThemeToggle />
+                  {/* Signed-in users get the theme control inside the account
+                      menu; signed-out visitors have no menu, so keep it here. */}
+                  <SignedOut>
+                    <ThemeToggle />
+                  </SignedOut>
                   <SignedOut>
                     <SignUpButton mode="modal">
                       <button
@@ -507,18 +520,6 @@ export function Layout({ children }: { children?: ReactNode }) {
                     <UserSyncer />
                     {/* Alerts Bell Icon */}
                     <div className="relative" ref={alertsDropdownRef}>
-                      <button
-                        onClick={() =>
-                          setShowAlertsDropdown(!showAlertsDropdown)
-                        }
-                        className="flex items-center justify-center w-8 h-8 rounded-full border border-hairline bg-surface hover:bg-surface-hover transition-colors mr-2"
-                        aria-label="Notifications"
-                      >
-                        <Bell className="w-4 h-4 text-copy" />
-                        {hasUnreadAlerts && (
-                          <div className="alerts-notification-dot absolute top-0 right-2 w-2 h-2 bg-brand rounded-full"></div>
-                        )}
-                      </button>
 
                       {showAlertsDropdown && (
                         <div className="absolute right-0 mt-2 w-80 bg-surface [border-radius:0.375rem] shadow-lg border border-hairline py-2 z-50">
@@ -560,34 +561,22 @@ export function Layout({ children }: { children?: ReactNode }) {
                       )}
                     </div>
 
-                    {/* Inbox Icon - Only show if inbox is enabled */}
-                    {userInboxEnabled !== false && (
-                      <div
-                        className="relative"
-                        style={{ marginRight: "0.5rem" }}
-                      >
-                        <Link
-                          to="/inbox"
-                          className="flex items-center justify-center w-8 h-8 rounded-full border border-hairline bg-surface hover:bg-surface-hover transition-colors"
-                          aria-label="Inbox"
-                        >
-                          <Inbox className="w-4 h-4 text-copy" />
-                        </Link>
-                        {hasUnreadMessages && (
-                          <div className="absolute top-0 right-0 w-2 h-2 bg-brand rounded-full"></div>
-                        )}
-                      </div>
-                    )}
-
                     {/* Custom Profile Dropdown */}
                     <div className="relative" ref={profileDropdownRef}>
                       <button
                         onClick={() =>
                           setShowProfileDropdown(!showProfileDropdown)
                         }
-                        className="flex items-center justify-center w-8 h-8 rounded-full bg-cta hover:bg-cta-hover transition-colors"
-                        aria-label="Profile menu"
+                        className="relative flex items-center justify-center w-8 h-8 rounded-full bg-cta hover:bg-cta-hover transition-colors"
+                        aria-label={
+                          hasUnreadAlerts || hasUnreadMessages
+                            ? "Profile menu, you have unread items"
+                            : "Profile menu"
+                        }
                       >
+                        {(hasUnreadAlerts || hasUnreadMessages) && (
+                          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-brand ring-2 ring-canvas" />
+                        )}
                         {clerkUser?.imageUrl ? (
                           <img
                             src={clerkUser.imageUrl}
@@ -600,7 +589,48 @@ export function Layout({ children }: { children?: ReactNode }) {
                       </button>
 
                       {showProfileDropdown && (
-                        <div className="absolute right-0 mt-2 w-36 bg-surface [border-radius:0.375rem] shadow-lg border border-hairline py-0.5 z-50">
+                        <div className="absolute right-0 mt-2 w-52 bg-surface [border-radius:0.375rem] shadow-lg border border-hairline py-0.5 z-50">
+                          <button
+                            onClick={() => {
+                              setShowProfileDropdown(false);
+                              setShowAlertsDropdown(true);
+                            }}
+                            className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-xs text-ink hover:bg-surface-hover transition-colors text-left"
+                          >
+                            <span className="flex items-center gap-2">
+                              <Bell className="w-3.5 h-3.5 text-soft" />
+                              Notifications
+                            </span>
+                            {hasUnreadAlerts && (
+                              <span className="w-2 h-2 rounded-full bg-brand" />
+                            )}
+                          </button>
+                          {userInboxEnabled !== false && (
+                            <Link
+                              to="/inbox"
+                              onClick={() => setShowProfileDropdown(false)}
+                              className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-xs text-ink hover:bg-surface-hover transition-colors"
+                            >
+                              <span className="flex items-center gap-2">
+                                <Inbox className="w-3.5 h-3.5 text-soft" />
+                                Inbox
+                              </span>
+                              {hasUnreadMessages && (
+                                <span className="w-2 h-2 rounded-full bg-brand" />
+                              )}
+                            </Link>
+                          )}
+                          <button
+                            onClick={() => cycleTheme()}
+                            className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-xs text-ink hover:bg-surface-hover transition-colors text-left"
+                          >
+                            <span className="flex items-center gap-2">
+                              <SunIcon className="w-3.5 h-3.5 text-soft" />
+                              Theme
+                            </span>
+                            <span className="text-soft capitalize">{theme}</span>
+                          </button>
+                          <div className="my-0.5 border-t border-hairline" />
                           <Link
                             to={profileUrl}
                             className="block px-3 py-1.5 text-xs text-ink hover:bg-surface-hover transition-colors"
@@ -636,7 +666,7 @@ export function Layout({ children }: { children?: ReactNode }) {
               {/* Middle Controls Wrapper for stacking on mobile and centering on desktop */}
               <div className="flex flex-col lg:flex-row lg:items-center lg:gap-3 lg:order-2">
                 {/* Row 2 content: Submit & View Options */}
-                <div className="flex w-full lg:w-auto items-center gap-3">
+                <div className="flex w-full lg:w-auto flex-wrap items-center gap-2 lg:gap-3">
                   {/* Submit Button: Navigate to /submit if signed in, show auth dialog if not */}
                   <button
                     onClick={() => {
@@ -652,84 +682,47 @@ export function Layout({ children }: { children?: ReactNode }) {
                     <PlusCircle className="w-4 h-4" />
                     Submit
                   </button>
-                  {settings?.showListView && (
-                    <button
-                      onClick={() => {
-                        setViewMode("list");
-                        setUserChangedViewMode(true);
-                        navigate("/"); // Navigate to homepage
-                      }}
-                      className={`p-2 rounded-md border ${viewMode === "list" ? "bg-cta border-cta" : "border-hairline hover:bg-surface-hover"}`}
-                      aria-label="List View"
-                      title="List View"
-                    >
-                      <List
-                        className={`w-5 h-5 ${viewMode === "list" ? "text-on-cta" : "text-soft"}`}
-                      />
-                    </button>
-                  )}
-                  {settings?.showGridView && (
-                    <button
-                      onClick={() => {
-                        setViewMode("grid");
-                        setUserChangedViewMode(true);
-                        navigate("/"); // Navigate to homepage
-                      }}
-                      className={`p-2 rounded-md border ${viewMode === "grid" ? "bg-cta border-cta" : "border-hairline hover:bg-surface-hover"}`}
-                      aria-label="Grid View"
-                      title="Grid View"
-                    >
-                      <LayoutGrid
-                        className={`w-5 h-5 ${viewMode === "grid" ? "text-on-cta" : "text-soft"}`}
-                      />
-                    </button>
-                  )}
-                  {settings?.showVibeView && (
-                    <button
-                      onClick={() => {
-                        setViewMode("vibe");
-                        setUserChangedViewMode(true);
-                        navigate("/"); // Navigate to homepage
-                      }}
-                      className={`p-2 rounded-md border ${viewMode === "vibe" ? "bg-cta border-cta" : "border-hairline hover:bg-surface-hover"}`}
-                      aria-label="Vibe View"
-                      title="Vibe View"
-                    >
-                      <ThumbsUp
-                        className={`w-5 h-5 ${viewMode === "vibe" ? "text-on-cta" : "text-soft"}`}
-                      />
-                    </button>
-                  )}
+                  {/* View and filters are dropdowns rather than a row of
+                      toggles plus a row of selects: two controls instead of
+                      five, and the toolbar fits one line on a phone. */}
+                  <SimpleSelect
+                    value={viewMode ?? ""}
+                    onChange={(value) => {
+                      setViewMode(value as NonNullable<typeof viewMode>);
+                      setUserChangedViewMode(true);
+                      navigate("/");
+                    }}
+                    aria-label="View layout"
+                    className="w-auto h-9 py-0 pl-3 pr-2 text-sm gap-1"
+                    options={[
+                      ...(settings?.showListView
+                        ? [{ value: "list", label: "List" }]
+                        : []),
+                      ...(settings?.showGridView
+                        ? [{ value: "grid", label: "Grid" }]
+                        : []),
+                      ...(settings?.showVibeView
+                        ? [{ value: "vibe", label: "Vibe" }]
+                        : []),
+                    ]}
+                  />
 
-                  {/* Mobile Search Icon - Show only on mobile, next to view options */}
-                  <button
-                    type="button"
-                    onClick={handleSearchIconClick}
-                    className="md:hidden p-2 text-copy hover:text-ink"
-                    aria-label="Search"
-                  >
-                    <Search className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* Mobile Search Bar - Show below view options when expanded */}
-                {isSearchExpanded && (
-                  <div className="md:hidden w-full mt-2 mb-1">
-                    <form onSubmit={handleSearch} className="flex items-center">
-                      <input
-                        ref={searchInputRef}
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search..."
-                        className="w-full h-9 px-3 text-sm focus:outline-none bg-surface text-copy rounded-md border border-hairline-strong"
-                      />
-                    </form>
-                  </div>
-                )}
-
-                {/* Row 3 content: Dropdowns & Desktop Search */}
-                <div className="flex w-full md:w-auto items-center gap-1 md:gap-3">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border border-hairline bg-surface text-sm text-copy hover:bg-surface-hover transition-colors"
+                        aria-label="Filters"
+                      >
+                        <SlidersHorizontal className="w-4 h-4 text-soft" />
+                        Filters
+                        {hasActiveFilters && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-brand" />
+                        )}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-64 p-3">
+                      <div className="space-y-3">
                   {/* Categories Dropdown (themed, replaces native select) */}
                   <SimpleSelect
                     value={selectedTagId || ""}
@@ -739,7 +732,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                       )
                     }
                     aria-label="Filter by category"
-                    className="w-auto h-auto py-1.5 md:py-2 pl-2 md:pl-3 pr-2 text-xs md:text-sm gap-1"
+                    className="w-full h-9 py-0 pl-3 pr-2 text-sm gap-1"
                     options={[
                       { value: "", label: "All Categories" },
                       ...(headerTags
@@ -764,7 +757,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                       setUserChangedSortPeriod(true); // User has made a selection
                     }}
                     aria-label="Sort submissions"
-                    className="w-auto h-auto py-1.5 md:py-2 pl-2 md:pl-3 pr-2 text-xs md:text-sm gap-1"
+                    className="w-full h-9 py-0 pl-3 pr-2 text-sm gap-1"
                     options={[
                       { value: "today", label: "Today" },
                       { value: "week", label: "This Week" },
@@ -778,7 +771,39 @@ export function Layout({ children }: { children?: ReactNode }) {
                       { value: "votes_all", label: "Most Vibes (All Time)" },
                     ]}
                   />
+                      </div>
+                    </PopoverContent>
+                  </Popover>
 
+                  {/* Mobile Search Icon - Show only on mobile, next to view options */}
+                  <button
+                    type="button"
+                    onClick={handleSearchIconClick}
+                    className="lg:hidden flex items-center justify-center w-9 h-9 rounded-md text-soft hover:text-ink hover:bg-surface-hover transition-colors"
+                    aria-label="Search"
+                  >
+                    <Search className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Mobile Search Bar - Show below view options when expanded */}
+                {isSearchExpanded && (
+                  <div className="md:hidden w-full mt-2 mb-1">
+                    <form onSubmit={handleSearch} className="flex items-center">
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search..."
+                        className="w-full h-9 px-3 text-sm focus:outline-none bg-surface text-copy rounded-md border border-hairline-strong"
+                      />
+                    </form>
+                  </div>
+                )}
+
+                {/* Row 3 content: Dropdowns & Desktop Search */}
+                <div className="flex w-full md:w-auto items-center gap-1 md:gap-3">
                   {/* Desktop Search - Hidden on mobile */}
                   <div className="hidden md:flex items-center gap-0">
                     <button
