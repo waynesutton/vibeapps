@@ -146,6 +146,14 @@ const TagPills = ({
   </>
 );
 
+// Same medal tints as the leaderboard and the sidebar card, so this week's top
+// three are recognisable wherever they show up.
+const RANK_TINT: Record<number, string> = {
+  1: "bg-[rgb(245_197_24_/_0.08)]",
+  2: "bg-[rgb(148_163_184_/_0.10)]",
+  3: "bg-[rgb(205_127_50_/_0.08)]",
+};
+
 export function StoryList({
   stories,
   viewMode,
@@ -155,6 +163,20 @@ export function StoryList({
 }: StoryListProps) {
   const { isSignedIn, isLoaded: isClerkLoaded } = useAuth();
   const voteStory = useMutation(api.stories.voteStory);
+
+  // The feed is usually sorted by recency, so position is not rank. Look up
+  // this week's top three by id instead of tinting the first three rows, which
+  // would be wrong under every sort but "most vibes".
+  const weeklyTop = useQuery(api.stories.getWeeklyLeaderboardStories, {
+    limit: 3,
+  });
+  const weeklyRank = React.useMemo(() => {
+    const map = new Map<string, number>();
+    weeklyTop?.forEach((s, i) => map.set(s._id as unknown as string, i + 1));
+    return map;
+  }, [weeklyTop]);
+  const rankTint = (storyId: string) =>
+    RANK_TINT[weeklyRank.get(storyId) ?? 0] ?? "";
   const { showMessage, DialogComponents } = useDialog();
 
   // Auth required dialog state
@@ -238,7 +260,9 @@ export function StoryList({
     return (
       <article
         key={story._id}
-        className="group flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-4 hover:bg-surface-hover transition-colors motion-reduce:transition-none"
+        className={`group flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-4 transition-colors motion-reduce:transition-none hover:bg-surface-hover ${rankTint(
+          story._id,
+        )}`}
       >
         {/* Square thumbnail. A square holds its size in a dense row far better
             than a 16:9 box, which had to go wide to stay legible. */}
@@ -373,7 +397,9 @@ export function StoryList({
   const renderVibeRow = (story: Story, index: number) => (
     <article
       key={story._id}
-      className="flex flex-col sm:flex-row items-stretch gap-3 sm:gap-4 bg-surface rounded-lg border border-hairline p-3 sm:p-4 hover:bg-surface-hover transition-colors motion-reduce:transition-none"
+      className={`flex flex-col sm:flex-row items-stretch gap-3 sm:gap-4 rounded-lg border border-hairline p-3 sm:p-4 transition-colors motion-reduce:transition-none hover:bg-surface-hover ${
+        rankTint(story._id) || "bg-surface"
+      }`}
     >
       {/* Vibe block. Deliberately the heaviest thing in the row. */}
       <div className="flex sm:flex-col items-stretch gap-2 w-full sm:w-[84px] flex-shrink-0 order-3">
@@ -509,7 +535,9 @@ export function StoryList({
     return (
       <article
         key={story._id}
-        className="flex flex-col h-full bg-surface rounded-lg p-2.5 border border-hairline shadow-sm hover:shadow-md transition-shadow motion-reduce:transition-none"
+        className={`flex flex-col h-full rounded-lg p-2.5 border border-hairline shadow-sm hover:shadow-md transition-shadow motion-reduce:transition-none ${
+        rankTint(story._id) || "bg-surface"
+      }`}
       >
         {/* 16:9 screenshot. Aspect box reserved so missing images do not collapse the card. */}
         <div className="relative flex-shrink-0">

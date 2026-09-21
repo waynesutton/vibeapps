@@ -1169,9 +1169,14 @@ export function Layout({ children }: { children?: ReactNode }) {
             )}
 
             <div className={showSidebar ? "lg:flex-1 lg:min-w-0" : "w-full"}>
+              <div
+                key={location.pathname}
+                className="animate-page-in motion-reduce:animate-none"
+              >
               {children || (
                 <Outlet context={{ viewMode, selectedTagId, sortPeriod }} />
               )}
+              </div>
             </div>
             {showSidebar && (
               <aside className="lg:w-1/4 lg:flex-shrink-0">

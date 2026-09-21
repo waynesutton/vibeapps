@@ -94,6 +94,10 @@ export default {
         "vibe-pop": "vibePop 0.42s cubic-bezier(0.22, 1, 0.36, 1)",
         "vibe-bump": "vibeBump 0.42s cubic-bezier(0.22, 1, 0.36, 1)",
         "vibe-halo": "vibeHalo 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards",
+        // Route changes slide the new view in from the right.
+        "page-in": "pageIn 0.26s cubic-bezier(0.22, 1, 0.36, 1)",
+        // A slow sheen across the first-place badge.
+        "rank-shine": "rankShine 2.8s ease-in-out infinite",
       },
       keyframes: {
         fadeIn: {
@@ -123,6 +127,14 @@ export default {
         },
         // A filled halo swelling out of the button, rather than a hard border
         // ring scaling up, which read as an outline artefact.
+        pageIn: {
+          "0%": { opacity: "0", transform: "translateX(1.25rem)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        rankShine: {
+          "0%, 65%, 100%": { boxShadow: "0 0 0 0 rgb(245 197 24 / 0)" },
+          "80%": { boxShadow: "0 0 0 4px rgb(245 197 24 / 0.35)" },
+        },
         vibeHalo: {
           "0%": { opacity: "0.32", transform: "scale(1)" },
           "100%": { opacity: "0", transform: "scale(1.28)" },

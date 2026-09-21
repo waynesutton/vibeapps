@@ -4,6 +4,14 @@ import { api } from "../../convex/_generated/api";
 import { ThumbsUp, UserCircle } from "lucide-react"; // Example icons
 import { ProfileHoverCard } from "./ui/ProfileHoverCard";
 
+// Matches the medal tints on the leaderboard page so the top three read the
+// same in both places. Low opacity so they sit correctly on light and dark.
+const RANK_TINT: Record<number, { row: string; num: string }> = {
+  1: { row: "bg-[rgb(245_197_24_/_0.12)]", num: "text-[rgb(161_128_10)]" },
+  2: { row: "bg-[rgb(148_163_184_/_0.14)]", num: "text-[rgb(100_116_139)]" },
+  3: { row: "bg-[rgb(205_127_50_/_0.12)]", num: "text-[rgb(154_95_37)]" },
+};
+
 export function WeeklyLeaderboard() {
   const topStories = useQuery(api.stories.getWeeklyLeaderboardStories, {
     limit: 5,
@@ -37,8 +45,17 @@ export function WeeklyLeaderboard() {
       </h3>
       <ul className="space-y-3">
         {topStories.map((story, index) => (
-          <li key={story._id} className="flex items-start gap-3">
-            <span className="text-[15px] font-medium text-faint tabular-nums">
+          <li
+            key={story._id}
+            className={`flex items-start gap-3 rounded-md px-2 py-1.5 -mx-2 ${
+              RANK_TINT[index + 1]?.row ?? ""
+            }`}
+          >
+            <span
+              className={`text-[15px] font-semibold tabular-nums ${
+                RANK_TINT[index + 1]?.num ?? "text-faint font-medium"
+              }`}
+            >
               {index + 1}.
             </span>
             <div className="flex-grow min-w-0">

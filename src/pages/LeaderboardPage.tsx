@@ -81,6 +81,23 @@ export function LeaderboardPage() {
   );
 }
 
+// Top three get a medal tint. Low-opacity accents rather than solid colours so
+// they read the same over the light and dark surface tokens.
+const RANK_STYLES: Record<number, { row: string; badge: string }> = {
+  1: {
+    row: "bg-[rgb(245_197_24_/_0.10)]",
+    badge: "bg-[rgb(245_197_24)] text-[rgb(61_46_0)] animate-rank-shine motion-reduce:animate-none",
+  },
+  2: {
+    row: "bg-[rgb(148_163_184_/_0.12)]",
+    badge: "bg-[rgb(148_163_184)] text-[rgb(30_36_46)]",
+  },
+  3: {
+    row: "bg-[rgb(205_127_50_/_0.10)]",
+    badge: "bg-[rgb(205_127_50)] text-[rgb(48_28_6)]",
+  },
+};
+
 interface LeaderboardItemProps {
   story: {
     _id: any;
@@ -113,9 +130,17 @@ function LeaderboardItem({
   };
 
   return (
-    <div className="px-3 sm:px-4 py-3 hover:bg-surface-hover transition-colors motion-reduce:transition-none">
+    <div
+      className={`px-3 sm:px-4 py-3 transition-colors motion-reduce:transition-none ${
+        RANK_STYLES[rank]?.row ?? ""
+      } hover:bg-surface-hover`}
+    >
       <div className="flex items-center gap-3">
-        <span className="flex-shrink-0 w-7 h-7 rounded-full bg-cta flex items-center justify-center text-on-cta text-[13px] font-medium tabular-nums">
+        <span
+          className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[13px] font-semibold tabular-nums ${
+            RANK_STYLES[rank]?.badge ?? "bg-cta text-on-cta"
+          }`}
+        >
           {rank}
         </span>
 
