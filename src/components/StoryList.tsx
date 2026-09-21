@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import {
   MessageSquare,
+  ThumbsUp,
   ArrowDown,
   Github,
   Pin,
@@ -148,6 +149,12 @@ const TagPills = ({
 
 // Same medal tints as the leaderboard and the sidebar card, so this week's top
 // three are recognisable wherever they show up.
+const RANK_RIBBON: Record<number, string> = {
+  1: "bg-[rgb(245_197_24)] text-[rgb(61_46_0)]",
+  2: "bg-[rgb(148_163_184)] text-[rgb(30_36_46)]",
+  3: "bg-[rgb(205_127_50)] text-[rgb(48_28_6)]",
+};
+
 const RANK_TINT: Record<number, string> = {
   1: "bg-[rgb(245_197_24_/_0.08)]",
   2: "bg-[rgb(148_163_184_/_0.10)]",
@@ -177,6 +184,28 @@ export function StoryList({
   }, [weeklyTop]);
   const rankTint = (storyId: string) =>
     RANK_TINT[weeklyRank.get(storyId) ?? 0] ?? "";
+
+  // Rank ribbon for this week's top three, sat on the screenshot corner.
+  const RankRibbon = ({
+    storyId,
+    inline = false,
+  }: {
+    storyId: string;
+    inline?: boolean;
+  }) => {
+    const rank = weeklyRank.get(storyId);
+    if (!rank || !RANK_RIBBON[rank]) return null;
+    return (
+      <span
+        className={`inline-flex items-center h-6 px-2 rounded-md text-[12px] font-semibold tabular-nums shadow-sm ${
+          inline ? "flex-shrink-0" : "absolute top-2 left-2 z-10"
+        } ${RANK_RIBBON[rank]}`}
+        aria-label={`Number ${rank} this week`}
+      >
+        #{rank}
+      </span>
+    );
+  };
   const { showMessage, DialogComponents } = useDialog();
 
   // Auth required dialog state
@@ -294,6 +323,7 @@ export function StoryList({
                 aria-label="Pinned Story"
               />
             )}
+            <RankRibbon storyId={story._id} inline />
             <h2 className="app-title text-ink truncate min-w-0">
               <Link
                 to={`/s/${story.slug}`}
@@ -372,9 +402,10 @@ export function StoryList({
                 ? "animate-vibe-pop motion-reduce:animate-none"
                 : ""
             }`}
-            aria-label={`Vibe it, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
+            aria-label={`Vibe, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
           >
-            <span className="text-[14px] font-semibold">Vibe it</span>
+            <ThumbsUp className="w-4 h-4" aria-hidden="true" />
+            <span className="text-[14px] font-semibold">Vibe</span>
             <span
               className={`text-[14px] font-semibold tabular-nums opacity-70 ${
                 justVoted === story._id
@@ -427,10 +458,11 @@ export function StoryList({
                 ? "animate-vibe-pop motion-reduce:animate-none"
                 : ""
             }`}
-            aria-label={`Vibe it, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
+            aria-label={`Vibe, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
           >
-            Vibe it
-            <span className="sm:hidden ml-1.5 tabular-nums opacity-70">
+            <ThumbsUp className="w-4 h-4" aria-hidden="true" />
+            Vibe
+            <span className="sm:hidden tabular-nums opacity-70">
               {story.votes}
             </span>
           </button>
@@ -438,9 +470,11 @@ export function StoryList({
       </div>
 
       {/* Screenshot */}
+      <div className="relative w-full sm:w-[190px] sm:flex-shrink-0 order-1">
+      <RankRibbon storyId={story._id} />
       <Link
         to={`/s/${story.slug}`}
-        className="w-full sm:w-[190px] sm:flex-shrink-0 aspect-video block overflow-hidden rounded-lg border border-hairline bg-surface-alt order-1"
+        className="w-full aspect-video block overflow-hidden rounded-lg border border-hairline bg-surface-alt"
         tabIndex={-1}
         aria-hidden="true"
       >
@@ -457,6 +491,7 @@ export function StoryList({
           </div>
         )}
       </Link>
+      </div>
 
       {/* Copy */}
       <div className="flex-1 min-w-0 order-2">
@@ -541,6 +576,7 @@ export function StoryList({
       >
         {/* 16:9 screenshot. Aspect box reserved so missing images do not collapse the card. */}
         <div className="relative flex-shrink-0">
+          <RankRibbon storyId={story._id} />
           <Link
             to={`/s/${story.slug}`}
             className="w-full aspect-[2/1] rounded-lg overflow-hidden bg-surface-alt block"
@@ -650,9 +686,10 @@ export function StoryList({
                     ? "animate-vibe-pop motion-reduce:animate-none"
                     : ""
                 }`}
-                aria-label={`Vibe it, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
+                aria-label={`Vibe, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
               >
-                Vibe it
+                <ThumbsUp className="w-4 h-4" aria-hidden="true" />
+                Vibe
                 <span
                   className={`tabular-nums opacity-70 ${
                     justVoted === story._id

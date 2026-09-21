@@ -3,7 +3,7 @@ import React from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useUser } from "@clerk/clerk-react";
 import { api } from "../../convex/_generated/api";
-import { UserCircle } from "lucide-react";
+import { UserCircle, ThumbsUp } from "lucide-react";
 import { ProfileHoverCard } from "../components/ui/ProfileHoverCard";
 import { BackToAppsLink } from "../components/BackToAppsLink";
 
@@ -218,12 +218,13 @@ function LeaderboardItem({
               type="button"
               onClick={handleVote}
               disabled={!isLoaded}
-              className={`relative inline-flex items-center justify-center h-9 px-3 rounded-lg bg-cta text-on-cta text-[13px] font-semibold whitespace-nowrap hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas transition-colors motion-reduce:transition-none disabled:opacity-50 disabled:cursor-not-allowed ${
+              className={`relative inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-cta text-on-cta text-[13px] font-semibold whitespace-nowrap hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas transition-colors motion-reduce:transition-none disabled:opacity-50 disabled:cursor-not-allowed ${
                 justVoted ? "animate-vibe-pop motion-reduce:animate-none" : ""
               }`}
-              aria-label={`Vibe it, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
+              aria-label={`Vibe, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
             >
-              Vibe it
+              <ThumbsUp className="w-4 h-4" aria-hidden="true" />
+              Vibe
             </button>
           </span>
         </div>

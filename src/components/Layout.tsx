@@ -116,6 +116,11 @@ export function Layout({ children }: { children?: ReactNode }) {
   const alertsDropdownRef = React.useRef<HTMLDivElement>(null);
 
   const headerTags = useQuery(api.tags.listHeader);
+  // The rail is a dedicated filter panel, so it offers every category you can
+  // actually filter by. `showInHeader` curates the compact header strip, and
+  // gating the rail on it left the panel with no Categories section at all
+  // whenever no tag happened to be flagged.
+  const filterTags = useQuery(api.tags.listAllForDropdown);
 
   const convexUserDoc = useQuery(
     api.users.getMyUserDocument,
@@ -1127,7 +1132,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                     </div>
                   </div>
 
-                  {headerTags && headerTags.length > 0 && (
+                  {filterTags && filterTags.some((t) => !t.isHidden) && (
                     <div>
                       <h3 className="px-2 mb-1 text-[11px] font-medium uppercase tracking-wide text-faint">
                         Categories
@@ -1144,8 +1149,8 @@ export function Layout({ children }: { children?: ReactNode }) {
                         >
                           All Categories
                         </button>
-                        {headerTags
-                          .filter((tag) => !tag.isHidden && tag.showInHeader)
+                        {filterTags
+                          .filter((tag) => !tag.isHidden)
                           .map((tag) => (
                             <button
                               key={tag._id}
