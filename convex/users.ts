@@ -76,9 +76,17 @@ export const ensureUser = mutation({
       candidateUsername = identity.username.trim();
     }
 
+    // Convex maps the OIDC `picture` claim to identity.pictureUrl; Clerk also
+    // sends image_url, which arrives as a passthrough claim. Check the standard
+    // field first and fall back, so the Google avatar is picked up by default.
     let clerkImageUrl: string | undefined = undefined;
-    if (typeof identity.imageUrl === "string") {
-      clerkImageUrl = identity.imageUrl || undefined; // Ensure empty string becomes undefined if desired, or just identity.imageUrl
+    const identityImage =
+      (typeof identity.pictureUrl === "string" ? identity.pictureUrl : undefined) ??
+      (typeof (identity as { imageUrl?: unknown }).imageUrl === "string"
+        ? ((identity as { imageUrl?: string }).imageUrl as string)
+        : undefined);
+    if (identityImage) {
+      clerkImageUrl = identityImage || undefined;
     }
 
     if (existingUser) {
@@ -106,7 +114,13 @@ export const ensureUser = mutation({
         updates.email = clerkEmail;
         changed = true;
       }
-      if (clerkImageUrl && clerkImageUrl !== existingUser.imageUrl) {
+      // Skip the Clerk image sync once the user has set their own picture
+      // in-app, otherwise their upload reverts on every page load.
+      if (
+        !existingUser.imageCustomized &&
+        clerkImageUrl &&
+        clerkImageUrl !== existingUser.imageUrl
+      ) {
         updates.imageUrl = clerkImageUrl;
         changed = true;
       }
@@ -1069,7 +1083,9 @@ export const setUserProfileImage = mutation({
       );
     }
 
-    await ctx.db.patch(user._id, { imageUrl: imageUrl });
+    await ctx.db.patch(user._id, { imageUrl: imageUrl,
+      imageCustomized: true,
+    });
     return { success: true, imageUrl };
   },
 });

@@ -20,6 +20,7 @@ export default defineSchema({
     inboxEnabled: v.optional(v.boolean()), // Inbox messaging toggle (default true)
     emojiTheme: v.optional(v.string()), // Emoji color theme preference: "default", "red", "blue", "green", "purple", "orange"
     nameCustomized: v.optional(v.boolean()), // True once the user edits their name in-app; blocks Clerk name sync from overwriting it
+    imageCustomized: v.optional(v.boolean()), // True once the user uploads a profile image in-app; blocks Clerk image sync from overwriting it
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_username", ["username"]) // Index for fetching by username

@@ -571,7 +571,15 @@ export function Layout({ children }: { children?: ReactNode }) {
                   to="/"
                   className="inline-block text-ink hover:text-copy lg:order-1"
                 >
-                  <h1 className="title-font text-xl">{siteTitle}</h1>
+                  <span className="inline-flex items-center gap-2">
+                    <img
+                      src="/favicon-96x96.png"
+                      alt=""
+                      aria-hidden="true"
+                      className="w-7 h-7 rounded-md flex-shrink-0"
+                    />
+                    <h1 className="title-font text-xl">{siteTitle}</h1>
+                  </span>
                 </Link>
                 {/* Right: User/Sign-in */}
                 <div className="flex items-center gap-2 lg:order-3">
@@ -711,9 +719,9 @@ export function Layout({ children }: { children?: ReactNode }) {
                         {(hasUnreadAlerts || hasUnreadMessages) && (
                           <span className="lg:hidden absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-brand ring-2 ring-canvas" />
                         )}
-                        {clerkUser?.imageUrl ? (
+                        {convexUserDoc?.imageUrl || clerkUser?.imageUrl ? (
                           <img
-                            src={clerkUser.imageUrl}
+                            src={convexUserDoc?.imageUrl || clerkUser?.imageUrl}
                             alt="Profile"
                             className="w-full h-full rounded-full object-cover"
                           />
@@ -1272,9 +1280,9 @@ export function Layout({ children }: { children?: ReactNode }) {
               to={profileUrl}
               className="relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] text-soft hover:text-ink transition-colors"
             >
-              {clerkUser?.imageUrl ? (
+              {convexUserDoc?.imageUrl || clerkUser?.imageUrl ? (
                 <img
-                  src={clerkUser.imageUrl}
+                  src={convexUserDoc?.imageUrl || clerkUser?.imageUrl}
                   alt=""
                   className="w-5 h-5 rounded-full object-cover"
                 />
