@@ -100,6 +100,9 @@ export function Layout({ children }: { children?: ReactNode }) {
   const [isSearchExpanded, setIsSearchExpanded] = React.useState(false);
   const [isTagsMenuOpen, setIsTagsMenuOpen] = React.useState(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
+  // The collapsible mobile bar and the desktop field both render an input;
+  // they need separate refs or whichever mounts last wins.
+  const desktopSearchRef = React.useRef<HTMLInputElement>(null);
 
   // Auth required dialog state
   const [showAuthDialog, setShowAuthDialog] = React.useState(false);
@@ -275,6 +278,50 @@ export function Layout({ children }: { children?: ReactNode }) {
       setIsSearchExpanded(false);
     }
   };
+
+  // ⌘K on Apple platforms, Ctrl+K elsewhere.
+  const isAppleDevice = React.useMemo(
+    () =>
+      typeof navigator !== "undefined" &&
+      /Mac|iPhone|iPad|iPod/.test(
+        (navigator as Navigator & { userAgentData?: { platform?: string } })
+          .userAgentData?.platform ||
+          navigator.platform ||
+          navigator.userAgent,
+      ),
+    [],
+  );
+
+  React.useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        // offsetParent is null when the desktop field is hidden by its
+        // breakpoint, which is how we tell which input is actually on screen.
+        const desktop = desktopSearchRef.current;
+        if (desktop && desktop.offsetParent !== null) {
+          desktop.focus();
+          desktop.select();
+          return;
+        }
+        // Otherwise open the collapsible bar and focus it once mounted.
+        setIsSearchExpanded(true);
+        requestAnimationFrame(() => {
+          searchInputRef.current?.focus();
+          searchInputRef.current?.select();
+        });
+        return;
+      }
+      if (event.key === "Escape") {
+        const active = document.activeElement;
+        if (active === desktopSearchRef.current || active === searchInputRef.current) {
+          (active as HTMLInputElement).blur();
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const handleSearchIconClick = () => {
     setIsSearchExpanded(!isSearchExpanded);
@@ -820,23 +867,28 @@ export function Layout({ children }: { children?: ReactNode }) {
                 )}
 
                 {/* Row 3 content: Dropdowns & Desktop Search */}
-                <div className="flex w-full md:w-auto items-center gap-1 md:gap-3">
+                <div className="flex w-full md:w-auto lg:w-full lg:flex-1 items-center gap-1 md:gap-3">
                   {/* Desktop search: always open, centred in the header. */}
                   <form
                     onSubmit={handleSearch}
-                    className="hidden lg:flex items-center w-full max-w-md"
+                    className="hidden lg:flex items-center w-full max-w-2xl lg:mx-auto"
                   >
                     <div className="relative w-full">
-                      <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-soft" />
+                      <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-soft" />
                       <input
-                        ref={searchInputRef}
+                        ref={desktopSearchRef}
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search apps and creators"
+                        placeholder="Search apps, tags and creators"
                         aria-label="Search"
-                        className="w-full h-9 pl-9 pr-3 text-sm rounded-md border border-hairline bg-surface-alt text-copy placeholder:text-faint focus:outline-none focus:border-hairline-strong focus:bg-surface transition-colors"
+                        aria-keyshortcuts="Meta+K Control+K"
+                        className="w-full h-10 pl-11 pr-20 text-sm rounded-md border border-hairline-strong bg-surface text-copy placeholder:text-soft focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition-colors"
                       />
+                      <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 inline-flex items-center gap-0.5 rounded border border-hairline bg-surface-alt px-1.5 py-0.5 text-[11px] font-medium text-soft">
+                        {isAppleDevice ? "⌘" : "Ctrl"}
+                        <span>K</span>
+                      </kbd>
                     </div>
                   </form>
                 </div>
