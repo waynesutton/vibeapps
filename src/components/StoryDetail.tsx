@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  ChevronUp,
+  ThumbsUp,
   MessageSquare,
   Star,
   Linkedin,
@@ -448,7 +448,21 @@ export function StoryDetail({ story }: StoryDetailProps) {
     setSearchParams,
   ]);
 
+  const [justVotedDetail, setJustVotedDetail] = React.useState(false);
+  const detailVoteTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  React.useEffect(
+    () => () => {
+      if (detailVoteTimer.current) clearTimeout(detailVoteTimer.current);
+    },
+    [],
+  );
+
   const handleVote = () => {
+    setJustVotedDetail(true);
+    if (detailVoteTimer.current) clearTimeout(detailVoteTimer.current);
+    detailVoteTimer.current = setTimeout(() => setJustVotedDetail(false), 950);
     if (!isClerkLoaded) return; // Don't do anything if Clerk hasn't loaded
 
     if (!isSignedIn) {
@@ -969,30 +983,11 @@ export function StoryDetail({ story }: StoryDetailProps) {
     <>
       <DialogComponents />
       <div className="max-w-7xl mx-auto pb-10">
-        <div className="flex gap-8">
+        <div className="flex gap-8 items-start">
           {/* Main Content */}
         <div className="flex-1 min-w-0">
           <article className="bg-surface rounded-lg p-4 sm:p-6 border border-hairline">
             <div className="flex gap-4">
-              <div className="flex flex-col items-center gap-1 pt-1 min-w-[40px]">
-                <button
-                  onClick={handleVote}
-                  disabled={!isClerkLoaded} // Disable while Clerk is loading to prevent premature clicks
-                  className={`text-ink hover:bg-surface-hover p-1 rounded ${
-                    !isSignedIn && isClerkLoaded ? "opacity-50 cursor-help" : ""
-                  }`}
-                  title={
-                    !isSignedIn && isClerkLoaded
-                      ? "Sign in to vote"
-                      : "Vote for this app"
-                  }
-                >
-                  <ChevronUp className="w-5 h-5" />
-                </button>
-                <span className="text-copy font-medium text-[15px] tabular-nums">
-                  {story.votes}
-                </span>
-              </div>
               <div className="flex-1 min-w-0">
                 <h1 className="text-[26px] sm:text-[30px] leading-[1.2] tracking-[-0.02em] font-semibold capitalize text-ink mb-2">
                   <a
@@ -1012,6 +1007,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 <p className="app-desc text-ink mb-4 max-w-none">
                   {story.description}
                 </p>
+
                 <ImageGallery
                   mainImageUrl={story.screenshotUrl}
                   additionalImageUrls={story.additionalImageUrls || []}
@@ -1022,6 +1018,51 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     <Markdown>{story.longDescription}</Markdown>
                   </div>
                 )}
+                {/* Primary actions. Everywhere else in the app voting is a
+                    filled Vibe button; this page used a bare chevron over a
+                    number, which read as a different product. */}
+                <div className="flex w-full items-stretch gap-3 mb-4">
+                  <span className="relative flex-1">
+                    {justVotedDetail && (
+                      <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 rounded-lg bg-cta animate-vibe-halo motion-reduce:hidden"
+                      />
+                    )}
+                    <button
+                      onClick={handleVote}
+                      disabled={!isClerkLoaded}
+                      className={`relative w-full inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-lg bg-cta text-on-cta text-[15px] font-semibold hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas transition-colors motion-reduce:transition-none disabled:opacity-50 disabled:cursor-not-allowed ${
+                        justVotedDetail
+                          ? "animate-vibe-pop motion-reduce:animate-none"
+                          : ""
+                      }`}
+                      title={
+                        !isSignedIn && isClerkLoaded
+                          ? "Sign in to vote"
+                          : "Vibe this app"
+                      }
+                      aria-label={`Vibe, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
+                    >
+                      <ThumbsUp className="w-4 h-4" aria-hidden="true" />
+                      Vibe
+                      <span className="tabular-nums opacity-70">
+                        {story.votes}
+                      </span>
+                    </button>
+                  </span>
+                  {story.url && (
+                    <a
+                      href={story.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-lg border border-hairline bg-surface text-copy text-[15px] font-medium hover:bg-surface-hover hover:text-ink transition-colors motion-reduce:transition-none"
+                    >
+                      Visit app
+                    </a>
+                  )}
+                </div>
+
                 <div className="flex items-center gap-2 text-sm text-soft flex-wrap mb-3">
                   {story.authorUsername ? (
                     <ProfileHoverCard username={story.authorUsername}>
@@ -1288,7 +1329,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
             )}
             <div className="space-y-3">
               <div className="flex items-center min-h-11">
-                <BackToAppsLink label="Back to apps list" />
+                <BackToAppsLink label="Back to apps list" showLabel />
               </div>
             </div>
             </div>
@@ -2367,7 +2408,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
       <div className="lg:hidden mt-6 space-y-3">
         <div className="flex items-center min-h-11">
-          <BackToAppsLink label="Back to apps list" />
+          <BackToAppsLink label="Back to apps list" showLabel />
         </div>
       </div>
 
