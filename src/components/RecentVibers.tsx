@@ -23,9 +23,9 @@ export function RecentVibers() {
         <h3 className="text-md font-normal text-ink mb-3">
           Recent Vibers
         </h3>
-        <div className="grid grid-cols-6 gap-1.5">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(2rem,1fr))] gap-1.5 justify-items-start">
           {/* Loading skeleton placeholders */}
-          {Array.from({ length: 36 }).map((_, index) => (
+          {Array.from({ length: 12 }).map((_, index) => (
             <div
               key={index}
               className="w-8 h-8 bg-surface-hover rounded-full animate-pulse"
@@ -50,7 +50,7 @@ export function RecentVibers() {
   return (
     <div className="p-4 bg-surface rounded-lg border border-hairline">
       <h3 className="text-md font-normal text-ink mb-3">Recent Vibers</h3>
-      <div className="grid grid-cols-6 gap-1.5">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(2rem,1fr))] gap-1.5 justify-items-start">
         {recentVibers.map((user: RecentViberUser) => {
           // Skip users without usernames (shouldn't happen due to backend filter)
           if (!user.username) {
@@ -85,11 +85,6 @@ export function RecentVibers() {
           );
         })}
 
-        {/* Fill empty slots with invisible placeholders for consistent grid layout */}
-        {recentVibers.length < 36 &&
-          Array.from({ length: 36 - recentVibers.length }).map((_, index) => (
-            <div key={`placeholder-${index}`} className="w-8 h-8" />
-          ))}
       </div>
     </div>
   );

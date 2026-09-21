@@ -471,18 +471,18 @@ export function Layout({ children }: { children?: ReactNode }) {
         <header className="pt-5 pb-0 bg-canvas sticky top-0 z-50">
           <div className="container mx-auto px-4">
             {/* Responsive header layout */}
-            <div className="flex flex-col gap-y-2 md:flex-row md:justify-between md:items-center">
+            <div className="flex flex-col gap-y-2 lg:flex-row lg:justify-between lg:items-center">
               {/* Row 1: Site Title & Profile Icon (Mobile) / Desktop: SiteTitle order-1, ProfileIcon order-3 */}
-              <div className="flex w-full justify-between items-center md:contents">
+              <div className="flex w-full justify-between items-center lg:contents">
                 {/* Left: Site Title */}
                 <Link
                   to="/"
-                  className="inline-block text-ink hover:text-copy md:order-1"
+                  className="inline-block text-ink hover:text-copy lg:order-1"
                 >
                   <h1 className="title-font text-xl">{siteTitle}</h1>
                 </Link>
                 {/* Right: User/Sign-in */}
-                <div className="flex items-center gap-2 md:order-3">
+                <div className="flex items-center gap-2 lg:order-3">
                   {/* Theme switcher (always visible, desktop + mobile) */}
                   <ThemeToggle />
                   <SignedOut>
@@ -634,9 +634,9 @@ export function Layout({ children }: { children?: ReactNode }) {
               </div>
 
               {/* Middle Controls Wrapper for stacking on mobile and centering on desktop */}
-              <div className="flex flex-col md:flex-row md:items-center md:gap-3 md:order-2">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:gap-3 lg:order-2">
                 {/* Row 2 content: Submit & View Options */}
-                <div className="flex w-full md:w-auto items-center gap-3">
+                <div className="flex w-full lg:w-auto items-center gap-3">
                   {/* Submit Button: Navigate to /submit if signed in, show auth dialog if not */}
                   <button
                     onClick={() => {
@@ -893,7 +893,7 @@ export function Layout({ children }: { children?: ReactNode }) {
           </div>
         </header>
         <main className="flex-grow container mx-auto px-4 py-1">
-          <div className="flex flex-col lg:flex-row gap-8">
+          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
             <div className={showSidebar ? "lg:w-3/4" : "w-full"}>
               {children || (
                 <Outlet context={{ viewMode, selectedTagId, sortPeriod }} />

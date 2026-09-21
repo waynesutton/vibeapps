@@ -283,7 +283,7 @@ export function StoryList({
     return (
       <article
         key={story._id}
-        className="group flex items-center gap-3 sm:gap-4 px-4 py-5 hover:bg-surface-hover transition-colors motion-reduce:transition-none"
+        className="group flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 px-4 py-5 hover:bg-surface-hover transition-colors motion-reduce:transition-none"
       >
         {/* Two-digit rank. Sized under the 18px title so it stays a quiet index. */}
         <span className="w-7 sm:w-8 flex-shrink-0 text-right text-[15px] font-normal text-faint tabular-nums tracking-tight leading-none select-none">
@@ -358,7 +358,7 @@ export function StoryList({
         </div>
 
         {/* Comments + Vibe it pill. Comments sit here from sm up; mobile keeps them in the byline. */}
-        <div className="flex-shrink-0 flex items-center gap-2 sm:gap-3">
+        <div className="flex-shrink-0 flex items-center gap-2 sm:gap-3 w-full justify-end sm:w-auto">
           <Link
             to={`/s/${story.slug}#comments`}
             className="hidden sm:inline-flex items-center justify-end min-w-[1.75rem] h-8 text-[13px] text-faint hover:text-copy tabular-nums"
@@ -391,8 +391,8 @@ export function StoryList({
       className="flex flex-col md:flex-row items-stretch gap-4 bg-surface rounded-xl border border-hairline p-4"
     >
       {/* Vibes block */}
-      <div className="flex md:flex-col items-center md:items-stretch gap-0 w-full md:w-[76px] flex-shrink-0 order-2 md:order-1">
-        <div className="bg-brand-soft rounded-l-lg md:rounded-l-none md:rounded-t-lg flex-1 md:flex-none md:h-[64px] flex flex-col items-center justify-center border border-hairline py-1.5">
+      <div className="flex md:flex-col items-center md:items-stretch gap-0 self-start w-auto md:w-[76px] flex-shrink-0 order-2 md:order-1">
+        <div className="bg-brand-soft rounded-l-lg md:rounded-l-none md:rounded-t-lg flex-none md:h-[64px] flex flex-col items-center justify-center border border-hairline py-1.5 px-4 md:px-0 md:min-w-0 min-w-[64px]">
           {/* Geist at 22px semibold holds the weight the slab face gave this
               number. Tabular figures stop 3 and 4 digit counts shifting. */}
           <span className="text-[22px] font-semibold tracking-[-0.02em] tabular-nums text-ink leading-none">
