@@ -570,6 +570,22 @@ export function Layout({ children }: { children?: ReactNode }) {
                     <UserSyncer />
                     {/* Alerts Bell Icon */}
                     <div className="relative" ref={alertsDropdownRef}>
+                      {/* From lg up these live in the header; below lg they are
+                          rows in the account menu and the bottom bar. */}
+                      <button
+                        onClick={() =>
+                          setShowAlertsDropdown(!showAlertsDropdown)
+                        }
+                        className="hidden lg:flex items-center justify-center w-8 h-8 rounded-md text-soft hover:text-ink hover:bg-surface-hover transition-colors"
+                        aria-label={
+                          hasUnreadAlerts ? "Notifications, unread" : "Notifications"
+                        }
+                      >
+                        <Bell className="w-[18px] h-[18px]" />
+                        {hasUnreadAlerts && (
+                          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-brand" />
+                        )}
+                      </button>
 
                       {showAlertsDropdown && (
                         <div
@@ -630,6 +646,23 @@ export function Layout({ children }: { children?: ReactNode }) {
                       )}
                     </div>
 
+                    {userInboxEnabled !== false && (
+                      <div className="relative hidden lg:block">
+                        <Link
+                          to="/inbox"
+                          className="flex items-center justify-center w-8 h-8 rounded-md text-soft hover:text-ink hover:bg-surface-hover transition-colors"
+                          aria-label={
+                            hasUnreadMessages ? "Inbox, unread" : "Inbox"
+                          }
+                        >
+                          <Inbox className="w-[18px] h-[18px]" />
+                        </Link>
+                        {hasUnreadMessages && (
+                          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-brand pointer-events-none" />
+                        )}
+                      </div>
+                    )}
+
                     {/* Custom Profile Dropdown */}
                     <div className="relative" ref={profileDropdownRef}>
                       <button
@@ -644,7 +677,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                         }
                       >
                         {(hasUnreadAlerts || hasUnreadMessages) && (
-                          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-brand ring-2 ring-canvas" />
+                          <span className="lg:hidden absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-brand ring-2 ring-canvas" />
                         )}
                         {clerkUser?.imageUrl ? (
                           <img
@@ -664,7 +697,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                               setShowProfileDropdown(false);
                               setShowAlertsDropdown(true);
                             }}
-                            className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-xs text-ink hover:bg-surface-hover transition-colors text-left"
+                            className="lg:hidden flex w-full items-center justify-between gap-2 px-3 py-1.5 text-xs text-ink hover:bg-surface-hover transition-colors text-left"
                           >
                             <span className="flex items-center gap-2">
                               <Bell className="w-3.5 h-3.5 text-soft" />
@@ -678,7 +711,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                             <Link
                               to="/inbox"
                               onClick={() => setShowProfileDropdown(false)}
-                              className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-xs text-ink hover:bg-surface-hover transition-colors"
+                              className="lg:hidden flex w-full items-center justify-between gap-2 px-3 py-1.5 text-xs text-ink hover:bg-surface-hover transition-colors"
                             >
                               <span className="flex items-center gap-2">
                                 <Inbox className="w-3.5 h-3.5 text-soft" />
