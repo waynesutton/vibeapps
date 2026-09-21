@@ -94,6 +94,10 @@ export default {
         "vibe-pop": "vibePop 0.42s cubic-bezier(0.22, 1, 0.36, 1)",
         "vibe-bump": "vibeBump 0.42s cubic-bezier(0.22, 1, 0.36, 1)",
         "vibe-halo": "vibeHalo 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards",
+        // Jumping to the comments highlights them for three seconds so it is
+        // clear where you landed.
+        "comment-spotlight": "commentSpotlight 3s ease-out forwards",
+        "comment-rise": "commentRise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both",
         // Route changes slide the new view in from the right.
         "page-in": "pageIn 0.26s cubic-bezier(0.22, 1, 0.36, 1)",
         // A slow sheen across the first-place badge.
@@ -134,6 +138,15 @@ export default {
         rankShine: {
           "0%, 65%, 100%": { boxShadow: "0 0 0 0 rgb(245 197 24 / 0)" },
           "80%": { boxShadow: "0 0 0 4px rgb(245 197 24 / 0.35)" },
+        },
+        commentSpotlight: {
+          "0%": { backgroundColor: "rgb(148 163 184 / 0.20)" },
+          "55%": { backgroundColor: "rgb(148 163 184 / 0.14)" },
+          "100%": { backgroundColor: "rgb(148 163 184 / 0)" },
+        },
+        commentRise: {
+          "0%": { opacity: "0", transform: "translateY(0.5rem)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
         },
         vibeHalo: {
           "0%": { opacity: "0.32", transform: "scale(1)" },

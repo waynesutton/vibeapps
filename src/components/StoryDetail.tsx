@@ -448,6 +448,17 @@ export function StoryDetail({ story }: StoryDetailProps) {
     setSearchParams,
   ]);
 
+  const [highlightComments, setHighlightComments] = React.useState(false);
+  const highlightTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  React.useEffect(
+    () => () => {
+      if (highlightTimer.current) clearTimeout(highlightTimer.current);
+    },
+    [],
+  );
+
   const [justVotedDetail, setJustVotedDetail] = React.useState(false);
   const detailVoteTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -1211,11 +1222,6 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   additionalImageUrls={story.additionalImageUrls || []}
                   altText={`${story.title} screenshot`}
                 />
-                {story.longDescription && (
-                  <div className="text-copy mb-4 prose prose-base max-w-none">
-                    <Markdown>{story.longDescription}</Markdown>
-                  </div>
-                )}
                 {/* Primary actions. Everywhere else in the app voting is a
                     filled Vibe button; this page used a bare chevron over a
                     number, which read as a different product. */}
@@ -1266,6 +1272,15 @@ export function StoryDetail({ story }: StoryDetailProps) {
                       document
                         .getElementById("comments")
                         ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      // Replay cleanly if the button is pressed twice.
+                      setHighlightComments(false);
+                      requestAnimationFrame(() => setHighlightComments(true));
+                      if (highlightTimer.current)
+                        clearTimeout(highlightTimer.current);
+                      highlightTimer.current = setTimeout(
+                        () => setHighlightComments(false),
+                        3000,
+                      );
                     }}
                     className="flex-1 min-w-[8rem] inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-lg border border-hairline bg-surface text-copy text-[15px] font-medium hover:bg-surface-hover hover:text-ink transition-colors motion-reduce:transition-none"
                   >
@@ -1277,6 +1292,11 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   </a>
                 </div>
 
+                {story.longDescription && (
+                  <div className="text-copy mb-4 prose prose-base max-w-none">
+                    <Markdown>{story.longDescription}</Markdown>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 text-sm text-soft flex-wrap mb-3">
                   {story.authorUsername ? (
                     <ProfileHoverCard username={story.authorUsername}>
@@ -3137,7 +3157,14 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
       {/* Comments Section */}
       {!isEditing && (
-        <div id="comments" className="mt-8 scroll-mt-20">
+        <div
+          id="comments"
+          className={`mt-8 scroll-mt-20 rounded-lg -mx-2 px-2 py-2 ${
+            highlightComments
+              ? "animate-comment-spotlight motion-reduce:animate-none [&_article]:animate-comment-rise motion-reduce:[&_article]:animate-none"
+              : ""
+          }`}
+        >
           <h2 className="text-xl font-medium text-copy mb-4">
             {comments?.length ?? 0}{" "}
             {(comments?.length ?? 0) === 1 ? "Comment" : "Comments"}

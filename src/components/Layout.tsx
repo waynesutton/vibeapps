@@ -563,13 +563,13 @@ export function Layout({ children }: { children?: ReactNode }) {
         <header className="pt-3 pb-1 bg-canvas sticky top-0 z-50">
           <div className="container mx-auto px-4">
             {/* Responsive header layout */}
-            <div className="flex flex-col gap-y-1.5 lg:flex-row lg:justify-between lg:items-center">
+            <div className="flex flex-col gap-y-1.5 lg:flex-row lg:items-center lg:gap-8">
               {/* Row 1: Site Title & Profile Icon (Mobile) / Desktop: SiteTitle order-1, ProfileIcon order-3 */}
               <div className="flex w-full justify-between items-center lg:contents">
                 {/* Left: Site Title */}
                 <Link
                   to="/"
-                  className="inline-block text-ink hover:text-copy lg:order-1"
+                  className="inline-block text-ink hover:text-copy lg:order-1 lg:w-56 lg:flex-shrink-0"
                 >
                   <span className="inline-flex items-center gap-2">
                     <img
@@ -582,7 +582,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                   </span>
                 </Link>
                 {/* Right: User/Sign-in */}
-                <div className="flex items-center gap-2 lg:order-3">
+                <div className="flex items-center gap-2 lg:order-3 lg:w-1/4 lg:flex-shrink-0 lg:justify-end">
                   {/* Signed-in users get the theme control inside the account
                       menu; signed-out visitors have no menu, so keep it here. */}
                   <SignedOut>
@@ -806,9 +806,9 @@ export function Layout({ children }: { children?: ReactNode }) {
               </div>
 
               {/* Middle Controls Wrapper for stacking on mobile and centering on desktop */}
-              <div className="flex flex-col lg:flex-row lg:flex-1 lg:justify-center lg:items-center lg:gap-3 lg:order-2 lg:px-6">
+              <div className="flex flex-col lg:flex-row lg:flex-1 lg:min-w-0 lg:items-center lg:gap-3 lg:order-2">
                 {/* Row 2 content: Submit & View Options */}
-                <div className="flex w-full lg:w-auto flex-wrap items-center gap-2 lg:gap-3">
+                <div className="flex w-full lg:hidden flex-wrap items-center gap-2">
                   {/* Submit Button: Navigate to /submit if signed in, show auth dialog if not */}
                   <button
                     onClick={() => {
