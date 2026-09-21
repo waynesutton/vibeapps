@@ -383,121 +383,65 @@ export function StoryList({
     );
   };
 
-  // VIBE VIEW: modern card row (vibes block + thumbnail + copy)
-  const renderVibeRow = (story: Story) => (
-    <article
-      key={story._id}
-      className="flex flex-col md:flex-row items-stretch gap-4 bg-surface rounded-xl border border-hairline p-4"
-    >
-      {/* Vibes block */}
-      <div className="flex md:flex-col items-center md:items-stretch gap-0 self-start w-auto md:w-[76px] flex-shrink-0 order-2 md:order-1">
-        <div className="bg-brand-soft rounded-l-lg md:rounded-l-none md:rounded-t-lg flex-none md:h-[64px] flex flex-col items-center justify-center border border-hairline py-1.5 px-4 md:px-0 md:min-w-0 min-w-[64px]">
-          {/* Geist at 22px semibold holds the weight the slab face gave this
-              number. Tabular figures stop 3 and 4 digit counts shifting. */}
-          <span className="text-[22px] font-semibold tracking-[-0.02em] tabular-nums text-ink leading-none">
-            {story.votes}
-          </span>
-          <span className="text-[12px] text-copy mt-0.5">Vibes</span>
-        </div>
-        <button
-          onClick={() => handleVote(story._id)}
-          className="bg-surface border border-l-0 md:border-l md:border-t-0 border-hairline text-ink hover:bg-brand-soft rounded-r-lg md:rounded-r-none md:rounded-b-lg py-1.5 px-3 md:px-2 flex items-center justify-center gap-1 text-sm font-medium transition-colors"
-        >
-          Vibe it
-        </button>
-      </div>
-
-      {/* Thumbnail */}
-      {story.screenshotUrl && (
-        <Link
-          to={`/s/${story.slug}`}
-          className="w-full md:w-[195px] md:flex-shrink-0 aspect-video block overflow-hidden rounded-lg border border-hairline order-1 md:order-2"
-        >
-          <img
-            src={story.screenshotUrl}
-            alt={`${story.title} thumbnail`}
-            className="w-full h-full object-cover transition-transform duration-200 hover:scale-[1.02]"
-            loading="lazy"
-          />
-        </Link>
-      )}
-
-      {/* Copy */}
-      <div className="flex-1 min-w-0 order-3">
-        {story.customMessage && (
-          <div className="mb-2 text-[13px] text-on-cta bg-cta border border-hairline rounded-md px-2 py-1 italic inline-block">
-            {story.customMessage}
-          </div>
-        )}
-        <h2 className="app-title text-ink flex items-center gap-1.5 min-w-0 mb-1">
-          {story.isPinned && (
-            <Pin
-              className="w-4 h-4 text-faint flex-shrink-0"
-              aria-label="Pinned Story"
-            />
-          )}
-          <Link
-            to={`/s/${story.slug}`}
-            className="truncate hover:underline underline-offset-2"
-          >
-            {story.title}
-          </Link>
-        </h2>
-        <p className="app-desc text-copy mb-2 line-clamp-2">
-          {story.description}
-        </p>
-        {story.tags && story.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-2">
-            <TagPills tags={story.tags} size="sm" />
-          </div>
-        )}
-        <MetaRow story={story} />
-      </div>
-    </article>
-  );
-
   // GRID VIEW: poster card — screenshot, title, byline, blurb, two stat
   // tiles, then a full-width primary action.
-  //
-  // The radii here are arbitrary values on purpose: tailwind.config.js
-  // flattens the whole radius scale to 0.25rem, so rounded-2xl et al. would
-  // render square. Scoping the soft corners to this card keeps that global
-  // scale untouched.
   const renderGridCard = (story: Story, index: number) => {
-    const averageRating =
-      story.ratingCount > 0
-        ? (story.ratingSum / story.ratingCount).toFixed(1)
-        : null;
-
     return (
       <article
         key={story._id}
-        className="flex flex-col h-full bg-surface rounded-[22px] p-3 border border-hairline shadow-sm hover:shadow-md transition-shadow motion-reduce:transition-none"
+        className="flex flex-col h-full bg-surface rounded-lg p-2.5 border border-hairline shadow-sm hover:shadow-md transition-shadow motion-reduce:transition-none"
       >
         {/* 16:9 screenshot. Aspect box reserved so missing images do not collapse the card. */}
-        <Link
-          to={`/s/${story.slug}`}
-          className="flex-shrink-0 w-full aspect-video rounded-[16px] overflow-hidden bg-surface-alt block"
-          tabIndex={-1}
-          aria-hidden="true"
-        >
-          {story.screenshotUrl ? (
-            <img
-              src={story.screenshotUrl}
-              alt=""
-              className="w-full h-full object-cover"
-              loading={index < 3 ? "eager" : "lazy"}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-lg font-semibold text-soft">
-              {story.title.charAt(0).toUpperCase()}
-            </div>
-          )}
-        </Link>
+        <div className="relative flex-shrink-0">
+          <Link
+            to={`/s/${story.slug}`}
+            className="w-full aspect-[2/1] rounded-lg overflow-hidden bg-surface-alt block"
+            tabIndex={-1}
+            aria-hidden="true"
+          >
+            {story.screenshotUrl ? (
+              <img
+                src={story.screenshotUrl}
+                alt=""
+                className="w-full h-full object-cover"
+                loading={index < 3 ? "eager" : "lazy"}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-lg font-semibold text-soft">
+                {story.title.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </Link>
 
-        <div className="flex flex-col flex-1 px-2 pt-4">
+          {/* Bookmark and repo sit on the image so they cost no card height. */}
+          <div className="absolute top-2 right-2 flex items-center gap-1">
+            <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-surface/90 text-soft hover:text-copy shadow-sm">
+              <BookmarkButton
+                storyId={story._id}
+                showMessage={showMessage}
+                onAuthRequired={() => {
+                  setAuthDialogAction("bookmark");
+                  setShowAuthDialog(true);
+                }}
+              />
+            </span>
+            {story.githubUrl && (
+              <a
+                href={story.githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center w-7 h-7 rounded-lg bg-surface/90 text-soft hover:text-copy shadow-sm"
+                title="View GitHub Repo"
+              >
+                <Github className="w-3.5 h-3.5" />
+              </a>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col flex-1 px-2 pt-3">
           {story.customMessage && (
-            <div className="mb-2 text-[13px] text-on-cta bg-cta rounded-[10px] p-2 italic">
+            <div className="mb-2 text-[13px] text-on-cta bg-cta rounded-lg p-2 italic">
               {story.customMessage}
             </div>
           )}
@@ -527,87 +471,36 @@ export function StoryList({
             <span className="tabular-nums">
               {compactTimeAgo(story._creationTime)}
             </span>
+            <span className="mx-1.5">·</span>
+            <MessageSquare className="inline w-3.5 h-3.5 -mt-0.5" />
+            <span className="tabular-nums ml-1">{story.commentCount}</span>
           </p>
 
           {story.description && (
-            <p className="mt-3 text-[15px] leading-relaxed text-copy line-clamp-3">
+            <p className="mt-2 text-[15px] leading-snug text-copy line-clamp-2">
               {story.description}
             </p>
           )}
 
           {story.tags && story.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-3">
+            <div className="flex flex-wrap gap-1 mt-2">
               <TagPills tags={story.tags} size="sm" shape="pill" />
             </div>
           )}
 
           {/* Everything below is pinned to the bottom so cards in a row line up. */}
-          <div className="mt-auto pt-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-surface-alt rounded-[16px] py-3 px-2 text-center">
-                <div className="text-[12px] text-soft leading-none">Vibes</div>
-                <div className="mt-1.5 text-[20px] font-semibold text-ink tabular-nums leading-none">
-                  {story.votes}
-                </div>
-              </div>
-              <Link
-                to={`/s/${story.slug}#comments`}
-                className="bg-surface-alt rounded-[16px] py-3 px-2 text-center block hover:bg-surface-hover transition-colors motion-reduce:transition-none"
-                aria-label={
-                  averageRating
-                    ? `Rated ${averageRating} out of 5`
-                    : `${story.commentCount} ${story.commentCount === 1 ? "comment" : "comments"}`
-                }
-              >
-                <div className="text-[12px] text-soft leading-none">
-                  {averageRating ? "Rating" : "Comments"}
-                </div>
-                <div className="mt-1.5 text-[20px] font-semibold text-ink tabular-nums leading-none">
-                  {averageRating ?? story.commentCount}
-                </div>
-              </Link>
-            </div>
-
+          <div className="mt-auto pt-3">
             <button
               type="button"
               onClick={() => handleVote(story._id)}
               disabled={!isClerkLoaded}
-              className="w-full mt-3 rounded-[16px] bg-cta text-on-cta py-3 text-[15px] font-semibold hover:bg-cta-hover active:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas transition-colors motion-reduce:transition-none disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-cta text-on-cta py-2.5 text-[15px] font-semibold hover:bg-cta-hover active:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas transition-colors motion-reduce:transition-none disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label={`Vibe it, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
             >
               Vibe it
+              <span className="tabular-nums opacity-70">{story.votes}</span>
             </button>
 
-            {/* Secondary affordances stay available but quiet. */}
-            <div className="mt-3 flex items-center justify-center gap-4 text-[13px] text-soft">
-              <Link
-                to={`/s/${story.slug}#comments`}
-                className="flex items-center gap-1 hover:text-copy"
-                aria-label={`${story.commentCount} ${story.commentCount === 1 ? "comment" : "comments"}`}
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                <span className="tabular-nums">{story.commentCount}</span>
-              </Link>
-              <BookmarkButton
-                storyId={story._id}
-                showMessage={showMessage}
-                onAuthRequired={() => {
-                  setAuthDialogAction("bookmark");
-                  setShowAuthDialog(true);
-                }}
-              />
-              {story.githubUrl && (
-                <a
-                  href={story.githubUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-copy"
-                  title="View GitHub Repo"
-                >
-                  <Github className="w-3.5 h-3.5" />
-                </a>
-              )}
-            </div>
           </div>
         </div>
       </article>
@@ -618,7 +511,7 @@ export function StoryList({
     viewMode === "grid"
       ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
       : viewMode === "vibe"
-        ? "flex flex-col space-y-4"
+        ? "grid grid-cols-1 md:grid-cols-2 gap-6"
         : "flex flex-col divide-y divide-hairline bg-surface rounded-lg border border-hairline overflow-hidden";
 
   return (
@@ -629,11 +522,9 @@ export function StoryList({
           <div className="space-y-8">
             <div className={containerClass}>
               {stories.map((story, index) =>
-                viewMode === "grid"
+                viewMode === "grid" || viewMode === "vibe"
                   ? renderGridCard(story, index)
-                  : viewMode === "vibe"
-                    ? renderVibeRow(story)
-                    : renderListRow(story, index),
+                  : renderListRow(story, index),
               )}
             </div>
 
