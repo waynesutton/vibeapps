@@ -1109,6 +1109,22 @@ export function StoryDetail({ story }: StoryDetailProps) {
                       Visit app
                     </a>
                   )}
+                  <a
+                    href="#comments"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      document
+                        .getElementById("comments")
+                        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-lg border border-hairline bg-surface text-copy text-[15px] font-medium hover:bg-surface-hover hover:text-ink transition-colors motion-reduce:transition-none"
+                  >
+                    <MessageSquare className="w-4 h-4" aria-hidden="true" />
+                    Comments
+                    <span className="tabular-nums text-soft">
+                      {story.commentCount ?? comments?.length ?? 0}
+                    </span>
+                  </a>
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-soft flex-wrap mb-3">
@@ -1149,7 +1165,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
         {/* Project Links & Tags Sidebar */}
           <div className="w-80 flex-shrink-0 hidden lg:block self-start">
-            <div className="sticky top-8 space-y-4">
+            <div className="sticky top-[60px] max-h-[calc(100vh-72px)] overflow-y-auto space-y-4 pb-4">
             {(story.url ||
           story.videoUrl ||
           story.githubUrl ||
