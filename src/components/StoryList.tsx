@@ -8,7 +8,6 @@ import {
   Bookmark,
   BookmarkCheck,
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
 import type { Story } from "../types";
 import { UsePaginatedQueryResult, useMutation, useQuery } from "convex/react";
 import { Id, Doc } from "../../convex/_generated/dataModel";
@@ -162,6 +161,16 @@ export function StoryList({
   const [showAuthDialog, setShowAuthDialog] = React.useState(false);
   const [authDialogAction, setAuthDialogAction] = React.useState("");
 
+  // Which story just got voted, so its control can play the feedback once.
+  const [justVoted, setJustVoted] = React.useState<Id<"stories"> | null>(null);
+  const vibeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  React.useEffect(
+    () => () => {
+      if (vibeTimer.current) clearTimeout(vibeTimer.current);
+    },
+    [],
+  );
+
   const handleVote = (storyId: Id<"stories">) => {
     if (!isClerkLoaded) return;
 
@@ -171,16 +180,13 @@ export function StoryList({
       return;
     }
 
-    voteStory({ storyId });
-  };
+    // Fire the animation straight away rather than waiting on the round trip;
+    // Convex reconciles the count when the mutation lands.
+    setJustVoted(storyId);
+    if (vibeTimer.current) clearTimeout(vibeTimer.current);
+    vibeTimer.current = setTimeout(() => setJustVoted(null), 950);
 
-  const formatDate = (creationTime: number) => {
-    try {
-      return formatDistanceToNow(creationTime) + " ago";
-    } catch (error) {
-      console.error("Error formatting date:", error);
-      return "Date not available";
-    }
+    voteStory({ storyId });
   };
 
   // Compact relative time for list scanning ("14h ago"), matching the mockup.
@@ -200,99 +206,45 @@ export function StoryList({
     return `${Math.round(days / 365)}y ago`;
   };
 
-  // Shared byline + comments + bookmark + repo meta row
-  const MetaRow = ({
-    story,
-    className = "",
-    size = "sm",
-    compactTime = false,
-    commentsClassName,
-  }: {
-    story: Story;
-    className?: string;
-    size?: "sm" | "md";
-    compactTime?: boolean;
-    commentsClassName?: string;
-  }) => (
-    <div
-      className={`flex items-center gap-x-2.5 gap-y-1 ${size === "sm" ? "text-[13px]" : "text-sm"} text-soft flex-wrap ${className}`}
-    >
-      {story.authorUsername ? (
-        <ProfileHoverCard username={story.authorUsername}>
-          <Link
-            to={`/${story.authorUsername}`}
-            className="hover:text-copy hover:underline"
-          >
-            by {story.submitterName || story.authorName || story.authorUsername}
-          </Link>
-        </ProfileHoverCard>
-      ) : (
-        <span>
-          by {story.submitterName || story.authorName || "Anonymous User"}
-        </span>
-      )}
-      <span aria-hidden="true" className="text-faint">
-        &middot;
-      </span>
-      <span>
-        {compactTime
-          ? compactTimeAgo(story._creationTime)
-          : formatDate(story._creationTime)}
-      </span>
-      <span
-        aria-hidden="true"
-        className={`text-faint ${commentsClassName ?? ""}`}
-      >
-        &middot;
-      </span>
-      <Link
-        to={`/s/${story.slug}#comments`}
-        className={`flex items-center gap-1 hover:text-copy ${commentsClassName ?? ""}`}
-      >
-        <MessageSquare className="w-3.5 h-3.5" />
-        {story.commentCount}
-      </Link>
-      <BookmarkButton
-        storyId={story._id}
-        showMessage={showMessage}
-        onAuthRequired={() => {
-          setAuthDialogAction("bookmark");
-          setShowAuthDialog(true);
-        }}
-      />
-      {story.githubUrl && (
-        <a
-          href={story.githubUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 text-soft hover:text-copy"
-          title="View GitHub Repo"
+  // Author name, carrying the hover card when we know their username. Both
+  // layouts render it, so it lives here rather than being duplicated.
+  const AuthorName = ({ story }: { story: Story }) => {
+    const label =
+      story.submitterName ||
+      story.authorName ||
+      story.authorUsername ||
+      "Anonymous User";
+    if (!story.authorUsername) {
+      return <>by {label}</>;
+    }
+    return (
+      <ProfileHoverCard username={story.authorUsername}>
+        <Link
+          to={`/${story.authorUsername}`}
+          className="hover:text-copy hover:underline underline-offset-2"
         >
-          <Github className="w-3.5 h-3.5" />
-          <span>Repo</span>
-        </a>
-      )}
-    </div>
-  );
+          by {label}
+        </Link>
+      </ProfileHoverCard>
+    );
+  };
 
-  // LIST VIEW: ranked editorial row (rank, 16:9 shot, copy, Vibe it pill)
+  // LIST VIEW: a dense ranked row. Two lines of text at every width — the
+  // previous version wrapped to five on a phone, with the blurb truncated to
+  // "Amet quo voluptate qui…" and the vote pill stranded on its own line.
   const renderListRow = (story: Story, index: number) => {
     const leadTag = visibleTags(story.tags ?? []).slice(0, 1);
 
     return (
       <article
         key={story._id}
-        className="group flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 px-4 py-5 hover:bg-surface-hover transition-colors motion-reduce:transition-none"
+        className="group flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-4 hover:bg-surface-hover transition-colors motion-reduce:transition-none"
       >
-        {/* Two-digit rank. Sized under the 18px title so it stays a quiet index. */}
-        <span className="w-7 sm:w-8 flex-shrink-0 text-right text-[15px] font-normal text-faint tabular-nums tracking-tight leading-none select-none">
-          {String(index + 1).padStart(2, "0")}
-        </span>
-
-        {/* 16:9 screenshot. Aspect box reserved so missing images do not shift the row. */}
+        {/* Square thumbnail. A square holds its size in a dense row far better
+            than a 16:9 box, which had to go wide to stay legible. */}
         <Link
           to={`/s/${story.slug}`}
-          className="flex-shrink-0 w-20 sm:w-[8.5rem] aspect-video rounded-md overflow-hidden border border-hairline bg-surface-alt block"
+          className="flex-shrink-0 w-14 h-14 sm:w-[4.5rem] sm:h-[4.5rem] rounded-lg overflow-hidden border border-hairline bg-surface-alt block"
           tabIndex={-1}
           aria-hidden="true"
         >
@@ -301,30 +253,24 @@ export function StoryList({
               src={story.screenshotUrl}
               alt=""
               className="w-full h-full object-cover"
-              loading={index < 3 ? "eager" : "lazy"}
+              loading={index < 6 ? "eager" : "lazy"}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-base sm:text-lg font-semibold text-soft">
+            <div className="w-full h-full flex items-center justify-center text-sm font-semibold text-soft">
               {story.title.charAt(0).toUpperCase()}
             </div>
           )}
         </Link>
 
-        {/* Copy: title + one tag, one-line description, byline */}
         <div className="flex-1 min-w-0">
-          {story.customMessage && (
-            <div className="mb-1.5 text-[13px] text-on-cta bg-cta border border-hairline rounded-md px-2 py-1 italic inline-block">
-              {story.customMessage}
-            </div>
-          )}
           <div className="flex items-center gap-2 min-w-0">
             {story.isPinned && (
               <Pin
-                className="w-4 h-4 text-faint flex-shrink-0"
+                className="w-3.5 h-3.5 text-faint flex-shrink-0"
                 aria-label="Pinned Story"
               />
             )}
-            <h2 className="app-title text-ink min-w-0 truncate">
+            <h2 className="app-title text-ink truncate min-w-0">
               <Link
                 to={`/s/${story.slug}`}
                 className="hover:underline underline-offset-2"
@@ -333,55 +279,87 @@ export function StoryList({
               </Link>
             </h2>
             {leadTag.length > 0 && (
-              <div className="hidden sm:flex flex-shrink-0">
+              <span className="hidden sm:flex flex-shrink-0">
                 <TagPills tags={leadTag} size="sm" shape="pill" />
-              </div>
+              </span>
             )}
           </div>
-          {leadTag.length > 0 && (
-            <div className="flex sm:hidden mt-1">
-              <TagPills tags={leadTag} size="sm" shape="pill" />
-            </div>
-          )}
-          {story.description && (
-            <p className="app-desc text-copy line-clamp-1 mt-0.5">
-              {story.description}
-            </p>
-          )}
-          <MetaRow
-            story={story}
-            compactTime
-            commentsClassName="sm:hidden"
-            className="mt-1"
-          />
+
+          {/* Everything secondary on one line so the row stays two lines tall. */}
+          <div className="mt-1 flex items-center gap-2 min-w-0 text-[13px] text-soft">
+            <span className="truncate">
+              <AuthorName story={story} />
+            </span>
+            <span aria-hidden="true">·</span>
+            <span className="tabular-nums flex-shrink-0">
+              {compactTimeAgo(story._creationTime)}
+            </span>
+            <Link
+              to={`/s/${story.slug}#comments`}
+              className="flex items-center gap-1 flex-shrink-0 hover:text-copy"
+              aria-label={`${story.commentCount} ${story.commentCount === 1 ? "comment" : "comments"}`}
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span className="tabular-nums">{story.commentCount}</span>
+            </Link>
+            <span className="hidden sm:flex items-center gap-2 flex-shrink-0">
+              <BookmarkButton
+                storyId={story._id}
+                showMessage={showMessage}
+                onAuthRequired={() => {
+                  setAuthDialogAction("bookmark");
+                  setShowAuthDialog(true);
+                }}
+              />
+              {story.githubUrl && (
+                <a
+                  href={story.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-copy"
+                  title="View GitHub Repo"
+                >
+                  <Github className="w-3.5 h-3.5" />
+                </a>
+              )}
+            </span>
+          </div>
         </div>
 
-        {/* Comments + Vibe it pill. Comments sit here from sm up; mobile keeps them in the byline. */}
-        <div className="flex-shrink-0 flex items-center gap-2 sm:gap-3 w-full justify-end sm:w-auto">
-          <Link
-            to={`/s/${story.slug}#comments`}
-            className="hidden sm:inline-flex items-center justify-end min-w-[1.75rem] h-8 text-[13px] text-faint hover:text-copy tabular-nums"
-            aria-label={`${story.commentCount} ${story.commentCount === 1 ? "comment" : "comments"}`}
-          >
-            {story.commentCount}c
-          </Link>
+        <span className="relative flex-shrink-0">
+          {justVoted === story._id && (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 rounded-lg bg-cta animate-vibe-halo motion-reduce:hidden"
+            />
+          )}
           <button
             type="button"
             onClick={() => handleVote(story._id)}
             disabled={!isClerkLoaded}
-            className="inline-flex items-center justify-center gap-1 h-8 px-3 rounded-full border border-ink bg-surface text-ink whitespace-nowrap hover:bg-surface-hover active:bg-surface-alt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Vibe it"
+            className={`relative inline-flex items-center justify-center gap-1.5 h-10 px-3 sm:px-4 rounded-lg bg-cta text-on-cta whitespace-nowrap hover:bg-cta-hover active:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas transition-colors motion-reduce:transition-none disabled:opacity-50 disabled:cursor-not-allowed ${
+              justVoted === story._id
+                ? "animate-vibe-pop motion-reduce:animate-none"
+                : ""
+            }`}
             aria-label={`Vibe it, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
           >
-            <span className="text-[13px] font-medium">Vibe it</span>
-            <span className="text-[13px] font-semibold tabular-nums">
+            <span className="text-[14px] font-semibold">Vibe it</span>
+            <span
+              className={`text-[14px] font-semibold tabular-nums opacity-70 ${
+                justVoted === story._id
+                  ? "inline-block animate-vibe-bump motion-reduce:animate-none"
+                  : ""
+              }`}
+            >
               {story.votes}
             </span>
           </button>
-        </div>
+        </span>
       </article>
     );
   };
+
 
   // GRID VIEW: poster card — screenshot, title, byline, blurb, two stat
   // tiles, then a full-width primary action.
@@ -462,11 +440,7 @@ export function StoryList({
           </h2>
 
           <p className="mt-1 text-[14px] text-soft truncate">
-            by{" "}
-            {story.submitterName ||
-              story.authorName ||
-              story.authorUsername ||
-              "Anonymous User"}
+            <AuthorName story={story} />
             <span className="mx-1.5">·</span>
             <span className="tabular-nums">
               {compactTimeAgo(story._creationTime)}
@@ -490,16 +464,36 @@ export function StoryList({
 
           {/* Everything below is pinned to the bottom so cards in a row line up. */}
           <div className="mt-auto pt-3">
-            <button
-              type="button"
-              onClick={() => handleVote(story._id)}
-              disabled={!isClerkLoaded}
-              className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-cta text-on-cta py-2.5 text-[15px] font-semibold hover:bg-cta-hover active:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas transition-colors motion-reduce:transition-none disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label={`Vibe it, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
-            >
-              Vibe it
-              <span className="tabular-nums opacity-70">{story.votes}</span>
-            </button>
+            <div className="relative">
+              {justVoted === story._id && (
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 rounded-lg bg-cta animate-vibe-halo motion-reduce:hidden"
+                />
+              )}
+              <button
+                type="button"
+                onClick={() => handleVote(story._id)}
+                disabled={!isClerkLoaded}
+                className={`relative w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-cta text-on-cta py-2.5 text-[15px] font-semibold hover:bg-cta-hover active:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas transition-colors motion-reduce:transition-none disabled:opacity-50 disabled:cursor-not-allowed ${
+                  justVoted === story._id
+                    ? "animate-vibe-pop motion-reduce:animate-none"
+                    : ""
+                }`}
+                aria-label={`Vibe it, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
+              >
+                Vibe it
+                <span
+                  className={`tabular-nums opacity-70 ${
+                    justVoted === story._id
+                      ? "inline-block animate-vibe-bump motion-reduce:animate-none"
+                      : ""
+                  }`}
+                >
+                  {story.votes}
+                </span>
+              </button>
+            </div>
 
           </div>
         </div>

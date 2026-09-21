@@ -89,6 +89,11 @@ export default {
       },
       animation: {
         "fade-in": "fadeIn 0.2s ease-out",
+        // Vote feedback: a squash-and-stretch press, a halo that swells out of
+        // the button, a quick count pop and a +1 drifting off the top.
+        "vibe-pop": "vibePop 0.42s cubic-bezier(0.22, 1, 0.36, 1)",
+        "vibe-bump": "vibeBump 0.42s cubic-bezier(0.22, 1, 0.36, 1)",
+        "vibe-halo": "vibeHalo 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards",
       },
       keyframes: {
         fadeIn: {
@@ -100,6 +105,27 @@ export default {
             opacity: "1",
             transform: "translateY(0)",
           },
+        },
+        // Squash on the press, overshoot on the release. No rotation: on a
+        // wide button a tilt reads as a glitch rather than a bounce.
+        vibePop: {
+          "0%": { transform: "scale(1)" },
+          "18%": { transform: "scale(0.94)" },
+          "50%": { transform: "scale(1.05)" },
+          "100%": { transform: "scale(1)" },
+        },
+        // The count stays put and pops in place; making it jump out of the
+        // button looked like a layout break.
+        vibeBump: {
+          "0%": { transform: "scale(1)" },
+          "40%": { transform: "scale(1.28)" },
+          "100%": { transform: "scale(1)" },
+        },
+        // A filled halo swelling out of the button, rather than a hard border
+        // ring scaling up, which read as an outline artefact.
+        vibeHalo: {
+          "0%": { opacity: "0.32", transform: "scale(1)" },
+          "100%": { opacity: "0", transform: "scale(1.28)" },
         },
       },
     },
