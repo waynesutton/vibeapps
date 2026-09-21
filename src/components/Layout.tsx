@@ -6,7 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "./ui/popover";
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal, X, Home } from "lucide-react";
 import {
   Link,
   Outlet,
@@ -522,14 +522,33 @@ export function Layout({ children }: { children?: ReactNode }) {
                     <div className="relative" ref={alertsDropdownRef}>
 
                       {showAlertsDropdown && (
-                        <div className="absolute right-0 mt-2 w-80 bg-surface [border-radius:0.375rem] shadow-lg border border-hairline py-2 z-50">
-                          <div className="px-3 py-2 border-b border-hairline">
+                        <div
+                          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+                          onClick={() => setShowAlertsDropdown(false)}
+                          aria-hidden="true"
+                        />
+                      )}
+                      {showAlertsDropdown && (
+                        <div
+                          role="dialog"
+                          aria-label="Notifications"
+                          className="fixed inset-y-0 right-0 z-50 flex w-[86vw] max-w-sm flex-col border-l border-hairline bg-surface shadow-lg py-2 lg:absolute lg:inset-y-auto lg:top-full lg:right-0 lg:mt-2 lg:w-80 lg:max-w-none lg:flex-none lg:rounded-md lg:border"
+                        >
+                          <div className="flex items-center justify-between px-3 py-2 border-b border-hairline">
                             <h3 className="text-sm font-medium text-ink">
                               Notifications
                             </h3>
+                            <button
+                              type="button"
+                              onClick={() => setShowAlertsDropdown(false)}
+                              className="lg:hidden flex items-center justify-center w-8 h-8 -mr-1 rounded-md text-soft hover:text-ink hover:bg-surface-hover transition-colors"
+                              aria-label="Close notifications"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
                           </div>
 
-                          <div className="max-h-80 overflow-y-auto">
+                          <div className="flex-1 overflow-y-auto lg:flex-none lg:max-h-80">
                             {recentAlerts && recentAlerts.length > 0 ? (
                               recentAlerts.map((alert: any) => (
                                 <DropdownNotificationItem
@@ -676,7 +695,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                         setShowAuthDialog(true);
                       }
                     }}
-                    className="flex items-center gap-2 bg-cta text-on-cta px-3 py-1 rounded-md text-sm hover:bg-cta-hover transition-colors"
+                    className="hidden lg:flex items-center gap-2 bg-cta text-on-cta px-3 py-1 rounded-md text-sm hover:bg-cta-hover transition-colors"
                     title="Submit your app to the community"
                   >
                     <PlusCircle className="w-4 h-4" />
@@ -775,15 +794,6 @@ export function Layout({ children }: { children?: ReactNode }) {
                     </PopoverContent>
                   </Popover>
 
-                  {/* Mobile Search Icon - Show only on mobile, next to view options */}
-                  <button
-                    type="button"
-                    onClick={handleSearchIconClick}
-                    className="lg:hidden flex items-center justify-center w-9 h-9 rounded-md text-soft hover:text-ink hover:bg-surface-hover transition-colors"
-                    aria-label="Search"
-                  >
-                    <Search className="w-5 h-5" />
-                  </button>
                 </div>
 
                 {/* Mobile Search Bar - Show below view options when expanded */}
@@ -917,7 +927,7 @@ export function Layout({ children }: { children?: ReactNode }) {
               )}
           </div>
         </header>
-        <main className="flex-grow container mx-auto px-4 py-1">
+        <main className="flex-grow container mx-auto px-4 py-1 pb-20 lg:pb-1">
           <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
             <div className={showSidebar ? "lg:w-3/4" : "w-full"}>
               {children || (
@@ -942,6 +952,104 @@ export function Layout({ children }: { children?: ReactNode }) {
           </div>
         </main>
         <Footer />
+
+        {/* Mobile bottom bar. The primary actions sit within thumb reach and
+            the header is left holding only the content controls. Hidden from
+            lg up, where the header has room for all of it. */}
+        <nav
+          className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-stretch justify-around border-t border-hairline bg-surface pb-[env(safe-area-inset-bottom)]"
+          aria-label="Primary"
+        >
+          <Link
+            to="/"
+            className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] transition-colors ${
+              location.pathname === "/"
+                ? "text-ink"
+                : "text-soft hover:text-ink"
+            }`}
+          >
+            <Home className="w-5 h-5" />
+            Home
+          </Link>
+
+          <button
+            type="button"
+            onClick={handleSearchIconClick}
+            className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] text-soft hover:text-ink transition-colors"
+          >
+            <Search className="w-5 h-5" />
+            Search
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (isSignedIn) {
+                navigate("/submit");
+              } else {
+                setShowAuthDialog(true);
+              }
+            }}
+            className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] text-ink"
+            aria-label="Submit your app"
+          >
+            <span className="flex items-center justify-center w-9 h-7 rounded-md bg-cta text-on-cta">
+              <PlusCircle className="w-5 h-5" />
+            </span>
+            Submit
+          </button>
+
+          <SignedIn>
+            <button
+              type="button"
+              onClick={() => setShowAlertsDropdown(true)}
+              className="relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] text-soft hover:text-ink transition-colors"
+              aria-label={
+                hasUnreadAlerts
+                  ? "Notifications, unread"
+                  : "Notifications"
+              }
+            >
+              <Bell className="w-5 h-5" />
+              {hasUnreadAlerts && (
+                <span className="absolute top-1.5 right-[28%] w-2 h-2 rounded-full bg-brand" />
+              )}
+              Alerts
+            </button>
+
+            <Link
+              to={profileUrl}
+              className="relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] text-soft hover:text-ink transition-colors"
+            >
+              {clerkUser?.imageUrl ? (
+                <img
+                  src={clerkUser.imageUrl}
+                  alt=""
+                  className="w-5 h-5 rounded-full object-cover"
+                />
+              ) : (
+                <User className="w-5 h-5" />
+              )}
+              {hasUnreadMessages && (
+                <span className="absolute top-1.5 right-[28%] w-2 h-2 rounded-full bg-brand" />
+              )}
+              You
+            </Link>
+          </SignedIn>
+
+          <SignedOut>
+            <SignInButton mode="modal">
+              <button
+                type="button"
+                className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] text-soft hover:text-ink transition-colors"
+              >
+                <User className="w-5 h-5" />
+                Sign in
+              </button>
+            </SignInButton>
+          </SignedOut>
+        </nav>
+
         <ConvexBox />
       </div>
 
