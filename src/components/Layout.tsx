@@ -1017,7 +1017,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                 live in the header and the bottom bar instead. */}
             {isStoryListPage && (
               <aside className="hidden lg:block lg:w-56 lg:flex-shrink-0">
-                <div className="sticky top-20 space-y-6">
+                <div className="sticky top-[60px] max-h-[calc(100vh-72px)] overflow-y-auto space-y-6 pb-4">
                   <button
                     onClick={() => {
                       if (isSignedIn) {
@@ -1105,7 +1105,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                       <h3 className="px-2 mb-1 text-[11px] font-medium uppercase tracking-wide text-faint">
                         Categories
                       </h3>
-                      <div className="flex flex-col max-h-72 overflow-y-auto">
+                      <div className="flex flex-col">
                         <button
                           onClick={() => setSelectedTagId(undefined)}
                           aria-pressed={!selectedTagId}

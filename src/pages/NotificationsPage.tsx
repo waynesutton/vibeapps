@@ -206,10 +206,16 @@ function NotificationItem({ alert }: NotificationItemProps) {
 
   return (
     <div
-      className={`p-4 hover:bg-surface-hover transition-colors ${
-        !alert.isRead ? "bg-blue-50" : ""
+      className={`relative px-3 sm:px-4 py-3 hover:bg-surface-hover transition-colors motion-reduce:transition-none ${
+        !alert.isRead ? "bg-surface-alt" : ""
       }`}
     >
+      {!alert.isRead && (
+        <span
+          className="absolute left-0 top-0 bottom-0 w-0.5 bg-brand"
+          aria-hidden="true"
+        />
+      )}
       <div className="flex items-start gap-3">
         {/* Actor Avatar */}
         {actorUser ? (
@@ -297,7 +303,7 @@ function NotificationItem({ alert }: NotificationItemProps) {
                     {" "}
                     <Link
                       to={`/s/${story.slug}`}
-                      className="inline-block px-3 py-1 mt-1 bg-cta text-on-cta text-xs rounded hover:bg-cta-hover transition-colors"
+                      className="font-medium text-ink hover:underline underline-offset-2"
                     >
                       {story.title}
                     </Link>
@@ -314,7 +320,7 @@ function NotificationItem({ alert }: NotificationItemProps) {
             <div className="mt-2">
               <Link
                 to="/admin?tab=spam"
-                className="inline-block px-3 py-1 bg-cta text-on-cta text-xs rounded hover:bg-cta-hover transition-colors"
+                className="font-medium text-ink hover:underline underline-offset-2"
               >
                 Review in spam dashboard
               </Link>
