@@ -686,7 +686,7 @@ export function Layout({ children }: { children?: ReactNode }) {
               </div>
 
               {/* Middle Controls Wrapper for stacking on mobile and centering on desktop */}
-              <div className="flex flex-col lg:flex-row lg:items-center lg:gap-3 lg:order-2">
+              <div className="flex flex-col lg:flex-row lg:flex-1 lg:justify-center lg:items-center lg:gap-3 lg:order-2 lg:px-6">
                 {/* Row 2 content: Submit & View Options */}
                 <div className="flex w-full lg:w-auto flex-wrap items-center gap-2 lg:gap-3">
                   {/* Submit Button: Navigate to /submit if signed in, show auth dialog if not */}
@@ -698,14 +698,14 @@ export function Layout({ children }: { children?: ReactNode }) {
                         setShowAuthDialog(true);
                       }
                     }}
-                    className="hidden lg:flex items-center gap-2 bg-cta text-on-cta px-3 py-1 rounded-md text-sm hover:bg-cta-hover transition-colors"
+                    className="hidden items-center gap-2 bg-cta text-on-cta px-3 py-1 rounded-md text-sm hover:bg-cta-hover transition-colors"
                     title="Submit your app to the community"
                   >
                     <PlusCircle className="w-4 h-4" />
                     Submit
                   </button>
                   {isStoryListPage && (
-                    <>
+                    <div className="contents lg:hidden">
                     {/* View and filters are dropdowns rather than a row of
                         toggles plus a row of selects: two controls instead of
                         five, and the toolbar fits one line on a phone. */}
@@ -798,7 +798,7 @@ export function Layout({ children }: { children?: ReactNode }) {
                         </div>
                       </PopoverContent>
                     </Popover>
-                    </>
+                    </div>
                   )}
 
                 </div>
@@ -821,33 +821,24 @@ export function Layout({ children }: { children?: ReactNode }) {
 
                 {/* Row 3 content: Dropdowns & Desktop Search */}
                 <div className="flex w-full md:w-auto items-center gap-1 md:gap-3">
-                  {/* Desktop Search - Hidden on mobile */}
-                  <div className="hidden md:flex items-center gap-0">
-                    <button
-                      type="button"
-                      onClick={handleSearchIconClick}
-                      className="p-2 text-copy hover:text-ink"
-                      aria-label="Search"
-                    >
-                      <Search className="w-5 h-5" />
-                    </button>
-                    <form onSubmit={handleSearch} className="flex items-center">
+                  {/* Desktop search: always open, centred in the header. */}
+                  <form
+                    onSubmit={handleSearch}
+                    className="hidden lg:flex items-center w-full max-w-md"
+                  >
+                    <div className="relative w-full">
+                      <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-soft" />
                       <input
                         ref={searchInputRef}
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search..."
-                        className={`transition-all duration-300 ease-in-out h-9 text-sm focus:outline-none bg-surface text-copy rounded-md border ${isSearchExpanded ? "w-48 opacity-100 px-3 border-hairline-strong" : "w-0 opacity-0 p-0 border-none"}`}
-                        style={{
-                          borderColor: isSearchExpanded
-                            ? "var(--th-hairline-strong)"
-                            : "transparent",
-                        }}
-                        tabIndex={isSearchExpanded ? 0 : -1}
+                        placeholder="Search apps and creators"
+                        aria-label="Search"
+                        className="w-full h-9 pl-9 pr-3 text-sm rounded-md border border-hairline bg-surface-alt text-copy placeholder:text-faint focus:outline-none focus:border-hairline-strong focus:bg-surface transition-colors"
                       />
-                    </form>
-                  </div>
+                    </div>
+                  </form>
                 </div>
               </div>
             </div>
@@ -936,7 +927,136 @@ export function Layout({ children }: { children?: ReactNode }) {
         </header>
         <main className="flex-grow container mx-auto px-4 py-1 pb-20 lg:pb-1">
           <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-            <div className={showSidebar ? "lg:w-3/4" : "w-full"}>
+            {/* Desktop rail: Submit on top, then the view and filter controls
+                laid out rather than collapsed into dropdowns. Below lg these
+                live in the header and the bottom bar instead. */}
+            {isStoryListPage && (
+              <aside className="hidden lg:block lg:w-56 lg:flex-shrink-0">
+                <div className="sticky top-20 space-y-6">
+                  <button
+                    onClick={() => {
+                      if (isSignedIn) {
+                        navigate("/submit");
+                      } else {
+                        setShowAuthDialog(true);
+                      }
+                    }}
+                    className="w-full inline-flex items-center justify-center gap-2 h-11 rounded-md bg-cta text-on-cta text-sm font-semibold hover:bg-cta-hover transition-colors"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    Submit your app
+                  </button>
+
+                  {(settings?.showListView ||
+                    settings?.showGridView ||
+                    settings?.showVibeView) && (
+                    <div>
+                      <h3 className="px-2 mb-1 text-[11px] font-medium uppercase tracking-wide text-faint">
+                        Layout
+                      </h3>
+                      <div className="flex flex-col">
+                        {[
+                          { key: "list", label: "List", show: settings?.showListView },
+                          { key: "grid", label: "Grid", show: settings?.showGridView },
+                          { key: "vibe", label: "Vibe", show: settings?.showVibeView },
+                        ]
+                          .filter((o) => o.show)
+                          .map((o) => (
+                            <button
+                              key={o.key}
+                              onClick={() => {
+                                setViewMode(o.key as NonNullable<typeof viewMode>);
+                                setUserChangedViewMode(true);
+                                navigate("/");
+                              }}
+                              aria-pressed={viewMode === o.key}
+                              className={`text-left px-2 py-1.5 rounded-md text-sm transition-colors ${
+                                viewMode === o.key
+                                  ? "bg-surface-alt text-ink font-medium"
+                                  : "text-copy hover:bg-surface-hover"
+                              }`}
+                            >
+                              {o.label}
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <h3 className="px-2 mb-1 text-[11px] font-medium uppercase tracking-wide text-faint">
+                      Sort
+                    </h3>
+                    <div className="flex flex-col">
+                      {[
+                        { value: "all", label: "Most Recent" },
+                        { value: "today", label: "Today" },
+                        { value: "week", label: "This Week" },
+                        { value: "month", label: "This Month" },
+                        { value: "votes_week", label: "Most Vibes (Week)" },
+                        { value: "votes_all", label: "Most Vibes (All Time)" },
+                      ].map((o) => (
+                        <button
+                          key={o.value}
+                          onClick={() => {
+                            setSortPeriod(o.value as SortPeriod);
+                            setUserChangedSortPeriod(true);
+                          }}
+                          aria-pressed={sortPeriod === o.value}
+                          className={`text-left px-2 py-1.5 rounded-md text-sm transition-colors ${
+                            sortPeriod === o.value
+                              ? "bg-surface-alt text-ink font-medium"
+                              : "text-copy hover:bg-surface-hover"
+                          }`}
+                        >
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {headerTags && headerTags.length > 0 && (
+                    <div>
+                      <h3 className="px-2 mb-1 text-[11px] font-medium uppercase tracking-wide text-faint">
+                        Categories
+                      </h3>
+                      <div className="flex flex-col max-h-72 overflow-y-auto">
+                        <button
+                          onClick={() => setSelectedTagId(undefined)}
+                          aria-pressed={!selectedTagId}
+                          className={`text-left px-2 py-1.5 rounded-md text-sm transition-colors ${
+                            !selectedTagId
+                              ? "bg-surface-alt text-ink font-medium"
+                              : "text-copy hover:bg-surface-hover"
+                          }`}
+                        >
+                          All Categories
+                        </button>
+                        {headerTags
+                          .filter((tag) => !tag.isHidden && tag.showInHeader)
+                          .map((tag) => (
+                            <button
+                              key={tag._id}
+                              onClick={() => setSelectedTagId(tag._id)}
+                              aria-pressed={selectedTagId === tag._id}
+                              className={`text-left px-2 py-1.5 rounded-md text-sm truncate transition-colors ${
+                                selectedTagId === tag._id
+                                  ? "bg-surface-alt text-ink font-medium"
+                                  : "text-copy hover:bg-surface-hover"
+                              }`}
+                            >
+                              {tag.emoji ? `${tag.emoji} ` : ""}
+                              {tag.name}
+                            </button>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </aside>
+            )}
+
+            <div className={showSidebar ? "lg:flex-1 lg:min-w-0" : "w-full"}>
               {children || (
                 <Outlet context={{ viewMode, selectedTagId, sortPeriod }} />
               )}
