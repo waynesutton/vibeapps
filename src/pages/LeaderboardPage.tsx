@@ -3,12 +3,18 @@ import React from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useUser } from "@clerk/clerk-react";
 import { api } from "../../convex/_generated/api";
-import { UserCircle, ThumbsUp } from "lucide-react";
+import { UserCircle } from "lucide-react";
 import { ProfileHoverCard } from "../components/ui/ProfileHoverCard";
 import { BackToAppsLink } from "../components/BackToAppsLink";
+import { VibeButton } from "../components/ui/VibeButton";
 
 export function LeaderboardPage() {
   // Get top stories for the leaderboard
+  const myVotedIds = useQuery(api.stories.getMyVotedStoryIds);
+  const vibedSet = React.useMemo(
+    () => new Set((myVotedIds ?? []).map((id) => id as unknown as string)),
+    [myVotedIds],
+  );
   const liveStories = useQuery(api.stories.getWeeklyLeaderboardStories, {
     limit: 20, // Show more stories on the dedicated page
   });
@@ -69,7 +75,7 @@ export function LeaderboardPage() {
                   key={story._id}
                   story={story}
                   rank={index + 1}
-                  justVoted={votingId === story._id}
+                  vibed={vibedSet.has(story._id as unknown as string)}
                   onVoted={handleVoted}
                 />
               ))}
@@ -110,14 +116,14 @@ interface LeaderboardItemProps {
     authorName?: string;
   };
   rank: number;
-  justVoted: boolean;
+  vibed: boolean;
   onVoted: (storyId: string) => void;
 }
 
 function LeaderboardItem({
   story,
   rank,
-  justVoted,
+  vibed,
   onVoted,
 }: LeaderboardItemProps) {
   const { isSignedIn, isLoaded } = useUser();
@@ -198,8 +204,8 @@ function LeaderboardItem({
 
         {/* Count reads as a figure, not a footnote, and the row can be voted on
             directly rather than only from the feed. */}
-        <div className="flex-shrink-0 flex items-center gap-3">
-          <div className="text-right leading-none">
+        <div className="flex-shrink-0 flex items-center gap-2 sm:gap-3">
+          <div className="hidden sm:block text-right leading-none">
             <div className="text-[20px] font-semibold text-ink tabular-nums">
               {story.votes}
             </div>
@@ -207,26 +213,12 @@ function LeaderboardItem({
               {story.votes === 1 ? "vibe" : "vibes"}
             </div>
           </div>
-          <span className="relative">
-            {justVoted && (
-              <span
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 rounded-lg bg-cta animate-vibe-halo motion-reduce:hidden"
-              />
-            )}
-            <button
-              type="button"
-              onClick={handleVote}
-              disabled={!isLoaded}
-              className={`relative inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-cta text-on-cta text-[13px] font-semibold whitespace-nowrap hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas transition-colors motion-reduce:transition-none disabled:opacity-50 disabled:cursor-not-allowed ${
-                justVoted ? "animate-vibe-pop motion-reduce:animate-none" : ""
-              }`}
-              aria-label={`Vibe, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
-            >
-              <ThumbsUp className="w-4 h-4" aria-hidden="true" />
-              Vibe
-            </button>
-          </span>
+          <VibeButton
+            count={story.votes}
+            vibed={vibed}
+            onToggle={handleVote}
+            disabled={!isLoaded}
+          />
         </div>
       </div>
     </div>

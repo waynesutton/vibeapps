@@ -47,7 +47,8 @@ export function WeeklyLeaderboard() {
         {topStories.map((story, index) => (
           <li
             key={story._id}
-            className={`flex items-start gap-3 rounded-md px-2 py-1.5 -mx-2 ${
+            style={{ animationDelay: `${index * 60}ms` }}
+            className={`flex items-start gap-3 rounded-md px-2 py-1.5 -mx-2 animate-comment-rise motion-reduce:animate-none ${
               RANK_TINT[index + 1]?.row ?? ""
             }`}
           >

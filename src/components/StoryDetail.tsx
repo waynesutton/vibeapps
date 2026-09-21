@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  ThumbsUp,
   MessageSquare,
   Star,
   Linkedin,
@@ -40,6 +39,7 @@ import { ProfileHoverCard } from "./ui/ProfileHoverCard";
 import { Markdown } from "./Markdown";
 import { useDialog } from "../hooks/useDialog";
 import { BackToAppsLink } from "./BackToAppsLink";
+import { VibeButton } from "./ui/VibeButton";
 import { LumaEventList } from "./LumaEventList";
 import { isLumaWidgetVisible } from "../lib/sidebarWidgets";
 
@@ -448,6 +448,15 @@ export function StoryDetail({ story }: StoryDetailProps) {
     setSearchParams,
   ]);
 
+  const myVotedIds = useQuery(api.stories.getMyVotedStoryIds);
+  const hasVibed = React.useMemo(
+    () =>
+      (myVotedIds ?? []).some(
+        (id) => (id as unknown as string) === (story._id as unknown as string),
+      ),
+    [myVotedIds, story._id],
+  );
+
   const [highlightComments, setHighlightComments] = React.useState(false);
   const highlightTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -459,21 +468,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
     [],
   );
 
-  const [justVotedDetail, setJustVotedDetail] = React.useState(false);
-  const detailVoteTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
-  React.useEffect(
-    () => () => {
-      if (detailVoteTimer.current) clearTimeout(detailVoteTimer.current);
-    },
-    [],
-  );
-
   const handleVote = () => {
-    setJustVotedDetail(true);
-    if (detailVoteTimer.current) clearTimeout(detailVoteTimer.current);
-    detailVoteTimer.current = setTimeout(() => setJustVotedDetail(false), 950);
     if (!isClerkLoaded) return; // Don't do anything if Clerk hasn't loaded
 
     if (!isSignedIn) {
@@ -1226,35 +1221,18 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     filled Vibe button; this page used a bare chevron over a
                     number, which read as a different product. */}
                 <div className="flex w-full flex-wrap items-stretch gap-2 sm:gap-3 mb-4">
-                  <span className="relative flex-1 min-w-[8rem]">
-                    {justVotedDetail && (
-                      <span
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 rounded-lg bg-cta animate-vibe-halo motion-reduce:hidden"
-                      />
-                    )}
-                    <button
-                      onClick={handleVote}
-                      disabled={!isClerkLoaded}
-                      className={`relative w-full inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-lg bg-cta text-on-cta text-[15px] font-semibold hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas transition-colors motion-reduce:transition-none disabled:opacity-50 disabled:cursor-not-allowed ${
-                        justVotedDetail
-                          ? "animate-vibe-pop motion-reduce:animate-none"
-                          : ""
-                      }`}
-                      title={
-                        !isSignedIn && isClerkLoaded
-                          ? "Sign in to vote"
-                          : "Vibe this app"
-                      }
-                      aria-label={`Vibe, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
-                    >
-                      <ThumbsUp className="w-4 h-4" aria-hidden="true" />
-                      Vibe
-                      <span className="tabular-nums opacity-70">
-                        {story.votes}
-                      </span>
-                    </button>
-                  </span>
+                  <VibeButton
+                    count={story.votes}
+                    vibed={hasVibed}
+                    onToggle={handleVote}
+                    disabled={!isClerkLoaded}
+                    title={
+                      !isSignedIn && isClerkLoaded
+                        ? "Sign in to vote"
+                        : undefined
+                    }
+                    className="flex-1 min-w-[8rem] justify-center"
+                  />
                   {story.url && (
                     <a
                       href={story.url}

@@ -2,7 +2,6 @@ import React from "react";
 import { Link } from "react-router-dom";
 import {
   MessageSquare,
-  ThumbsUp,
   ArrowDown,
   Github,
   Pin,
@@ -10,6 +9,7 @@ import {
   BookmarkCheck,
 } from "lucide-react";
 import type { Story } from "../types";
+import { VibeButton } from "./ui/VibeButton";
 import { UsePaginatedQueryResult, useMutation, useQuery } from "convex/react";
 import { Id, Doc } from "../../convex/_generated/dataModel";
 import { api } from "../../convex/_generated/api";
@@ -170,6 +170,11 @@ export function StoryList({
 }: StoryListProps) {
   const { isSignedIn, isLoaded: isClerkLoaded } = useAuth();
   const voteStory = useMutation(api.stories.voteStory);
+  const myVotedIds = useQuery(api.stories.getMyVotedStoryIds);
+  const vibedSet = React.useMemo(
+    () => new Set((myVotedIds ?? []).map((id) => id as unknown as string)),
+    [myVotedIds],
+  );
 
   // The feed is usually sorted by recency, so position is not rank. Look up
   // this week's top three by id instead of tinting the first three rows, which
@@ -212,16 +217,6 @@ export function StoryList({
   const [showAuthDialog, setShowAuthDialog] = React.useState(false);
   const [authDialogAction, setAuthDialogAction] = React.useState("");
 
-  // Which story just got voted, so its control can play the feedback once.
-  const [justVoted, setJustVoted] = React.useState<Id<"stories"> | null>(null);
-  const vibeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  React.useEffect(
-    () => () => {
-      if (vibeTimer.current) clearTimeout(vibeTimer.current);
-    },
-    [],
-  );
-
   const handleVote = (storyId: Id<"stories">) => {
     if (!isClerkLoaded) return;
 
@@ -230,12 +225,6 @@ export function StoryList({
       setShowAuthDialog(true);
       return;
     }
-
-    // Fire the animation straight away rather than waiting on the round trip;
-    // Convex reconciles the count when the mutation lands.
-    setJustVoted(storyId);
-    if (vibeTimer.current) clearTimeout(vibeTimer.current);
-    vibeTimer.current = setTimeout(() => setJustVoted(null), 950);
 
     voteStory({ storyId });
   };
@@ -386,37 +375,13 @@ export function StoryList({
           </div>
         </div>
 
-        <span className="relative flex-shrink-0">
-          {justVoted === story._id && (
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 rounded-lg bg-cta animate-vibe-halo motion-reduce:hidden"
-            />
-          )}
-          <button
-            type="button"
-            onClick={() => handleVote(story._id)}
-            disabled={!isClerkLoaded}
-            className={`relative inline-flex items-center justify-center gap-1.5 h-10 px-3 sm:px-4 rounded-lg bg-cta text-on-cta whitespace-nowrap hover:bg-cta-hover active:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas transition-colors motion-reduce:transition-none disabled:opacity-50 disabled:cursor-not-allowed ${
-              justVoted === story._id
-                ? "animate-vibe-pop motion-reduce:animate-none"
-                : ""
-            }`}
-            aria-label={`Vibe, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
-          >
-            <ThumbsUp className="w-4 h-4" aria-hidden="true" />
-            <span className="text-[14px] font-semibold">Vibe</span>
-            <span
-              className={`text-[14px] font-semibold tabular-nums opacity-70 ${
-                justVoted === story._id
-                  ? "inline-block animate-vibe-bump motion-reduce:animate-none"
-                  : ""
-              }`}
-            >
-              {story.votes}
-            </span>
-          </button>
-        </span>
+        <VibeButton
+          count={story.votes}
+          vibed={vibedSet.has(story._id as unknown as string)}
+          onToggle={() => handleVote(story._id)}
+          disabled={!isClerkLoaded}
+          className="flex-shrink-0"
+        />
       </article>
     );
   };
@@ -432,43 +397,6 @@ export function StoryList({
         rankTint(story._id) || "bg-surface"
       }`}
     >
-      {/* Vibe block. Deliberately the heaviest thing in the row. */}
-      <div className="flex sm:flex-col items-stretch gap-2 w-full sm:w-[84px] flex-shrink-0 order-3">
-        <div className="hidden sm:flex flex-col items-center justify-center rounded-lg bg-brand-soft border border-hairline py-2 px-3">
-          <span className="text-[24px] font-semibold tracking-[-0.02em] tabular-nums text-ink leading-none">
-            {story.votes}
-          </span>
-          <span className="text-[11px] text-copy mt-1">
-            {story.votes === 1 ? "Vibe" : "Vibes"}
-          </span>
-        </div>
-        <span className="relative w-full sm:flex-none">
-          {justVoted === story._id && (
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 rounded-lg bg-cta animate-vibe-halo motion-reduce:hidden"
-            />
-          )}
-          <button
-            type="button"
-            onClick={() => handleVote(story._id)}
-            disabled={!isClerkLoaded}
-            className={`relative w-full h-full min-h-[36px] inline-flex items-center justify-center rounded-lg bg-cta text-on-cta text-[13px] font-semibold hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas transition-colors motion-reduce:transition-none disabled:opacity-50 disabled:cursor-not-allowed ${
-              justVoted === story._id
-                ? "animate-vibe-pop motion-reduce:animate-none"
-                : ""
-            }`}
-            aria-label={`Vibe, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
-          >
-            <ThumbsUp className="w-4 h-4" aria-hidden="true" />
-            Vibe
-            <span className="sm:hidden tabular-nums opacity-70">
-              {story.votes}
-            </span>
-          </button>
-        </span>
-      </div>
-
       {/* Screenshot */}
       <div className="relative w-full sm:w-[190px] sm:flex-shrink-0 order-1">
       <RankRibbon storyId={story._id} />
@@ -492,74 +420,96 @@ export function StoryList({
         )}
       </Link>
       </div>
-
-      {/* Copy */}
-      <div className="flex-1 min-w-0 order-2">
-        {story.customMessage && (
-          <div className="mb-2 text-[13px] text-on-cta bg-cta rounded-lg px-2 py-1 italic inline-block">
-            {story.customMessage}
-          </div>
-        )}
-        <h2 className="app-card-title text-ink flex items-start gap-1.5 min-w-0">
-          {story.isPinned && (
-            <Pin
-              className="w-4 h-4 mt-1 text-faint flex-shrink-0"
-              aria-label="Pinned Story"
-            />
+      {/* Below sm the copy and the vibe control share a row under the image.
+          sm:contents dissolves this wrapper so the desktop three-column row is
+          unchanged. */}
+      <div className="flex flex-row items-start gap-3 min-w-0 order-2 sm:contents">
+        <div className="flex-1 min-w-0 sm:order-2">
+          {story.customMessage && (
+            <div className="mb-2 text-[13px] text-on-cta bg-cta rounded-lg px-2 py-1 italic inline-block">
+              {story.customMessage}
+            </div>
           )}
-          <Link
-            to={`/s/${story.slug}`}
-            className="hover:underline underline-offset-2 line-clamp-1"
-          >
-            {story.title}
-          </Link>
-        </h2>
-        <p className="mt-1 text-[15px] leading-snug text-copy line-clamp-2">
-          {story.description}
-        </p>
-        {story.tags && story.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
-            <TagPills tags={story.tags} size="sm" shape="pill" />
-          </div>
-        )}
-        <div className="mt-2 flex items-center gap-2 text-[13px] text-soft">
-          <span className="truncate">
-            <AuthorName story={story} />
-          </span>
-          <span aria-hidden="true">·</span>
-          <span className="tabular-nums flex-shrink-0">
-            {compactTimeAgo(story._creationTime)}
-          </span>
-          <Link
-            to={`/s/${story.slug}#comments`}
-            className="flex items-center gap-1 flex-shrink-0 hover:text-copy"
-            aria-label={`${story.commentCount} ${story.commentCount === 1 ? "comment" : "comments"}`}
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            <span className="tabular-nums">{story.commentCount}</span>
-          </Link>
-          <span className="flex items-center gap-2 flex-shrink-0">
-            <BookmarkButton
-              storyId={story._id}
-              showMessage={showMessage}
-              onAuthRequired={() => {
-                setAuthDialogAction("bookmark");
-                setShowAuthDialog(true);
-              }}
-            />
-            {story.githubUrl && (
-              <a
-                href={story.githubUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-copy"
-                title="View GitHub Repo"
-              >
-                <Github className="w-3.5 h-3.5" />
-              </a>
+          <h2 className="app-card-title text-ink flex items-start gap-1.5 min-w-0">
+            {story.isPinned && (
+              <Pin
+                className="w-4 h-4 mt-1 text-faint flex-shrink-0"
+                aria-label="Pinned Story"
+              />
             )}
+            <Link
+              to={`/s/${story.slug}`}
+              className="hover:underline underline-offset-2 line-clamp-1"
+            >
+              {story.title}
+            </Link>
+          </h2>
+          <p className="mt-1 text-[15px] leading-snug text-copy line-clamp-2">
+            {story.description}
+          </p>
+          {story.tags && story.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              <TagPills tags={story.tags} size="sm" shape="pill" />
+            </div>
+          )}
+          <div className="mt-2 flex items-center gap-2 text-[13px] text-soft">
+            <span className="truncate">
+              <AuthorName story={story} />
+            </span>
+            <span aria-hidden="true">·</span>
+            <span className="tabular-nums flex-shrink-0">
+              {compactTimeAgo(story._creationTime)}
+            </span>
+            <Link
+              to={`/s/${story.slug}#comments`}
+              className="flex items-center gap-1 flex-shrink-0 hover:text-copy"
+              aria-label={`${story.commentCount} ${story.commentCount === 1 ? "comment" : "comments"}`}
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span className="tabular-nums">{story.commentCount}</span>
+            </Link>
+            <span className="flex items-center gap-2 flex-shrink-0">
+              <BookmarkButton
+                storyId={story._id}
+                showMessage={showMessage}
+                onAuthRequired={() => {
+                  setAuthDialogAction("bookmark");
+                  setShowAuthDialog(true);
+                }}
+              />
+              {story.githubUrl && (
+                <a
+                  href={story.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-copy"
+                  title="View GitHub Repo"
+                >
+                  <Github className="w-3.5 h-3.5" />
+                </a>
+              )}
+            </span>
+          </div>
+        </div>
+      <div className="flex flex-col items-stretch gap-2 flex-shrink-0 sm:order-3 sm:w-[92px]">
+        <div className="flex flex-col items-center justify-center rounded-lg bg-surface-alt border border-hairline py-2 px-3">
+          <span className="text-[22px] font-semibold tracking-[-0.02em] tabular-nums text-ink leading-none">
+            {story.votes}
+          </span>
+          <span className="text-[11px] text-copy mt-1">
+            {story.votes === 1 ? "Vibe" : "Vibes"}
           </span>
         </div>
+        <VibeButton
+          count={story.votes}
+          vibed={vibedSet.has(story._id as unknown as string)}
+          onToggle={() => handleVote(story._id)}
+          disabled={!isClerkLoaded}
+          hideCount
+          compact
+          className="w-full"
+        />
+      </div>
       </div>
     </article>
   );
@@ -670,37 +620,13 @@ export function StoryList({
 
           {/* Everything below is pinned to the bottom so cards in a row line up. */}
           <div className="mt-auto pt-3">
-            <div className="relative">
-              {justVoted === story._id && (
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 rounded-lg bg-cta animate-vibe-halo motion-reduce:hidden"
-                />
-              )}
-              <button
-                type="button"
-                onClick={() => handleVote(story._id)}
-                disabled={!isClerkLoaded}
-                className={`relative w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-cta text-on-cta py-2.5 text-[15px] font-semibold hover:bg-cta-hover active:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas transition-colors motion-reduce:transition-none disabled:opacity-50 disabled:cursor-not-allowed ${
-                  justVoted === story._id
-                    ? "animate-vibe-pop motion-reduce:animate-none"
-                    : ""
-                }`}
-                aria-label={`Vibe, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
-              >
-                <ThumbsUp className="w-4 h-4" aria-hidden="true" />
-                Vibe
-                <span
-                  className={`tabular-nums opacity-70 ${
-                    justVoted === story._id
-                      ? "inline-block animate-vibe-bump motion-reduce:animate-none"
-                      : ""
-                  }`}
-                >
-                  {story.votes}
-                </span>
-              </button>
-            </div>
+            <VibeButton
+              count={story.votes}
+              vibed={vibedSet.has(story._id as unknown as string)}
+              onToggle={() => handleVote(story._id)}
+              disabled={!isClerkLoaded}
+              className="w-full"
+            />
 
           </div>
         </div>

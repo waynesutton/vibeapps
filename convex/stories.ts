@@ -1026,6 +1026,32 @@ export const generateUploadUrl = mutation({
 });
 
 // Renamed vote to voteStory - Fixed: Removed read before write to avoid conflicts
+/**
+ * Story ids the signed-in user has already vibed.
+ *
+ * voteStory is a toggle, but nothing exposed the current state, so a vote
+ * control could not show whether you had already voted — it always rendered as
+ * un-pressed and flipped back on reload. Returns an empty list when signed out.
+ */
+export const getMyVotedStoryIds = query({
+  args: {},
+  returns: v.array(v.id("stories")),
+  handler: async (ctx): Promise<Id<"stories">[]> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+    if (!user) return [];
+    const votes = await ctx.db
+      .query("votes")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .collect();
+    return votes.map((v) => v.storyId);
+  },
+});
+
 export const voteStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {

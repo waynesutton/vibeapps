@@ -26,6 +26,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { ConvexBox } from "./ConvexBox";
+import { BackToTop } from "./BackToTop";
 import { Footer } from "./Footer";
 import {
   SignedIn,
@@ -1310,6 +1311,7 @@ export function Layout({ children }: { children?: ReactNode }) {
         </nav>
 
         <ConvexBox />
+        <BackToTop />
       </div>
 
       {/* Auth Required Dialog */}
