@@ -665,6 +665,7 @@ function CustomCriteriaCard({ group }: { group: GroupDetails }) {
       }
     >
       <HumanCriteriaMirrorBlock group={group} />
+      <SecondOpinionBlock group={group} />
 
       <div className="flex flex-wrap items-center gap-2">
         <button
@@ -833,6 +834,60 @@ function HumanCriteriaMirrorBlock({ group }: { group: GroupDetails }) {
             </div>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+// Per group switch for the Jev second opinion: a decisions model scores the
+// same rubric from text only context and its scores show beside the judge
+// model's in AI Results. Advisory only, so ranking never changes.
+function SecondOpinionBlock({ group }: { group: GroupDetails }) {
+  const updateAiSecondOpinionEnabled = useMutation(
+    api.aiJudge.updateAiSecondOpinionEnabled,
+  );
+  const [pending, setPending] = useState(false);
+  const [toggleError, setToggleError] = useState("");
+  const enabled = group.aiSecondOpinionEnabled === true;
+
+  const handleToggle = () => {
+    setToggleError("");
+    setPending(true);
+    updateAiSecondOpinionEnabled({ groupId: group._id, enabled: !enabled })
+      .catch((err) => {
+        setToggleError(
+          err instanceof Error ? err.message : "Failed to update setting",
+        );
+      })
+      .finally(() => setPending(false));
+  };
+
+  return (
+    <div className="rounded-md border border-hairline">
+      <div className="flex items-start justify-between gap-3 px-3 py-2.5">
+        <div className="min-w-0">
+          <p className="text-[13px] font-medium text-copy">
+            Second opinion
+            <span className="ml-2 text-xs text-faint">Jev, alpha</span>
+          </p>
+          <p className="text-xs text-soft mt-0.5">
+            Each review also asks Jev, the gateway's decisions model, to score
+            the same rubric from the text context (no screenshot) and report
+            how sure it is. Scores appear beside the judge's in AI Results with
+            a flag when the two disagree. Advisory only: totals and ranking
+            never change. Applies on the next run.
+          </p>
+        </div>
+        <TogglePill
+          enabled={enabled}
+          onToggle={handleToggle}
+          onLabel="On"
+          offLabel="Off"
+          disabled={pending}
+        />
+      </div>
+      {toggleError && (
+        <p className="px-3 pb-2 text-[13px] text-red-600">{toggleError}</p>
       )}
     </div>
   );

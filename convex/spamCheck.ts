@@ -33,6 +33,9 @@ const AUTO_SCAN_KEY = "spamAutoScanEnabled"; // default true
 const AUTO_MARK_KEY = "spamAutoMarkEnabled"; // default false
 const AUTO_MARK_CONFIDENCE_KEY = "spamAutoMarkConfidence"; // default 85
 const AUTO_MARK_NOTIFY_KEY = "spamAutoMarkNotify"; // default true
+// When true the verdict comes from Jev (gateway decisions model) as a
+// calibrated probability per verdict instead of the chat model's JSON guess.
+const JEV_CLASSIFIER_KEY = "spamJevClassifierEnabled"; // default false
 
 const AUTO_MARK_DEFAULT_CONFIDENCE = 85;
 const AUTO_MARK_MIN_CONFIDENCE = 50;
@@ -43,6 +46,7 @@ type SpamAutomationSettings = {
   autoMarkEnabled: boolean;
   autoMarkConfidence: number;
   autoMarkNotify: boolean;
+  jevClassifierEnabled: boolean;
 };
 
 // Read one appSettings row by key
@@ -57,17 +61,19 @@ async function readSettingRow(ctx: QueryCtx | MutationCtx, key: string) {
 async function readAutomationSettings(
   ctx: QueryCtx | MutationCtx,
 ): Promise<SpamAutomationSettings> {
-  const [scan, mark, confidence, notify] = await Promise.all([
+  const [scan, mark, confidence, notify, jev] = await Promise.all([
     readSettingRow(ctx, AUTO_SCAN_KEY),
     readSettingRow(ctx, AUTO_MARK_KEY),
     readSettingRow(ctx, AUTO_MARK_CONFIDENCE_KEY),
     readSettingRow(ctx, AUTO_MARK_NOTIFY_KEY),
+    readSettingRow(ctx, JEV_CLASSIFIER_KEY),
   ]);
   return {
     autoScanEnabled: scan?.valueBoolean ?? true,
     autoMarkEnabled: mark?.valueBoolean ?? false,
     autoMarkConfidence: confidence?.valueNumber ?? AUTO_MARK_DEFAULT_CONFIDENCE,
     autoMarkNotify: notify?.valueBoolean ?? true,
+    jevClassifierEnabled: jev?.valueBoolean ?? false,
   };
 }
 
@@ -547,6 +553,7 @@ const automationValidator = v.object({
   autoMarkEnabled: v.boolean(),
   autoMarkConfidence: v.number(),
   autoMarkNotify: v.boolean(),
+  jevClassifierEnabled: v.boolean(),
 });
 
 /**
@@ -571,6 +578,7 @@ export const setSpamAutomation = mutation({
     autoMarkEnabled: v.optional(v.boolean()),
     autoMarkConfidence: v.optional(v.number()),
     autoMarkNotify: v.optional(v.boolean()),
+    jevClassifierEnabled: v.optional(v.boolean()),
   },
   returns: automationValidator,
   handler: async (ctx, args) => {
@@ -612,6 +620,14 @@ export const setSpamAutomation = mutation({
       });
       changes.push(
         `auto-mark notifications ${args.autoMarkNotify ? "on" : "off"}`,
+      );
+    }
+    if (args.jevClassifierEnabled !== undefined) {
+      await upsertSetting(ctx, JEV_CLASSIFIER_KEY, {
+        valueBoolean: args.jevClassifierEnabled,
+      });
+      changes.push(
+        `Jev classifier ${args.jevClassifierEnabled ? "on" : "off"}`,
       );
     }
 
@@ -691,19 +707,25 @@ export const setSpamPrompt = mutation({
 });
 
 /**
- * Effective prompt for the analysis action: the admin override when set,
- * otherwise the default.
+ * Everything the analysis action needs in one read: the effective system
+ * prompt (admin override or default) and which classifier to run.
  */
-export const getSpamPromptInternal = internalQuery({
+export const getSpamAnalysisConfigInternal = internalQuery({
   args: {},
-  returns: v.string(),
+  returns: v.object({
+    systemPrompt: v.string(),
+    jevClassifierEnabled: v.boolean(),
+  }),
   handler: async (ctx) => {
-    const row = await ctx.db
-      .query("appSettings")
-      .withIndex("by_key", (q) => q.eq("key", SPAM_PROMPT_SETTING_KEY))
-      .unique();
-    const custom = row?.valueString?.trim();
-    return custom || DEFAULT_SPAM_SYSTEM_PROMPT;
+    const [promptRow, jevRow] = await Promise.all([
+      readSettingRow(ctx, SPAM_PROMPT_SETTING_KEY),
+      readSettingRow(ctx, JEV_CLASSIFIER_KEY),
+    ]);
+    const custom = promptRow?.valueString?.trim();
+    return {
+      systemPrompt: custom || DEFAULT_SPAM_SYSTEM_PROMPT,
+      jevClassifierEnabled: jevRow?.valueBoolean ?? false,
+    };
   },
 });
 

@@ -1,6 +1,11 @@
 import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
-import { callLlm, type LlmResult } from "./lib/llm";
+import {
+  callLlm,
+  evaluateRubric,
+  type LlmResult,
+  type RubricEvaluation,
+} from "./lib/llm";
 import { internal } from "./_generated/api";
 import {
   DEFAULT_AI_JUDGE_PROMPT_BODY,
@@ -1971,6 +1976,66 @@ function formatGitFacts(git: GitFacts): string {
 // Build the user message with all gathered submission context.
 // Harness signals are deliberately EXCLUDED: harness attribution is organizer
 // metadata and must never bias scoring.
+// Screenshot section variants, shared with the Jev state builder so the
+// text only pass never claims an image it cannot see.
+const SCREENSHOT_ATTACHED_SECTION =
+  "\n=== LIVE APP SCREENSHOT ===\nA screenshot of the live app's first screen is attached to this message as an image. Use it for UI and frontend judgments only.";
+const SCREENSHOT_MISSING_SECTION =
+  "\n=== LIVE APP SCREENSHOT ===\nNot available. Do not lower any score because a screenshot is missing.";
+
+// Jev (decisions model) has a 32k token window and no image input. Its state
+// is the same user message with the screenshot note made truthful and the
+// repository section (the only unbounded part) cut to fit. Every verified
+// facts section stays intact because they come before the repo section.
+const JEV_STATE_MAX_CHARS = 80_000;
+const REPO_SECTION_MARKER = "\n=== GITHUB REPOSITORY CONTEXT ===\n";
+const LIVE_SITE_SECTION_MARKER = "\n=== LIVE SITE CONTENT";
+
+function buildSecondOpinionState(userMessage: string): {
+  state: string;
+  truncated: boolean;
+} {
+  const text = userMessage.replace(
+    SCREENSHOT_ATTACHED_SECTION,
+    SCREENSHOT_MISSING_SECTION,
+  );
+  if (text.length <= JEV_STATE_MAX_CHARS) {
+    return { state: text, truncated: false };
+  }
+  const truncationNote =
+    "\n... (repository files truncated to fit the decisions model window)";
+  const repoStart = text.indexOf(REPO_SECTION_MARKER);
+  const liveStart =
+    repoStart === -1 ? -1 : text.indexOf(LIVE_SITE_SECTION_MARKER, repoStart);
+  if (repoStart === -1 || liveStart === -1) {
+    return {
+      state: text.slice(0, JEV_STATE_MAX_CHARS) + truncationNote,
+      truncated: true,
+    };
+  }
+  const before = text.slice(0, repoStart);
+  const after = text.slice(liveStart);
+  const repoBudget =
+    JEV_STATE_MAX_CHARS - before.length - after.length - truncationNote.length;
+  if (repoBudget <= 0) {
+    // Even without the repo the fixed sections overflow; hard cut as a last resort
+    return {
+      state: text.slice(0, JEV_STATE_MAX_CHARS) + truncationNote,
+      truncated: true,
+    };
+  }
+  const repoSection = text.slice(repoStart, liveStart);
+  return {
+    state:
+      before +
+      (repoSection.length > repoBudget
+        ? repoSection.slice(0, repoBudget) + truncationNote
+        : repoSection) +
+      after,
+    truncated: true,
+  };
+}
+
 function buildUserMessage(
   data: {
     title: string;
@@ -2147,8 +2212,8 @@ function buildUserMessage(
     // Tell the model whether an image of the rendered page accompanies the
     // text so it knows where UI observations may come from
     scrape.screenshotUrl
-      ? "\n=== LIVE APP SCREENSHOT ===\nA screenshot of the live app's first screen is attached to this message as an image. Use it for UI and frontend judgments only."
-      : "\n=== LIVE APP SCREENSHOT ===\nNot available. Do not lower any score because a screenshot is missing.",
+      ? SCREENSHOT_ATTACHED_SECTION
+      : SCREENSHOT_MISSING_SECTION,
   );
 
   if (!repo.fetched && scrape.fetched) {
@@ -2516,6 +2581,31 @@ export const analyzeSubmission = internalAction({
         throw lastError ?? new Error("Analysis failed");
       }
 
+      // Advisory Jev pass, on per group. Text only, scores the same rubric,
+      // and runs in its own try/catch so a decisions endpoint (alpha)
+      // failure can never fail the review. Left unclamped on purpose: it is
+      // a second opinion to compare against, not a ranked score.
+      let secondOpinion:
+        | { model: string; truncated: boolean; scores: RubricEvaluation["scores"] }
+        | undefined;
+      if (data.aiSecondOpinionEnabled === true) {
+        const jevState = buildSecondOpinionState(userMessage);
+        try {
+          const evaluation = await evaluateRubric(jevState.state, rubric);
+          secondOpinion = {
+            model: evaluation.model,
+            truncated: jevState.truncated,
+            scores: evaluation.scores,
+          };
+        } catch (error) {
+          console.warn(
+            `Jev second opinion skipped for result ${args.resultId}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
+        }
+      }
+
       // Server-side clamps. Deterministic facts always win over the model:
       // 1. Dead/missing URL caps the liveness score (existing behavior)
       let criteriaScores = parsed.criteriaScores.map((cs) => {
@@ -2616,6 +2706,7 @@ export const analyzeSubmission = internalAction({
           repoAccess: repo.repoAccess,
           judgeProvider: llm.provider,
           judgeModel: llm.model,
+          secondOpinion,
           sourcesUsed: {
             github: repo.fetched,
             liveUrl: scrape.fetched,

@@ -11,10 +11,14 @@ import contextDev from "@context-dot-dev/convex/convex.config.js";
 // FIRECRAWL_API_KEY and CONTEXT_DEV_API_KEY are declared as app env and bound
 // by reference into their components, so one deployment env var powers every
 // consumer.
+// AI_JUDGE_MODEL is the Convex AI gateway model id ("provider/model") for
+// the AI judge, group summary, and spam check. Optional: lib/llm.ts falls
+// back to Claude Fable 5 when unset, so flipping models is a dashboard edit.
 const app = defineApp({
   env: {
     FIRECRAWL_API_KEY: v.string(),
     CONTEXT_DEV_API_KEY: v.string(),
+    AI_JUDGE_MODEL: v.optional(v.string()),
   },
 });
 app.use(resend);

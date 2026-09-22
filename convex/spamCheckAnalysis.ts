@@ -1,6 +1,11 @@
 import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
-import { callLlm, type LlmResult } from "./lib/llm";
+import {
+  callLlm,
+  classifySpam,
+  providerOf,
+  type LlmResult,
+} from "./lib/llm";
 import { internal, components } from "./_generated/api";
 import { FirecrawlClient } from "@firecrawl/firecrawl-convex";
 
@@ -467,32 +472,60 @@ export const analyzeSubmission = internalAction({
         linksChecked: extraLinkChecks,
       };
 
-      // 3. LLM verdict, or heuristic when the gateway call fails.
-      // Uses the admin-editable system prompt (default when no override set).
-      const systemPrompt: string = await ctx.runQuery(
-        internal.spamCheck.getSpamPromptInternal,
+      // 3. Verdict. Classifier order, each step falling through on failure:
+      //    Jev (when the admin toggle is on) -> chat model JSON verdict ->
+      //    deterministic heuristic. The admin-editable system prompt steers
+      //    both AI paths (default when no override set).
+      const config = await ctx.runQuery(
+        internal.spamCheck.getSpamAnalysisConfigInternal,
         {},
       );
       const userMessage = buildUserMessage(story, signals, scrapedMarkdown);
-      const llmResult = await callLlmOrNull(systemPrompt, userMessage);
 
-      let parsed: ParsedVerdict;
-      let provider: string;
-      let model: string;
-      if (llmResult) {
+      let parsed: ParsedVerdict | null = null;
+      let provider = "";
+      let model = "";
+
+      if (config.jevClassifierEnabled) {
         try {
-          parsed = parseVerdictResponse(llmResult.text);
-        } catch {
-          throw new Error(
-            `Could not parse ${llmResult.provider} verdict response`,
+          const jev = await classifySpam(config.systemPrompt, userMessage);
+          parsed = {
+            verdict: jev.verdict,
+            // Probability Jev assigned to the verdict: the auto-mark
+            // threshold now compares against a calibrated number
+            confidence: jev.confidence,
+            reasons:
+              jev.reasons.length > 0 ? jev.reasons : ["No spam flags raised"],
+            reasoning: `Jev verdict probabilities: spam ${jev.probabilities.spam}, suspicious ${jev.probabilities.suspicious}, clean ${jev.probabilities.clean}.`,
+          };
+          provider = providerOf(jev.model);
+          model = jev.model;
+        } catch (error) {
+          console.warn(
+            `Jev spam classifier failed for result ${args.resultId}, falling back to the chat model: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
           );
         }
-        provider = llmResult.provider;
-        model = llmResult.model;
-      } else {
-        parsed = heuristicVerdict(signals, story.description);
-        provider = "heuristic";
-        model = "signals-v1";
+      }
+
+      if (!parsed) {
+        const llmResult = await callLlmOrNull(config.systemPrompt, userMessage);
+        if (llmResult) {
+          try {
+            parsed = parseVerdictResponse(llmResult.text);
+          } catch {
+            throw new Error(
+              `Could not parse ${llmResult.provider} verdict response`,
+            );
+          }
+          provider = llmResult.provider;
+          model = llmResult.model;
+        } else {
+          parsed = heuristicVerdict(signals, story.description);
+          provider = "heuristic";
+          model = "signals-v1";
+        }
       }
 
       await ctx.runMutation(internal.spamCheck.saveResult, {

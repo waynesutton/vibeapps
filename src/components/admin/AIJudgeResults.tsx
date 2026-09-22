@@ -729,6 +729,55 @@ function buildHackathonReport(
   return lines.join("\n");
 }
 
+// Fable and Jev disagree when their scores sit 3 or more points apart
+const SECOND_OPINION_DISAGREE_GAP = 3;
+
+// Muted Jev score beside the judge's score for one criterion. Shows how sure
+// Jev was (peak level probability) and flags a wide gap so organizers know
+// which criteria deserve a human look. Renders nothing without an opinion.
+function SecondOpinionScore({
+  opinion,
+  criterionKey,
+  judgeScore,
+}: {
+  opinion:
+    | {
+        model: string;
+        truncated: boolean;
+        scores: Array<{ key: string; score: number; confidence?: number }>;
+      }
+    | undefined;
+  criterionKey: string;
+  judgeScore: number;
+}) {
+  const jev = opinion?.scores.find((s) => s.key === criterionKey);
+  if (!jev) return null;
+  const disagrees =
+    Math.abs(jev.score - judgeScore) >= SECOND_OPINION_DISAGREE_GAP;
+  const confidence =
+    jev.confidence === undefined ? null : Math.round(jev.confidence * 100);
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 text-xs text-soft tabular-nums"
+      title={`Second opinion from ${opinion?.model ?? "Jev"} (text only, advisory)${
+        confidence === null ? "" : `. Peak level probability ${confidence}%`
+      }`}
+    >
+      {disagrees && (
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">
+          disagrees
+        </span>
+      )}
+      <span>
+        Jev {jev.score}/10
+        {confidence !== null && (
+          <span className="text-faint"> · {confidence}%</span>
+        )}
+      </span>
+    </span>
+  );
+}
+
 // Lazy viewer for the stored video transcript: the markdown is only fetched
 // when an organizer opens the section, so the results list stays light.
 function VideoTranscriptSection({
@@ -1953,9 +2002,16 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                     ))}
                                   </div>
                                 ) : (
-                                  <span className="text-sm font-semibold text-ink">
-                                    {cs.score}/10
-                                  </span>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <SecondOpinionScore
+                                      opinion={result.secondOpinion}
+                                      criterionKey={cs.key}
+                                      judgeScore={cs.score}
+                                    />
+                                    <span className="text-sm font-semibold text-ink">
+                                      {cs.score}/10
+                                    </span>
+                                  </div>
                                 )}
                               </div>
                               {isEditing ? (
@@ -1994,6 +2050,15 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                               )}
                             </div>
                           ))}
+                          {!isEditing && result.secondOpinion && (
+                            <p className="text-xs text-faint">
+                              Second opinion by {result.secondOpinion.model}
+                              : text only, advisory, not part of totals or
+                              ranking.
+                              {result.secondOpinion.truncated &&
+                                " Repository context was truncated to fit its window."}
+                            </p>
+                          )}
                         </div>
 
                         {/* Overall reasoning */}

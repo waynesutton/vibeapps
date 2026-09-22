@@ -570,16 +570,21 @@ The **Human judging criteria** block at the top of Custom AI criteria mirrors th
 
 Human criteria stay editable only in the Criteria section, so there is one source of truth. Edits apply on the next AI run; results already saved keep the label and score from their run. Deleting a human criterion prunes its AI weight and toggle automatically, and older results keep their history. These weights affect the AI ranking only; human results stay unweighted plain totals of the 1 to 5 or 1 to 10 scores.
 
+## Second opinion (Jev)
+
+The **Second opinion** block under Custom AI criteria turns on a per group advisory pass by **Jev**, the Convex AI gateway's decisions model (alpha). When on, each review also asks Jev to score the same rubric from the text context (repo, verified facts, scraped page, transcript; no screenshot, and very large repos are truncated to fit its window). Jev returns a score plus how sure it was, and AI Results shows it beside the judge's score with a **disagrees** flag when the two sit 3 or more points apart. It is advisory only: totals, weighted scores, and ranking never change. If the Jev call fails, the review still completes without it.
+
 ## Editable system prompt
 
 The AI judge section shows the full prompt body the model runs with. You can edit it, paste a replacement, or **reset to default** at any time. The \`{{rubric}}\` placeholder expands to the criteria list, and the JSON response format is always enforced server side, so a custom prompt cannot break score parsing.
 
 ## Models and environment variables
 
-Model calls go through the **Convex AI gateway** (\`anthropic/claude-sonnet-4.5\`), which authenticates with the deployment's own service token. No Anthropic, OpenAI, or OpenRouter key is read by this deployment. Set these in the Convex deployment environment:
+Model calls go through the **Convex AI gateway**, which authenticates with the deployment's own service token. No Anthropic, OpenAI, or OpenRouter key is read by this deployment. The judge model defaults to \`anthropic/claude-fable-5\` and can be switched from the Convex dashboard by setting \`AI_JUDGE_MODEL\` to any id from the gateway model list; the AI judge, group summary, and spam check all move together, and each saved result records the model that produced it. Jev (\`typesafe/jev-1.13\`) is fixed and only used by the second opinion and the spam classifier toggles. Set these in the Convex deployment environment:
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
+| \`AI_JUDGE_MODEL\` | Optional | Gateway model id for the judge, summary, and spam check (default \`anthropic/claude-fable-5\`) |
 | \`GITHUB_TOKEN\` | Yes | Authenticated GitHub API access for repo reading |
 | \`FIRECRAWL_API_KEY\` | Optional | Website content fetching and the live app screenshot |
 | \`CONTEXT_DEV_API_KEY\` | Optional | Video transcript fetching (YouTube captions and video host pages) |
@@ -693,6 +698,7 @@ The **Automation** card controls what happens to new submissions with no admin i
 - **Agent auto-mark spam** (default off): when an automatic scan returns a **spam** verdict at or above the **confidence threshold**, the agent marks the submission as spam and hides it immediately. Only automatic scans on fresh submissions qualify; batch and manual re-scans never auto-mark, so re-checking old content can never mass-hide it. Every auto-mark is logged in the Activity tab by the **AI Spam Agent** actor with the confidence and reasons.
 - **Confidence threshold** (default 85, range 50 to 100): higher means fewer, safer auto-marks.
 - **Notify submitter on auto-mark** (default on): send the same in-app alert and reason email a human mark sends. Turned off, the agent marks silently so you can review first and notify (or unmark) after.
+- **Use Jev for the verdict** (default off): ask Jev, the gateway's decisions model (alpha), for the spam / suspicious / clean call. Its confidence is the real probability Jev assigned to the chosen verdict, which makes the confidence threshold above a calibrated cutoff instead of a model's self estimate. Reasons come from fixed yes/no checks (dead or placeholder URL, empty repo, gibberish or template text, unrelated promotion, links pointing elsewhere), and the AI spam review prompt becomes Jev's verdict instructions. If Jev fails, the scan falls back to the chat model, then the heuristic.
 
 Auto-marked rows show an **Auto-marked spam** badge with a robot icon in both the scan results and the Marked spam review. **Unmark** reverses an auto-mark exactly like a human mark.
 
@@ -705,7 +711,7 @@ Each scan combines measured facts with an AI verdict:
 - **GitHub repo**: reachable or not, file count, and empty-repo detection (fewer than three files).
 - **Duplicates**: how many other submissions share the same URL.
 - **Extra links**: video, LinkedIn, and X liveness, treated as weak signals since social sites block bots.
-- **AI verdict**: spam, suspicious, or clean, with a confidence score and short reasons. Uses the same Convex AI gateway model as the AI judge. If the model call fails, a deterministic heuristic scores the hard signals instead.
+- **AI verdict**: spam, suspicious, or clean, with a confidence score and short reasons. Uses the same Convex AI gateway model as the AI judge, or Jev when **Use Jev for the verdict** is on. If the model call fails, a deterministic heuristic scores the hard signals instead. Each result footer names the provider and model that produced the verdict.
 
 Low quality is never the reason for a spam verdict. Only deception and irrelevance.
 

@@ -291,6 +291,19 @@ const repoAccessValidator = v.union(
   v.literal("private_or_missing"),
 );
 
+// Advisory Jev pass over the rubric (mirrors schema.ts aiJudgeResults)
+const secondOpinionValidator = v.object({
+  model: v.string(),
+  truncated: v.boolean(),
+  scores: v.array(
+    v.object({
+      key: v.string(),
+      score: v.number(),
+      confidence: v.optional(v.number()),
+    }),
+  ),
+});
+
 // Weighted score derived from stored criteriaScores plus the group's current
 // aiRubricWeights. Never stored: weight edits and admin score edits both stay
 // consistent because every read recomputes.
@@ -345,6 +358,8 @@ const aiResultValidator = v.object({
   componentsUsed: v.optional(v.array(v.string())), // Referenced in code
   judgeProvider: v.optional(v.string()),
   judgeModel: v.optional(v.string()),
+  // Advisory Jev pass; shown beside criteriaScores, never ranked
+  secondOpinion: v.optional(secondOpinionValidator),
   repoFacts: v.optional(repoFactsValidator),
   gitFacts: v.optional(gitFactsValidator),
   harnessSignals: v.optional(v.array(harnessSignalValidator)),
@@ -462,6 +477,7 @@ async function enrichResults(
     componentsUsed?: Array<string>;
     judgeProvider?: string;
     judgeModel?: string;
+    secondOpinion?: Doc<"aiJudgeResults">["secondOpinion"];
     repoFacts?: Doc<"aiJudgeResults">["repoFacts"];
     gitFacts?: Doc<"aiJudgeResults">["gitFacts"];
     harnessSignals?: Doc<"aiJudgeResults">["harnessSignals"];
@@ -518,6 +534,7 @@ async function enrichResults(
       // Fall back to the deprecated fields for rows the backfill has not reached
       judgeProvider: result.judgeProvider ?? result.provider,
       judgeModel: result.judgeModel ?? result.model,
+      secondOpinion: result.secondOpinion,
       repoFacts: result.repoFacts,
       gitFacts: result.gitFacts,
       harnessSignals: result.harnessSignals,
@@ -938,6 +955,27 @@ export const updateAiIncludeHumanCriteria = mutation({
     await requireJudgingGroupPermission(ctx, args.groupId, "judging.ai");
     await ctx.db.patch(args.groupId, {
       aiIncludeHumanCriteria: args.enabled ? true : undefined,
+    });
+    return null;
+  },
+});
+
+/**
+ * Admin: toggle the Jev second opinion for a group. When on, each AI review
+ * also asks the gateway's decisions model to score the same rubric from text
+ * only context. The result is advisory: shown beside the judge model's
+ * scores in AI Results, never part of totals or rankings.
+ */
+export const updateAiSecondOpinionEnabled = mutation({
+  args: {
+    groupId: v.id("judgingGroups"),
+    enabled: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.ai");
+    await ctx.db.patch(args.groupId, {
+      aiSecondOpinionEnabled: args.enabled ? true : undefined,
     });
     return null;
   },
@@ -1481,6 +1519,8 @@ export const getSubmissionForAnalysis = internalQuery({
       // Human criteria mirroring: flag, the human scale, and the live rows
       // (empty when mirroring is off) so the action needs no second query
       aiIncludeHumanCriteria: v.optional(v.boolean()),
+      // Jev second opinion toggle, read here so the action needs no extra query
+      aiSecondOpinionEnabled: v.optional(v.boolean()),
       scoreScale: v.number(),
       humanCriteria: v.array(
         v.object({
@@ -1528,6 +1568,7 @@ export const getSubmissionForAnalysis = internalQuery({
       aiCustomCriteria: group.aiCustomCriteria,
       aiDisabledCriteria: group.aiDisabledCriteria,
       aiIncludeHumanCriteria: group.aiIncludeHumanCriteria,
+      aiSecondOpinionEnabled: group.aiSecondOpinionEnabled,
       scoreScale: group.scoreScale ?? 10,
       humanCriteria,
       storyId: result.storyId,
@@ -1564,6 +1605,9 @@ export const saveResult = internalMutation({
         repoAccess: v.optional(repoAccessValidator),
         judgeProvider: v.string(),
         judgeModel: v.string(),
+        // Present only when the group's Jev second opinion is on and the
+        // call succeeded; absent clears any stale value on rerun
+        secondOpinion: v.optional(secondOpinionValidator),
         sourcesUsed: v.object({
           github: v.boolean(),
           liveUrl: v.boolean(),
@@ -1620,6 +1664,7 @@ export const saveResult = internalMutation({
         // New field names only; deprecated provider/model are no longer written
         judgeProvider: args.outcome.judgeProvider,
         judgeModel: args.outcome.judgeModel,
+        secondOpinion: args.outcome.secondOpinion,
         provider: undefined,
         model: undefined,
         sourcesUsed: args.outcome.sourcesUsed,

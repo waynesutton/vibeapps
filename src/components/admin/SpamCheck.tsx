@@ -509,6 +509,7 @@ export function SpamCheck() {
       autoMarkEnabled: boolean;
       autoMarkConfidence: number;
       autoMarkNotify: boolean;
+      jevClassifierEnabled: boolean;
     }>,
   ) => {
     setSpamAutomation(change)
@@ -818,6 +819,16 @@ export function SpamCheck() {
                 onToggle={() =>
                   handleAutomationChange({
                     autoMarkNotify: !automation.autoMarkNotify,
+                  })
+                }
+              />
+              <AutomationToggle
+                label="Use Jev for the verdict"
+                description="Ask Jev, the gateway's decisions model (alpha), for the spam / suspicious / clean call. Its confidence is a real probability for the chosen verdict, so the auto-mark threshold compares against a calibrated number. Reasons come from fixed yes/no checks, and the AI spam review prompt becomes Jev's verdict instructions. If Jev fails, the scan falls back to the chat model, then the heuristic. Applies to future scans."
+                enabled={automation.jevClassifierEnabled}
+                onToggle={() =>
+                  handleAutomationChange({
+                    jevClassifierEnabled: !automation.jevClassifierEnabled,
                   })
                 }
               />

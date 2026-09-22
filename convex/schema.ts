@@ -674,6 +674,10 @@ export default defineSchema({
     // are mirrored into the AI rubric at run time under "human-<criteriaId>"
     // keys. The AI scores them 1-10; human weights and scale are untouched.
     aiIncludeHumanCriteria: v.optional(v.boolean()),
+    // When true, each AI review also asks Jev (the gateway's decisions model)
+    // to score the same rubric from text only context. Stored on the result
+    // as secondOpinion; advisory, never used for ranking.
+    aiSecondOpinionEnabled: v.optional(v.boolean()),
     // Custom AI judge system prompt body. Absent = built-in default prompt.
     // Supports a {{rubric}} placeholder; the JSON response contract is
     // always appended by the analysis action and is never editable.
@@ -740,6 +744,21 @@ export default defineSchema({
     model: v.optional(v.string()), // DEPRECATED: judging model. Remove after backfillJudgeModelFields has run in production.
     judgeProvider: v.optional(v.string()), // AI provider used to run the review ("anthropic" | "openai" | "openrouter")
     judgeModel: v.optional(v.string()), // Model used to run the review (NOT the participant's model)
+    // Advisory Jev pass over the same rubric (text only, no screenshot).
+    // Shown beside the judge model's scores; never feeds totals or ranking.
+    secondOpinion: v.optional(
+      v.object({
+        model: v.string(), // Gateway decisions model id
+        truncated: v.boolean(), // True when repo context was cut to fit Jev's window
+        scores: v.array(
+          v.object({
+            key: v.string(), // Rubric key, matches criteriaScores[].key
+            score: v.number(), // 1-10, one decimal
+            confidence: v.optional(v.number()), // 0-1 peak level probability
+          }),
+        ),
+      }),
+    ),
     // Deterministic Convex facts counted from the repo before the model sees it
     repoFacts: v.optional(
       v.object({
