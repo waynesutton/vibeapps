@@ -1503,6 +1503,141 @@ export default function JudgingInterfacePage() {
                     </div>
                   </div>
 
+                  {/* Video Demo: sits above the detailed description so
+                      judges can watch before reading the long writeup */}
+                  {currentSubmission.videoUrl &&
+                    currentSubmission.videoUrl.trim() && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Play className="w-4 h-4 text-copy flex-shrink-0" />
+                          <h4 className="font-medium text-ink">Video Demo</h4>
+                          <a
+                            href={currentSubmission.videoUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-copy hover:text-ink hover:underline ml-auto"
+                            title="Open in new tab"
+                          >
+                            ↗
+                          </a>
+                        </div>
+                        <div className="w-full">
+                          {(() => {
+                            const url = currentSubmission.videoUrl.trim();
+
+                            // YouTube URL patterns (including Shorts)
+                            const youtubeMatch = url.match(
+                              /(?:youtube\.com\/(?:shorts\/|[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/,
+                            );
+                            if (youtubeMatch) {
+                              const videoId = youtubeMatch[1];
+                              return (
+                                <iframe
+                                  src={`https://www.youtube.com/embed/${videoId}`}
+                                  className="w-full aspect-video rounded-md"
+                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                  allowFullScreen
+                                  loading="lazy"
+                                  title="Video Demo"
+                                />
+                              );
+                            }
+
+                            // Vimeo URL patterns
+                            const vimeoMatch = url.match(
+                              /(?:vimeo\.com\/)(?:.*\/)?(\d+)/,
+                            );
+                            if (vimeoMatch) {
+                              const videoId = vimeoMatch[1];
+                              return (
+                                <iframe
+                                  src={`https://player.vimeo.com/video/${videoId}`}
+                                  className="w-full aspect-video rounded-md"
+                                  allow="autoplay; fullscreen; picture-in-picture"
+                                  allowFullScreen
+                                  loading="lazy"
+                                  title="Video Demo"
+                                />
+                              );
+                            }
+
+                            // Loom URL patterns
+                            const loomMatch = url.match(
+                              /(?:loom\.com\/share\/)([a-f0-9-]+)/,
+                            );
+                            if (loomMatch) {
+                              const videoId = loomMatch[1];
+                              return (
+                                <iframe
+                                  src={`https://www.loom.com/embed/${videoId}`}
+                                  className="w-full aspect-video rounded-md"
+                                  allow="autoplay; fullscreen; picture-in-picture"
+                                  allowFullScreen
+                                  loading="lazy"
+                                  title="Video Demo"
+                                />
+                              );
+                            }
+
+                            // Google Drive URL patterns
+                            const driveMatch = url.match(
+                              /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/,
+                            );
+                            if (driveMatch) {
+                              const fileId = driveMatch[1];
+                              return (
+                                <iframe
+                                  src={`https://drive.google.com/file/d/${fileId}/preview`}
+                                  className="w-full aspect-video rounded-md"
+                                  allow="autoplay; fullscreen; picture-in-picture"
+                                  allowFullScreen
+                                  loading="lazy"
+                                  title="Video Demo"
+                                />
+                              );
+                            }
+
+                            // Check if it's a direct video file
+                            const videoExtensions =
+                              /\.(mp4|webm|ogg|mov|avi|mkv)(\?.*)?$/i;
+                            if (videoExtensions.test(url)) {
+                              return (
+                                <video
+                                  src={url}
+                                  className="w-full aspect-video rounded-md bg-black"
+                                  controls
+                                  preload="metadata"
+                                  title="Video Demo"
+                                >
+                                  Your browser does not support the video tag.
+                                </video>
+                              );
+                            }
+
+                            // Fallback for other URLs - show as link in a styled box
+                            return (
+                              <div className="w-full aspect-video rounded-md border-2 border-dashed border-hairline flex items-center justify-center bg-canvas">
+                                <div className="text-center">
+                                  <Play className="w-12 h-12 text-faint mx-auto mb-2" />
+                                  <p className="text-copy mb-2">
+                                    Video not embeddable
+                                  </p>
+                                  <a
+                                    href={url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-ink hover:text-copy underline"
+                                  >
+                                    Watch Video ↗
+                                  </a>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    )}
+
                   {currentSubmission.longDescription && (
                     <div>
                       <h4 className="font-medium text-ink mb-2">
@@ -1515,140 +1650,6 @@ export default function JudgingInterfacePage() {
                   )}
                 </div>
               </div>
-
-              {/* Video Demo Section */}
-              {currentSubmission.videoUrl &&
-                currentSubmission.videoUrl.trim() && (
-                  <div className="bg-surface rounded-lg border border-hairline p-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Play className="w-4 h-4 text-copy flex-shrink-0" />
-                      <h3 className="font-medium text-ink">Video Demo</h3>
-                      <a
-                        href={currentSubmission.videoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-copy hover:text-ink hover:underline ml-auto"
-                        title="Open in new tab"
-                      >
-                        ↗
-                      </a>
-                    </div>
-                    <div className="w-full">
-                      {(() => {
-                        const url = currentSubmission.videoUrl.trim();
-
-                        // YouTube URL patterns (including Shorts)
-                        const youtubeMatch = url.match(
-                          /(?:youtube\.com\/(?:shorts\/|[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/\s]{11})/,
-                        );
-                        if (youtubeMatch) {
-                          const videoId = youtubeMatch[1];
-                          return (
-                            <iframe
-                              src={`https://www.youtube.com/embed/${videoId}`}
-                              className="w-full aspect-video rounded-md"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                              loading="lazy"
-                              title="Video Demo"
-                            />
-                          );
-                        }
-
-                        // Vimeo URL patterns
-                        const vimeoMatch = url.match(
-                          /(?:vimeo\.com\/)(?:.*\/)?(\d+)/,
-                        );
-                        if (vimeoMatch) {
-                          const videoId = vimeoMatch[1];
-                          return (
-                            <iframe
-                              src={`https://player.vimeo.com/video/${videoId}`}
-                              className="w-full aspect-video rounded-md"
-                              allow="autoplay; fullscreen; picture-in-picture"
-                              allowFullScreen
-                              loading="lazy"
-                              title="Video Demo"
-                            />
-                          );
-                        }
-
-                        // Loom URL patterns
-                        const loomMatch = url.match(
-                          /(?:loom\.com\/share\/)([a-f0-9-]+)/,
-                        );
-                        if (loomMatch) {
-                          const videoId = loomMatch[1];
-                          return (
-                            <iframe
-                              src={`https://www.loom.com/embed/${videoId}`}
-                              className="w-full aspect-video rounded-md"
-                              allow="autoplay; fullscreen; picture-in-picture"
-                              allowFullScreen
-                              loading="lazy"
-                              title="Video Demo"
-                            />
-                          );
-                        }
-
-                        // Google Drive URL patterns
-                        const driveMatch = url.match(
-                          /drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/,
-                        );
-                        if (driveMatch) {
-                          const fileId = driveMatch[1];
-                          return (
-                            <iframe
-                              src={`https://drive.google.com/file/d/${fileId}/preview`}
-                              className="w-full aspect-video rounded-md"
-                              allow="autoplay; fullscreen; picture-in-picture"
-                              allowFullScreen
-                              loading="lazy"
-                              title="Video Demo"
-                            />
-                          );
-                        }
-
-                        // Check if it's a direct video file
-                        const videoExtensions =
-                          /\.(mp4|webm|ogg|mov|avi|mkv)(\?.*)?$/i;
-                        if (videoExtensions.test(url)) {
-                          return (
-                            <video
-                              src={url}
-                              className="w-full aspect-video rounded-md bg-black"
-                              controls
-                              preload="metadata"
-                              title="Video Demo"
-                            >
-                              Your browser does not support the video tag.
-                            </video>
-                          );
-                        }
-
-                        // Fallback for other URLs - show as link in a styled box
-                        return (
-                          <div className="w-full aspect-video rounded-md border-2 border-dashed border-hairline flex items-center justify-center bg-canvas">
-                            <div className="text-center">
-                              <Play className="w-12 h-12 text-faint mx-auto mb-2" />
-                              <p className="text-copy mb-2">
-                                Video not embeddable
-                              </p>
-                              <a
-                                href={url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-ink hover:text-copy underline"
-                              >
-                                Watch Video ↗
-                              </a>
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                )}
 
               {/* Screenshot/Media */}
               {(currentSubmission.screenshotUrl ||
