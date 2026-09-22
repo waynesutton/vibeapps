@@ -109,3 +109,10 @@ does not grow.
   heading escapes, raw description with intact code block, non-http URL printed
   as text, CSV `'=SUM(A1)` prefix and BOM, ZIP with `README.md` and numbered
   files. Not run: signed-in browser click through. No Convex deploy needed.
+- 2026-09-22 03:31 UTC: Regression caught after ship. `npx convex deploy`
+  failed with `Could not resolve "zod/v4"`. The lockfile normalization noted at
+  03:14 UTC was the cause: `zod` had only been an auto-installed peer of the
+  `ai` SDK, and `legacy-peer-deps` stops that. Lesson: under
+  `legacy-peer-deps=true`, a dropped `"peer": true` lockfile entry is a
+  runtime dependency going missing, not noise. Fix: `zod` added as a direct
+  dependency. Verified with `npx convex dev --once` and `npm run build`.
