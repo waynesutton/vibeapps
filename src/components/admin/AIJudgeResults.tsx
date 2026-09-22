@@ -72,6 +72,27 @@ const FRONTEND_PLATFORM_LABELS: Record<string, string> = {
   other: "Other host",
 };
 
+// One detected sponsor integration (mirrors sponsorEvidenceValidator in
+// convex/aiJudge.ts). Recorded facts only; never part of any score.
+type SponsorEvidence = {
+  sponsor: string;
+  via: Array<"component" | "sdk" | "api_key" | "http" | "gateway">;
+  evidence: string;
+};
+
+const SPONSOR_VIA_LABELS: Record<SponsorEvidence["via"][number], string> = {
+  component: "component",
+  sdk: "SDK",
+  api_key: "API key",
+  http: "HTTP",
+  gateway: "AI gateway",
+};
+
+// "AgentMail (component, API key)" for chips and markdown exports
+function formatSponsor(s: SponsorEvidence): string {
+  return `${s.sponsor} (${s.via.map((v) => SPONSOR_VIA_LABELS[v]).join(", ")})`;
+}
+
 type StatsResult = {
   status: string;
   averageScore?: number;
@@ -87,6 +108,8 @@ type StatsResult = {
   };
   authProvider?: string;
   usesAiGateway?: boolean;
+  sponsorStack?: Array<SponsorEvidence>;
+  modelProvidersDetected?: Array<string>;
 };
 
 // Rollup numbers for the Stats tab and the report overview
@@ -160,6 +183,22 @@ function computeStats(results: Array<StatsResult>) {
     (a, b) => b[1] - a[1],
   );
 
+  // Sponsor integrations and model providers (recorded facts, not scores)
+  const sponsorCounts = new Map<string, number>();
+  const modelProviderCounts = new Map<string, number>();
+  for (const r of completed) {
+    for (const s of r.sponsorStack ?? []) {
+      sponsorCounts.set(s.sponsor, (sponsorCounts.get(s.sponsor) || 0) + 1);
+    }
+    for (const p of r.modelProvidersDetected ?? []) {
+      modelProviderCounts.set(p, (modelProviderCounts.get(p) || 0) + 1);
+    }
+  }
+  const sponsors = [...sponsorCounts.entries()].sort((a, b) => b[1] - a[1]);
+  const modelProviders = [...modelProviderCounts.entries()].sort(
+    (a, b) => b[1] - a[1],
+  );
+
   // Average-score distribution bands for the mini chart
   const bands = [
     { label: "9-10", min: 9, max: 10.01, count: 0 },
@@ -183,6 +222,10 @@ function computeStats(results: Array<StatsResult>) {
     usingAuth: completed.filter(usingAuth).length,
     usingAiGateway: completed.filter(usingAiGateway).length,
     authProviders,
+    usingSponsors: completed.filter((r) => (r.sponsorStack?.length ?? 0) > 0)
+      .length,
+    sponsors,
+    modelProviders,
     liveApps: completed.filter((r) => r.urlCheck?.isLive).length,
     urlChecked: completed.filter((r) => r.urlCheck !== undefined).length,
     reposAnalyzed: completed.filter((r) => r.sourcesUsed?.github).length,
@@ -214,6 +257,8 @@ type ReportSubmission = {
   authProvider?: string;
   usesAiGateway?: boolean;
   aiModelIdsDetected?: Array<string>;
+  modelProvidersDetected?: Array<string>;
+  sponsorStack?: Array<SponsorEvidence>;
   urlCheck?: {
     checkedUrl?: string;
     isLive: boolean;
@@ -287,12 +332,34 @@ type SubmissionBrief = {
   authProvider?: string;
   usesAiGateway?: boolean;
   aiModelIdsDetected?: Array<string>;
+  modelProvidersDetected?: Array<string>;
+  sponsorStack?: Array<SponsorEvidence>;
   sourcesUsed?: {
     github: boolean;
     liveUrl: boolean;
     videoTranscript?: boolean;
   };
 };
+
+// Markdown lines for sponsor integrations and model providers. Shared by the
+// per-submission brief and the group report so both read the same way.
+function sponsorStackLines(submission: {
+  sponsorStack?: Array<SponsorEvidence>;
+  modelProvidersDetected?: Array<string>;
+}): Array<string> {
+  const lines: Array<string> = [];
+  if (submission.sponsorStack !== undefined) {
+    lines.push(
+      `- Sponsor stack: ${submission.sponsorStack.length > 0 ? submission.sponsorStack.map(formatSponsor).join(", ") : "none detected"}`,
+    );
+  }
+  if (submission.modelProvidersDetected !== undefined) {
+    lines.push(
+      `- Model providers: ${submission.modelProvidersDetected.length > 0 ? submission.modelProvidersDetected.join(", ") : "none detected"}`,
+    );
+  }
+  return lines;
+}
 
 // Copy text with a fallback for browsers that block the Clipboard API.
 async function copyText(text: string): Promise<void> {
@@ -370,6 +437,7 @@ function submissionBriefLines(
   } else if (submission.usesAiGateway === false) {
     lines.push("- Convex AI Gateway: no");
   }
+  lines.push(...sponsorStackLines(submission));
 
   lines.push("", `${heading}# Review checks`, "");
   if (submission.urlCheck) {
@@ -443,6 +511,8 @@ function buildConvexTeamRecap(
     `- Components used in code: ${stats.componentsUsed.length > 0 ? stats.componentsUsed.map(([name, count]) => `${name} (${count})`).join(", ") : "none verified"}`,
     `- Auth providers: ${stats.authProviders.length > 0 ? stats.authProviders.map(([name, count]) => `${name} (${count})`).join(", ") : "none detected"}`,
     `- Convex AI Gateway: ${stats.usingAiGateway} of ${stats.completed} reviewed apps`,
+    `- Sponsor stack: ${stats.sponsors.length > 0 ? stats.sponsors.map(([name, count]) => `${name} (${count})`).join(", ") : "none detected"}`,
+    `- Model providers: ${stats.modelProviders.length > 0 ? stats.modelProviders.map(([name, count]) => `${name} (${count})`).join(", ") : "none detected"}`,
     `- Top Convex features: ${stats.topFeatures.length > 0 ? stats.topFeatures.map(([name, count]) => `${name} (${count})`).join(", ") : "none recorded"}`,
   ];
 
@@ -523,6 +593,9 @@ function buildHackathonReport(
     `| Apps with detected auth | ${stats.usingAuth}${stats.authProviders.length > 0 ? ` (${stats.authProviders.map(([name, count]) => `${name} ${count}`).join(", ")})` : ""} |`,
   );
   lines.push(`| Apps using Convex AI Gateway | ${stats.usingAiGateway} |`);
+  lines.push(
+    `| Apps with a sponsor integration | ${stats.usingSponsors}${stats.sponsors.length > 0 ? ` (${stats.sponsors.map(([name, count]) => `${name} ${count}`).join(", ")})` : ""} |`,
+  );
   lines.push(
     `| Live apps at review time | ${stats.liveApps} of ${stats.urlChecked} checked |`,
   );
@@ -632,6 +705,7 @@ function buildHackathonReport(
     } else if (s.usesAiGateway === false) {
       lines.push("- Convex AI Gateway: no");
     }
+    lines.push(...sponsorStackLines(s));
     if (s.criteriaScores && s.criteriaScores.length > 0) {
       lines.push(
         `- Scores: ${s.criteriaScores.map((cs) => `${cs.label} ${cs.score}/10`).join(" · ")}`,
@@ -1585,6 +1659,26 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                 AI Gateway
                               </span>
                             )}
+                            {/* Sponsor integrations: recorded facts, never scored */}
+                            {result.sponsorStack?.map((s) => (
+                              <span
+                                key={`sponsor-${s.sponsor}`}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200"
+                                title={`${s.sponsor} detected in package.json or convex/ source: ${s.evidence}. Recorded only; sponsor stack is judged by humans.`}
+                              >
+                                {formatSponsor(s)}
+                              </span>
+                            ))}
+                            {(result.modelProvidersDetected?.length ?? 0) >
+                              0 && (
+                              <span
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-surface-alt text-soft border-hairline"
+                                title={`Model providers referenced via SDK deps, API key env vars, or model ids${result.aiModelIdsDetected?.length ? `: ${result.aiModelIdsDetected.join(", ")}` : ""}`}
+                              >
+                                models:{" "}
+                                {result.modelProvidersDetected?.join(", ")}
+                              </span>
+                            )}
                             {(result.logDiscrepancies?.length ?? 0) > 0 && (
                               <span
                                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200"
@@ -2090,6 +2184,22 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                     : ""}
                                 </span>
                               )}
+                              {result.sponsorStack?.map((s) => (
+                                <span
+                                  key={`sponsor-${s.sponsor}`}
+                                  className="px-2 py-0.5 text-xs rounded-full border bg-green-50 text-green-700 border-green-200"
+                                  title={s.evidence}
+                                >
+                                  {formatSponsor(s)}
+                                </span>
+                              ))}
+                              {(result.modelProvidersDetected?.length ?? 0) >
+                                0 && (
+                                <span className="px-2 py-0.5 text-xs rounded-full border bg-surface-alt text-soft border-hairline">
+                                  models:{" "}
+                                  {result.modelProvidersDetected?.join(", ")}
+                                </span>
+                              )}
                             </div>
                           </div>
                         )}
@@ -2304,7 +2414,22 @@ function StatsPanel({
     {
       label: "Using AI Gateway",
       value: `${stats.usingAiGateway}`,
-      sub: "convexGateway() in convex/ source",
+      sub:
+        stats.modelProviders.length > 0
+          ? `models: ${stats.modelProviders
+              .map(([name, count]) => `${name} ${count}`)
+              .join(", ")}`
+          : "convexGateway() in convex/ source",
+    },
+    {
+      label: "Sponsor stack",
+      value: `${stats.usingSponsors}`,
+      sub:
+        stats.sponsors.length > 0
+          ? stats.sponsors
+              .map(([name, count]) => `${name} ${count}`)
+              .join(", ")
+          : "AgentMail, Firecrawl, OpenAI via component, SDK, or API key",
     },
     {
       label: "Live apps",

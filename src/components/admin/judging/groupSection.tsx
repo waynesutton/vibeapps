@@ -143,6 +143,14 @@ export const DEFAULT_RUBRIC_WEIGHTS: Record<string, number> =
     {} as Record<string, number>,
   );
 
+// Human judging criteria mirrored into the AI rubric are keyed
+// "human-<criteriaId>". Must match HUMAN_CRITERION_PREFIX and
+// humanCriterionKey in convex/aiJudge.ts.
+export const HUMAN_CRITERION_PREFIX = "human-";
+export function humanCriterionKey(criteriaId: string): string {
+  return `${HUMAN_CRITERION_PREFIX}${criteriaId}`;
+}
+
 // Frontend checker hosting platforms and their default sub-weights. Keys must
 // match AI_FRONTEND_PLATFORMS in convex/aiJudge.ts; the mutation validates
 // against the server list. The detected platform's weight multiplies the

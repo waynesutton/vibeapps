@@ -416,9 +416,10 @@ Open **Criteria** on a group row to edit its scoring questions.
 
 - Each criterion has a **question**, an optional **description**, and an **order**.
 - Judges score every criterion on the group's **scoring scale**: 1 to 10 by default, or 1 to 5 when selected in group Settings. Changing the scale later keeps existing scores as entered.
-- Criteria can have **weights** that multiply into the weighted totals shown on results dashboards. Equal weights mean a plain average.
+- Human criteria are **not weighted**. Every criterion counts the same, and results dashboards show plain totals and averages of the 1 to 5 or 1 to 10 scores judges enter.
 - Reordering is drag friendly and saves immediately.
 - Deleting a criterion removes its scores, so prefer editing text over deleting once judging has started.
+- These criteria can also be **mirrored into the AI judge** with the "Human judging criteria" toggle in the AI judge section. Weights apply to the AI judge only: each mirrored criterion gets its own AI weight in Rubric weights, and the AI scores it 1 to 10 while humans keep scoring on the group scale.
 
 A submission counts as **complete** for a judge once that judge has scored every criterion for it.`,
   },
@@ -529,6 +530,7 @@ For each submission the AI judge collects:
 
 - the submission's title, tagline, description, and links,
 - the app website (fetched with Firecrawl when \`FIRECRAWL_API_KEY\` is set) plus a direct liveness check,
+- a **live app screenshot**: the same Firecrawl request captures the rendered first screen and the image is attached to the model, so UI and frontend criteria are judged from what renders, not just page text. Convex facts are never inferred from a screenshot. If the image fails, the review retries text only, so a screenshot can never fail a run,
 - the **demo video transcript** (fetched with Context.dev when \`CONTEXT_DEV_API_KEY\` is set): YouTube videos return their caption transcript; other video host pages get a best effort page scrape with a Firecrawl fallback. Transcripts are treated as unverified builder narrative and a missing video never lowers a score,
 - the **GitHub repository**, when a GitHub URL is on the submission,
 - **project log files** at the repo root: \`hackathon.md\`, \`changelog.md\`, \`task.md\`, and \`files.md\` (self-reported build context, cross-checked against verified facts),
@@ -558,21 +560,28 @@ Each group can add up to **10 custom criteria** on top of the built-in six. Each
 
 Every criterion in the **Rubric weights** card has an **on/off toggle**. Criteria switched off are excluded from the AI prompt, scoring, and rankings on the next run; at least one criterion must stay on. The **components check** preset lives in the same card behind an **Add to rubric** button: clicking it adds a repo-verified Convex components criterion (installed vs referenced in code) that then behaves like any other custom criterion. Deleting it from Custom AI criteria removes it until you click Add again.
 
+## Human criteria in the AI rubric
+
+The **Human judging criteria** block at the top of Custom AI criteria mirrors the questions human judges score (from the Criteria editor) into the AI rubric. Flip **In AI rubric** and:
+
+- each human criterion appears in Rubric weights tagged **human**, with its own AI weight and on/off toggle,
+- the AI reads the question and description and scores it **1 to 10** using the live app, screenshot, video transcript, description, and repo. The prompt tells the model the human scale (1 to 5 or 1 to 10) so intent matches,
+- product or UI questions are judged from what the app does and shows, never from Convex feature counts alone.
+
+Human criteria stay editable only in the Criteria section, so there is one source of truth. Edits apply on the next AI run; results already saved keep the label and score from their run. Deleting a human criterion prunes its AI weight and toggle automatically, and older results keep their history. These weights affect the AI ranking only; human results stay unweighted plain totals of the 1 to 5 or 1 to 10 scores.
+
 ## Editable system prompt
 
 The AI judge section shows the full prompt body the model runs with. You can edit it, paste a replacement, or **reset to default** at any time. The \`{{rubric}}\` placeholder expands to the criteria list, and the JSON response format is always enforced server side, so a custom prompt cannot break score parsing.
 
 ## Models and environment variables
 
-Set these in the Convex deployment environment:
+Model calls go through the **Convex AI gateway** (\`anthropic/claude-sonnet-4.5\`), which authenticates with the deployment's own service token. No Anthropic, OpenAI, or OpenRouter key is read by this deployment. Set these in the Convex deployment environment:
 
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | \`GITHUB_TOKEN\` | Yes | Authenticated GitHub API access for repo reading |
-| \`ANTHROPIC_API_KEY\` | One model key required | Primary model (Claude Sonnet) |
-| \`OPENAI_API_KEY\` | Fallback | Used when Anthropic is unavailable |
-| \`OPENROUTER_API_KEY\` | Fallback | Second fallback provider |
-| \`FIRECRAWL_API_KEY\` | Optional | Website content fetching |
+| \`FIRECRAWL_API_KEY\` | Optional | Website content fetching and the live app screenshot |
 | \`CONTEXT_DEV_API_KEY\` | Optional | Video transcript fetching (YouTube captions and video host pages) |
 
 ## Running and reviewing
@@ -590,6 +599,10 @@ Set these in the Convex deployment environment:
     content: `# Agent judges (external AI judges over HTTP)
 
 Beyond the built-in AI judge, any external AI agent can judge a group through an authenticated HTTP API. The agent reads the criteria, works through its submission queue, and posts scores that land next to human judges in results and tracking.
+
+## AI judge vs agent judges
+
+These are two different features. The **AI judge** runs inside this app: you enable it per group, it reviews every submission against the AI rubric, and its results live on the AI Results page. **Agent judges** are outside programs (someone running Claude Code, Codex, or a custom script as a judge) that call this API with a key and post scores on the group's **human criteria**, landing in the human results as an \`agent\` judge identity, advisory by default. You do not need agent keys for the built-in AI judge; leave the Agent API toggle off unless an external agent will be judging.
 
 ## Setup in three steps
 
@@ -692,7 +705,7 @@ Each scan combines measured facts with an AI verdict:
 - **GitHub repo**: reachable or not, file count, and empty-repo detection (fewer than three files).
 - **Duplicates**: how many other submissions share the same URL.
 - **Extra links**: video, LinkedIn, and X liveness, treated as weak signals since social sites block bots.
-- **AI verdict**: spam, suspicious, or clean, with a confidence score and short reasons. Uses the same provider chain as the AI judge (Anthropic, then OpenAI, then OpenRouter). With no model key set, a deterministic heuristic scores the hard signals instead.
+- **AI verdict**: spam, suspicious, or clean, with a confidence score and short reasons. Uses the same Convex AI gateway model as the AI judge. If the model call fails, a deterministic heuristic scores the hard signals instead.
 
 Low quality is never the reason for a spam verdict. Only deception and irrelevance.
 
@@ -794,15 +807,12 @@ Set these on the Convex deployment (Dashboard, Settings, Environment Variables),
 | Variable | Needed for | Notes |
 | --- | --- | --- |
 | \`GITHUB_TOKEN\` | AI judge, spam check | Required for AI judge repo reading; the spam check uses it for higher GitHub rate limits and works without it. A classic token with public repo read scope is enough. |
-| \`ANTHROPIC_API_KEY\` | AI judge, spam check | Primary model provider. At least one model key must be set for AI verdicts. |
-| \`OPENAI_API_KEY\` | AI judge, spam check | First fallback provider. |
-| \`OPENROUTER_API_KEY\` | AI judge, spam check | Second fallback provider. |
-| \`FIRECRAWL_API_KEY\` | AI judge, spam check | Website content fetching. Optional for the AI judge; the spam check scans still complete without it. |
+| \`FIRECRAWL_API_KEY\` | AI judge, spam check | Website content fetching plus the AI judge's live app screenshot. Optional for the AI judge; the spam check scans still complete without it. |
 | \`CONTEXT_DEV_API_KEY\` | AI judge | Video demo transcript fetching via Context.dev (YouTube captions plus video host pages). Optional; reviews run without it. |
 | \`ADMIN_EMAIL\` | Spam check | Optional. Reply-to address on spam notification emails so submitters can reach the admins. |
 | \`LUMA_API_KEY\` | Luma events | Calendar-scoped key from luma.com/calendar/manage/api-keys. Set with \`npx convex env set LUMA_API_KEY your-key\` (add \`--prod\` for production). The admin Settings tab stores the calendar URL and event placements; the key never goes in the database. |
 
-The spam check falls back to a deterministic heuristic when no model key is set. Everything else in the judging system (groups, criteria, human judges, agent keys, results) works without any environment variables. Luma listings stay hidden until the key is set and an admin syncs events.`,
+Model calls for the AI judge and spam check go through the Convex AI gateway using the deployment's own service token, so no provider API keys are needed. The spam check falls back to a deterministic heuristic if the model call fails. Everything else in the judging system (groups, criteria, human judges, agent keys, results) works without any environment variables. Luma listings stay hidden until the key is set and an admin syncs events.`,
   },
 ];
 

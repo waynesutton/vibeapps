@@ -670,6 +670,10 @@ export default defineSchema({
     // Rubric keys (built-in or custom) switched off for this group. Disabled
     // criteria are excluded from the AI prompt, scoring, and rankings.
     aiDisabledCriteria: v.optional(v.array(v.string())),
+    // When true, the group's human judging criteria (judgingCriteria rows)
+    // are mirrored into the AI rubric at run time under "human-<criteriaId>"
+    // keys. The AI scores them 1-10; human weights and scale are untouched.
+    aiIncludeHumanCriteria: v.optional(v.boolean()),
     // Custom AI judge system prompt body. Absent = built-in default prompt.
     // Supports a {{rubric}} placeholder; the JSON response contract is
     // always appended by the analysis action and is never editable.
@@ -808,6 +812,7 @@ export default defineSchema({
         github: v.boolean(), // Whether the GitHub repo was fetched
         liveUrl: v.boolean(), // Whether the live URL was scraped
         videoTranscript: v.optional(v.boolean()), // Whether a video transcript/page scrape was included
+        screenshot: v.optional(v.boolean()), // Whether a live app screenshot was attached to the model
       }),
     ),
     urlCheck: v.optional(
@@ -840,6 +845,30 @@ export default defineSchema({
     usesAiGateway: v.optional(v.boolean()),
     // Model ids from convexGateway("provider/model") and SDK model literals
     aiModelIdsDetected: v.optional(v.array(v.string())),
+    // Model providers named by SDK deps, API key env vars, or model id
+    // families (OpenAI, Anthropic, Google, ...). Empty array = repo scanned,
+    // none found. Recorded only, never scored.
+    modelProvidersDetected: v.optional(v.array(v.string())),
+    // Hackathon sponsor integrations (AgentMail, Firecrawl, OpenAI) and how
+    // each is wired. Empty array = repo scanned, none found. Recorded only;
+    // the sponsor stack is a human judging criterion.
+    sponsorStack: v.optional(
+      v.array(
+        v.object({
+          sponsor: v.string(),
+          via: v.array(
+            v.union(
+              v.literal("component"),
+              v.literal("sdk"),
+              v.literal("api_key"),
+              v.literal("http"),
+              v.literal("gateway"),
+            ),
+          ),
+          evidence: v.string(),
+        }),
+      ),
+    ),
     editedBy: v.optional(v.id("users")), // Admin who last edited scores
     editedAt: v.optional(v.number()), // When scores were last edited
   })
@@ -953,7 +982,8 @@ export default defineSchema({
   })
     .index("by_judge_story_criteria", ["judgeId", "storyId", "criteriaId"]) // Unique constraint
     .index("by_groupId_storyId", ["groupId", "storyId"])
-    .index("by_storyId", ["storyId"]),
+    .index("by_storyId", ["storyId"])
+    .index("by_criteriaId", ["criteriaId"]), // Delete guard: does a criterion have scores
 
   submissionStatuses: defineTable({
     groupId: v.id("judgingGroups"), // Associated judging group

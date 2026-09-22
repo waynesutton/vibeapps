@@ -23,6 +23,7 @@ import {
   FRONTEND_CHECKER_KEY,
   GroupDetails,
   HeaderSaveButton,
+  humanCriterionKey,
   SectionCard,
   SaveFooter,
   TogglePill,
@@ -48,8 +49,12 @@ export function GroupAiSection({
 }) {
   // Key the rubric and criteria cards by the server criteria list so both
   // resync when a criterion is added elsewhere (e.g. the components check
-  // toggle in the weights card)
-  const criteriaKey = (group.aiCustomCriteria || []).map((c) => c.key).join(",");
+  // toggle in the weights card, or the human criteria mirror toggle)
+  const criteriaKey = [
+    ...(group.aiCustomCriteria || []).map((c) => c.key),
+    group.aiIncludeHumanCriteria ? "human-on" : "human-off",
+    ...(group.aiIncludeHumanCriteria ? group.criteria.map((c) => c._id) : []),
+  ].join(",");
 
   return (
     <div className="space-y-4">
@@ -314,15 +319,30 @@ function RubricWeightsCard({ group }: { group: GroupDetails }) {
   const [addingPreset, setAddingPreset] = useState<string | null>(null);
   const [presetError, setPresetError] = useState("");
 
-  // Effective rubric: built-in criteria plus this group's custom criteria
-  const rubricDefs = [
-    ...AI_RUBRIC_DEFS.map((d) => ({ ...d, builtIn: true })),
+  // Effective rubric: built-in criteria, this group's custom criteria, and
+  // (when mirroring is on) the group's human judging criteria under
+  // human-<criteriaId> keys, matching getRubricForGroup on the server
+  const humanMirrored = group.aiIncludeHumanCriteria === true;
+  const rubricDefs: Array<{
+    key: string;
+    label: string;
+    source: "builtin" | "custom" | "human";
+  }> = [
+    ...AI_RUBRIC_DEFS.map((d) => ({ ...d, source: "builtin" as const })),
     ...(group.aiCustomCriteria || []).map((c) => ({
       key: c.key,
       label: c.label,
-      builtIn: false,
+      source: "custom" as const,
     })),
+    ...(humanMirrored
+      ? group.criteria.map((c) => ({
+          key: humanCriterionKey(c._id),
+          label: c.question,
+          source: "human" as const,
+        }))
+      : []),
   ];
+  const customCount = (group.aiCustomCriteria || []).length;
   const hasComponentsCheck = rubricDefs.some(
     (d) => d.key === COMPONENTS_CHECK_PRESET.key,
   );
@@ -332,7 +352,7 @@ function RubricWeightsCard({ group }: { group: GroupDetails }) {
 
   const [weights, setWeights] = useState<Record<string, number>>(() => {
     const map = { ...DEFAULT_RUBRIC_WEIGHTS };
-    for (const c of group.aiCustomCriteria || []) map[c.key] = 1;
+    for (const def of rubricDefs) if (!(def.key in map)) map[def.key] = 1;
     for (const w of group.aiRubricWeights || []) {
       if (w.key in map) map[w.key] = w.weight;
     }
@@ -438,8 +458,8 @@ function RubricWeightsCard({ group }: { group: GroupDetails }) {
                   className={`text-[13px] ${isOff ? "text-faint" : "text-copy"}`}
                 >
                   {def.label}
-                  {!def.builtIn && (
-                    <span className="ml-2 text-xs text-faint">custom</span>
+                  {def.source !== "builtin" && (
+                    <span className="ml-2 text-xs text-faint">{def.source}</span>
                   )}
                 </span>
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -523,10 +543,7 @@ function RubricWeightsCard({ group }: { group: GroupDetails }) {
             preset={COMPONENTS_CHECK_PRESET}
             note="Scores repo-verified Convex component usage. Not added until you click Add."
             adding={addingPreset === COMPONENTS_CHECK_PRESET.key}
-            disabled={
-              addingPreset !== null ||
-              rubricDefs.length - AI_RUBRIC_DEFS.length >= 10
-            }
+            disabled={addingPreset !== null || customCount >= 10}
             onAdd={() => handleAddPreset(COMPONENTS_CHECK_PRESET)}
           />
         )}
@@ -535,10 +552,7 @@ function RubricWeightsCard({ group }: { group: GroupDetails }) {
             preset={FRONTEND_CHECKER_PRESET}
             note="Scores the deployed frontend with per-platform weights for Codex Sites, Convex static hosting, Vercel, Netlify, and other. Not added until you click Add."
             adding={addingPreset === FRONTEND_CHECKER_PRESET.key}
-            disabled={
-              addingPreset !== null ||
-              rubricDefs.length - AI_RUBRIC_DEFS.length >= 10
-            }
+            disabled={addingPreset !== null || customCount >= 10}
             onAdd={() => handleAddPreset(FRONTEND_CHECKER_PRESET)}
           />
         )}
@@ -650,6 +664,8 @@ function CustomCriteriaCard({ group }: { group: GroupDetails }) {
         />
       }
     >
+      <HumanCriteriaMirrorBlock group={group} />
+
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -742,6 +758,86 @@ function CustomCriteriaCard({ group }: { group: GroupDetails }) {
   );
 }
 
+// Read-only mirror of the group's human judging criteria with a toggle that
+// adds them to the AI rubric. Text is edited only in the Criteria section so
+// there is one source of truth; the toggle saves immediately.
+function HumanCriteriaMirrorBlock({ group }: { group: GroupDetails }) {
+  const updateAiIncludeHumanCriteria = useMutation(
+    api.aiJudge.updateAiIncludeHumanCriteria,
+  );
+  const [pending, setPending] = useState(false);
+  const [toggleError, setToggleError] = useState("");
+  const enabled = group.aiIncludeHumanCriteria === true;
+  const scale = group.scoreScale ?? 10;
+
+  const handleToggle = () => {
+    setToggleError("");
+    setPending(true);
+    updateAiIncludeHumanCriteria({ groupId: group._id, enabled: !enabled })
+      .catch((err) => {
+        setToggleError(
+          err instanceof Error ? err.message : "Failed to update setting",
+        );
+      })
+      .finally(() => setPending(false));
+  };
+
+  return (
+    <div className="rounded-md border border-hairline">
+      <div className="flex items-start justify-between gap-3 px-3 py-2.5">
+        <div className="min-w-0">
+          <p className="text-[13px] font-medium text-copy">
+            Human judging criteria
+            <span className="ml-2 text-xs text-faint">
+              {group.criteria.length} defined
+            </span>
+          </p>
+          <p className="text-xs text-soft mt-0.5">
+            Mirror the Criteria human judges use into the AI rubric. The AI
+            reads each question and description and scores it 1 to 10 from the
+            live app, screenshot, video, and repo. Edits in the Criteria
+            section apply on the next run; AI weights are set in Rubric
+            weights above.
+          </p>
+        </div>
+        <TogglePill
+          enabled={enabled}
+          onToggle={handleToggle}
+          onLabel="In AI rubric"
+          offLabel="Not included"
+          disabled={pending}
+        />
+      </div>
+      {toggleError && (
+        <p className="px-3 pb-2 text-[13px] text-red-600">{toggleError}</p>
+      )}
+      {enabled && group.criteria.length === 0 && (
+        <p className="border-t border-hairline px-3 py-2 text-[13px] text-soft">
+          No human criteria yet. Add questions in the Criteria section and they
+          will appear here and in the AI rubric.
+        </p>
+      )}
+      {enabled && group.criteria.length > 0 && (
+        <div className="border-t border-hairline divide-y divide-hairline">
+          {group.criteria.map((c) => (
+            <div key={c._id} className="px-3 py-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[13px] text-copy">{c.question}</span>
+                <span className="text-xs text-faint shrink-0 tabular-nums">
+                  Humans 1 to {scale}, AI 1 to 10
+                </span>
+              </div>
+              {c.description && (
+                <p className="text-xs text-soft mt-0.5">{c.description}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Editable AI judge system prompt with a reset-to-default action. The JSON
 // response contract is always appended server-side and is not editable, so
 // a custom prompt can never break score parsing.
@@ -762,11 +858,38 @@ function SystemPromptCard({ group }: { group: GroupDetails }) {
         <p className="text-[13px] text-soft">Prompt unavailable.</p>
       )}
       {promptConfig && (
-        <SystemPromptEditor
-          groupId={group._id}
-          defaultPrompt={promptConfig.defaultPrompt}
-          customPrompt={promptConfig.customPrompt}
-        />
+        <>
+          {/* What {{rubric}} expands to on the next run, tagged by source so
+              custom and mirrored human criteria are easy to spot */}
+          <div className="rounded-md border border-hairline">
+            <p className="px-3 py-2 text-xs text-faint border-b border-hairline">
+              {"{{rubric}}"} expands to {promptConfig.rubric.length} criteria
+            </p>
+            <div className="divide-y divide-hairline">
+              {promptConfig.rubric.map((c) => (
+                <div
+                  key={c.key}
+                  className="flex items-center gap-2 px-3 py-1.5 text-[13px]"
+                >
+                  <span className="text-copy truncate">{c.label}</span>
+                  <span className="font-mono text-xs text-faint truncate">
+                    {c.key}
+                  </span>
+                  {c.source !== "builtin" && (
+                    <span className="ml-auto text-xs text-faint shrink-0">
+                      {c.source}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <SystemPromptEditor
+            groupId={group._id}
+            defaultPrompt={promptConfig.defaultPrompt}
+            customPrompt={promptConfig.customPrompt}
+          />
+        </>
       )}
     </SectionCard>
   );

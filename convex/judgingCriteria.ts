@@ -1,6 +1,55 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 import { requireJudgingGroupPermission } from "./adminAccess";
+import { humanCriterionKey } from "./aiJudge";
+
+// When human criteria are mirrored into the AI rubric, each one owns a
+// "human-<criteriaId>" key that may carry an AI weight or an off flag on the
+// group. Deleting the criterion prunes those entries so the AI settings never
+// reference a criterion that no longer exists. Stored AI results keep their
+// scores for the removed key; only the group-level settings are cleaned.
+export async function pruneAiSettingsForDeletedCriteria(
+  ctx: MutationCtx,
+  groupId: Id<"judgingGroups">,
+  deletedIds: Array<Id<"judgingCriteria">>,
+): Promise<void> {
+  if (deletedIds.length === 0) return;
+  const group = await ctx.db.get(groupId);
+  if (!group) return;
+  const removedKeys = new Set(deletedIds.map((id) => humanCriterionKey(id)));
+  const weights = (group.aiRubricWeights ?? []).filter(
+    (w) => !removedKeys.has(w.key),
+  );
+  const disabled = (group.aiDisabledCriteria ?? []).filter(
+    (key) => !removedKeys.has(key),
+  );
+  const weightsChanged = weights.length !== (group.aiRubricWeights ?? []).length;
+  const disabledChanged =
+    disabled.length !== (group.aiDisabledCriteria ?? []).length;
+  if (!weightsChanged && !disabledChanged) return;
+  await ctx.db.patch(groupId, {
+    ...(weightsChanged
+      ? { aiRubricWeights: weights.length > 0 ? weights : undefined }
+      : {}),
+    ...(disabledChanged
+      ? { aiDisabledCriteria: disabled.length > 0 ? disabled : undefined }
+      : {}),
+  });
+}
+
+// Does any judge score reference this criterion? Indexed lookup so the
+// delete guard never scans the judgeScores table.
+async function criterionHasScores(
+  ctx: MutationCtx,
+  criteriaId: Id<"judgingCriteria">,
+): Promise<boolean> {
+  const score = await ctx.db
+    .query("judgeScores")
+    .withIndex("by_criteriaId", (q) => q.eq("criteriaId", criteriaId))
+    .first();
+  return score !== null;
+}
 
 // --- Admin Functions ---
 
@@ -97,23 +146,23 @@ export const saveCriteria = mutation({
     }
 
     // Delete criteria that are no longer in the list
+    const deletedIds: Array<Id<"judgingCriteria">> = [];
     for (const existing of existingCriteria) {
       if (!criteriaToKeep.has(existing._id)) {
         // Before deleting, check if there are any scores for this criterion
-        const scores = await ctx.db
-          .query("judgeScores")
-          .filter((q) => q.eq(q.field("criteriaId"), existing._id))
-          .first();
-
-        if (scores) {
+        if (await criterionHasScores(ctx, existing._id)) {
           throw new Error(
             `Cannot delete criterion "${existing.question}" because it has existing scores. Please remove all scores first.`,
           );
         }
 
         await ctx.db.delete(existing._id);
+        deletedIds.push(existing._id);
       }
     }
+
+    // Keep the AI rubric settings consistent with the surviving criteria
+    await pruneAiSettingsForDeletedCriteria(ctx, args.groupId, deletedIds);
 
     return null;
   },
@@ -137,19 +186,16 @@ export const deleteCriteria = mutation({
     );
 
     // Check if there are any scores for this criterion
-    const scores = await ctx.db
-      .query("judgeScores")
-      .filter((q) => q.eq(q.field("criteriaId"), args.criteriaId))
-      .first();
-
-    if (scores) {
-      const criterion = await ctx.db.get(args.criteriaId);
+    if (await criterionHasScores(ctx, args.criteriaId)) {
       throw new Error(
-        `Cannot delete criterion "${criterion?.question || "Unknown"}" because it has existing scores. Please remove all scores first.`,
+        `Cannot delete criterion "${criterionDoc.question}" because it has existing scores. Please remove all scores first.`,
       );
     }
 
     await ctx.db.delete(args.criteriaId);
+    await pruneAiSettingsForDeletedCriteria(ctx, criterionDoc.groupId, [
+      args.criteriaId,
+    ]);
     return null;
   },
 });

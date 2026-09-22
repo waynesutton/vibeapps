@@ -462,10 +462,20 @@ export function EditJudgingGroupModal({
       // Save AI rubric weights; all-default weights clear the stored field so
       // ranking falls back to the plain total
       if (formData.aiJudgeEnabled) {
-        const weightsArray = AI_RUBRIC_DEFS.map((def) => ({
-          key: def.key,
-          weight: rubricWeights[def.key] ?? 1,
-        }));
+        // This modal only edits the built-in six. Carry the group's stored
+        // custom and mirrored human criteria weights through untouched so
+        // saving here never wipes them.
+        const builtInKeys = new Set<string>(AI_RUBRIC_DEFS.map((d) => d.key));
+        const preserved = (group?.aiRubricWeights || []).filter(
+          (w) => !builtInKeys.has(w.key),
+        );
+        const weightsArray = [
+          ...AI_RUBRIC_DEFS.map((def) => ({
+            key: def.key,
+            weight: rubricWeights[def.key] ?? 1,
+          })),
+          ...preserved,
+        ];
         const allDefault = weightsArray.every((w) => w.weight === 1);
         await updateAiRubricWeights({
           groupId,

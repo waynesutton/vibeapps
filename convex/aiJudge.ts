@@ -83,20 +83,86 @@ export const AI_FRONTEND_PLATFORMS: Array<{ key: string; label: string }> = [
   { key: "other", label: "Other" },
 ];
 
+// Human judging criteria mirrored into the AI rubric use this key prefix
+// plus the judgingCriteria document id, so the key stays stable when the
+// question text is edited and never clashes with built-in or custom keys.
+export const HUMAN_CRITERION_PREFIX = "human-";
+
+// Minimal shape of a judgingCriteria row needed to build a rubric entry
+export type HumanCriterionSource = {
+  _id: Id<"judgingCriteria">;
+  question: string;
+  description?: string;
+};
+
+export function humanCriterionKey(criteriaId: Id<"judgingCriteria">): string {
+  return `${HUMAN_CRITERION_PREFIX}${criteriaId}`;
+}
+
+// Convert the group's human criteria into AI rubric entries. The question
+// becomes the label; the description (or the question when absent) tells the
+// model what to evaluate, plus a note about the human scale so intent lines
+// up even though the AI always scores 1-10.
+export function humanCriteriaToRubric(
+  criteria: Array<HumanCriterionSource>,
+  scoreScale: number,
+): Array<RubricCriterion> {
+  return criteria.map((c) => {
+    const detail = c.description?.trim() || c.question.trim();
+    return {
+      key: humanCriterionKey(c._id),
+      label: c.question.trim(),
+      description: `${detail} (Human judging criterion for this event: human judges score it 1-${scoreScale}; you score the same intent 1-10 using the live app, screenshot, video transcript, and repository as evidence.)`,
+    };
+  });
+}
+
 // Effective rubric for a group: the built-in six plus any admin-defined
-// custom criteria, minus any criteria the admin switched off. Used by the
-// analysis action, weight validation, and the prompt editor so every
-// consumer sees the same keys. If somehow every key is disabled, the full
-// list is used so an analysis can never run with an empty rubric.
-export function getRubricForGroup(group: {
-  aiCustomCriteria?: Array<RubricCriterion>;
-  aiDisabledCriteria?: Array<string>;
-}): Array<RubricCriterion> {
-  const all = [...AI_JUDGE_RUBRIC, ...(group.aiCustomCriteria ?? [])];
+// custom criteria, plus the group's human criteria when mirroring is on,
+// minus any criteria the admin switched off. Used by the analysis action,
+// weight validation, and the prompt editor so every consumer sees the same
+// keys. If somehow every key is disabled, the full list is used so an
+// analysis can never run with an empty rubric.
+export function getRubricForGroup(
+  group: {
+    aiCustomCriteria?: Array<RubricCriterion>;
+    aiDisabledCriteria?: Array<string>;
+    aiIncludeHumanCriteria?: boolean;
+    scoreScale?: number;
+  },
+  humanCriteria?: Array<HumanCriterionSource>,
+): Array<RubricCriterion> {
+  const mirrored =
+    group.aiIncludeHumanCriteria && humanCriteria
+      ? humanCriteriaToRubric(humanCriteria, group.scoreScale ?? 10)
+      : [];
+  const all = [
+    ...AI_JUDGE_RUBRIC,
+    ...(group.aiCustomCriteria ?? []),
+    ...mirrored,
+  ];
   const disabled = new Set(group.aiDisabledCriteria ?? []);
   if (disabled.size === 0) return all;
   const enabled = all.filter((c) => !disabled.has(c.key));
   return enabled.length > 0 ? enabled : all;
+}
+
+// Human criteria rows for a group in display order (shared by the admin
+// queries and the analysis data loader)
+async function getHumanCriteriaForGroup(
+  ctx: QueryCtx,
+  groupId: Id<"judgingGroups">,
+): Promise<Array<HumanCriterionSource>> {
+  const rows = await ctx.db
+    .query("judgingCriteria")
+    .withIndex("by_groupId_order", (q) => q.eq("groupId", groupId))
+    .order("asc")
+    .collect();
+  return rows.map((r) => ({
+    _id: r._id,
+    question: r.question,
+    description: r.description,
+  }));
 }
 
 // Default AI judge system prompt body. {{rubric}} expands to the numbered
@@ -151,6 +217,22 @@ const urlCheckValidator = v.object({
 // Shared validator for the deterministic frontend hosting detection
 export const frontendHostingValidator = v.object({
   platform: v.string(),
+  evidence: v.string(),
+});
+
+// Shared validator for one sponsor integration (mirrors schema.ts and the
+// SponsorEvidence type in aiJudgeAnalysis.ts). Recorded only, never scored.
+export const sponsorEvidenceValidator = v.object({
+  sponsor: v.string(),
+  via: v.array(
+    v.union(
+      v.literal("component"),
+      v.literal("sdk"),
+      v.literal("api_key"),
+      v.literal("http"),
+      v.literal("gateway"),
+    ),
+  ),
   evidence: v.string(),
 });
 
@@ -276,6 +358,7 @@ const aiResultValidator = v.object({
       github: v.boolean(),
       liveUrl: v.boolean(),
       videoTranscript: v.optional(v.boolean()),
+      screenshot: v.optional(v.boolean()),
     }),
   ),
   urlCheck: v.optional(urlCheckValidator),
@@ -287,6 +370,8 @@ const aiResultValidator = v.object({
   authProvider: v.optional(v.string()),
   usesAiGateway: v.optional(v.boolean()),
   aiModelIdsDetected: v.optional(v.array(v.string())),
+  modelProvidersDetected: v.optional(v.array(v.string())),
+  sponsorStack: v.optional(v.array(sponsorEvidenceValidator)),
   editedAt: v.optional(v.number()),
 });
 
@@ -388,6 +473,7 @@ async function enrichResults(
       github: boolean;
       liveUrl: boolean;
       videoTranscript?: boolean;
+      screenshot?: boolean;
     };
     urlCheck?: {
       checkedUrl?: string;
@@ -401,6 +487,8 @@ async function enrichResults(
     authProvider?: string;
     usesAiGateway?: boolean;
     aiModelIdsDetected?: Array<string>;
+    modelProvidersDetected?: Array<string>;
+    sponsorStack?: Doc<"aiJudgeResults">["sponsorStack"];
     editedAt?: number;
   }> = [];
 
@@ -454,6 +542,8 @@ async function enrichResults(
       authProvider: result.authProvider,
       usesAiGateway: result.usesAiGateway,
       aiModelIdsDetected: result.aiModelIdsDetected,
+      modelProvidersDetected: result.modelProvidersDetected,
+      sponsorStack: result.sponsorStack,
       editedAt: result.editedAt,
     });
   }
@@ -643,11 +733,16 @@ export const updateAiRubricWeights = mutation({
       throw new Error("Judging group not found");
     }
 
-    // Validate against the full rubric (built-in + custom, ignoring the
-    // disabled filter) so weights for currently-disabled keys stay valid
+    // Validate against the full rubric (built-in + custom + mirrored human
+    // criteria, ignoring the disabled filter) so weights for
+    // currently-disabled keys stay valid
+    const humanCriteria = group.aiIncludeHumanCriteria
+      ? await getHumanCriteriaForGroup(ctx, args.groupId)
+      : [];
     const allKeys = new Set([
       ...AI_JUDGE_RUBRIC.map((c) => c.key),
       ...(group.aiCustomCriteria ?? []).map((c) => c.key),
+      ...humanCriteria.map((c) => humanCriterionKey(c._id)),
     ]);
 
     if (args.weights !== undefined) {
@@ -772,6 +867,12 @@ export const updateAiCustomCriteria = mutation({
             `Criterion key "${criterion.key}" clashes with a built-in rubric key`,
           );
         }
+        // The human- prefix is reserved for mirrored human judging criteria
+        if (criterion.key.startsWith(HUMAN_CRITERION_PREFIX)) {
+          throw new Error(
+            `Criterion key "${criterion.key}" uses the reserved "${HUMAN_CRITERION_PREFIX}" prefix`,
+          );
+        }
         if (seen.has(criterion.key)) {
           throw new Error(`Duplicate criterion key "${criterion.key}"`);
         }
@@ -789,10 +890,16 @@ export const updateAiCustomCriteria = mutation({
     }
 
     // Prune weights and disabled flags whose key is no longer part of the
-    // effective rubric
+    // effective rubric. Mirrored human keys are kept so editing custom
+    // criteria never touches human criteria weights.
     const validKeys = new Set([
       ...AI_JUDGE_RUBRIC.map((c) => c.key),
       ...(criteria ?? []).map((c) => c.key),
+      ...(group.aiIncludeHumanCriteria
+        ? (await getHumanCriteriaForGroup(ctx, args.groupId)).map((c) =>
+            humanCriterionKey(c._id),
+          )
+        : []),
     ]);
     const prunedWeights = (group.aiRubricWeights ?? []).filter((w) =>
       validKeys.has(w.key),
@@ -810,6 +917,27 @@ export const updateAiCustomCriteria = mutation({
       aiDisabledCriteria:
         prunedDisabled.length > 0 ? prunedDisabled : undefined,
       ...(keepFrontendWeights ? {} : { aiFrontendWeights: undefined }),
+    });
+    return null;
+  },
+});
+
+/**
+ * Admin: toggle mirroring of the group's human judging criteria into the AI
+ * rubric. Mirrored criteria are read live at analysis time, so later edits
+ * to the human criteria flow through on the next run. Turning it off leaves
+ * any stored human-<id> weights in place so flipping it back restores them.
+ */
+export const updateAiIncludeHumanCriteria = mutation({
+  args: {
+    groupId: v.id("judgingGroups"),
+    enabled: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.ai");
+    await ctx.db.patch(args.groupId, {
+      aiIncludeHumanCriteria: args.enabled ? true : undefined,
     });
     return null;
   },
@@ -865,6 +993,13 @@ export const getAiPromptConfig = query({
           label: v.string(),
           description: v.string(),
           builtIn: v.boolean(),
+          // Where the criterion comes from: built-in rubric, admin custom
+          // criteria, or a mirrored human judging criterion
+          source: v.union(
+            v.literal("builtin"),
+            v.literal("custom"),
+            v.literal("human"),
+          ),
         }),
       ),
     }),
@@ -876,13 +1011,21 @@ export const getAiPromptConfig = query({
     if (!group) return null;
 
     const builtInKeys = new Set(AI_JUDGE_RUBRIC.map((c) => c.key));
+    const humanCriteria = group.aiIncludeHumanCriteria
+      ? await getHumanCriteriaForGroup(ctx, args.groupId)
+      : [];
     return {
       defaultPrompt: DEFAULT_AI_JUDGE_PROMPT_BODY,
       customPrompt: group.aiJudgeSystemPrompt,
-      rubric: getRubricForGroup(group).map((c) => ({
-        ...c,
-        builtIn: builtInKeys.has(c.key),
-      })),
+      rubric: getRubricForGroup(group, humanCriteria).map((c) => {
+        const builtIn = builtInKeys.has(c.key);
+        const source = builtIn
+          ? ("builtin" as const)
+          : c.key.startsWith(HUMAN_CRITERION_PREFIX)
+            ? ("human" as const)
+            : ("custom" as const);
+        return { ...c, builtIn, source };
+      }),
     };
   },
 });
@@ -1066,11 +1209,14 @@ export const getGroupAiReportData = query({
           authProvider: v.optional(v.string()),
           usesAiGateway: v.optional(v.boolean()),
           aiModelIdsDetected: v.optional(v.array(v.string())),
+          modelProvidersDetected: v.optional(v.array(v.string())),
+          sponsorStack: v.optional(v.array(sponsorEvidenceValidator)),
           sourcesUsed: v.optional(
             v.object({
               github: v.boolean(),
               liveUrl: v.boolean(),
               videoTranscript: v.optional(v.boolean()),
+              screenshot: v.optional(v.boolean()),
             }),
           ),
           error: v.optional(v.string()),
@@ -1129,10 +1275,13 @@ export const getGroupAiReportData = query({
       authProvider?: string;
       usesAiGateway?: boolean;
       aiModelIdsDetected?: Array<string>;
+      modelProvidersDetected?: Array<string>;
+      sponsorStack?: Doc<"aiJudgeResults">["sponsorStack"];
       sourcesUsed?: {
         github: boolean;
         liveUrl: boolean;
         videoTranscript?: boolean;
+        screenshot?: boolean;
       };
       error?: string;
     }> = [];
@@ -1177,6 +1326,8 @@ export const getGroupAiReportData = query({
         authProvider: row.authProvider,
         usesAiGateway: row.usesAiGateway,
         aiModelIdsDetected: row.aiModelIdsDetected,
+        modelProvidersDetected: row.modelProvidersDetected,
+        sponsorStack: row.sponsorStack,
         sourcesUsed: row.sourcesUsed,
         error: row.error,
       });
@@ -1327,6 +1478,17 @@ export const getSubmissionForAnalysis = internalQuery({
         ),
       ),
       aiDisabledCriteria: v.optional(v.array(v.string())),
+      // Human criteria mirroring: flag, the human scale, and the live rows
+      // (empty when mirroring is off) so the action needs no second query
+      aiIncludeHumanCriteria: v.optional(v.boolean()),
+      scoreScale: v.number(),
+      humanCriteria: v.array(
+        v.object({
+          _id: v.id("judgingCriteria"),
+          question: v.string(),
+          description: v.optional(v.string()),
+        }),
+      ),
       storyId: v.id("stories"),
       title: v.string(),
       description: v.string(),
@@ -1353,6 +1515,10 @@ export const getSubmissionForAnalysis = internalQuery({
       if (tag) tags.push(tag.name);
     }
 
+    const humanCriteria = group.aiIncludeHumanCriteria
+      ? await getHumanCriteriaForGroup(ctx, result.groupId)
+      : [];
+
     return {
       groupId: result.groupId,
       groupName: group.name,
@@ -1361,6 +1527,9 @@ export const getSubmissionForAnalysis = internalQuery({
       aiJudgeSystemPrompt: group.aiJudgeSystemPrompt,
       aiCustomCriteria: group.aiCustomCriteria,
       aiDisabledCriteria: group.aiDisabledCriteria,
+      aiIncludeHumanCriteria: group.aiIncludeHumanCriteria,
+      scoreScale: group.scoreScale ?? 10,
+      humanCriteria,
       storyId: result.storyId,
       title: story.title,
       description: story.description,
@@ -1399,6 +1568,7 @@ export const saveResult = internalMutation({
           github: v.boolean(),
           liveUrl: v.boolean(),
           videoTranscript: v.optional(v.boolean()),
+          screenshot: v.optional(v.boolean()),
         }),
         urlCheck: v.optional(urlCheckValidator),
         frontendHosting: v.optional(frontendHostingValidator),
@@ -1409,6 +1579,8 @@ export const saveResult = internalMutation({
         authProvider: v.optional(v.string()),
         usesAiGateway: v.optional(v.boolean()),
         aiModelIdsDetected: v.optional(v.array(v.string())),
+        modelProvidersDetected: v.optional(v.array(v.string())),
+        sponsorStack: v.optional(v.array(sponsorEvidenceValidator)),
       }),
       v.object({
         kind: v.literal("error"),
@@ -1458,6 +1630,8 @@ export const saveResult = internalMutation({
         authProvider: args.outcome.authProvider,
         usesAiGateway: args.outcome.usesAiGateway,
         aiModelIdsDetected: args.outcome.aiModelIdsDetected,
+        modelProvidersDetected: args.outcome.modelProvidersDetected,
+        sponsorStack: args.outcome.sponsorStack,
         error: undefined,
         editedBy: undefined,
         editedAt: undefined,

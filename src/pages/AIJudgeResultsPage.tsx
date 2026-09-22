@@ -17,6 +17,16 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Id } from "../../convex/_generated/dataModel";
 
+// Human labels for how a sponsor product is wired in (keys match
+// sponsorEvidenceValidator in convex/aiJudge.ts)
+const SPONSOR_VIA_LABELS: Record<string, string> = {
+  component: "component",
+  sdk: "SDK",
+  api_key: "API key",
+  http: "HTTP",
+  gateway: "AI gateway",
+};
+
 export default function AIJudgeResultsPage() {
   const { slug } = useParams<{ slug: string }>();
   const [password, setPassword] = useState("");
@@ -425,7 +435,9 @@ export default function AIJudgeResultsPage() {
 
                       {(result.authProvider &&
                         result.authProvider !== "none") ||
-                      result.usesAiGateway ? (
+                      result.usesAiGateway ||
+                      (result.sponsorStack?.length ?? 0) > 0 ||
+                      (result.modelProvidersDetected?.length ?? 0) > 0 ? (
                         <div className="flex flex-wrap gap-2">
                           {result.authProvider &&
                             result.authProvider !== "none" && (
@@ -443,6 +455,22 @@ export default function AIJudgeResultsPage() {
                               }
                             >
                               AI Gateway
+                            </span>
+                          )}
+                          {/* Sponsor integrations detected from the repo (recorded, not scored) */}
+                          {result.sponsorStack?.map((s) => (
+                            <span
+                              key={`sponsor-${s.sponsor}`}
+                              className="px-2.5 py-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded-full"
+                              title={s.evidence}
+                            >
+                              {`${s.sponsor} (${s.via.map((v) => SPONSOR_VIA_LABELS[v] ?? v).join(", ")})`}
+                            </span>
+                          ))}
+                          {(result.modelProvidersDetected?.length ?? 0) >
+                            0 && (
+                            <span className="px-2.5 py-1 text-xs bg-surface-alt text-soft border border-hairline rounded-full">
+                              models: {result.modelProvidersDetected?.join(", ")}
                             </span>
                           )}
                         </div>

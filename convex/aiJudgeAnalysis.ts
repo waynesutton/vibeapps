@@ -5,6 +5,7 @@ import { internal } from "./_generated/api";
 import {
   DEFAULT_AI_JUDGE_PROMPT_BODY,
   FRONTEND_CHECKER_KEY,
+  HUMAN_CRITERION_PREFIX,
   getRubricForGroup,
   type RubricCriterion,
 } from "./aiJudge";
@@ -71,6 +72,13 @@ type RepoContext = {
   // Model ids found in fetched convex/ source: convexGateway("provider/model")
   // string literals plus model ids passed to OpenAI/Anthropic SDK clients
   aiModelIdsDetected: Array<string>;
+  // Model providers named by SDK deps, API key env vars, or model id
+  // prefixes (OpenAI, Anthropic, Google, ...). Recorded only, never scored.
+  modelProvidersDetected: Array<string>;
+  // Hackathon sponsor integrations (AgentMail, Firecrawl, OpenAI) and how
+  // each is wired: component, SDK, API key, HTTP call, or the AI gateway.
+  // Recorded only; sponsor stack is a human criterion.
+  sponsorStack: Array<SponsorEvidence>;
   // Agent skills present in the repo (.agents/skills/*/SKILL.md and similar)
   skillPaths: Array<string>;
   repoMeta?: {
@@ -114,12 +122,25 @@ export type HarnessSignal = {
   confidence: "high" | "medium" | "low";
 };
 
+// How a sponsor product is wired into the app. Mirrors sponsorViaValidator
+// in aiJudge.ts and the aiJudgeResults.sponsorStack schema field.
+export type SponsorVia = "component" | "sdk" | "api_key" | "http" | "gateway";
+
+export type SponsorEvidence = {
+  sponsor: string; // Display name: "AgentMail", "Firecrawl", "OpenAI"
+  via: Array<SponsorVia>;
+  evidence: string; // Short list of the concrete signals that matched
+};
+
 // Official @convex-dev/* packages are detected by prefix. Community Convex
 // components use other scopes and must be mapped by package name. Catalog:
 // https://www.convex.dev/components/get-convex.md (official, 26 as of 2026-08-22)
-// plus Firecrawl, Exa, Context.dev, Browser Use, and agent-ready.
+// plus Firecrawl, AgentMail, Exa, Context.dev, Browser Use, and agent-ready.
+// Canonical names must match the components.<name> property teams use in
+// code so extractComponentsUsed can pair installed with used.
 const COMMUNITY_COMPONENT_PACKAGES: Record<string, string> = {
   "@firecrawl/firecrawl-convex": "firecrawl",
+  "@agentmail/convex": "agentmail",
   "@exalabs/convex-exa": "exa",
   "@context-dot-dev/convex": "context-dot-dev",
   "browser-use-convex-component": "browser-use",
@@ -146,8 +167,14 @@ function nameFromConfigImport(source: string): string | null {
   if (fromMap) return fromMap;
   if (source.startsWith("@convex-dev/")) return null; // eslint-plugin already dropped
   if (source.startsWith("@")) {
-    const last = source.split("/").filter(Boolean).pop() ?? source;
+    const segments = source.split("/").filter(Boolean);
+    const last = segments[segments.length - 1] ?? source;
     if (last.endsWith("-convex")) return last.slice(0, -"-convex".length);
+    // "@sponsor/convex" style packages: the scope is the component name
+    // (matches the components.<scope> property teams reference in code)
+    if (last === "convex" && segments.length === 2) {
+      return segments[0].slice(1);
+    }
     return source;
   }
   const parts = source.split("/").filter((p) => p && p !== ".");
@@ -302,26 +329,135 @@ export function detectAuthProvider(
   return depsResult;
 }
 
+// All dependency names across the fetched manifests (root package.json plus
+// workspace manifests). Unparseable manifests are skipped.
+function collectDependencyNames(
+  manifestRaws: Array<string | null>,
+): Set<string> {
+  const deps = new Set<string>();
+  for (const raw of manifestRaws) {
+    if (!raw) continue;
+    try {
+      const pkg = JSON.parse(raw) as {
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+      };
+      for (const name of Object.keys(pkg.dependencies || {})) deps.add(name);
+      for (const name of Object.keys(pkg.devDependencies || {})) deps.add(name);
+    } catch {
+      // Unparseable manifest: skip
+    }
+  }
+  return deps;
+}
+
+// Fetched convex/ source files (excluding _generated) with comments stripped.
+// Shared by the model and sponsor detectors so each file is stripped once.
+function convexSourceFiles(
+  fileContentsByPath: Map<string, string>,
+): Array<{ path: string; source: string }> {
+  const files: Array<{ path: string; source: string }> = [];
+  for (const [path, raw] of fileContentsByPath) {
+    if (!/(^|\/)convex\//.test(path) || path.includes("_generated")) continue;
+    files.push({ path, source: stripComments(raw) });
+  }
+  return files;
+}
+
+// Model provider lookup tables. Provider names are display strings that
+// flow straight to the prompt and the admin chips.
+const MODEL_PROVIDER_DEPS: Record<string, string> = {
+  openai: "OpenAI",
+  "@ai-sdk/openai": "OpenAI",
+  "@anthropic-ai/sdk": "Anthropic",
+  "@ai-sdk/anthropic": "Anthropic",
+  "@google/genai": "Google",
+  "@google/generative-ai": "Google",
+  "@ai-sdk/google": "Google",
+  "@mistralai/mistralai": "Mistral",
+  "@ai-sdk/mistral": "Mistral",
+  "groq-sdk": "Groq",
+  "@ai-sdk/groq": "Groq",
+  "@ai-sdk/xai": "xAI",
+  "@openrouter/ai-sdk-provider": "OpenRouter",
+};
+const MODEL_PROVIDER_ENV_VARS: Record<string, string> = {
+  OPENAI_API_KEY: "OpenAI",
+  ANTHROPIC_API_KEY: "Anthropic",
+  GEMINI_API_KEY: "Google",
+  GOOGLE_GENERATIVE_AI_API_KEY: "Google",
+  MISTRAL_API_KEY: "Mistral",
+  GROQ_API_KEY: "Groq",
+  XAI_API_KEY: "xAI",
+  OPENROUTER_API_KEY: "OpenRouter",
+};
+// Gateway "provider/model" ids name the provider in the first segment
+const GATEWAY_PROVIDER_SEGMENTS: Record<string, string> = {
+  openai: "OpenAI",
+  anthropic: "Anthropic",
+  google: "Google",
+  mistral: "Mistral",
+  groq: "Groq",
+  xai: "xAI",
+  meta: "Meta",
+  deepseek: "DeepSeek",
+  openrouter: "OpenRouter",
+};
+// Bare model id families (SDK model: "..." literals) mapped to a provider
+const MODEL_ID_PREFIX_PROVIDERS: Array<[RegExp, string]> = [
+  [/^(gpt-|o[1-9]|chatgpt-|text-embedding-)/i, "OpenAI"],
+  [/^claude-/i, "Anthropic"],
+  [/^gemini-/i, "Google"],
+  [/^(mistral-|mixtral-|codestral-)/i, "Mistral"],
+  [/^grok-/i, "xAI"],
+  [/^llama-/i, "Meta"],
+  [/^deepseek-/i, "DeepSeek"],
+];
+
+// Provider for a detected model id: gateway ids use their provider segment,
+// bare ids match a known prefix family. Undefined when neither applies.
+function providerForModelId(id: string): string | undefined {
+  const slash = id.indexOf("/");
+  if (slash > 0) {
+    const segment = id.slice(0, slash).toLowerCase();
+    return GATEWAY_PROVIDER_SEGMENTS[segment] ?? segment;
+  }
+  for (const [pattern, provider] of MODEL_ID_PREFIX_PROVIDERS) {
+    if (pattern.test(id)) return provider;
+  }
+  return undefined;
+}
+
 // Detect AI model evidence in fetched convex/ source: convexGateway( calls
 // (Convex AI Gateway) with their "provider/model" string literal argument,
 // plus model id literals passed to OpenAI/Anthropic SDK clients so apps
-// that skip the gateway still produce evidence. Recorded-only facts.
-export function detectAiModelEvidence(fileContentsByPath: Map<string, string>): {
+// that skip the gateway still produce evidence. Also names the model
+// providers seen via SDK deps, API key env vars, and model id families.
+// Recorded-only facts.
+export function detectAiModelEvidence(
+  fileContentsByPath: Map<string, string>,
+  manifestRaws: Array<string | null> = [],
+): {
   usesAiGateway: boolean;
   aiModelIdsDetected: Array<string>;
+  modelProvidersDetected: Array<string>;
 } {
   const modelIds = new Set<string>();
+  const providers = new Set<string>();
   let usesAiGateway = false;
 
-  // Known OpenAI/Anthropic id families, or the gateway's provider/model shape
+  // Known model id families, or the gateway's provider/model shape
   const looksLikeModelId = (id: string): boolean =>
-    /^(gpt-|o[1-9]|chatgpt-|claude-|text-embedding-)/i.test(id) ||
+    MODEL_ID_PREFIX_PROVIDERS.some(([pattern]) => pattern.test(id)) ||
     /^[a-z0-9-]+\/[A-Za-z0-9][\w.:-]+$/.test(id);
 
-  for (const [path, raw] of fileContentsByPath) {
-    if (!/(^|\/)convex\//.test(path) || path.includes("_generated")) continue;
-    const stripped = stripComments(raw);
+  // Provider SDK dependencies
+  for (const dep of collectDependencyNames(manifestRaws)) {
+    const provider = MODEL_PROVIDER_DEPS[dep];
+    if (provider) providers.add(provider);
+  }
 
+  for (const { source: stripped } of convexSourceFiles(fileContentsByPath)) {
     if (/\bconvexGateway\s*\(/.test(stripped)) {
       usesAiGateway = true;
     }
@@ -344,9 +480,136 @@ export function detectAiModelEvidence(fileContentsByPath: Map<string, string>): 
         modelIds.add(match[1]);
       }
     }
+
+    // Provider API key env vars referenced in code
+    for (const [envVar, provider] of Object.entries(MODEL_PROVIDER_ENV_VARS)) {
+      if (new RegExp(`\\b${envVar}\\b`).test(stripped)) providers.add(provider);
+    }
   }
 
-  return { usesAiGateway, aiModelIdsDetected: [...modelIds].sort() };
+  for (const id of modelIds) {
+    const provider = providerForModelId(id);
+    if (provider) providers.add(provider);
+  }
+
+  return {
+    usesAiGateway,
+    aiModelIdsDetected: [...modelIds].sort(),
+    modelProvidersDetected: [...providers].sort(),
+  };
+}
+
+// Hackathon sponsor products and the signals that prove each integration
+// path. Deps come from every fetched manifest; code signals from fetched
+// convex/ source. Component names must match COMMUNITY_COMPONENT_PACKAGES.
+const SPONSOR_DEFS: Array<{
+  sponsor: string;
+  component?: string;
+  sdkDeps: Array<string>;
+  envVars: Array<string>;
+  hosts: RegExp;
+  hostLabel: string;
+  // OpenAI can also be reached through the Convex AI gateway
+  gatewayModelPattern?: RegExp;
+}> = [
+  {
+    sponsor: "AgentMail",
+    component: "agentmail",
+    sdkDeps: ["agentmail"],
+    envVars: ["AGENTMAIL_API_KEY"],
+    hosts: /api\.agentmail\.(to|eu)\b/,
+    hostLabel: "api.agentmail.to",
+  },
+  {
+    sponsor: "Firecrawl",
+    component: "firecrawl",
+    sdkDeps: ["firecrawl", "@mendable/firecrawl-js"],
+    envVars: ["FIRECRAWL_API_KEY"],
+    hosts: /api\.firecrawl\.dev\b/,
+    hostLabel: "api.firecrawl.dev",
+  },
+  {
+    sponsor: "OpenAI",
+    sdkDeps: ["openai", "@ai-sdk/openai"],
+    envVars: ["OPENAI_API_KEY"],
+    hosts: /api\.openai\.com\b/,
+    hostLabel: "api.openai.com",
+    gatewayModelPattern: /^(openai\/|gpt-|o[1-9]|chatgpt-|text-embedding-)/i,
+  },
+];
+
+// Detect how each hackathon sponsor is integrated: Convex component used in
+// code, SDK dependency or import, API key env var referenced in convex/
+// source, direct HTTP call to the sponsor API, or (OpenAI) a model routed
+// through the Convex AI gateway. Only sponsors with at least one signal are
+// returned. Recorded-only facts; sponsor stack is a human criterion.
+export function detectSponsorStack(
+  manifestRaws: Array<string | null>,
+  fileContentsByPath: Map<string, string>,
+  componentsUsed: Array<string>,
+  aiModel: { usesAiGateway: boolean; aiModelIdsDetected: Array<string> },
+): Array<SponsorEvidence> {
+  const deps = collectDependencyNames(manifestRaws);
+  const sources = convexSourceFiles(fileContentsByPath).map((f) => f.source);
+  const usedSet = new Set(componentsUsed);
+  const results: Array<SponsorEvidence> = [];
+
+  for (const def of SPONSOR_DEFS) {
+    const via = new Set<SponsorVia>();
+    const evidence: Array<string> = [];
+
+    if (def.component && usedSet.has(def.component)) {
+      via.add("component");
+      evidence.push(`components.${def.component}`);
+    }
+
+    for (const dep of def.sdkDeps) {
+      if (deps.has(dep)) {
+        via.add("sdk");
+        evidence.push(`${dep} dependency`);
+      }
+    }
+    // Import without a manifest hit (monorepo manifests outside the fetched set)
+    const importPattern = new RegExp(
+      `from\\s+["'](?:${def.sdkDeps.map((d) => d.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")).join("|")})(?:/[^"']*)?["']`,
+    );
+    if (!via.has("sdk") && sources.some((s) => importPattern.test(s))) {
+      via.add("sdk");
+      evidence.push(`${def.sdkDeps[0]} import`);
+    }
+
+    for (const envVar of def.envVars) {
+      if (sources.some((s) => new RegExp(`\\b${envVar}\\b`).test(s))) {
+        via.add("api_key");
+        evidence.push(envVar);
+      }
+    }
+
+    if (sources.some((s) => def.hosts.test(s))) {
+      via.add("http");
+      evidence.push(`${def.hostLabel} call`);
+    }
+
+    const gatewayPattern = def.gatewayModelPattern;
+    if (
+      gatewayPattern &&
+      aiModel.usesAiGateway &&
+      aiModel.aiModelIdsDetected.some((id) => gatewayPattern.test(id))
+    ) {
+      via.add("gateway");
+      evidence.push("Convex AI gateway model");
+    }
+
+    if (via.size > 0) {
+      results.push({
+        sponsor: def.sponsor,
+        via: [...via],
+        evidence: evidence.join("; "),
+      });
+    }
+  }
+
+  return results;
 }
 
 // Strip // line comments and /* */ block comments without touching string
@@ -520,6 +783,9 @@ function extractComponentsUsed(
 type ScrapeContext = {
   fetched: boolean;
   markdown: string;
+  // Hosted screenshot of the live page (Firecrawl), attached to the model
+  // as an image so UI-facing criteria can be judged from what renders
+  screenshotUrl?: string;
 };
 
 type UrlCheck = {
@@ -633,6 +899,8 @@ async function fetchGithubContext(
     skillPaths: [],
     usesAiGateway: false,
     aiModelIdsDetected: [],
+    modelProvidersDetected: [],
+    sponsorStack: [],
   };
   if (!githubUrl) return empty;
   const parsed = parseGithubUrl(githubUrl);
@@ -786,7 +1054,14 @@ async function fetchGithubContext(
     componentsInstalled,
   );
   const repoFacts = extractConvexFacts(filePaths, fileContentsByPath);
-  const aiModelEvidence = detectAiModelEvidence(fileContentsByPath);
+  const aiModelEvidence = detectAiModelEvidence(fileContentsByPath, manifestRaws);
+  // Sponsor integrations: component, SDK, API key, HTTP, or gateway
+  const sponsorStack = detectSponsorStack(
+    manifestRaws,
+    fileContentsByPath,
+    componentsUsed,
+    aiModelEvidence,
+  );
 
   // Build the prompt summary from the narrower prompt subset with char budgets
   let totalChars = 0;
@@ -854,6 +1129,8 @@ async function fetchGithubContext(
     ),
     usesAiGateway: aiModelEvidence.usesAiGateway,
     aiModelIdsDetected: aiModelEvidence.aiModelIdsDetected,
+    modelProvidersDetected: aiModelEvidence.modelProvidersDetected,
+    sponsorStack,
     skillPaths,
     repoMeta,
   };
@@ -1459,23 +1736,33 @@ async function fetchLiveUrlContext(
       },
       body: JSON.stringify({
         url,
-        formats: ["markdown"],
+        // Screenshot of the rendered page rides along with the markdown so
+        // the judge model can see the UI, not just its text
+        formats: ["markdown", "screenshot"],
         onlyMainContent: true,
       }),
     });
     if (!res.ok) return { fetched: false, markdown: "" };
     const json = (await res.json()) as {
       success?: boolean;
-      data?: { markdown?: string };
+      data?: { markdown?: string; screenshot?: string };
     };
     const markdown = json.data?.markdown || "";
-    if (!markdown) return { fetched: false, markdown: "" };
+    // Only accept an absolute https URL; anything else is dropped so a bad
+    // value can never break the multimodal request
+    const screenshotUrl =
+      typeof json.data?.screenshot === "string" &&
+      /^https:\/\//.test(json.data.screenshot)
+        ? json.data.screenshot
+        : undefined;
+    if (!markdown) return { fetched: false, markdown: "", screenshotUrl };
     return {
       fetched: true,
       markdown:
         markdown.length > MAX_SCRAPE_CHARS
           ? markdown.slice(0, MAX_SCRAPE_CHARS) + "\n... (truncated)"
           : markdown,
+      screenshotUrl,
     };
   } catch {
     return { fetched: false, markdown: "" };
@@ -1615,6 +1902,23 @@ function buildSystemPrompt(
   body +=
     "\n\nA pasted or repo hackathon.md is self-reported context. Cross-check its claims against code facts and the live deployment; a claim contradicted by facts must never raise a score.";
 
+  // Mirrored human criteria and the optional screenshot: fixed rules that a
+  // custom prompt body cannot remove, so these sources are always judged the
+  // same way regardless of prompt edits.
+  const hasHumanCriteria = rubric.some((c) =>
+    c.key.startsWith(HUMAN_CRITERION_PREFIX),
+  );
+  if (hasHumanCriteria) {
+    body += `\n\nCriteria whose key starts with "${HUMAN_CRITERION_PREFIX}" mirror this event's human judging rubric. Score them 1-10 from the same evidence a human judge would use: the live app, the LIVE APP SCREENSHOT when attached, the video transcript, the description, and the repository. A criterion about the product, UI, or user experience must be judged from what the app does and shows, never from Convex feature counts alone.`;
+  }
+  body +=
+    "\n\nWhen a LIVE APP SCREENSHOT image is attached, use it to judge visible UI quality, layout, and whether the app renders a real interface (not an error page). Never infer Convex usage, tables, or functions from a screenshot; those come only from the VERIFIED CONVEX FACTS.";
+
+  // Sponsor stack facts: fixed rule so a custom prompt body cannot make the
+  // model score sponsor usage or invent an integration the scan did not find
+  body +=
+    "\n\nThe SPONSOR STACK EVIDENCE section (when present) is measured from package.json and convex/ source the same way VERIFIED CONVEX FACTS are. It records whether AgentMail, Firecrawl, and OpenAI are integrated and how (Convex component, SDK, API key, direct HTTP call, or the Convex AI gateway), and the AI MODEL EVIDENCE section names every model provider referenced. Name what these sections show in overallReasoning. Never claim a sponsor or provider integration they do not show, and never raise or lower any rubric score because of sponsor usage; the sponsor stack is judged by humans.";
+
   const jsonContract = `Respond with ONLY a JSON object in exactly this shape (no markdown fences, no extra text):
 {
   "criteria": {
@@ -1752,7 +2056,23 @@ function buildUserMessage(
         repo.aiModelIdsDetected.length > 0
           ? repo.aiModelIdsDetected.join(", ")
           : "none"
+      }\nModel providers referenced (SDK deps, API key env vars, model ids): ${
+        repo.modelProvidersDetected.length > 0
+          ? repo.modelProvidersDetected.join(", ")
+          : "none"
       }`,
+    );
+
+    // Sponsor integrations: every sponsor is listed yes/no so the model can
+    // never infer usage that was not measured. Recorded only; never scored.
+    const sponsorLines = SPONSOR_DEFS.map((def) => {
+      const hit = repo.sponsorStack.find((s) => s.sponsor === def.sponsor);
+      return hit
+        ? `${def.sponsor}: yes via ${hit.via.join(", ")} (${hit.evidence})`
+        : `${def.sponsor}: no`;
+    });
+    sections.push(
+      `\n=== SPONSOR STACK EVIDENCE (detected from package.json and convex/ source; authoritative) ===\n${sponsorLines.join("\n")}`,
     );
   }
 
@@ -1824,6 +2144,11 @@ function buildUserMessage(
     scrape.fetched
       ? `\n=== LIVE SITE CONTENT (scraped) ===\n${scrape.markdown}`
       : "\n=== LIVE SITE CONTENT ===\nNot available.",
+    // Tell the model whether an image of the rendered page accompanies the
+    // text so it knows where UI observations may come from
+    scrape.screenshotUrl
+      ? "\n=== LIVE APP SCREENSHOT ===\nA screenshot of the live app's first screen is attached to this message as an image. Use it for UI and frontend judgments only."
+      : "\n=== LIVE APP SCREENSHOT ===\nNot available. Do not lower any score because a screenshot is missing.",
   );
 
   if (!repo.fetched && scrape.fetched) {
@@ -1862,10 +2187,13 @@ function buildUserMessage(
 async function callJudgeLlm(
   systemPrompt: string,
   userMessage: string,
+  // Optional live app screenshot attached as an image part
+  imageUrl?: string,
 ): Promise<LlmResult> {
   return await callLlm(systemPrompt, userMessage, {
     maxOutputTokens: 4000,
     temperature: 0.2,
+    imageUrl,
   });
 }
 
@@ -2150,8 +2478,9 @@ export const analyzeSubmission = internalAction({
         ? detectHarnessSignals(repo.filePaths, commitHistory.commits)
         : [];
 
-      // Effective rubric: built-in criteria plus this group's custom criteria
-      const rubric = getRubricForGroup(data);
+      // Effective rubric: built-in criteria, this group's custom criteria,
+      // and (when mirroring is on) the group's live human judging criteria
+      const rubric = getRubricForGroup(data, data.humanCriteria);
       const systemPrompt = buildSystemPrompt(data.aiJudgeSystemPrompt, rubric);
       const userMessage = buildUserMessage(
         data,
@@ -2165,14 +2494,19 @@ export const analyzeSubmission = internalAction({
         liveHackathonMd,
       );
 
-      // One retry on parse failure: re-ask the same model
+      // One retry on parse or request failure: the first attempt attaches the
+      // live app screenshot when available; the retry drops the image so a
+      // bad or expired image URL can never fail the whole review.
       let parsed: ParsedAnalysis | null = null;
       let llm: LlmResult | null = null;
       let lastError: Error | null = null;
+      let screenshotUsed = false;
       for (let attempt = 0; attempt < 2 && !parsed; attempt++) {
+        const imageUrl = attempt === 0 ? scrape.screenshotUrl : undefined;
         try {
-          llm = await callJudgeLlm(systemPrompt, userMessage);
+          llm = await callJudgeLlm(systemPrompt, userMessage, imageUrl);
           parsed = parseAnalysisResponse(llm.text, rubric);
+          screenshotUsed = imageUrl !== undefined;
         } catch (error) {
           lastError =
             error instanceof Error ? error : new Error("Analysis failed");
@@ -2286,6 +2620,7 @@ export const analyzeSubmission = internalAction({
             github: repo.fetched,
             liveUrl: scrape.fetched,
             videoTranscript: video.included,
+            screenshot: screenshotUsed,
           },
           urlCheck,
           frontendHosting,
@@ -2298,6 +2633,12 @@ export const analyzeSubmission = internalAction({
             repo.aiModelIdsDetected.length > 0
               ? repo.aiModelIdsDetected
               : undefined,
+          // Empty arrays are kept when the repo was scanned so the UI can
+          // show "none detected" instead of "not scanned"
+          modelProvidersDetected: repo.fetched
+            ? repo.modelProvidersDetected
+            : undefined,
+          sponsorStack: repo.fetched ? repo.sponsorStack : undefined,
         },
       });
     } catch (error) {

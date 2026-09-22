@@ -25,16 +25,43 @@ function providerOf(modelId: string): string {
 export async function callLlm(
   systemPrompt: string,
   userMessage: string,
-  opts: { maxOutputTokens: number; temperature: number },
+  opts: {
+    maxOutputTokens: number;
+    temperature: number;
+    // Optional image (e.g. a live app screenshot) attached to the user turn.
+    // Callers should retry without it if the multimodal request fails.
+    imageUrl?: string;
+  },
 ): Promise<LlmResult> {
   const model = DEFAULT_LLM_MODEL;
-  const { text } = await generateText({
+  const shared = {
     model: convexGateway(model),
     system: systemPrompt,
-    prompt: userMessage,
     temperature: opts.temperature,
     maxOutputTokens: opts.maxOutputTokens,
-  });
+  };
+  // With an image the user turn becomes a multipart message (text + image);
+  // without one the plain prompt path is unchanged.
+  const { text } = opts.imageUrl
+    ? await generateText({
+        ...shared,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: userMessage },
+              // Top-level "image" media type lets the provider detect the
+              // exact subtype from the fetched bytes
+              {
+                type: "file",
+                data: { type: "url", url: new URL(opts.imageUrl) },
+                mediaType: "image",
+              },
+            ],
+          },
+        ],
+      })
+    : await generateText({ ...shared, prompt: userMessage });
   if (!text) throw new Error(`Empty response from ${model}`);
   return { text, provider: providerOf(model), model };
 }
