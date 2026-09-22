@@ -75,6 +75,10 @@ export type RubricCriterion = {
 // platform list for per-platform sub-weights. The detected platform's weight
 // multiplies the frontend-checker criterion weight in the weighted ranking.
 export const FRONTEND_CHECKER_KEY = "frontend-checker";
+// Social proof: preset custom criterion key. Scored from the SOCIAL PROOF
+// snapshot section (X and Bluesky metrics, LinkedIn liveness), never from
+// numbers the model guesses. Mirrored in groupSection.tsx.
+export const SOCIAL_PROOF_KEY = "social-proof";
 export const AI_FRONTEND_PLATFORMS: Array<{ key: string; label: string }> = [
   { key: "codex-sites", label: "Codex Sites" },
   { key: "convex-hosting", label: "Convex static hosting" },
@@ -374,6 +378,7 @@ const aiResultValidator = v.object({
       liveUrl: v.boolean(),
       videoTranscript: v.optional(v.boolean()),
       screenshot: v.optional(v.boolean()),
+      socialProof: v.optional(v.boolean()),
     }),
   ),
   urlCheck: v.optional(urlCheckValidator),
@@ -490,6 +495,7 @@ async function enrichResults(
       liveUrl: boolean;
       videoTranscript?: boolean;
       screenshot?: boolean;
+      socialProof?: boolean;
     };
     urlCheck?: {
       checkedUrl?: string;
@@ -1255,6 +1261,7 @@ export const getGroupAiReportData = query({
               liveUrl: v.boolean(),
               videoTranscript: v.optional(v.boolean()),
               screenshot: v.optional(v.boolean()),
+              socialProof: v.optional(v.boolean()),
             }),
           ),
           error: v.optional(v.string()),
@@ -1320,6 +1327,7 @@ export const getGroupAiReportData = query({
         liveUrl: boolean;
         videoTranscript?: boolean;
         screenshot?: boolean;
+        socialProof?: boolean;
       };
       error?: string;
     }> = [];
@@ -1536,6 +1544,9 @@ export const getSubmissionForAnalysis = internalQuery({
       url: v.optional(v.string()),
       githubUrl: v.optional(v.string()),
       videoUrl: v.optional(v.string()),
+      // Social launch links, snapshotted for the SOCIAL PROOF prompt section
+      linkedinUrl: v.optional(v.string()),
+      twitterUrl: v.optional(v.string()),
       tags: v.array(v.string()),
       // Pasted hackathon.md (already capped + redacted at submission time)
       hackathonLog: v.optional(v.string()),
@@ -1578,6 +1589,8 @@ export const getSubmissionForAnalysis = internalQuery({
       url: story.url,
       githubUrl: story.githubUrl,
       videoUrl: story.videoUrl,
+      linkedinUrl: story.linkedinUrl,
+      twitterUrl: story.twitterUrl,
       tags,
       hackathonLog: story.hackathonLog,
     };
@@ -1613,6 +1626,7 @@ export const saveResult = internalMutation({
           liveUrl: v.boolean(),
           videoTranscript: v.optional(v.boolean()),
           screenshot: v.optional(v.boolean()),
+          socialProof: v.optional(v.boolean()),
         }),
         urlCheck: v.optional(urlCheckValidator),
         frontendHosting: v.optional(frontendHostingValidator),

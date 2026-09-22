@@ -420,6 +420,7 @@ Open **Criteria** on a group row to edit its scoring questions.
 - Reordering is drag friendly and saves immediately.
 - Deleting a criterion removes its scores, so prefer editing text over deleting once judging has started.
 - These criteria can also be **mirrored into the AI judge** with the "Human judging criteria" toggle in the AI judge section. Weights apply to the AI judge only: each mirrored criterion gets its own AI weight in Rubric weights, and the AI scores it 1 to 10 while humans keep scoring on the group scale.
+- A human **Social proof** criterion works best with the social proof snapshot: judges see the captured post text and engagement counts in a card on the judging page, and a mirrored copy of the criterion makes the AI score from the same snapshot.
 
 A submission counts as **complete** for a judge once that judge has scored every criterion for it.`,
   },
@@ -569,6 +570,20 @@ The **Human judging criteria** block at the top of Custom AI criteria mirrors th
 - product or UI questions are judged from what the app does and shows, never from Convex feature counts alone.
 
 Human criteria stay editable only in the Criteria section, so there is one source of truth. Edits apply on the next AI run; results already saved keep the label and score from their run. Deleting a human criterion prunes its AI weight and toggle automatically, and older results keep their history. These weights affect the AI ranking only; human results stay unweighted plain totals of the 1 to 5 or 1 to 10 scores.
+
+## Social proof
+
+Submissions can include a LinkedIn link and an X or Bluesky link. Before each review the judge takes one **snapshot** per link and stores it, so the AI prompt and every human judge read the same numbers captured at the same moment:
+
+- **X posts** are read through Firecrawl's X engine (post text, author, date, likes, retweets, replies), with a text only oEmbed fallback when metrics are not returned.
+- **Bluesky posts** are read through Bluesky's public API (text, author, date, likes, reposts, replies). No key needed.
+- **LinkedIn** blocks automated reads and answers even nonexistent posts with a login wall, so the judge records the link as **unverified** (post and engagement) and tells the model to give at most partial credit. Human judges open the post to check it.
+- A **profile URL** (x.com/name, linkedin.com/in/name) is recorded as a profile, not a launch post, and the model is told a profile alone is not a launch.
+- **Views are never collected**: only the paid X API exposes them and LinkedIn never does, so scoring on views would be unfair across platforms.
+
+The AI judge gets a fixed rule it cannot be prompted out of: never invent or estimate engagement numbers, only cite the ones in the snapshot. Add the **Social proof** preset from Rubric weights to score launch posts as their own criterion, or mirror your human "Social proof" criterion with the toggle above; both read the same snapshot. Human judges see a **Social proof** card under Project Links with the post text, metric pills, and the capture time. AI Results shows a **social** chip when a readable post was included.
+
+Snapshots refresh on their own during an AI run once they are older than a day. The **Social proof snapshots** card in the AI judge section has a **Refresh social proof** button that re captures every submission in the group right now; run it once when submissions close so all teams are measured at the same moment.
 
 ## Second opinion (Jev)
 

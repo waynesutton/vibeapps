@@ -156,6 +156,9 @@ export function humanCriterionKey(criteriaId: string): string {
 // against the server list. The detected platform's weight multiplies the
 // frontend-checker criterion weight in the weighted ranking.
 export const FRONTEND_CHECKER_KEY = "frontend-checker";
+// Social proof preset criterion key. Must match SOCIAL_PROOF_KEY in
+// convex/aiJudge.ts.
+export const SOCIAL_PROOF_KEY = "social-proof";
 export const AI_FRONTEND_PLATFORM_DEFS = [
   { key: "codex-sites", label: "Codex Sites" },
   { key: "convex-hosting", label: "Convex static hosting" },

@@ -832,6 +832,7 @@ export default defineSchema({
         liveUrl: v.boolean(), // Whether the live URL was scraped
         videoTranscript: v.optional(v.boolean()), // Whether a video transcript/page scrape was included
         screenshot: v.optional(v.boolean()), // Whether a live app screenshot was attached to the model
+        socialProof: v.optional(v.boolean()), // Whether at least one social post snapshot with content was included
       }),
     ),
     urlCheck: v.optional(
@@ -924,6 +925,51 @@ export default defineSchema({
     errorMessage: v.optional(v.string()), // Why the scrape failed, when it did
     fetchedAt: v.number(), // When the scrape ran (cache freshness)
   }).index("by_story", ["storyId"]),
+
+  // Social proof snapshots for judging. One row per story per social link
+  // field, upserted on refetch, so the AI judge and every human judge read
+  // the same engagement numbers captured at the same moment.
+  socialProofSnapshots: defineTable({
+    storyId: v.id("stories"), // Submission the link belongs to
+    field: v.union(v.literal("linkedinUrl"), v.literal("twitterUrl")), // Which submission field held the URL
+    url: v.string(), // The exact URL that was checked (cache key)
+    platform: v.union(
+      v.literal("x"),
+      v.literal("bluesky"),
+      v.literal("linkedin"),
+      v.literal("other"),
+    ),
+    kind: v.union(
+      v.literal("post"), // A single post or thread
+      v.literal("profile"), // Account page, not a launch post
+      v.literal("unknown"), // Unrecognized URL shape
+    ),
+    status: v.union(
+      v.literal("completed"), // Post content captured (metrics when the source had them)
+      v.literal("liveness_only"), // Only a reachability check was possible (LinkedIn)
+      v.literal("profile_only"), // Profile link: no post to measure
+      v.literal("failed"), // Fetch attempted but errored or post not found
+      v.literal("unsupported"), // Host not handled
+    ),
+    live: v.boolean(), // Whether the URL answered at fetch time
+    source: v.union(
+      v.literal("firecrawl-x"), // Firecrawl x-twitter engine
+      v.literal("oembed"), // publish.twitter.com oEmbed fallback (text only)
+      v.literal("bsky-api"), // Bluesky public AppView API
+      v.literal("http-head"), // Plain reachability request
+      v.literal("none"), // No network call made
+    ),
+    text: v.optional(v.string()), // Post text, capped before storage
+    author: v.optional(v.string()), // Display name or handle of the poster
+    postedAt: v.optional(v.number()), // Post timestamp when the source exposed it
+    likes: v.optional(v.number()),
+    reposts: v.optional(v.number()),
+    replies: v.optional(v.number()),
+    errorMessage: v.optional(v.string()), // Why the fetch failed, when it did
+    fetchedAt: v.number(), // When the snapshot was taken
+  })
+    .index("by_story", ["storyId"])
+    .index("by_story_field", ["storyId", "field"]),
 
   judgingCriteria: defineTable({
     groupId: v.id("judgingGroups"), // Associated judging group

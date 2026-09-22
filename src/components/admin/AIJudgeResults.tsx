@@ -19,6 +19,7 @@ import {
   Download,
   Users,
   Video,
+  Megaphone,
 } from "lucide-react";
 import { ConvexError } from "convex/values";
 import { api } from "../../../convex/_generated/api";
@@ -105,6 +106,7 @@ type StatsResult = {
     github: boolean;
     liveUrl: boolean;
     videoTranscript?: boolean;
+    socialProof?: boolean;
   };
   authProvider?: string;
   usesAiGateway?: boolean;
@@ -269,6 +271,7 @@ type ReportSubmission = {
     github: boolean;
     liveUrl: boolean;
     videoTranscript?: boolean;
+    socialProof?: boolean;
   };
   error?: string;
 };
@@ -338,6 +341,7 @@ type SubmissionBrief = {
     github: boolean;
     liveUrl: boolean;
     videoTranscript?: boolean;
+    socialProof?: boolean;
   };
 };
 
@@ -1649,6 +1653,24 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                     ? "video"
                                     : "no video"}
                                 </span>
+                                {/* Social proof chip: only shown once a run
+                                    has recorded the field, so old rows are unchanged */}
+                                {result.sourcesUsed.socialProof !==
+                                  undefined && (
+                                  <span
+                                    className={`inline-flex items-center gap-1 ${result.sourcesUsed.socialProof ? "text-green-600" : "text-faint"}`}
+                                    title={
+                                      result.sourcesUsed.socialProof
+                                        ? "A social launch post was read and included in the review"
+                                        : "No readable social post (none submitted, profile only, or not found)"
+                                    }
+                                  >
+                                    <Megaphone className="w-3 h-3" />
+                                    {result.sourcesUsed.socialProof
+                                      ? "social"
+                                      : "no social"}
+                                  </span>
+                                )}
                               </>
                             )}
                             {result.urlCheck && (

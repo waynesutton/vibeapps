@@ -23,6 +23,7 @@ import {
   FRONTEND_CHECKER_KEY,
   GroupDetails,
   HeaderSaveButton,
+  SOCIAL_PROOF_KEY,
   humanCriterionKey,
   SectionCard,
   SaveFooter,
@@ -66,6 +67,9 @@ export function GroupAiSection({
         <CustomCriteriaCard key={`criteria-${criteriaKey}`} group={group} />
       )}
       {canAi && group.aiJudgeEnabled && <SystemPromptCard group={group} />}
+      {/* Social proof snapshots serve human judges too, so this card does
+          not depend on the AI judge being on */}
+      {canAi && <SocialProofRefreshCard group={group} />}
       {canAi && group.aiJudgeEnabled && <AgentKeysCard group={group} />}
       {!canManage && !canAi && (
         <p className="text-[13px] text-soft">
@@ -309,6 +313,16 @@ const FRONTEND_CHECKER_PRESET = {
     "Evaluate the deployed frontend using the FRONTEND HOSTING CHECK facts: is the live app reachable and working, how complete and polished is the UI, and does the deployment serve the app correctly. Name the detected hosting platform (Codex Sites, Convex static hosting, Vercel, Netlify, or other) in your reasoning. Score 1-10 on frontend quality and deployment; never change other criterion scores because of the hosting platform.",
 };
 
+// Preset custom criterion: public launch post engagement, scored only from
+// the SOCIAL PROOF snapshot (X and Bluesky metrics, LinkedIn liveness).
+// Key must match SOCIAL_PROOF_KEY in convex/aiJudge.ts.
+const SOCIAL_PROOF_PRESET = {
+  key: SOCIAL_PROOF_KEY,
+  label: "Social proof",
+  description:
+    "Did the team launch publicly and did it land? Use only the SOCIAL PROOF section: is the X, Bluesky, or LinkedIn link a real post (not a profile), is it live, what does it say, and what are the captured likes, reposts, and replies. LinkedIn links cannot be read by bots, so give a LinkedIn post at most partial credit and mark it unverified for a human check. Never estimate numbers. Score 1 when no social link was submitted.",
+};
+
 // Rubric weights with a per-criterion on/off toggle. Disabled criteria are
 // excluded from the AI prompt, scoring, and rankings on the next run. The
 // components check preset appears here with an Add button until it is added.
@@ -349,6 +363,7 @@ function RubricWeightsCard({ group }: { group: GroupDetails }) {
   const hasFrontendChecker = rubricDefs.some(
     (d) => d.key === FRONTEND_CHECKER_KEY,
   );
+  const hasSocialProof = rubricDefs.some((d) => d.key === SOCIAL_PROOF_KEY);
 
   const [weights, setWeights] = useState<Record<string, number>>(() => {
     const map = { ...DEFAULT_RUBRIC_WEIGHTS };
@@ -556,8 +571,81 @@ function RubricWeightsCard({ group }: { group: GroupDetails }) {
             onAdd={() => handleAddPreset(FRONTEND_CHECKER_PRESET)}
           />
         )}
+        {!hasSocialProof && (
+          <PresetRow
+            preset={SOCIAL_PROOF_PRESET}
+            note="Scores the submitted X, Bluesky, or LinkedIn launch post from the same snapshot human judges see. Not added until you click Add."
+            adding={addingPreset === SOCIAL_PROOF_PRESET.key}
+            disabled={addingPreset !== null || customCount >= 10}
+            onAdd={() => handleAddPreset(SOCIAL_PROOF_PRESET)}
+          />
+        )}
       </div>
       {presetError && <p className="text-[13px] text-red-600">{presetError}</p>}
+    </SectionCard>
+  );
+}
+
+// Admin fairness control: re snapshot every submission's social links right
+// now so the AI judge and human judges all read numbers captured at the
+// same moment. Snapshots are otherwise refreshed lazily by the AI run.
+function SocialProofRefreshCard({ group }: { group: GroupDetails }) {
+  const refresh = useMutation(api.socialProof.refreshSocialProofForGroup);
+  const { saving, saved, error, run } = useSaveState();
+  const [scheduledCount, setScheduledCount] = useState<number | null>(null);
+
+  const handleRefresh = () => {
+    void run(async () => {
+      const count = await refresh({ groupId: group._id });
+      setScheduledCount(count);
+    });
+  };
+
+  return (
+    <SectionCard
+      title="Social proof snapshots"
+      description="Post text, author, date, and likes, reposts, and replies captured from each submission's X, Bluesky, or LinkedIn link. The AI judge prompt and the judge interface both read the stored snapshot, so every judge sees the same numbers."
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="text-[13px] text-soft space-y-1 min-w-0">
+          <p>
+            X posts read through Firecrawl (oEmbed text fallback), Bluesky
+            through its public API. LinkedIn blocks automated reads, so its
+            links are recorded as unverified for a human to open. Views are
+            never collected.
+          </p>
+          <p className="text-faint text-xs">
+            Snapshots refresh on their own during an AI run when older than a
+            day. Refresh here once submissions close so all teams are measured
+            at the same moment.
+          </p>
+          <div className="text-xs pt-1">
+            {error ? (
+              <span className="text-red-600">{error}</span>
+            ) : saved && scheduledCount !== null ? (
+              <span className="text-green-700 inline-flex items-center gap-1">
+                <Check className="w-3.5 h-3.5" />
+                {scheduledCount === 0
+                  ? "No submissions have social links yet"
+                  : `Refreshing ${scheduledCount} submission${scheduledCount === 1 ? "" : "s"} in the background`}
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={saving}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium rounded-md border border-hairline text-copy hover:bg-surface-hover transition-colors disabled:opacity-50 shrink-0"
+        >
+          {saving ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <RotateCcw className="w-3.5 h-3.5" />
+          )}
+          Refresh social proof
+        </button>
+      </div>
     </SectionCard>
   );
 }

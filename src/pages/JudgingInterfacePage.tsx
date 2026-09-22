@@ -34,6 +34,7 @@ import { ImageGallery } from "../components/ImageGallery";
 import { renderTextWithMentions } from "../utils/mentions";
 import { MentionTextarea } from "../components/ui/MentionTextarea";
 import { Markdown } from "../components/Markdown";
+import { SocialProofCard } from "../components/judging/SocialProofCard";
 import { useDialog } from "../hooks/useDialog";
 
 export default function JudgingInterfacePage() {
@@ -1346,6 +1347,20 @@ export default function JudgingInterfacePage() {
                           </div>
                         </div>
                       )}
+
+                      {/* Social proof snapshot: same stored post text and
+                          engagement counts the AI judge read. Renders only
+                          once a snapshot exists; the plain links above stay. */}
+                      {sessionId &&
+                        judgeSession &&
+                        ((currentSubmission as any).linkedinUrl ||
+                          (currentSubmission as any).twitterUrl) && (
+                          <SocialProofCard
+                            groupId={judgeSession.group._id}
+                            storyId={currentSubmission._id}
+                            sessionId={sessionId}
+                          />
+                        )}
 
                       {/* Tags */}
                       {(currentSubmission as any).tags &&

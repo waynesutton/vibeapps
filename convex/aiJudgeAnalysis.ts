@@ -11,10 +11,16 @@ import {
   DEFAULT_AI_JUDGE_PROMPT_BODY,
   FRONTEND_CHECKER_KEY,
   HUMAN_CRITERION_PREFIX,
+  SOCIAL_PROOF_KEY,
   getRubricForGroup,
   type RubricCriterion,
 } from "./aiJudge";
 import { fetchVideoContext, type VideoContext } from "./videoTranscripts";
+import {
+  fetchSocialProofContext,
+  formatSocialProofForPrompt,
+  type SocialProofContext,
+} from "./socialProof";
 import {
   parseHackathonLogHeader,
   redactSecrets,
@@ -1921,6 +1927,10 @@ function buildSystemPrompt(
 
   // Sponsor stack facts: fixed rule so a custom prompt body cannot make the
   // model score sponsor usage or invent an integration the scan did not find
+  // Social proof: fixed rule so a custom prompt can never make the model
+  // estimate engagement or treat a profile link as a launch
+  body += `\n\nThe SOCIAL PROOF section (when present) holds facts captured by direct fetch: whether each X, Bluesky, or LinkedIn link is a post or a profile, whether it is live, the post text, and likes, reposts, and replies when the platform exposed them. Never invent, estimate, or extrapolate engagement numbers; only cite numbers that appear in that section. When a link is marked UNVERIFIED (LinkedIn blocks automated reads and does not confirm a post exists) give at most partial credit and write "unverified, human check needed" in the reasoning. A profile link with no post is not evidence of a public launch. Views are never collected and must not be mentioned as a factor. If the rubric includes a "${SOCIAL_PROOF_KEY}" criterion, score it only from this section; when the section is absent, score it 1 and say no social link was submitted. Never change any other criterion because of social engagement.`;
+
   body +=
     "\n\nThe SPONSOR STACK EVIDENCE section (when present) is measured from package.json and convex/ source the same way VERIFIED CONVEX FACTS are. It records whether AgentMail, Firecrawl, and OpenAI are integrated and how (Convex component, SDK, API key, direct HTTP call, or the Convex AI gateway), and the AI MODEL EVIDENCE section names every model provider referenced. Name what these sections show in overallReasoning. Never claim a sponsor or provider integration they do not show, and never raise or lower any rubric score because of sponsor usage; the sponsor stack is judged by humans.";
 
@@ -2056,6 +2066,7 @@ function buildUserMessage(
   video: VideoContext,
   frontendHosting: FrontendHosting | undefined,
   liveHackathonMd?: ManifestContext,
+  socialProof?: SocialProofContext,
 ): string {
   const sections: Array<string> = [
     `SUBMISSION: ${data.title}`,
@@ -2080,6 +2091,14 @@ function buildUserMessage(
   if (frontendHosting) {
     sections.push(
       `\n=== FRONTEND HOSTING CHECK (deterministic) ===\nPlatform: ${frontendHosting.platform}\nEvidence: ${frontendHosting.evidence}\nIf the rubric includes a "${FRONTEND_CHECKER_KEY}" criterion, name this platform in its reasoning and judge how well the deployed frontend works. Never raise or lower any other criterion score because of the hosting platform.`,
+    );
+  }
+
+  // Social launch links, snapshotted once per submission and shared with
+  // human judges. Facts only; the fixed system rule forbids invented numbers.
+  if (socialProof && socialProof.entries.length > 0) {
+    sections.push(
+      `\n=== SOCIAL PROOF (verified by direct fetch) ===\n${formatSocialProofForPrompt(socialProof)}`,
     );
   }
 
@@ -2483,16 +2502,29 @@ export const analyzeSubmission = internalAction({
       const parsedRepoUrl = data.githubUrl
         ? parseGithubUrl(data.githubUrl)
         : null;
-      const [repo, commitHistory, scrape, liveness, manifest, video, liveHackathonMd] =
-        await Promise.all([
-          fetchGithubContext(data.githubUrl),
-          fetchCommitHistory(parsedRepoUrl),
-          fetchLiveUrlContext(data.url),
-          checkUrlLiveness(data.url),
-          fetchHackathonManifest(data.url),
-          fetchVideoContext(ctx, data.storyId, data.videoUrl),
-          fetchLiveHackathonMd(data.url),
-        ]);
+      const [
+        repo,
+        commitHistory,
+        scrape,
+        liveness,
+        manifest,
+        video,
+        liveHackathonMd,
+        socialProof,
+      ] = await Promise.all([
+        fetchGithubContext(data.githubUrl),
+        fetchCommitHistory(parsedRepoUrl),
+        fetchLiveUrlContext(data.url),
+        checkUrlLiveness(data.url),
+        fetchHackathonManifest(data.url),
+        fetchVideoContext(ctx, data.storyId, data.videoUrl),
+        fetchLiveHackathonMd(data.url),
+        // Social launch links (X, Bluesky, LinkedIn), cached per story
+        fetchSocialProofContext(ctx, data.storyId, {
+          linkedinUrl: data.linkedinUrl,
+          twitterUrl: data.twitterUrl,
+        }),
+      ]);
       const urlCheckRaw = liveness.check;
 
       // Some hosts block plain fetch but serve crawlers: a successful
@@ -2557,6 +2589,7 @@ export const analyzeSubmission = internalAction({
         video,
         frontendHosting,
         liveHackathonMd,
+        socialProof,
       );
 
       // One retry on parse or request failure: the first attempt attaches the
@@ -2712,6 +2745,7 @@ export const analyzeSubmission = internalAction({
             liveUrl: scrape.fetched,
             videoTranscript: video.included,
             screenshot: screenshotUsed,
+            socialProof: socialProof.included,
           },
           urlCheck,
           frontendHosting,
