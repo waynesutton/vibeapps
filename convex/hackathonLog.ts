@@ -3,6 +3,8 @@
 // AI judge analysis action (deterministic header parsing + cross-checks).
 // Plain functions only; no Convex function registrations here.
 
+import { ConvexError } from "convex/values";
+
 // Server-side cap for pasted hackathon.md content
 export const HACKATHON_LOG_MAX_CHARS = 20000;
 
@@ -33,6 +35,7 @@ export function redactSecrets(text: string): string {
  * Validate and sanitize a pasted hackathon.md for storage.
  * Returns the redacted string, undefined when empty, and throws a readable
  * error when over the cap so every submission path fails the same way.
+ * ConvexError so the message survives prod redaction and reaches the form.
  */
 export function sanitizeHackathonLog(
   raw: string | undefined,
@@ -41,7 +44,7 @@ export function sanitizeHackathonLog(
   const trimmed = raw.trim();
   if (!trimmed) return undefined;
   if (trimmed.length > HACKATHON_LOG_MAX_CHARS) {
-    throw new Error(
+    throw new ConvexError(
       `Hackathon log is too long (${trimmed.length} characters). ` +
         `Maximum is ${HACKATHON_LOG_MAX_CHARS} characters; trim your hackathon.md and try again.`,
     );

@@ -6,7 +6,7 @@ import {
   internalMutation,
   action,
 } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { Id, Doc } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api"; // Ensured internal is imported if needed by other funcs
 import {
@@ -213,18 +213,19 @@ export const ensureUser = mutation({
 export async function getAuthenticatedUserId(
   ctx: QueryCtx | MutationCtx,
 ): Promise<Id<"users">> {
+  // ConvexError so the message survives prod redaction (plain Error shows as "Server Error")
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
-    throw new Error("User not authenticated.");
+    throw new ConvexError("Please sign in and try again.");
   }
   const user = await ctx.db
     .query("users")
     .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
     .unique();
   if (!user) {
-    // This should ideally not happen if ensureUser is called on login
-    throw new Error(
-      "Authenticated user not found in Convex database. User sync issue?",
+    // Clerk session exists but the users row has not synced yet
+    throw new ConvexError(
+      "Your account is still syncing. Refresh the page and try again.",
     );
   }
   return user._id;
@@ -255,7 +256,7 @@ export async function getAuthenticatedUserDoc(
 export async function ensureUserNotBanned(ctx: MutationCtx): Promise<void> {
   const user = await getAuthenticatedUserDoc(ctx);
   if (user && user.isBanned === true) {
-    throw new Error("User is banned and cannot perform this action.");
+    throw new ConvexError("This account cannot perform this action.");
   }
   // If user is null (not authenticated), other auth checks should handle it.
   // If isBanned is false or undefined, the user is not banned.

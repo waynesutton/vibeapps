@@ -42,6 +42,7 @@ import { useDialog } from "../hooks/useDialog";
 import { BackToAppsLink } from "./BackToAppsLink";
 import { LumaEventList } from "./LumaEventList";
 import { isLumaWidgetVisible } from "../lib/sidebarWidgets";
+import { getConvexErrorMessage } from "../lib/convexErrors";
 
 // Removed MOCK_COMMENTS
 
@@ -289,11 +290,19 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
   // Team info editing state
   const [showTeamInfo, setShowTeamInfo] = React.useState(false);
-  const [teamData, setTeamData] = React.useState({
+  const [teamData, setTeamData] = React.useState<{
+    teamName: string;
+    teamMemberCount: number;
+    teamMembers: Array<{ name: string; email: string }>;
+  }>({
     teamName: "",
     teamMemberCount: 1,
     teamMembers: [{ name: "", email: "" }],
   });
+  // Public story queries strip team member emails, so the edit form only
+  // sends team fields when the owner actually touched them. Untouched team
+  // data stays exactly as stored.
+  const [teamDirty, setTeamDirty] = React.useState(false);
 
   // Fetch APPROVED comments using Convex query
   const comments = useQuery(api.comments.listApprovedByStory, {
@@ -405,16 +414,23 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
       setSelectedTagIds(story.tagIds || []);
 
-      // Initialize team data
+      // Initialize team data (emails are hidden on public pages, so they
+      // start blank; blank means "keep what is stored" on save)
       setTeamData({
         teamName: story.teamName || "",
         teamMemberCount: story.teamMemberCount || 1,
         teamMembers:
           story.teamMembers && story.teamMembers.length > 0
-            ? story.teamMembers
+            ? story.teamMembers.map(
+                (member: { name: string; email?: string }) => ({
+                  name: member.name,
+                  email: member.email ?? "",
+                }),
+              )
             : [{ name: "", email: "" }],
       });
       setShowTeamInfo(!!story.teamName);
+      setTeamDirty(false);
 
       // Reset screenshot state
       setCurrentScreenshot(story.screenshotUrl || null);
@@ -585,27 +601,33 @@ export function StoryDetail({ story }: StoryDetailProps) {
     setScreenshotPreview(null);
   };
 
+  // Tag limits come from admin settings, the same values the server enforces
+  // in updateOwnStory. Hidden tracking tags never count toward the limit.
+  const maxTags = settings?.maxTagsPerSubmission ?? 6;
+  const maxTagLength = settings?.maxTagLength ?? 20;
+  const isHiddenTag = (tagId: Id<"tags">) =>
+    allTags?.find((t) => t._id === tagId)?.isHidden === true;
+  const countedTags =
+    selectedTagIds.filter((id) => !isHiddenTag(id)).length + newTagNames.length;
+  const tagLimitReached = countedTags >= maxTags;
+
   const toggleTag = (tagId: Id<"tags">) => {
-    setSelectedTagIds((prev) => {
-      if (prev.includes(tagId)) {
-        return prev.filter((id) => id !== tagId);
-      } else {
-        const totalTags = prev.length + newTagNames.length;
-        if (totalTags >= 10) {
-          setEditError("You can select a maximum of 10 tags.");
-          return prev;
-        }
-        setEditError(null);
-        return [...prev, tagId];
-      }
-    });
+    if (selectedTagIds.includes(tagId)) {
+      setSelectedTagIds((prev) => prev.filter((id) => id !== tagId));
+      setEditError(null);
+      return;
+    }
+    if (!isHiddenTag(tagId) && tagLimitReached) {
+      setEditError(`You can select a maximum of ${maxTags} tags.`);
+      return;
+    }
+    setEditError(null);
+    setSelectedTagIds((prev) => [...prev, tagId]);
   };
 
   const handleSelectFromDropdown = (tagId: Id<"tags">) => {
-    const totalTags = selectedTagIds.length + newTagNames.length;
-
-    if (totalTags >= 10) {
-      setEditError("You can select a maximum of 10 tags.");
+    if (!isHiddenTag(tagId) && tagLimitReached) {
+      setEditError(`You can select a maximum of ${maxTags} tags.`);
       return;
     }
 
@@ -619,10 +641,15 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
   const handleAddNewTag = () => {
     const tagName = dropdownSearchValue.trim();
-    const totalTags = selectedTagIds.length + newTagNames.length;
 
-    if (totalTags >= 10) {
-      setEditError("You can select a maximum of 10 tags.");
+    if (tagLimitReached) {
+      setEditError(`You can select a maximum of ${maxTags} tags.`);
+      return;
+    }
+
+    // Match the server cap on brand-new tag names
+    if (tagName.length > maxTagLength) {
+      setEditError(`Tag names are limited to ${maxTagLength} characters.`);
       return;
     }
 
@@ -732,6 +759,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
   // Team info helper functions
   const handleTeamMemberCountChange = (count: number) => {
     const newCount = Math.max(1, Math.min(10, count)); // Limit between 1-10 members
+    setTeamDirty(true);
     setTeamData((prev) => {
       const newMembers = [...prev.teamMembers];
 
@@ -758,6 +786,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
     field: "name" | "email",
     value: string,
   ) => {
+    setTeamDirty(true);
     setTeamData((prev) => ({
       ...prev,
       teamMembers: prev.teamMembers.map((member, i) =>
@@ -812,6 +841,26 @@ export function StoryDetail({ story }: StoryDetailProps) {
       setEditError("Please select at least one tag.");
       return;
     }
+    // Server rejects more than maxTags visible tags; say so before the round trip
+    if (countedTags > maxTags) {
+      setEditError(
+        `You can select a maximum of ${maxTags} tags. Remove ${countedTags - maxTags} to save.`,
+      );
+      return;
+    }
+
+    // Team fields only go to the server when the owner touched them
+    const includeTeam = showTeamInfo && teamDirty;
+    // Emails are hidden on this page. A blank email is sent as undefined so
+    // updateOwnStory keeps the stored address for that member position.
+    const teamMembersToSave = includeTeam
+      ? teamData.teamMembers
+          .filter((member) => member.name.trim() || member.email.trim())
+          .map((member) => ({
+            name: member.name,
+            email: member.email.trim() || undefined,
+          }))
+      : [];
 
     setIsSubmitting(true);
     setEditError(null);
@@ -883,19 +932,15 @@ export function StoryDetail({ story }: StoryDetailProps) {
         githubUrl: editDynamicFormData.githubUrl || undefined,
         chefShowUrl: editDynamicFormData.chefShowUrl || undefined,
         chefAppUrl: editDynamicFormData.chefAppUrl || undefined,
-        // Team info (only include if team info is shown and has data)
+        // Team info (only when the owner edited it; undefined keeps stored values)
         teamName:
-          showTeamInfo && teamData.teamName ? teamData.teamName : undefined,
+          includeTeam && teamData.teamName ? teamData.teamName : undefined,
         teamMemberCount:
-          showTeamInfo && teamData.teamName
+          includeTeam && teamData.teamName
             ? teamData.teamMemberCount
             : undefined,
         teamMembers:
-          showTeamInfo && teamData.teamName
-            ? teamData.teamMembers.filter(
-                (member) => member.name.trim() || member.email?.trim(),
-              )
-            : undefined,
+          includeTeam && teamData.teamName ? teamMembersToSave : undefined,
         ...(newScreenshotFile || removeScreenshot
           ? { screenshotId: screenshotStorageId }
           : {}),
@@ -913,10 +958,15 @@ export function StoryDetail({ story }: StoryDetailProps) {
         // Force refresh by reloading the page
         window.location.reload();
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to update story:", error);
+      // ConvexError data comes through as is; redacted prod errors get a
+      // readable sentence that keeps the request id for support
       setEditError(
-        error.data?.message || error.message || "Failed to update submission.",
+        getConvexErrorMessage(
+          error,
+          "We could not save your changes. Check the form and try again.",
+        ),
       );
     } finally {
       setIsSubmitting(false);
@@ -1726,12 +1776,13 @@ export function StoryDetail({ story }: StoryDetailProps) {
                         id="edit-teamName"
                         placeholder="Enter your team name"
                         value={teamData.teamName}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                          setTeamDirty(true);
                           setTeamData((prev) => ({
                             ...prev,
                             teamName: e.target.value,
-                          }))
-                        }
+                          }));
+                        }}
                         className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
                         disabled={isSubmitting}
                       />
@@ -1766,9 +1817,16 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
                     {/* Team Members */}
                     <div>
-                      <h4 className="text-sm font-medium text-copy mb-3">
+                      <h4 className="text-sm font-medium text-copy mb-1">
                         Team Members
                       </h4>
+                      {story.teamMembers && story.teamMembers.length > 0 && (
+                        <p className="text-xs text-soft mb-3">
+                          Member emails are hidden here for privacy. Leave an
+                          email blank to keep the one already saved for that
+                          member.
+                        </p>
+                      )}
                       <div className="space-y-3">
                         {teamData.teamMembers.map((member, index) => (
                           <div
@@ -1965,8 +2023,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                                 disabled={
                                   isSubmitting ||
                                   !dropdownSearchValue.trim() ||
-                                  selectedTagIds.length + newTagNames.length >=
-                                    10
+                                  tagLimitReached
                                 }
                                 className="w-full px-3 py-2 text-left text-sm hover:bg-surface-hover focus:bg-surface-alt focus:outline-none text-blue-600 disabled:opacity-50"
                               >
@@ -2020,11 +2077,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                               <button
                                 type="button"
                                 onClick={handleAddNewTag}
-                                disabled={
-                                  isSubmitting ||
-                                  selectedTagIds.length + newTagNames.length >=
-                                    10
-                                }
+                                disabled={isSubmitting || tagLimitReached}
                                 className="w-full px-3 py-2 text-left text-sm hover:bg-surface-hover focus:bg-surface-alt focus:outline-none text-blue-600 border-t border-hairline disabled:opacity-50"
                               >
                                 + Create new tag "{dropdownSearchValue}"
@@ -2042,8 +2095,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
               {(selectedTagIds.length > 0 || newTagNames.length > 0) && (
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-copy mb-2">
-                    Selected Tags ({selectedTagIds.length + newTagNames.length}
-                    /10)
+                    Selected Tags ({countedTags}/{maxTags})
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {/* Show selected existing tags */}
@@ -2121,11 +2173,17 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   Please select or add at least one tag.
                 </p>
               )}
-              {selectedTagIds.length + newTagNames.length >= 10 && (
+              {countedTags > maxTags ? (
                 <p className="text-xs text-amber-600 mt-1">
-                  Maximum of 10 tags reached. Remove a tag to add another.
+                  This submission has {countedTags} tags but the limit is now{" "}
+                  {maxTags}. Remove {countedTags - maxTags} to save.
                 </p>
-              )}
+              ) : tagLimitReached ? (
+                <p className="text-xs text-amber-600 mt-1">
+                  Maximum of {maxTags} tags reached. Remove a tag to add
+                  another.
+                </p>
+              ) : null}
             </div>
 
             {editError && (

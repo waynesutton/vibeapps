@@ -1,4 +1,5 @@
-import { type QueryCtx, type MutationCtx } from "./_generated/server";
+import { query, type QueryCtx, type MutationCtx } from "./_generated/server";
+import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 
 // --- Hackathon URL helpers ---
@@ -7,7 +8,9 @@ import { Id } from "./_generated/dataModel";
 // codes, rules payloads) was removed: the simplified /hackathon agent skill
 // keeps one hackathon.md file in the participant's repo, and private/no-repo
 // teams paste its contents into the submission form (stories.hackathonLog).
-// Only the shared URL helpers used by stories.submit remain here.
+// The shared URL helpers used by stories.submit live here, plus a small
+// public query the event submit form uses to warn about duplicate URLs
+// before the mutation rejects them.
 
 // Normalize a project URL for duplicate comparison: lowercase scheme/host,
 // drop hash and trailing slashes. Returns null for unparseable values.
@@ -50,3 +53,17 @@ export async function groupHasDuplicateUrl(
   }
   return false;
 }
+
+// Public pre-check for the event submit form. Returns only a boolean so the
+// form can flag "already submitted to this event" while the user types,
+// instead of after a full upload and a redacted server error.
+export const isProjectUrlTakenInGroup = query({
+  args: {
+    groupId: v.id("judgingGroups"),
+    url: v.string(),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    return await groupHasDuplicateUrl(ctx, args.groupId, args.url);
+  },
+});

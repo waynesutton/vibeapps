@@ -5,10 +5,11 @@ import {
   useSearchParams,
   useLocation,
 } from "react-router-dom";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { ExternalLink, Lock, Plus, X } from "lucide-react";
+import { getConvexErrorMessage } from "../lib/convexErrors";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Markdown } from "../components/Markdown";
@@ -134,11 +135,10 @@ type FormPrefill = {
 
 // Convex mutation errors arrive wrapped ("[CONVEX ...] ... Uncaught Error:
 // message"). Extract the friendly message so users see it clean.
-function cleanSubmitError(raw: string): string {
-  const match = raw.match(/Uncaught Error:\s*([^\n]+)/);
-  if (match) return match[1].trim();
-  return raw.replace(/^\[.*?\]\s*/, "").trim() || "Failed to submit";
-}
+// Message shown when the same project URL is already in this event.
+// Mirrors the server guard in stories.submit so both paths read the same.
+const DUPLICATE_URL_MESSAGE =
+  "This project URL was already submitted to this event. Each project can only be submitted once. To update it, open your existing submission and use Edit.";
 
 export function JudgingGroupSubmitPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -586,6 +586,10 @@ function SubmissionFormContent({
   const allTags = useQuery(api.tags.listAllForDropdown); // For dropdown search
   const formFields = useQuery(api.storyFormFields.listEnabled);
   const siteSettings = useQuery(api.settings.get); // Tag limits
+  // Convex must have accepted the Clerk token before stories.submit can
+  // read ctx.auth; the page only checks Clerk's isSignedIn
+  const { isAuthenticated: isConvexAuthed, isLoading: isConvexAuthLoading } =
+    useConvexAuth();
 
   // Admin-managed dynamic fields, filtered and configured per group.
   // Overrides beat the field's global defaults; unset entries fall through.
@@ -639,6 +643,15 @@ function SubmissionFormContent({
   const [additionalImages, setAdditionalImages] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  // Live duplicate check against this event: the server rejects a second
+  // submission for the same project URL, so say it under the field first
+  const trimmedUrl = formData.url.trim();
+  const isUrlTaken = useQuery(
+    api.hackathon.isProjectUrlTakenInGroup,
+    trimmedUrl.length > 8
+      ? { groupId: judgingGroupId, url: trimmedUrl }
+      : "skip",
+  );
   // Non-blocking warning when the GitHub repo looks private or missing.
   // The AI judge can only analyze public repos.
   const [repoVisibilityWarning, setRepoVisibilityWarning] = useState<
@@ -805,6 +818,22 @@ function SubmissionFormContent({
     e.preventDefault();
     setError("");
 
+    // Clerk says signed in, but Convex has not validated the token yet
+    if (!isConvexAuthed) {
+      setError(
+        isConvexAuthLoading
+          ? "Still connecting your account. Give it a second and try again."
+          : "We could not verify your sign in. Refresh the page and try again.",
+      );
+      return;
+    }
+
+    // Same project URL already in this event: stop before uploading images
+    if (isUrlTaken === true) {
+      setError(DUPLICATE_URL_MESSAGE);
+      return;
+    }
+
     // Enforce tag requirement (custom selector cannot use HTML required).
     // Skipped when the tag picker is hidden; the required tag is applied
     // automatically both client- and server-side.
@@ -927,10 +956,13 @@ function SubmissionFormContent({
       onSuccess();
     } catch (err) {
       console.error("Submission error:", err);
+      // ConvexError data comes through as is; redacted prod errors get a
+      // readable sentence that keeps the request id for support
       setError(
-        err instanceof Error
-          ? cleanSubmitError(err.message)
-          : "Failed to submit",
+        getConvexErrorMessage(
+          err,
+          "We could not submit your project. Check the form and try again.",
+        ),
       );
       setIsSubmitting(false);
     }
@@ -1045,10 +1077,23 @@ function SubmissionFormContent({
               setFormData((prev) => ({ ...prev, url: e.target.value }))
             }
             placeholder="https://"
-            className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline"
+            className={`w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border ${
+              isUrlTaken === true ? "border-red-300" : "border-hairline"
+            }`}
             required={req.url}
             disabled={isSubmitting}
+            aria-invalid={isUrlTaken === true || undefined}
+            aria-describedby={isUrlTaken === true ? "url-taken-note" : undefined}
           />
+          {isUrlTaken === true && (
+            <p
+              id="url-taken-note"
+              role="alert"
+              className="mt-2 text-sm text-red-700"
+            >
+              {DUPLICATE_URL_MESSAGE}
+            </p>
+          )}
         </div>
       )}
 

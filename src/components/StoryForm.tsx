@@ -2,13 +2,14 @@ import React from "react";
 import { Markdown } from "./Markdown";
 import { Link, useNavigate } from "react-router-dom";
 import { BackToAppsLink } from "./BackToAppsLink";
-import { useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
 import { Plus, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuth } from "@clerk/clerk-react";
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
 import { ChoiceFieldInput } from "./ui/ChoiceFieldInput";
+import { getConvexErrorMessage } from "../lib/convexErrors";
 
 // Inherits _id, _creationTime, name, showInHeader, isHidden?, backgroundColor?, textColor?
 type Tag = Doc<"tags">;
@@ -16,6 +17,10 @@ type Tag = Doc<"tags">;
 export function StoryForm() {
   const navigate = useNavigate();
   const { isSignedIn, isLoaded: isClerkLoaded } = useAuth();
+  // Convex must have accepted the Clerk token before a mutation can read
+  // ctx.auth. Clerk can report signed in a beat before that happens.
+  const { isAuthenticated: isConvexAuthed, isLoading: isConvexAuthLoading } =
+    useConvexAuth();
   const [selectedTagIds, setSelectedTagIds] = React.useState<Id<"tags">[]>([]);
   const [newTagInputValue, setNewTagInputValue] = React.useState("");
   const [newTagNames, setNewTagNames] = React.useState<string[]>([]);
@@ -137,6 +142,15 @@ export function StoryForm() {
       setShowAuthDialog(true);
       return;
     }
+    // Signed in with Clerk but Convex has not validated the token yet
+    if (!isConvexAuthed) {
+      setSubmitError(
+        isConvexAuthLoading
+          ? "Still connecting your account. Give it a second and try again."
+          : "We could not verify your sign in. Refresh the page and try again.",
+      );
+      return;
+    }
 
     const totalTagsSelected = selectedTagIds.length + newTagNames.length;
     if (isSubmitting || totalTagsSelected === 0) {
@@ -236,10 +250,13 @@ export function StoryForm() {
       }, 2000);
     } catch (error) {
       console.error("Failed to submit story:", error);
+      // ConvexError data comes through as is; redacted prod errors get a
+      // readable sentence that keeps the request id for support
       setSubmitError(
-        error instanceof Error
-          ? error.message
-          : "An unknown error occurred during submission.",
+        getConvexErrorMessage(
+          error,
+          "We could not submit your app. Check the form and try again.",
+        ),
       );
     } finally {
       setIsSubmitting(false);
@@ -1214,7 +1231,11 @@ export function StoryForm() {
               }
               className="px-4 py-2 bg-cta text-on-cta rounded-md hover:bg-cta-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? "Submitting..." : "Submit App"}
+              {isSubmitting
+                ? "Submitting..."
+                : isSignedIn && isConvexAuthLoading
+                  ? "Connecting your account..."
+                  : "Submit App"}
             </button>
             <Link
               to="/"

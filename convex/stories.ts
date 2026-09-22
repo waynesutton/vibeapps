@@ -4,7 +4,7 @@ import {
   internalQuery,
   type MutationCtx,
 } from "./_generated/server";
-import { v, type Infer } from "convex/values";
+import { v, ConvexError, type Infer } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { Doc, Id, DataModel } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
@@ -575,7 +575,7 @@ async function validateNewTagNameLengths(
       .withIndex("by_name", (q) => q.eq("name", name))
       .first();
     if (!existing) {
-      throw new Error(
+      throw new ConvexError(
         `Tag "${name}" is too long. Tag names are limited to ${maxTagLength} characters.`,
       );
     }
@@ -590,7 +590,7 @@ function enforceVisibleTagLimit(
 ): void {
   const visibleCount = tagDocs.filter((tag) => tag.isHidden !== true).length;
   if (visibleCount > maxTagsPerSubmission) {
-    throw new Error(
+    throw new ConvexError(
       `You can select up to ${maxTagsPerSubmission} tags per submission.`,
     );
   }
@@ -659,13 +659,16 @@ export const submit = mutation({
     const userId = await getAuthenticatedUserId(ctx);
     const userRecord = await ctx.db.get(userId);
 
-    // Validate additional images limit
+    // Validate additional images limit. ConvexError so the message survives
+    // prod redaction (a plain Error reaches the browser as "Server Error").
     if (args.additionalImageIds && args.additionalImageIds.length > 4) {
-      throw new Error("Maximum of 4 additional images allowed");
+      throw new ConvexError("Maximum of 4 additional images allowed");
     }
 
     if (!userRecord) {
-      throw new Error("Authenticated user record not found. Sync issue?");
+      throw new ConvexError(
+        "Your account is still syncing. Refresh the page and try again.",
+      );
     }
 
     // Rate Limiting Check (now based on userId)
@@ -684,8 +687,8 @@ export const submit = mutation({
       .collect();
 
     if (recentSubmissions.length >= 20) {
-      throw new Error(
-        "Submission limit reached. You can submit up to 10 projects per day.",
+      throw new ConvexError(
+        "Submission limit reached. You can submit up to 20 projects per day.",
       );
     }
 
@@ -713,7 +716,7 @@ export const submit = mutation({
         args.url,
       );
       if (isDuplicate) {
-        throw new Error(
+        throw new ConvexError(
           "This project URL was already submitted to this event. Each project can only be submitted once.",
         );
       }
@@ -744,7 +747,9 @@ export const submit = mutation({
     }
 
     if (allTagIds.length === 0) {
-      throw new Error("At least one valid tag is required to submit a story.");
+      throw new ConvexError(
+        "At least one valid tag is required to submit a story.",
+      );
     }
 
     // Hidden tags (custom form tracking tags) do not count toward the limit
@@ -894,7 +899,7 @@ export const submitAnonymous = mutation({
 
     // Validate additional images limit
     if (args.additionalImageIds && args.additionalImageIds.length > 4) {
-      throw new Error("Maximum of 4 additional images allowed");
+      throw new ConvexError("Maximum of 4 additional images allowed");
     }
 
     // Basic rate limiting by email - allow up to 10 submissions per day per email
@@ -908,7 +913,7 @@ export const submitAnonymous = mutation({
       .collect();
 
     if (recentSubmissions.length >= 10) {
-      throw new Error(
+      throw new ConvexError(
         "Submission limit reached. You can submit up to 10 projects per day.",
       );
     }
@@ -920,8 +925,8 @@ export const submitAnonymous = mutation({
       .withIndex("by_slug", (q) => q.eq("slug", slug))
       .first();
     if (existing) {
-      throw new Error(
-        `Slug "${slug}" already exists for story: ${existing.title}`,
+      throw new ConvexError(
+        `A submission titled "${existing.title}" already uses this name. Pick a different title.`,
       );
     }
 
@@ -950,7 +955,9 @@ export const submitAnonymous = mutation({
     }
 
     if (allTagIds.length === 0) {
-      throw new Error("At least one valid tag is required to submit a story.");
+      throw new ConvexError(
+        "At least one valid tag is required to submit a story.",
+      );
     }
 
     // Hidden tags (custom form tracking tags) do not count toward the limit
@@ -1571,7 +1578,9 @@ export const updateOwnStory = mutation({
       v.array(
         v.object({
           name: v.string(),
-          email: v.string(),
+          // Optional: public story pages strip member emails, so the owner
+          // edit form may send a member back without one. Merge below.
+          email: v.optional(v.string()),
         }),
       ),
     ),
@@ -1580,19 +1589,18 @@ export const updateOwnStory = mutation({
     const userId = await getAuthenticatedUserId(ctx);
     const story = await ctx.db.get(args.storyId);
 
+    // ConvexError so these messages survive prod redaction
     if (!story) {
-      throw new Error("Story not found.");
+      throw new ConvexError("Story not found.");
     }
 
     // Validate additional images limit
     if (args.additionalImageIds && args.additionalImageIds.length > 4) {
-      throw new Error("Maximum of 4 additional images allowed");
+      throw new ConvexError("Maximum of 4 additional images allowed");
     }
 
     if (story.userId !== userId) {
-      throw new Error(
-        "User not authorized to edit this story. Only the owner can edit.",
-      );
+      throw new ConvexError("Only the owner can edit this submission.");
     }
 
     // Track changes for changelog
@@ -1758,7 +1766,7 @@ export const updateOwnStory = mutation({
       }
 
       if (finalTagIds.length === 0) {
-        throw new Error("At least one valid tag is required.");
+        throw new ConvexError("At least one valid tag is required.");
       }
 
       // Hidden tags (custom form tracking tags) do not count toward the limit
@@ -1821,8 +1829,15 @@ export const updateOwnStory = mutation({
     if (args.teamName !== undefined) updateData.teamName = args.teamName;
     if (args.teamMemberCount !== undefined)
       updateData.teamMemberCount = args.teamMemberCount;
-    if (args.teamMembers !== undefined)
-      updateData.teamMembers = args.teamMembers;
+    // Merge by position: public pages strip member emails, so a member
+    // arriving without one keeps the stored address. Blank clears on purpose.
+    if (args.teamMembers !== undefined) {
+      const existingMembers = story.teamMembers ?? [];
+      updateData.teamMembers = args.teamMembers.map((member, i) => ({
+        name: member.name,
+        email: member.email ?? existingMembers[i]?.email ?? "",
+      }));
+    }
 
     // Update slug if title changed
     if (args.title && args.title !== story.title) {
@@ -1892,7 +1907,9 @@ export const updateStoryAdmin = mutation({
       v.array(
         v.object({
           name: v.string(),
-          email: v.string(),
+          // Optional: the admin list strips member emails, so untouched
+          // members arrive as { name } only. Merge below.
+          email: v.optional(v.string()),
         }),
       ),
     ),
@@ -1904,12 +1921,12 @@ export const updateStoryAdmin = mutation({
     const story = await ctx.db.get(args.storyId);
 
     if (!story) {
-      throw new Error("Story not found.");
+      throw new ConvexError("Story not found.");
     }
 
     // Validate additional images limit
     if (args.additionalImageIds && args.additionalImageIds.length > 4) {
-      throw new Error("Maximum of 4 additional images allowed");
+      throw new ConvexError("Maximum of 4 additional images allowed");
     }
 
     // Handle new tags if provided
@@ -1934,7 +1951,7 @@ export const updateStoryAdmin = mutation({
       }
 
       if (finalTagIds.length === 0) {
-        throw new Error("At least one valid tag is required.");
+        throw new ConvexError("At least one valid tag is required.");
       }
     }
 
@@ -1979,8 +1996,14 @@ export const updateStoryAdmin = mutation({
     if (args.teamName !== undefined) updateData.teamName = args.teamName;
     if (args.teamMemberCount !== undefined)
       updateData.teamMemberCount = args.teamMemberCount;
-    if (args.teamMembers !== undefined)
-      updateData.teamMembers = args.teamMembers;
+    // Merge by position so an untouched member keeps its stored email
+    if (args.teamMembers !== undefined) {
+      const existingMembers = story.teamMembers ?? [];
+      updateData.teamMembers = args.teamMembers.map((member, i) => ({
+        name: member.name,
+        email: member.email ?? existingMembers[i]?.email ?? "",
+      }));
+    }
 
     // Update slug if title changed
     if (args.title && args.title !== story.title) {
@@ -1992,7 +2015,9 @@ export const updateStoryAdmin = mutation({
         .first();
 
       if (existingWithSlug) {
-        throw new Error(`Slug "${newSlug}" already exists for another story.`);
+        throw new ConvexError(
+          `Slug "${newSlug}" already exists for another story.`,
+        );
       }
 
       updateData.slug = newSlug;
