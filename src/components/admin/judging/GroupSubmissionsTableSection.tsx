@@ -35,7 +35,9 @@ import {
 import { api } from "../../../../convex/_generated/api";
 import { Input } from "../../ui/input";
 import { SimpleSelect } from "../../ui/SimpleSelect";
+import { useAdminAccess } from "../useAdminAccess";
 import type { GroupDetails } from "./groupSection";
+import { SubmissionDownloadControl } from "./SubmissionDownloadControl";
 
 type SubmissionRow = FunctionReturnType<
   typeof api.judgingGroupSubmissions.listSubmissionsTable
@@ -147,6 +149,7 @@ export function GroupSubmissionsTableSection({
 }: {
   group: GroupDetails;
 }) {
+  const { can } = useAdminAccess();
   const rows = useQuery(api.judgingGroupSubmissions.listSubmissionsTable, {
     groupId: group._id,
   });
@@ -407,6 +410,9 @@ export function GroupSubmissionsTableSection({
             className="w-40"
             aria-label="Rows per page"
           />
+          {can("judging.results") && (
+            <SubmissionDownloadControl group={group} />
+          )}
         </div>
       </div>
 
