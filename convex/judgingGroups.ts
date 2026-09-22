@@ -80,6 +80,20 @@ const submissionDynamicFieldOverridesValidator = v.record(
   }),
 );
 
+// Submission deadline countdown fields, shared by the admin and public
+// group queries so both return the same shape.
+const submissionCountdownFields = {
+  submissionCountdownEnabled: v.optional(v.boolean()),
+  submissionCountdownEndsAt: v.optional(v.number()),
+  submissionCountdownSize: v.optional(
+    v.union(v.literal("large"), v.literal("compact")),
+  ),
+  submissionCountdownPlacement: v.optional(
+    v.union(v.literal("top"), v.literal("form")),
+  ),
+  submissionCountdownLabel: v.optional(v.string()),
+};
+
 // Helper to generate slugs (consistent with existing forms.ts)
 function generateSlug(name: string): string {
   return name
@@ -422,6 +436,16 @@ export const updateGroup = mutation({
     ),
     submissionFormTitle: v.optional(v.union(v.string(), v.null())),
     submissionFormSubtitle: v.optional(v.union(v.string(), v.null())),
+    // Submission deadline countdown (null clears the deadline or label)
+    submissionCountdownEnabled: v.optional(v.boolean()),
+    submissionCountdownEndsAt: v.optional(v.union(v.number(), v.null())),
+    submissionCountdownSize: v.optional(
+      v.union(v.literal("large"), v.literal("compact")),
+    ),
+    submissionCountdownPlacement: v.optional(
+      v.union(v.literal("top"), v.literal("form")),
+    ),
+    submissionCountdownLabel: v.optional(v.union(v.string(), v.null())),
     submissionFormRequiredTagId: v.optional(v.union(v.id("tags"), v.null())),
     submissionFormRequiredTagVisible: v.optional(v.boolean()),
     submissionFieldRequirements: v.optional(
@@ -503,6 +527,14 @@ export const updateGroup = mutation({
       throw new Error(
         "The title field cannot be hidden; submissions need a title for judging",
       );
+    }
+    // Countdown deadline must be a real epoch ms value (null clears it)
+    if (
+      typeof args.submissionCountdownEndsAt === "number" &&
+      (!Number.isFinite(args.submissionCountdownEndsAt) ||
+        args.submissionCountdownEndsAt <= 0)
+    ) {
+      throw new Error("The countdown deadline is not a valid date");
     }
 
     // Build finalUpdates object properly, handling nulls explicitly
@@ -824,6 +856,7 @@ export const getGroupWithDetails = query({
       ),
       submissionFormTitle: v.optional(v.string()),
       submissionFormSubtitle: v.optional(v.string()),
+      ...submissionCountdownFields,
       submissionFormRequiredTagId: v.optional(v.id("tags")),
       submissionFormRequiredTagVisible: v.optional(v.boolean()),
       submissionFieldRequirements: v.optional(
@@ -958,6 +991,11 @@ export const getGroupWithDetails = query({
       submissionPageLinks: group.submissionPageLinks,
       submissionFormTitle: group.submissionFormTitle,
       submissionFormSubtitle: group.submissionFormSubtitle,
+      submissionCountdownEnabled: group.submissionCountdownEnabled,
+      submissionCountdownEndsAt: group.submissionCountdownEndsAt,
+      submissionCountdownSize: group.submissionCountdownSize,
+      submissionCountdownPlacement: group.submissionCountdownPlacement,
+      submissionCountdownLabel: group.submissionCountdownLabel,
       submissionFormRequiredTagId: group.submissionFormRequiredTagId,
       submissionFormRequiredTagVisible: group.submissionFormRequiredTagVisible,
       submissionFieldRequirements: group.submissionFieldRequirements,
@@ -1187,6 +1225,7 @@ export const getSubmissionPage = query({
       ),
       submissionFormTitle: v.optional(v.string()),
       submissionFormSubtitle: v.optional(v.string()),
+      ...submissionCountdownFields,
       submissionFormRequiredTagId: v.optional(v.id("tags")),
       submissionFormRequiredTagVisible: v.optional(v.boolean()),
       submissionFieldRequirements: v.optional(
@@ -1239,6 +1278,11 @@ export const getSubmissionPage = query({
       submissionPageLinks: group.submissionPageLinks,
       submissionFormTitle: group.submissionFormTitle,
       submissionFormSubtitle: group.submissionFormSubtitle,
+      submissionCountdownEnabled: group.submissionCountdownEnabled,
+      submissionCountdownEndsAt: group.submissionCountdownEndsAt,
+      submissionCountdownSize: group.submissionCountdownSize,
+      submissionCountdownPlacement: group.submissionCountdownPlacement,
+      submissionCountdownLabel: group.submissionCountdownLabel,
       submissionFormRequiredTagId: group.submissionFormRequiredTagId,
       submissionFormRequiredTagVisible: group.submissionFormRequiredTagVisible,
       submissionFieldRequirements: group.submissionFieldRequirements,
@@ -1268,10 +1312,10 @@ export const getSubmissionPageMetadata = internalQuery({
     const group = await ctx.db
       .query("judgingGroups")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
-      .filter((q) => q.eq(q.field("isActive"), true))
       .unique();
 
-    if (!group || !group.hasCustomSubmissionPage) {
+    // Slug is unique, so the active check is a plain field test
+    if (!group || !group.isActive || !group.hasCustomSubmissionPage) {
       return null;
     }
 

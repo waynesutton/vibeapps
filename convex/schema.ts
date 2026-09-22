@@ -527,6 +527,18 @@ export default defineSchema({
     ), // External links to display
     submissionFormTitle: v.optional(v.string()), // Custom title for submission form (default: "Submit Your App")
     submissionFormSubtitle: v.optional(v.string()), // Optional subtitle text below form title
+    // Public countdown to the submission deadline. endsAt is an absolute
+    // epoch ms so every visitor sees the same instant in their own time
+    // zone. Display only: the form stays open after the deadline.
+    submissionCountdownEnabled: v.optional(v.boolean()),
+    submissionCountdownEndsAt: v.optional(v.number()),
+    submissionCountdownSize: v.optional(
+      v.union(v.literal("large"), v.literal("compact")),
+    ),
+    submissionCountdownPlacement: v.optional(
+      v.union(v.literal("top"), v.literal("form")),
+    ), // top = banner above the page, form = above the form card title
+    submissionCountdownLabel: v.optional(v.string()), // Heading, default "Submissions close in"
     submissionFormRequiredTagId: v.optional(v.id("tags")), // Required tag that will be auto-selected and locked in submission form
     // Whether the locked required tag is visible to submitters on the form
     // (pills, quick select, tag counter). Unset = shown. Display only: the tag

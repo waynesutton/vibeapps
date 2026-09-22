@@ -217,6 +217,25 @@ export function dateInputToEndTs(value: string): number | null {
   return Number.isNaN(ts) ? null : ts;
 }
 
+// Convert a timestamp into a datetime-local input value (yyyy-mm-ddThh:mm)
+// in the admin's local time zone, or "" when unset.
+export function tsToDateTimeInput(ts?: number | null): string {
+  if (ts === undefined || ts === null) return "";
+  const d = new Date(ts);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${tsToDateInput(ts)}T${hh}:${min}`;
+}
+
+// Convert a datetime-local input value into an epoch ms timestamp, or null.
+// Browsers parse "yyyy-mm-ddThh:mm" as local time, which is what admins
+// expect when they type a deadline in their own zone.
+export function dateTimeInputToTs(value: string): number | null {
+  if (!value) return null;
+  const ts = new Date(value).getTime();
+  return Number.isNaN(ts) ? null : ts;
+}
+
 // Track a save button's lifecycle so every panel gives the same feedback.
 export function useSaveState() {
   const [saving, setSaving] = useState(false);

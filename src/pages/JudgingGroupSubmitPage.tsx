@@ -18,6 +18,7 @@ import { useAuth } from "@clerk/clerk-react";
 import { Link } from "react-router-dom";
 import { authUrlWithReturn } from "../lib/redirectPath";
 import { LumaEventList } from "../components/LumaEventList";
+import { CountdownTimer } from "../components/CountdownTimer";
 
 // Default required state for each configurable submission field.
 // Mirrors the admin defaults in EditJudgingGroupModal.
@@ -278,6 +279,22 @@ export function JudgingGroupSubmitPage() {
   const imageSize = submissionPage.submissionPageImageSize || 400;
   const isWideImage = submissionPage.submissionPageImageAspect === "wide";
 
+  // Optional deadline countdown, placed at the top of the page or above the
+  // form title. Display only: the form stays open after the deadline.
+  const countdown =
+    submissionPage.submissionCountdownEnabled &&
+    submissionPage.submissionCountdownEndsAt ? (
+      <CountdownTimer
+        endsAt={submissionPage.submissionCountdownEndsAt}
+        size={submissionPage.submissionCountdownSize ?? "large"}
+        label={submissionPage.submissionCountdownLabel}
+      />
+    ) : null;
+  const countdownPlacement =
+    submissionPage.submissionCountdownPlacement ?? "form";
+  const topCountdown = countdownPlacement === "top" ? countdown : null;
+  const formCountdown = countdownPlacement === "form" ? countdown : null;
+
   // Shared form card used by every layout variant
   const formCard = (
     <div className="bg-surface rounded-xl p-6 sm:p-8 border border-hairline">
@@ -309,6 +326,7 @@ export function JudgingGroupSubmitPage() {
         </div>
       ) : (
         <>
+          {formCountdown && <div className="mb-6">{formCountdown}</div>}
           <h2 className="text-2xl font-medium text-ink mb-2">
             {submissionPage.submissionFormTitle || "Submit Your App"}
           </h2>
@@ -396,6 +414,7 @@ export function JudgingGroupSubmitPage() {
     return (
       <div className="min-h-screen bg-canvas">
         <div className="mx-auto max-w-4xl px-4 py-10 sm:py-16">
+          {topCountdown && <div className="mb-10 sm:mb-12">{topCountdown}</div>}
           <header className="mb-10 sm:mb-12 text-center">
             {submissionPage.submissionPageImageUrl && (
               <img
@@ -458,6 +477,7 @@ export function JudgingGroupSubmitPage() {
     <div className="min-h-screen bg-canvas">
       {/* Main Content - Dynamic Column Layout */}
       <div className="container mx-auto px-4 py-8 max-w-7xl">
+        {topCountdown && <div className="mb-8">{topCountdown}</div>}
         <div className={`grid grid-cols-1 ${layoutClass} gap-8`}>
           {/* Left Column - Event Info */}
           <div className="space-y-6 lg:sticky lg:top-8 lg:h-[calc(100vh-4rem)] lg:overflow-y-auto self-start">

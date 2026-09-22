@@ -1,12 +1,21 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { ImageIcon, Loader2, Plus, RefreshCw, Trash2 } from "lucide-react";
+import {
+  Clock,
+  ImageIcon,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
 import { Textarea } from "../../ui/textarea";
 import { SimpleSelect } from "../../ui/SimpleSelect";
+import { CountdownTimer } from "../../CountdownTimer";
+import { CountdownSize, formatDeadline } from "../../../lib/countdown";
 import {
   ALWAYS_VISIBLE_FIELD_KEYS,
   CustomQuestion,
@@ -21,9 +30,11 @@ import {
   SubmissionFieldVisibility,
   TogglePill,
   UrlRow,
+  dateTimeInputToTs,
   makeQuestionKey,
   mergeRequirements,
   mergeVisibility,
+  tsToDateTimeInput,
   useSaveState,
 } from "./groupSection";
 
@@ -66,6 +77,24 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
   const [formSubtitle, setFormSubtitle] = useState(
     group.submissionFormSubtitle || "",
   );
+  // Submission deadline countdown. The deadline input is in the admin's
+  // local time; it is stored as epoch ms so visitors see their own zone.
+  const [countdownEnabled, setCountdownEnabled] = useState(
+    group.submissionCountdownEnabled ?? false,
+  );
+  const [countdownEndsAt, setCountdownEndsAt] = useState(
+    tsToDateTimeInput(group.submissionCountdownEndsAt),
+  );
+  const [countdownSize, setCountdownSize] = useState<CountdownSize>(
+    group.submissionCountdownSize ?? "large",
+  );
+  const [countdownPlacement, setCountdownPlacement] = useState<
+    "top" | "form"
+  >(group.submissionCountdownPlacement ?? "form");
+  const [countdownLabel, setCountdownLabel] = useState(
+    group.submissionCountdownLabel ?? "",
+  );
+  const countdownEndsAtTs = dateTimeInputToTs(countdownEndsAt);
   const [requiredTagId, setRequiredTagId] = useState<Id<"tags"> | null>(
     group.submissionFormRequiredTagId || null,
   );
@@ -150,6 +179,11 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
         return;
       }
     }
+    // A shown countdown needs a deadline to count down to
+    if (countdownEnabled && countdownEndsAtTs === null) {
+      setError("Set a deadline for the countdown timer, or hide it.");
+      return;
+    }
     void run(async () => {
       let uploadedImageId: Id<"_storage"> | undefined;
       if (imageFile) {
@@ -210,6 +244,11 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
         submissionPageLinks: cleanLinks,
         submissionFormTitle: formTitle.trim() || null,
         submissionFormSubtitle: formSubtitle.trim() || null,
+        submissionCountdownEnabled: countdownEnabled,
+        submissionCountdownEndsAt: countdownEndsAtTs,
+        submissionCountdownSize: countdownSize,
+        submissionCountdownPlacement: countdownPlacement,
+        submissionCountdownLabel: countdownLabel.trim() || null,
         submissionFormRequiredTagId: requiredTagId,
         submissionFormRequiredTagVisible: requiredTagVisible,
         submissionFieldRequirements: requirements,
@@ -556,6 +595,133 @@ export function GroupSubmitPageSection({ group }: { group: GroupDetails }) {
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* Submission deadline countdown */}
+            <div className="border-t border-hairline pt-4 space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[13px] font-medium text-ink flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5" />
+                    Countdown timer
+                  </p>
+                  <p className="text-xs text-soft">
+                    Live days, hours, minutes, and seconds to the deadline.
+                    Every visitor sees the deadline in their own time zone.
+                  </p>
+                </div>
+                <TogglePill
+                  enabled={countdownEnabled}
+                  onToggle={() => setCountdownEnabled((prev) => !prev)}
+                  onLabel="Shown"
+                  offLabel="Hidden"
+                  disabled={saving}
+                />
+              </div>
+
+              {countdownEnabled && (
+                <>
+                  <div>
+                    <Label htmlFor="countdown-ends-at">Deadline</Label>
+                    <Input
+                      id="countdown-ends-at"
+                      type="datetime-local"
+                      value={countdownEndsAt}
+                      onChange={(e) => setCountdownEndsAt(e.target.value)}
+                      disabled={saving}
+                      className="mt-1 w-auto"
+                      aria-describedby="countdown-ends-at-hint"
+                    />
+                    <p
+                      id="countdown-ends-at-hint"
+                      className="text-xs text-soft mt-1"
+                    >
+                      {countdownEndsAtTs !== null
+                        ? `Saves as ${formatDeadline(countdownEndsAtTs)} in your time zone.`
+                        : "Enter the date and time in your own time zone."}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <Label>Size</Label>
+                      <div className="flex gap-2 mt-1">
+                        {(
+                          [
+                            { value: "large", label: "Large" },
+                            { value: "compact", label: "Compact" },
+                          ] as const
+                        ).map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setCountdownSize(option.value)}
+                            disabled={saving}
+                            className={`px-3 py-1.5 text-[13px] font-medium rounded-md border transition-colors ${
+                              countdownSize === option.value
+                                ? "bg-cta border-ink text-on-cta"
+                                : "bg-surface border-hairline text-copy hover:border-hairline-strong"
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Placement</Label>
+                      <div className="flex gap-2 mt-1">
+                        {(
+                          [
+                            { value: "top", label: "Top of page" },
+                            { value: "form", label: "Above the form" },
+                          ] as const
+                        ).map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setCountdownPlacement(option.value)}
+                            disabled={saving}
+                            className={`px-3 py-1.5 text-[13px] font-medium rounded-md border transition-colors ${
+                              countdownPlacement === option.value
+                                ? "bg-cta border-ink text-on-cta"
+                                : "bg-surface border-hairline text-copy hover:border-hairline-strong"
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="countdown-label">Label</Label>
+                    <Input
+                      id="countdown-label"
+                      value={countdownLabel}
+                      onChange={(e) => setCountdownLabel(e.target.value)}
+                      placeholder="Submissions close in"
+                      disabled={saving}
+                      className="mt-1"
+                    />
+                  </div>
+
+                  {/* Live preview with the unsaved values */}
+                  {countdownEndsAtTs !== null && (
+                    <div>
+                      <Label>Preview</Label>
+                      <div className="mt-1 rounded-lg bg-canvas p-3">
+                        <CountdownTimer
+                          endsAt={countdownEndsAtTs}
+                          size={countdownSize}
+                          label={countdownLabel}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             <div className="border-t border-hairline pt-4 space-y-4">
