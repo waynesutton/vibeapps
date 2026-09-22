@@ -110,6 +110,21 @@ export function deadlineText(data: HowToJudgeData): string | null {
   return typeof at === "number" ? formatDeadline(at) : null;
 }
 
+// Submission deadline (the event window end) in the viewer's time zone, or
+// null when the organizer has not set one. Distinct from the judging
+// deadline above: this is when teams had to submit.
+export function submissionDeadlineText(data: HowToJudgeData): string | null {
+  return typeof data.endDate === "number" ? formatDeadline(data.endDate) : null;
+}
+
+// One sentence judges see when the group has a submission deadline, so a
+// red Late submission label in the queue is never a surprise.
+export function lateSubmissionNote(data: HowToJudgeData): string | null {
+  const deadline = submissionDeadlineText(data);
+  if (!deadline) return null;
+  return `Submissions closed ${deadline}. Anything submitted after that shows a red Late submission label in your queue and on the submission. Score it like any other entry and mention the label in a note if it should affect eligibility; organizers make that call.`;
+}
+
 // The five step summary at the top of the page. Plain sentences so the
 // Markdown export can number them and the page can render them as a list.
 export function tldrSteps(data: HowToJudgeData, origin: string): Array<string> {
@@ -196,6 +211,11 @@ export function aiReviewParagraphs(
   );
   if (data.aiRubricLabels.length > 0) {
     paragraphs.push(`AI rubric: ${data.aiRubricLabels.join(", ")}.`);
+  }
+  if (submissionDeadlineText(data)) {
+    paragraphs.push(
+      "The AI judge knows the submission deadline. A late entry is still scored on every criterion, and its AI note opens with how late it was so organizers can rule on eligibility.",
+    );
   }
   if (data.judgeQueueMode === "shortlist") {
     paragraphs.push(
@@ -342,8 +362,16 @@ export function buildHowToJudgeMarkdown(
       "- Description, tags, team name and members, and answers to any event questions",
       "- Social proof card with launch post engagement when the team shared LinkedIn, X, or Bluesky links",
       "- Notes: a thread per submission for you and the other judges, with @mentions",
+      ...(submissionDeadlineText(data)
+        ? [
+            "- A red Late submission label when the entry came in after the submission deadline",
+          ]
+        : []),
     ].join("\n"),
   );
+
+  const lateNote = lateSubmissionNote(data);
+  if (lateNote) out.push("## Late submissions", lateNote);
 
   const ai = aiReviewParagraphs(data, origin);
   if (ai.length > 0) out.push("## AI review", ...ai);

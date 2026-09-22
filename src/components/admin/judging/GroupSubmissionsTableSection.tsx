@@ -41,6 +41,7 @@ import { SimpleSelect } from "../../ui/SimpleSelect";
 import { useAdminAccess } from "../useAdminAccess";
 import type { GroupDetails } from "./groupSection";
 import { SubmissionDownloadControl } from "./SubmissionDownloadControl";
+import { LateSubmissionBadge } from "../../LateSubmissionBadge";
 
 type SubmissionRow = FunctionReturnType<
   typeof api.judgingGroupSubmissions.listSubmissionsTable
@@ -306,11 +307,18 @@ export function GroupSubmissionsTableSection({
         header: "Submitted",
         sortFn: "basic",
         cell: ({ row }) => (
-          <span
-            className="text-copy tabular-nums whitespace-nowrap"
-            title={format(new Date(row.original.submittedAt), "PPpp")}
-          >
-            {format(new Date(row.original.submittedAt), "MMM d, yyyy")}
+          <span className="inline-flex items-center gap-2 whitespace-nowrap">
+            <span
+              className="text-copy tabular-nums"
+              title={format(new Date(row.original.submittedAt), "PPpp")}
+            >
+              {format(new Date(row.original.submittedAt), "MMM d, yyyy")}
+            </span>
+            {/* Red "Late" when submitted after the group's event end */}
+            <LateSubmissionBadge
+              timing={row.original.submissionTiming}
+              variant="inline"
+            />
           </span>
         ),
       },

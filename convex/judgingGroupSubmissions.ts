@@ -15,6 +15,10 @@ import {
   rankCompletedAiResults,
   type AiRankEntry,
 } from "./lib/aiRank";
+import {
+  computeSubmissionTiming,
+  submissionTimingValidator,
+} from "./lib/submissionTiming";
 
 // Helper function to check if a story should be included in judging
 // Returns true if story is valid for judging (not deleted, hidden, archived, or rejected)
@@ -893,6 +897,8 @@ export const listSubmissionsTable = query({
       slug: v.string(),
       url: v.string(),
       submittedAt: v.number(),
+      // Submitted vs the group's event end; recomputed on every read
+      submissionTiming: submissionTimingValidator,
       addedAt: v.number(),
       status: v.union(
         v.literal("pending"),
@@ -919,10 +925,15 @@ export const listSubmissionsTable = query({
   handler: async (ctx, args) => {
     await requireJudgingGroupPermission(ctx, args.groupId, "judging.view");
 
-    const submissions = await ctx.db
-      .query("judgingGroupSubmissions")
-      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
-      .collect();
+    // Event end is the submission deadline for the late label
+    const [group, submissions] = await Promise.all([
+      ctx.db.get(args.groupId),
+      ctx.db
+        .query("judgingGroupSubmissions")
+        .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+        .collect(),
+    ]);
+    const deadlineAt = group?.endDate;
 
     const stories = await Promise.all(
       submissions.map(async (submission) => {
@@ -972,6 +983,10 @@ export const listSubmissionsTable = query({
         slug: story.slug,
         url: story.url,
         submittedAt: story._creationTime,
+        submissionTiming: computeSubmissionTiming(
+          story._creationTime,
+          deadlineAt,
+        ),
         addedAt,
         shortlisted,
         status: story.status,
@@ -1257,6 +1272,8 @@ export const getGroupSubmissions = query({
       // False only for below-cut rows in shortlist mode; never scorable
       inJudgeQueue: v.boolean(),
       ai: v.optional(judgeAiRankValidator),
+      // Submitted vs the group's event end so judges see late entries
+      submissionTiming: submissionTimingValidator,
       title: v.string(),
       slug: v.string(),
       description: v.string(),
@@ -1447,6 +1464,10 @@ export const getGroupSubmissions = query({
             _creationTime: story._creationTime,
             inJudgeQueue,
             ai: undefined as AiRankEntry | undefined,
+            submissionTiming: computeSubmissionTiming(
+              story._creationTime,
+              group.endDate,
+            ),
             title: story.title,
             slug: story.slug,
             description: story.description,

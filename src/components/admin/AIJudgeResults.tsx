@@ -30,6 +30,11 @@ import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
 import { SimpleSelect } from "../ui/SimpleSelect";
 import { useDialog } from "../../hooks/useDialog";
+import {
+  LateSubmissionBadge,
+  describeLateSubmission,
+} from "../LateSubmissionBadge";
+import type { SubmissionTiming } from "../../../convex/lib/submissionTiming";
 
 // Rendered inside the group workspace; the workspace header and sidebar
 // provide navigation, so this component has no back button.
@@ -248,6 +253,7 @@ type ReportSubmission = {
   teamMembers?: Array<{ name: string; email: string }>;
   submitterName?: string;
   status: string;
+  submissionTiming?: SubmissionTiming;
   criteriaScores?: Array<CriteriaScore>;
   totalScore?: number;
   averageScore?: number;
@@ -311,12 +317,21 @@ type GitFactsSummary = {
   parentRepo?: string;
 };
 
+// Eligibility filter values: git build timeline plus submission timing
+type TimelineFilter =
+  | "all"
+  | "in_window"
+  | "started_before"
+  | "on_time"
+  | "late";
+
 type SubmissionBrief = {
   storyTitle: string;
   storySlug: string;
   storyUrl?: string;
   githubUrl?: string;
   status: string;
+  submissionTiming?: SubmissionTiming;
   averageScore?: number;
   weightedScore?: number;
   overallReasoning?: string;
@@ -468,6 +483,11 @@ function submissionBriefLines(
   if (submission.gitFacts?.builtDuringEvent === "started_before") {
     lines.push(
       "- Build timeline: first commit predates the event window; organizer review recommended",
+    );
+  }
+  if (submission.submissionTiming?.status === "late") {
+    lines.push(
+      `- Submission timing: late. ${describeLateSubmission(submission.submissionTiming)}`,
     );
   }
   for (const discrepancy of submission.logDiscrepancies ?? []) {
@@ -627,7 +647,9 @@ function buildHackathonReport(
   );
   lines.push("| --- | --- | --- | --- | --- | --- | --- |");
   completed.forEach((s, index) => {
-    const submissionLink = `[${mdCell(s.title)}](${origin}/s/${s.slug})`;
+    const submissionLink = `[${mdCell(s.title)}](${origin}/s/${s.slug})${
+      s.submissionTiming?.status === "late" ? " (late submission)" : ""
+    }`;
     const team = s.teamName
       ? mdCell(s.teamName)
       : s.submitterName
@@ -685,6 +707,11 @@ function buildHackathonReport(
       lines.push(`- Team: ${s.teamName}${members ? ` (${members})` : ""}`);
     } else if (s.submitterName) {
       lines.push(`- Builder: ${s.submitterName}`);
+    }
+    if (s.submissionTiming?.status === "late") {
+      lines.push(
+        `- Submission timing: late. ${describeLateSubmission(s.submissionTiming)}`,
+      );
     }
     if (s.urlCheck) {
       lines.push(
@@ -911,10 +938,9 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
   const [activeTab, setActiveTab] = useState<
     "results" | "stats" | "recap" | "report"
   >("results");
-  // Build-timeline filter (Phase 3): all / built in window / started before
-  const [timelineFilter, setTimelineFilter] = useState<
-    "all" | "in_window" | "started_before"
-  >("all");
+  // Eligibility filter: build timeline (git first commit vs event start) and
+  // submission timing (submitted vs event end)
+  const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>("all");
   const [reportMarkdown, setReportMarkdown] = useState<string | null>(null);
   const [reportCopied, setReportCopied] = useState(false);
   const [recapMarkdown, setRecapMarkdown] = useState<string | null>(null);
@@ -1216,8 +1242,15 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
   );
   const visibleResults = (data?.results || []).filter((r) => {
     if (timelineFilter === "all") return true;
+    if (timelineFilter === "late" || timelineFilter === "on_time") {
+      return r.submissionTiming.status === timelineFilter;
+    }
     return r.gitFacts?.builtDuringEvent === timelineFilter;
   });
+  // Only offer the timing options when the group has a deadline
+  const hasDeadline = (data?.results || []).some(
+    (r) => r.submissionTiming.status !== "no_deadline_set",
+  );
 
   // Short date for timeline facts
   const shortDate = (ts?: number) =>
@@ -1705,18 +1738,16 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                 </div>
               </div>
 
-              {/* Build-timeline filter */}
+              {/* Eligibility filter: build timeline plus submission timing */}
               <div className="flex items-center justify-end gap-2">
                 <label htmlFor="timeline-filter" className="text-xs text-soft">
-                  Build timeline
+                  Eligibility
                 </label>
                 <SimpleSelect
                   id="timeline-filter"
                   value={timelineFilter}
                   onChange={(value) =>
-                    setTimelineFilter(
-                      value as "all" | "in_window" | "started_before",
-                    )
+                    setTimelineFilter(value as TimelineFilter)
                   }
                   className="w-auto h-auto px-2 py-1.5 text-xs gap-1"
                   options={[
@@ -1726,12 +1757,18 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                       value: "started_before",
                       label: "Started before event",
                     },
+                    ...(hasDeadline
+                      ? [
+                          { value: "on_time", label: "Submitted on time" },
+                          { value: "late", label: "Late submissions" },
+                        ]
+                      : []),
                   ]}
                 />
               </div>
               {visibleResults.length === 0 && (
                 <p className="text-sm text-soft bg-surface rounded-lg border border-hairline p-4">
-                  No submissions match this timeline filter.
+                  No submissions match this filter.
                 </p>
               )}
               {visibleResults.map((result) => {
@@ -1768,6 +1805,9 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                             </a>
                             <ExternalLink className="w-3.5 h-3.5 text-faint flex-shrink-0" />
                             {statusBadge(result.status)}
+                            <LateSubmissionBadge
+                              timing={result.submissionTiming}
+                            />
                             {isShortlisted && (
                               <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-50 text-green-700 rounded-full">
                                 <Star className="w-3 h-3 fill-current" />

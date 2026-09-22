@@ -26,6 +26,11 @@ import {
   redactSecrets,
   type HackathonLogHeader,
 } from "./hackathonLog";
+import {
+  computeSubmissionTiming,
+  formatLateBy,
+  type SubmissionTiming,
+} from "./lib/submissionTiming";
 
 // Content budgets so prompts stay well under model context limits.
 // Facts are counted from a wider file set than the prompt includes, so
@@ -1240,7 +1245,8 @@ function computeGitFacts(
     builtDuringEvent =
       firstCommitAt >= eventStartDate ? "in_window" : "started_before";
   }
-  // eventEndDate is informational only; late commits are not an eligibility flag
+  // eventEndDate is not a git flag: late commits are fine. The submission
+  // deadline check lives in lib/submissionTiming.ts (story creation time).
   void eventEndDate;
 
   return {
@@ -1934,6 +1940,11 @@ function buildSystemPrompt(
   body +=
     "\n\nThe SPONSOR STACK EVIDENCE section (when present) is measured from package.json and convex/ source the same way VERIFIED CONVEX FACTS are. It records whether AgentMail, Firecrawl, and OpenAI are integrated and how (Convex component, SDK, API key, direct HTTP call, or the Convex AI gateway), and the AI MODEL EVIDENCE section names every model provider referenced. Name what these sections show in overallReasoning. Never claim a sponsor or provider integration they do not show, and never raise or lower any rubric score because of sponsor usage; the sponsor stack is judged by humans.";
 
+  // Submission timing: fixed rule so a custom prompt body can never make the
+  // model penalize or skip a late entry. Eligibility is the organizer's call.
+  body +=
+    "\n\nThe SUBMISSION TIMING section holds the platform's own record of when this submission was received and the judging group's deadline (event end). Score every criterion normally regardless of timing; never raise, lower, or skip a score because a submission was late or on time. When the status is LATE, begin overallReasoning with one sentence such as \"Late submission: received <how late> after the deadline; organizers decide eligibility.\" and then continue with the normal scoring note. When the status is ON TIME or no deadline is set, do not mention timing.";
+
   const jsonContract = `Respond with ONLY a JSON object in exactly this shape (no markdown fences, no extra text):
 {
   "criteria": {
@@ -1979,6 +1990,29 @@ function formatGitFacts(git: GitFacts): string {
     lines.push(
       "Event window: first commit is within the judging group's event window.",
     );
+  }
+  return lines.join("\n");
+}
+
+// Render the submission timing block for the user message. Authoritative
+// platform record: story creation time vs the group's event end.
+export function formatSubmissionTiming(timing: SubmissionTiming): string {
+  const iso = (t: number) => new Date(t).toISOString();
+  const lines = [`Submitted at: ${iso(timing.submittedAt)}`];
+  if (timing.deadlineAt === undefined) {
+    lines.push(
+      "Deadline: none set for this judging group",
+      "Status: NO DEADLINE SET. Do not mention timing in overallReasoning.",
+    );
+    return lines.join("\n");
+  }
+  lines.push(`Deadline (event end): ${iso(timing.deadlineAt)}`);
+  if (timing.status === "late") {
+    lines.push(
+      `Status: LATE, received ${formatLateBy(timing.lateByMs ?? 0)} after the deadline. Open overallReasoning with the late submission sentence; score every criterion normally.`,
+    );
+  } else {
+    lines.push("Status: ON TIME. Do not mention timing in overallReasoning.");
   }
   return lines.join("\n");
 }
@@ -2067,6 +2101,7 @@ function buildUserMessage(
   frontendHosting: FrontendHosting | undefined,
   liveHackathonMd?: ManifestContext,
   socialProof?: SocialProofContext,
+  submissionTiming?: SubmissionTiming,
 ): string {
   const sections: Array<string> = [
     `SUBMISSION: ${data.title}`,
@@ -2078,6 +2113,14 @@ function buildUserMessage(
   sections.push(`Live URL: ${data.url || "not provided"}`);
   sections.push(`GitHub URL: ${data.githubUrl || "not provided"}`);
   if (data.videoUrl) sections.push(`Video URL: ${data.videoUrl}`);
+
+  // Platform record of when the app was submitted vs the group deadline.
+  // Sits before the repository section so the Jev truncation never drops it.
+  if (submissionTiming) {
+    sections.push(
+      `\n=== SUBMISSION TIMING (platform record; authoritative) ===\n${formatSubmissionTiming(submissionTiming)}`,
+    );
+  }
 
   // Deterministic liveness facts so the model does not have to guess
   sections.push(
@@ -2579,6 +2622,11 @@ export const analyzeSubmission = internalAction({
       // and (when mirroring is on) the group's live human judging criteria
       const rubric = getRubricForGroup(data, data.humanCriteria);
       const systemPrompt = buildSystemPrompt(data.aiJudgeSystemPrompt, rubric);
+      // Submitted vs the group's event end; same helper the UI badges use
+      const submissionTiming = computeSubmissionTiming(
+        data.submittedAt,
+        data.eventEndDate,
+      );
       const userMessage = buildUserMessage(
         data,
         repo,
@@ -2590,6 +2638,7 @@ export const analyzeSubmission = internalAction({
         frontendHosting,
         liveHackathonMd,
         socialProof,
+        submissionTiming,
       );
 
       // One retry on parse or request failure: the first attempt attaches the
@@ -2711,6 +2760,15 @@ export const analyzeSubmission = internalAction({
       ) {
         overallReasoning =
           `${overallReasoning} Note for organizers: the first commit predates the judging group's start date, so review event eligibility.`.trim();
+      }
+      // Late submission note is a fixed rule; prepend it when the model
+      // skipped it so humans reading the reasoning always see it first
+      if (
+        submissionTiming.status === "late" &&
+        !/late submission|after the deadline/i.test(overallReasoning)
+      ) {
+        overallReasoning =
+          `Late submission: received ${formatLateBy(submissionTiming.lateByMs ?? 0)} after the deadline; organizers decide eligibility. ${overallReasoning}`.trim();
       }
 
       // Feature list is now derived from verified facts, not model output

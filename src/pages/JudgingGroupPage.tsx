@@ -8,6 +8,7 @@ import { Input } from "../components/ui/input";
 import { useDialog } from "../hooks/useDialog";
 import { Label } from "../components/ui/label";
 import { LumaEventList } from "../components/LumaEventList";
+import { formatDeadline } from "../lib/countdown";
 
 export default function JudgingGroupPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -178,20 +179,21 @@ export default function JudgingGroupPage() {
               <p className="text-copy mb-4">{group.description}</p>
             )}
 
-            <div className="flex items-center justify-center gap-4 text-sm text-soft mb-6">
+            {/* Event window with time of day in the viewer's zone; the end
+                is the submission deadline behind the Late submission label */}
+            <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-soft mb-6">
               {group.startDate && (
                 <div className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
-                  <span>
-                    Started {new Date(group.startDate).toLocaleDateString()}
-                  </span>
+                  <span>Started {formatDeadline(group.startDate)}</span>
                 </div>
               )}
               {group.endDate && (
                 <div className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
                   <span>
-                    Ends {new Date(group.endDate).toLocaleDateString()}
+                    {group.endDate < Date.now() ? "Ended" : "Ends"}{" "}
+                    {formatDeadline(group.endDate)}
                   </span>
                 </div>
               )}

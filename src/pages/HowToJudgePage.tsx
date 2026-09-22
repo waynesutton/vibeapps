@@ -23,6 +23,7 @@ import {
   deadlineText,
   judgingLinks,
   judgingUrl,
+  lateSubmissionNote,
   queueSummary,
   ratingAnchors,
   scaleSummary,
@@ -250,6 +251,7 @@ function HowToJudgeDocument({
   const steps = useMemo(() => tldrSteps(data, origin), [data, origin]);
   const ai = useMemo(() => aiReviewParagraphs(data, origin), [data, origin]);
   const deadline = deadlineText(data);
+  const lateNote = lateSubmissionNote(data);
   const settings = data.howToJudge;
   const code = accessCodeNote(data);
   const queueCount =
@@ -270,13 +272,14 @@ function HowToJudgeDocument({
       { id: "status", label: "Status and finishing" },
       { id: "submission", label: "What you will see" },
     ];
+    if (lateNote) list.push({ id: "late-submissions", label: "Late submissions" });
     if (ai.length > 0) list.push({ id: "ai-review", label: "AI review" });
     list.push({ id: "navigation", label: "Finding your way" });
     list.push({ id: "troubleshooting", label: "Troubleshooting" });
     if (hasOrganizerBlocks) list.push({ id: "organizer", label: "From the organizer" });
     list.push({ id: "links", label: "Links" });
     return list;
-  }, [ai.length, hasOrganizerBlocks]);
+  }, [ai.length, hasOrganizerBlocks, lateNote]);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-24 pt-6 sm:px-6">
@@ -546,12 +549,31 @@ function HowToJudgeDocument({
               Bluesky links
             </li>
             <li>Notes: a thread per submission for you and the other judges, with @mentions</li>
+            {lateNote && (
+              <li>
+                A red{" "}
+                <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-1.5 py-0.5 text-xs text-red-700">
+                  Late submission
+                </span>{" "}
+                label when the entry came in after the submission deadline
+              </li>
+            )}
           </ul>
           <Shot
             src="notes-thread.png"
             alt="The notes thread on a submission"
             caption="Notes are shared with the other judges and the organizer."
           />
+
+          {/* Late submissions, only when the group has a submission deadline */}
+          {lateNote && (
+            <>
+              <SectionHeading id="late-submissions" eyebrow="Eligibility">
+                Late submissions
+              </SectionHeading>
+              <p className="mt-3 text-sm text-copy">{lateNote}</p>
+            </>
+          )}
 
           {/* AI review, only when the AI judge is on */}
           {ai.length > 0 && (

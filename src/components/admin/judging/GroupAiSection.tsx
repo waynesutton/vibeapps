@@ -28,12 +28,12 @@ import {
   SectionCard,
   SaveFooter,
   TogglePill,
-  dateInputToEndTs,
-  dateInputToStartTs,
-  tsToDateInput,
+  dateTimeInputToTs,
+  tsToDateTimeInput,
   useSaveState,
 } from "./groupSection";
 import { LinkLedgerRow, type LinkEntry } from "./GroupLinksSection";
+import { formatDeadline } from "../../../lib/countdown";
 
 // AI judge configuration: enable toggle, AI results visibility, event
 // window for the build-timeline check, rubric weights, custom criteria,
@@ -89,8 +89,20 @@ function AiSettingsCard({ group }: { group: GroupDetails }) {
     group.aiResultsIsPublic ?? false,
   );
   const [password, setPassword] = useState("");
-  const [eventStart, setEventStart] = useState(tsToDateInput(group.startDate));
-  const [eventEnd, setEventEnd] = useState(tsToDateInput(group.endDate));
+  // Event window with time of day: start feeds the build timeline check,
+  // end is the submission deadline behind the "Late submission" label
+  const [eventStart, setEventStart] = useState(
+    tsToDateTimeInput(group.startDate),
+  );
+  const [eventEnd, setEventEnd] = useState(tsToDateTimeInput(group.endDate));
+  const eventStartTs = dateTimeInputToTs(eventStart);
+  const eventEndTs = dateTimeInputToTs(eventEnd);
+  const windowInvalid =
+    eventStartTs !== null && eventEndTs !== null && eventEndTs <= eventStartTs;
+  // Only resend a field the admin touched, so a stored 23:59:59.999 deadline
+  // is not silently rounded to 23:59 by an unrelated save
+  const startChanged = eventStart !== tsToDateTimeInput(group.startDate);
+  const endChanged = eventEnd !== tsToDateTimeInput(group.endDate);
 
   // AI judge links shown once the AI judge is saved as enabled. Same entries
   // as the Links section so admins can grab URLs where they configure them.
@@ -141,13 +153,17 @@ function AiSettingsCard({ group }: { group: GroupDetails }) {
       );
       return;
     }
+    if (windowInvalid) {
+      setError("Event end must be after event start.");
+      return;
+    }
     void run(async () => {
       await updateGroup({
         groupId: group._id,
         aiJudgeEnabled: enabled,
         aiResultsIsPublic: resultsPublic,
-        startDate: dateInputToStartTs(eventStart),
-        endDate: dateInputToEndTs(eventEnd),
+        ...(startChanged ? { startDate: eventStartTs } : {}),
+        ...(endChanged ? { endDate: eventEndTs } : {}),
         ...(resultsPublic
           ? { aiResultsPassword: null }
           : password.trim()
@@ -240,31 +256,50 @@ function AiSettingsCard({ group }: { group: GroupDetails }) {
               Event window
             </p>
             <p className="text-xs text-soft mt-0.5 mb-2">
-              Used by the build-timeline check to verify apps were built during
-              the event.
+              Start feeds the build-timeline check (first commit vs event
+              start). End is the submission deadline: anything submitted after
+              it is still judged but labeled Late submission for the AI judge,
+              human judges, and organizers. Times are in your time zone.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="event-start">Event start</Label>
                 <Input
                   id="event-start"
-                  type="date"
+                  type="datetime-local"
                   value={eventStart}
                   onChange={(e) => setEventStart(e.target.value)}
                   disabled={saving}
                   className="mt-1"
                 />
+                <p className="text-[11px] text-faint mt-1 min-h-[1rem]">
+                  {eventStartTs !== null
+                    ? `Saves as ${formatDeadline(eventStartTs)}`
+                    : "No start set"}
+                </p>
               </div>
               <div>
-                <Label htmlFor="event-end">Event end</Label>
+                <Label htmlFor="event-end">Event end (submission deadline)</Label>
                 <Input
                   id="event-end"
-                  type="date"
+                  type="datetime-local"
                   value={eventEnd}
                   onChange={(e) => setEventEnd(e.target.value)}
                   disabled={saving}
-                  className="mt-1"
+                  aria-invalid={windowInvalid || undefined}
+                  className={`mt-1 ${windowInvalid ? "border-red-300" : ""}`}
                 />
+                <p
+                  className={`text-[11px] mt-1 min-h-[1rem] ${
+                    windowInvalid ? "text-red-600" : "text-faint"
+                  }`}
+                >
+                  {windowInvalid
+                    ? "Event end must be after event start."
+                    : eventEndTs !== null
+                      ? `Saves as ${formatDeadline(eventEndTs)}`
+                      : "No deadline: nothing is labeled late"}
+                </p>
               </div>
             </div>
           </div>

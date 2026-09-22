@@ -63,6 +63,7 @@ import type * as lib_judgeQueue from "../lib/judgeQueue.js";
 import type * as lib_llm from "../lib/llm.js";
 import type * as lib_reactionEmojis from "../lib/reactionEmojis.js";
 import type * as lib_socialLinks from "../lib/socialLinks.js";
+import type * as lib_submissionTiming from "../lib/submissionTiming.js";
 import type * as luma from "../luma.js";
 import type * as mentions from "../mentions.js";
 import type * as migrations from "../migrations.js";
@@ -150,6 +151,7 @@ declare const fullApi: ApiFromModules<{
   "lib/llm": typeof lib_llm;
   "lib/reactionEmojis": typeof lib_reactionEmojis;
   "lib/socialLinks": typeof lib_socialLinks;
+  "lib/submissionTiming": typeof lib_submissionTiming;
   luma: typeof luma;
   mentions: typeof mentions;
   migrations: typeof migrations;

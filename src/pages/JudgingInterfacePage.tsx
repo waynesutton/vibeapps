@@ -38,6 +38,7 @@ import { MentionTextarea } from "../components/ui/MentionTextarea";
 import { Markdown } from "../components/Markdown";
 import { SocialProofCard } from "../components/judging/SocialProofCard";
 import { AiReviewCard } from "../components/judging/AiReviewCard";
+import { LateSubmissionBadge } from "../components/LateSubmissionBadge";
 import { useDialog } from "../hooks/useDialog";
 
 // Which rows the judge is looking at when below-cut rows are visible:
@@ -1033,6 +1034,10 @@ export default function JudgingInterfacePage() {
                                       {submission.title}
                                     </span>
                                     <div className="flex items-center gap-1 flex-shrink-0">
+                                      <LateSubmissionBadge
+                                        timing={submission.submissionTiming}
+                                        variant="inline"
+                                      />
                                       {!submission.inJudgeQueue && (
                                         <span className="inline-flex items-center gap-1 text-xs text-soft">
                                           <Lock className="w-3 h-3" aria-hidden="true" />
@@ -1297,6 +1302,10 @@ export default function JudgingInterfacePage() {
                       <h3 className="app-title text-ink">
                         {currentSubmission.title}
                       </h3>
+                      {/* Submitted after the group's event end; scoring stays on */}
+                      <LateSubmissionBadge
+                        timing={currentSubmission.submissionTiming}
+                      />
                       {showAiScores && currentSubmission.ai && (
                         <AiRankBadge ai={currentSubmission.ai} />
                       )}

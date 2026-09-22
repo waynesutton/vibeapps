@@ -21,6 +21,11 @@ import {
   rankCompletedAiResults,
 } from "./lib/aiRank";
 import { isInJudgeQueue, showsBelowCut } from "./lib/judgeQueue";
+import {
+  computeSubmissionTiming,
+  submissionTimingValidator,
+  type SubmissionTiming,
+} from "./lib/submissionTiming";
 
 // Analyses run through a workpool with limited parallelism: faster than the
 // old one-at-a-time scheduler chain while staying inside GitHub rate limits.
@@ -332,6 +337,8 @@ const aiResultValidator = v.object({
     v.literal("completed"),
     v.literal("failed"),
   ),
+  // Submitted vs the group's event end; derived on read, never stored
+  submissionTiming: submissionTimingValidator,
   criteriaScores: v.optional(v.array(criteriaScoreValidator)),
   totalScore: v.optional(v.number()),
   averageScore: v.optional(v.number()),
@@ -442,6 +449,8 @@ async function enrichResults(
     // Story ids currently in the group. Pass when the caller already loaded
     // memberships; otherwise they are read here.
     memberStoryIds?: Set<Id<"stories">>;
+    // Group event end; drives the late submission label on every row
+    deadlineAt?: number;
   },
 ) {
   // Only rank stories that are still members of the group. AI rows can
@@ -467,6 +476,7 @@ async function enrichResults(
     storyUrl?: string;
     githubUrl?: string;
     status: "pending" | "running" | "completed" | "failed";
+    submissionTiming: SubmissionTiming;
     criteriaScores?: Array<{
       key: string;
       label: string;
@@ -527,6 +537,10 @@ async function enrichResults(
       storyUrl: story.url,
       githubUrl: story.githubUrl,
       status: result.status,
+      submissionTiming: computeSubmissionTiming(
+        story._creationTime,
+        options?.deadlineAt,
+      ),
       criteriaScores: result.criteriaScores,
       totalScore: result.totalScore,
       averageScore: result.averageScore,
@@ -1304,6 +1318,7 @@ export const getGroupAiResults = query({
       {
         includeLogMeta: true, // Admin view: show log cross-check notes
         memberStoryIds: new Set(memberships.map((m) => m.storyId)),
+        deadlineAt: group?.endDate,
       },
     );
     const counts = { pending: 0, running: 0, completed: 0, failed: 0 };
@@ -1373,6 +1388,7 @@ export const getGroupAiReportData = query({
             v.literal("completed"),
             v.literal("failed"),
           ),
+          submissionTiming: submissionTimingValidator,
           criteriaScores: v.optional(v.array(criteriaScoreValidator)),
           totalScore: v.optional(v.number()),
           averageScore: v.optional(v.number()),
@@ -1430,6 +1446,7 @@ export const getGroupAiReportData = query({
       teamMembers?: Array<{ name: string; email: string }>;
       submitterName?: string;
       status: "pending" | "running" | "completed" | "failed";
+      submissionTiming: SubmissionTiming;
       criteriaScores?: Array<{
         key: string;
         label: string;
@@ -1485,6 +1502,10 @@ export const getGroupAiReportData = query({
         teamMembers: story.teamMembers,
         submitterName: story.submitterName,
         status: row.status,
+        submissionTiming: computeSubmissionTiming(
+          story._creationTime,
+          group.endDate,
+        ),
         criteriaScores: row.criteriaScores,
         totalScore: row.totalScore,
         averageScore: row.averageScore,
@@ -1647,9 +1668,12 @@ export const getSubmissionForAnalysis = internalQuery({
     v.object({
       groupId: v.id("judgingGroups"),
       groupName: v.string(),
-      // Event window for builtDuringEvent (avoids a second query in the action)
+      // Event window: start feeds builtDuringEvent, end is the submission
+      // deadline for the SUBMISSION TIMING prompt section
       eventStartDate: v.optional(v.number()),
       eventEndDate: v.optional(v.number()),
+      // Story _creationTime: when the team submitted the app
+      submittedAt: v.number(),
       // Custom prompt body, extra criteria, and disabled keys for this
       // group's AI judge
       aiJudgeSystemPrompt: v.optional(v.string()),
@@ -1714,6 +1738,7 @@ export const getSubmissionForAnalysis = internalQuery({
       groupName: group.name,
       eventStartDate: group.startDate,
       eventEndDate: group.endDate,
+      submittedAt: story._creationTime,
       aiJudgeSystemPrompt: group.aiJudgeSystemPrompt,
       aiCustomCriteria: group.aiCustomCriteria,
       aiDisabledCriteria: group.aiDisabledCriteria,
@@ -1979,6 +2004,7 @@ async function getCompletedResultsForGroup(
     rows.filter((r) => r.status === "completed"),
     group?.aiRubricWeights,
     group?.aiFrontendWeights,
+    { deadlineAt: group?.endDate },
   );
   return enriched;
 }

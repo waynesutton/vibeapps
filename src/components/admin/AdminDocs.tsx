@@ -155,6 +155,7 @@ For the current submission the interface can show:
 - **Additional Form Fields** from site wide dynamic form fields
 - **Social proof** card with the team's launch post and engagement counts, when they shared one
 - **AI review** card, only when the organizer turned it on for this group: a collapsed card with the AI judge's scores and reasoning. It is advisory. Score on your own first, then open it to compare.
+- A red **Late submission** chip next to the title when the entry came in after the group's submission deadline. Hover it for the submitted time and the deadline. Scoring stays on: judge it like any other entry and mention the label in a note if you think it should affect eligibility. Organizers make that call.
 
 Open the live app and repo when they exist. Scores should reflect what you can verify, not only the writeup.
 
@@ -341,6 +342,7 @@ A Notion style document with a sticky section nav (left rail on desktop, scrolli
 - **Your queue**: how many submissions the judge will see, whether the group is in shortlist mode, and how many judges each submission needs.
 - **Scoring criteria**: the live criteria list with descriptions, the scale sentence, and a rating guide adapted to 1 to 5 or 1 to 10.
 - **Status and finishing**, **What you will see**, **Finding your way around**, and a short **Troubleshooting** table.
+- **Late submissions**: only when the group's event window has an end. States the submission deadline in the judge's time zone, explains the red Late submission label, and tells judges to score the entry normally and leave eligibility to organizers.
 - **AI review**: only when the AI judge is enabled. Explains what the AI reads, that it is advisory and scores 1 to 10 on its own rubric (the enabled rubric labels are listed), how judges see it (the AI review card when that toggle is on, the AI results link when shareable), and that judges should score independently first.
 - **Organizer blocks**: private repos, judge assignments, notes, and contact, shown only when you fill them in.
 
@@ -348,7 +350,7 @@ The screenshots on the page are generic captures from a demo group. They never s
 
 ## What updates on its own
 
-The page reads live group data on every load. Renaming the group, changing the slug, editing criteria, switching the scale, toggling the AI judge, changing results visibility, switching the Judge queue, or shortlisting more submissions all show up without touching the page. Pausing the group keeps the page readable behind a **Judging is paused** banner so judges can prepare early.
+The page reads live group data on every load. Renaming the group, changing the slug, editing criteria, switching the scale, toggling the AI judge, changing results visibility, switching the Judge queue, setting or moving the event window end, or shortlisting more submissions all show up without touching the page. Pausing the group keeps the page readable behind a **Judging is paused** banner so judges can prepare early.
 
 ## The access code convention
 
@@ -399,7 +401,12 @@ Each group can set independent passwords for:
 
 ## Event dates
 
-Optional start and end dates control the auto-include tag window (see Submissions) and display on the group page.
+Two separate date windows live on a group, and they do different jobs:
+
+- **Auto-include window** (Submissions section): a date range that decides which tagged stories get pulled into the group automatically. Day granularity is enough here.
+- **Event window** (AI judge section): a start and end **with time of day**, saved in your time zone. Start feeds the AI judge's build timeline check (first commit vs event start). End is the **submission deadline**: any submission whose site creation time is after it is labeled **Late submission** for the AI judge, human judges, and admins. The judge login page shows both with the time.
+
+The late label is computed every time a page loads from the group's current event end, so moving the deadline relabels every row live with no re-run. Leave the end empty and nothing is ever labeled late. See **Late submissions** under AI judge for what the label does and does not do.
 
 ## Multi-judge scoring
 
@@ -425,7 +432,7 @@ Opening a group takes you to \`/admin/judging/your-slug\`, a workspace with a se
 | Criteria | Scoring questions and weights for human judges | judging.manage |
 | Submissions | Add, sync, and remove submissions | judging.manage |
 | Submit page | Custom public submission form | judging.manage |
-| AI judge | Enable AI judging, rubric weights, custom criteria, system prompt, agent keys | judging.manage or judging.ai |
+| AI judge | Enable AI judging, event window with submission deadline, rubric weights, custom criteria, system prompt, agent keys | judging.manage or judging.ai |
 | Results | Human judging rankings and exports | judging.results |
 | AI results | AI run dashboard with per-criterion reasoning | judging.ai |
 | Judge tracking | Per-judge activity, score edits, notes | judging.tracking |
@@ -703,6 +710,21 @@ When the repo is fetched, the judge also records which sponsor tools the team re
 
 These are recorded facts, not scores. The prompt gets a \`SPONSOR STACK EVIDENCE\` section and a providers line, plus a fixed rule that the model must describe what those sections show, never claim an integration they do not show, and never move a rubric score because of sponsor usage. The sponsor stack stays a human criterion. Results show green sponsor chips (with the matched signals in the tooltip) and a neutral \`models:\` chip on each card, in the compare view, and on the public results page; the brief, recap, and report exports carry the same lines, and the Stats tab rolls them up. An empty list means the repo was scanned and nothing was found; no list means the repo was not fetched.
 
+## Event window and late submissions
+
+The **Event window** in the AI judge settings card takes a start and an end **with time of day** (saved in your time zone; the card shows exactly what will be stored under each field). They do two jobs:
+
+- **Event start** feeds the build timeline check: the first commit in the repo is compared with the start and the result shows as **built in window** or **started before** chips on AI results. Commit dates can be rewritten, so treat it as a signal, not proof.
+- **Event end** is the **submission deadline**. A submission whose site creation time is after the end is labeled **Late submission**.
+
+What the late label does:
+
+- The AI judge gets a \`SUBMISSION TIMING\` section with the exact submitted time, the deadline, and how late the entry was. A fixed rule (not editable from the system prompt) says: score every criterion normally, never change a score because of timing, and open the overall note with a "Late submission: received N hours after the deadline; organizers decide eligibility" sentence. If the model skips it, the server adds it.
+- Human judges see a red **Late submission** chip next to the title in the judging interface and a short **Late** flag in the search list. Scoring stays on. The How to judge page and its Markdown export gain a Late submissions section explaining the label while an end is set.
+- Admins see the chip on AI results (admin and public pages), a **Late** flag in the Submitted column of View submissions, an **Eligibility** filter on AI results with **Submitted on time** and **Late submissions** options, and a Submission timing line in the brief, recap, and hackathon report.
+
+What it does not do: it never removes a submission, hides it, blocks scoring, or lowers a score. "Late" is a flag for organizers, the same stance as the build timeline check. It is computed on every read from the group's current event end, so changing the deadline updates every badge live; AI notes already written keep the sentence from their run until the next one. Leave the end empty and nothing is labeled late.
+
 ## Show AI review to judges
 
 The **Show AI review to judges** block under Custom AI criteria is a single Visible/Hidden toggle (Hidden by default). When Visible, every submission with a completed AI review shows a collapsed **AI review** card in the human judging interface, under Project Links: the weighted score in the header, per criterion score and reasoning, the overall note, the model, and whether the live app answered. Harness signals, git facts, discrepancies, and second opinion data never reach judges. Pending or failed reviews render nothing, so a broken run cannot leak an error. Switching the toggle updates open judge sessions immediately, and the group's How to judge page describes the card in its AI review section while the toggle is on.
@@ -732,6 +754,7 @@ Model calls go through the **Convex AI gateway**, which authenticates with the d
 - Failed submissions can be **retried** individually.
 - **Shortlist top N**: once results are complete, pick a **5**, **10**, or **20** preset or type a number and click Shortlist top N to flag the top N by weighted score for human judges (ties at N included). Each result row has a star toggle to add or remove it by hand, and a Shortlisted badge. Judges only see the shortlist after the group's **Judge queue** setting is switched to Shortlist only; a **Below the cut** status line under the bar says whether the rest stay visible read only (**Show submissions below the cut to judges** in Settings) or are hidden. See Shortlist under Submissions.
 - Admins can **edit AI scores** and reasoning; edits are stamped with the editor and time.
+- The **Eligibility** filter narrows the list to built in window, started before, submitted on time, or late submissions (the timing options appear once the group has an event end). Rank numbers stay fixed while filtering.
 - **Rubric weights** are editable per group and re-rank existing results instantly since weighted totals are computed at read time. Per-criterion on/off toggles take effect on the next AI run.
 - AI results can be exposed at \`/api/judging/your-slug/results.json\` (public, password protected, or key protected depending on group settings).`,
   },

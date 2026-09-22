@@ -15,6 +15,7 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { LateSubmissionBadge } from "../components/LateSubmissionBadge";
 import { Id } from "../../convex/_generated/dataModel";
 
 // Human labels for how a sponsor product is wired in (keys match
@@ -283,9 +284,15 @@ export default function AIJudgeResultsPage() {
                         {index + 1}
                       </span>
                       <div className="min-w-0">
-                        <p className="app-title-sm text-ink truncate">
-                          {result.storyTitle}
-                        </p>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <p className="app-title-sm text-ink truncate">
+                            {result.storyTitle}
+                          </p>
+                          <LateSubmissionBadge
+                            timing={result.submissionTiming}
+                            className="flex-shrink-0"
+                          />
+                        </div>
                         <div className="flex items-center gap-3 mt-0.5 text-xs text-soft">
                           {result.sourcesUsed?.github && (
                             <span className="inline-flex items-center gap-1">
