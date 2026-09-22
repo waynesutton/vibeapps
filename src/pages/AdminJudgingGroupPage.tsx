@@ -5,6 +5,7 @@ import {
   Activity,
   ArrowLeft,
   BarChart3,
+  BookOpen,
   Bot,
   ClipboardList,
   FileText,
@@ -41,6 +42,7 @@ import { GroupSubmitPageSection } from "../components/admin/judging/GroupSubmitP
 import { GroupAiSection } from "../components/admin/judging/GroupAiSection";
 import { GroupEmailsSection } from "../components/admin/judging/GroupEmailsSection";
 import { GroupLinksSection } from "../components/admin/judging/GroupLinksSection";
+import { GroupHowToJudgeSection } from "../components/admin/judging/GroupHowToJudgeSection";
 import { GroupActivitySection } from "../components/admin/judging/GroupActivitySection";
 import { GroupSlugEditor } from "../components/admin/judging/GroupSlugEditor";
 
@@ -49,6 +51,13 @@ import { GroupSlugEditor } from "../components/admin/judging/GroupSlugEditor";
 const SECTIONS = [
   { key: "overview", label: "Overview", icon: LayoutDashboard, perm: null },
   { key: "links", label: "Links", icon: Link2, perm: null },
+  // Public judge guide editor and Markdown export
+  {
+    key: "how-to-judge",
+    label: "How to judge",
+    icon: BookOpen,
+    perm: "judging.manage",
+  },
   {
     key: "settings",
     label: "Settings",
@@ -288,6 +297,9 @@ function GroupWorkspace({ group }: { group: GroupDetails }) {
             <GroupOverviewSection group={group} canManage={canManage} />
           )}
           {activeSection === "links" && <GroupLinksSection group={group} />}
+          {activeSection === "how-to-judge" && canManage && (
+            <GroupHowToJudgeSection group={group} />
+          )}
           {activeSection === "settings" && canManage && (
             <GroupSettingsSection
               group={group}

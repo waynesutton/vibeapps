@@ -47,7 +47,8 @@ The judging system lets you run scored competitions (hackathons, demo days, cont
 - **Submissions**: apps pulled into the group manually, by tag sync, or through a custom submission page.
 - **Judges**: humans who sign in with a name (and optional password), or AI agents using API keys.
 - **Results**: live score dashboards, public results pages, submission downloads, and judge tracking.
-- **AI judge**: an optional automated reviewer that reads each submission (including its GitHub repo) and scores it against a fixed rubric.
+- **AI judge**: an optional automated reviewer that reads each submission (including its GitHub repo) and scores it against a fixed rubric. Its ranking can seed a **shortlist** for human judges, and its review can be shown to judges as an advisory card.
+- **How to judge page**: a public per group guide at \`/judging/your-slug/howtojudge\` that judges read before they start, built from the group's live settings.
 
 **Where things live in this dashboard:**
 
@@ -152,8 +153,14 @@ For the current submission the interface can show:
 - **Team info** (team name, size, member names when provided)
 - **Additional Answers** from the group's custom submit questions
 - **Additional Form Fields** from site wide dynamic form fields
+- **Social proof** card with the team's launch post and engagement counts, when they shared one
+- **AI review** card, only when the organizer turned it on for this group: a collapsed card with the AI judge's scores and reasoning. It is advisory. Score on your own first, then open it to compare.
 
 Open the live app and repo when they exist. Scores should reflect what you can verify, not only the writeup.
+
+## Shortlist rounds
+
+Some groups run the AI judge over every submission first and then hand human judges a shortlist. When that is the case your queue only contains the shortlisted submissions, your progress bar counts against that shorter list, and the group's How to judge page says how many made the cut. You do not need to do anything different.
 
 ## Scoring criteria
 
@@ -310,7 +317,60 @@ Refresh the page if the UI stalls. Saved scores persist on the server once each 
 
 ## Sharing this guide
 
-Organizers: open **Admin → Docs → External Judging Process**, then **Copy Markdown** or **Download .md**. Paste into Notion or Google Docs, add your real \`/judging/{slug}\` link and access code in a short cover note, and send to every judge.`,
+Organizers: open **Admin → Docs → External Judging Process**, then **Copy Markdown** or **Download .md**. Paste into Notion or Google Docs, add your real \`/judging/{slug}\` link and access code in a short cover note, and send to every judge.
+
+For a per group version that already has the right links, criteria, and scale filled in, use the **How to judge page** (next in this sidebar).`,
+  },
+  {
+    id: "how-to-judge",
+    title: "How to judge page",
+    icon: BookOpen,
+    content: `# How to judge page
+
+Every judging group has a public one sheet for its judges at \`/judging/your-slug/howtojudge\`. It is the External Judging Process guide with the blanks filled in from the group itself, so judges read the real criteria, scale, links, and queue size for the event they are scoring.
+
+## What judges see
+
+A Notion style document with a sticky section nav (left rail on desktop, scrolling tabs on mobile):
+
+- **TL;DR**: five numbered steps (open the judging link, enter the access code, enter your first name, score every criterion then Mark Complete or Judged & Next, finish by the deadline).
+- **Links you need** at the top and again at the bottom: the judging link, the results page when it is shareable, the AI results page when the AI judge is on and the page is public or passcode protected, tag pages for the required and auto include tags, and any extra links you add.
+- **Getting in**: the access code screen (private groups only), the lowercase first name rule, and how to come back later.
+- **Your queue**: how many submissions the judge will see, whether the group is in shortlist mode, and how many judges each submission needs.
+- **Scoring criteria**: the live criteria list with descriptions, the scale sentence, and a rating guide adapted to 1 to 5 or 1 to 10.
+- **Status and finishing**, **What you will see**, **Finding your way around**, and a short **Troubleshooting** table.
+- **AI review**: only when the AI judge is enabled. Explains what the AI reads, that it is advisory and scores 1 to 10 on its own rubric (the enabled rubric labels are listed), how judges see it (the AI review card when that toggle is on, the AI results link when shareable), and that judges should score independently first.
+- **Organizer blocks**: private repos, judge assignments, notes, and contact, shown only when you fill them in.
+
+The screenshots on the page are generic captures from a demo group. They never show real judges, codes, or teams.
+
+## What updates on its own
+
+The page reads live group data on every load. Renaming the group, changing the slug, editing criteria, switching the scale, toggling the AI judge, changing results visibility, switching the Judge queue, or shortlisting more submissions all show up without touching the page. Pausing the group keeps the page readable behind a **Judging is paused** banner so judges can prepare early.
+
+## The access code convention
+
+The page is public and holds no secrets. Where the access code belongs it prints the literal placeholder **passcodegoeshere** in a chip with the line "your organizer sends the real code by Slack or email". Send the real judge password separately with the page link. You can change the placeholder text in the section's **Access code note** field; whatever you type there is public, so never paste the real code.
+
+## Editing it
+
+Open the group workspace and pick **How to judge** in the sidebar (needs **judging.manage**). The section has:
+
+- a **Public guide** toggle (Live or Off): Off returns 404 for judges, and the row disappears from the Links ledger,
+- the public URL with copy and open,
+- **Copy Markdown** and **Download .md**: the same content as the live page with real URLs and the placeholder code, for a one paste Google Doc, Notion page, or email. Works even while the page is off,
+- **Preview** opens the live page in a new tab,
+- organizer fields: **Access code note**, **Judging deadline** (a local date and time; the page shows it in each judge's own time zone), **Contact**, **Private repositories** (markdown), **Judge assignments** (markdown), **Notes from the organizer** (markdown), **Extra links** (label plus URL), and a **Results link** Shown/Hidden pill.
+
+Markdown fields render with the same Markdown component used elsewhere in the app. Save with the footer button; the page updates immediately.
+
+## Suggested flow before an event
+
+1. Finish criteria, scale, access, and the AI judge settings for the group.
+2. Fill in the deadline, contact, and any assignments or private repo notes.
+3. Open the page signed out, on desktop and on a phone, and read it once as a judge would.
+4. Copy the link into your judge email or Slack message and add the real access code next to it.
+5. Optional: Copy Markdown into a Google Doc if your judges expect a document.`,
   },
   {
     id: "groups",
@@ -343,6 +403,10 @@ Optional start and end dates control the auto-include tag window (see Submission
 
 **Judges per submission** (\`judgesPerSubmission\`) controls how many judges must complete a submission before it drops out of other judges' queues. Leave it empty for every judge to score everything.
 
+## Judge queue
+
+**Judge queue** in Settings decides which submissions human and agent judges see: **All submissions** (default) or **Shortlist only**, which limits the queue to submissions flagged as shortlisted. The setting shows the live shortlist count and warns in red when Shortlist only is on with nothing shortlisted, because judges would see an empty queue. See **Shortlist** under Submissions for the full workflow.
+
 ## The group workspace
 
 Opening a group takes you to \`/admin/judging/your-slug\`, a workspace with a section sidebar. What you see depends on your permissions (see Delegated access):
@@ -351,7 +415,8 @@ Opening a group takes you to \`/admin/judging/your-slug\`, a workspace with a se
 | --- | --- | --- |
 | Overview | Live stats, active and public toggles, quick links | judging.view |
 | Links | Real-time ledger of every shareable link with lock status | judging.view |
-| Settings | Name, slug (judging.slug to change), description, dates, deletion | judging.manage |
+| How to judge | Public per group judge guide: on/off, organizer fields, Copy Markdown and Download .md | judging.manage |
+| Settings | Name, slug (judging.slug to change), description, dates, scale, judges per submission, Judge queue, deletion | judging.manage |
 | Access | Who can manage this group | judging.manage |
 | Criteria | Scoring questions and weights for human judges | judging.manage |
 | Submissions | Add, sync, and remove submissions | judging.manage |
@@ -380,6 +445,7 @@ The **Links** section lists every URL the group exposes in one place and updates
 
 - a **lock icon** means the link asks for a password, with a live "Password set" or "No password set" status,
 - a **globe icon** means the link is open to anyone who has it,
+- the **How to judge page** (\`/judging/your-slug/howtojudge\`) is listed while that page is on; it is always public and never carries a password,
 - the **AI results page** and **agent API** endpoints are listed only while the AI judge is enabled; disabling the AI judge removes every AI judge link from the ledger and the export,
 - the **agent API** endpoints appear with their key requirement, or a notice when the agent API is disabled for the group.
 
@@ -392,6 +458,7 @@ Use it as the single place to copy links for judges, participants, and results v
 Every page a group exposes has its own gate:
 
 - **Judging interface** (\`/judging/your-slug\`): open when the group is public, otherwise asks for the judge password.
+- **How to judge page** (\`/howtojudge\`): public whenever it is switched on. It prints a placeholder where the access code goes and never exposes any password.
 - **Results page** (\`/results\`): open when results are public, otherwise asks for the results password.
 - **Custom submission page** (\`/submit\`): asks for the submission password when one is set.
 - **AI results page** (\`/ai-results\`): open when AI results are public, otherwise asks for the AI results password.
@@ -467,6 +534,23 @@ The **Submit page** section in the group workspace controls exactly what the for
 
 Fields added in Manage Form Fields also flow to the main public submit forms, and values without a dedicated column are stored with the submission and shown to judges under **Additional Form Fields**.
 
+## Submission deadline countdown
+
+The Submit page section has a **Countdown timer** block (Shown/Hidden) for a live timer on the custom submission page. Turn it on, pick the deadline in the local time picker (stored as one absolute instant, so a PT organizer and an ET visitor see the same moment in their own zones), choose **Large** (stacked days, hours, minutes, seconds) or **Compact** (one line), place it at the top of the page or above the Submit Your App form, and override the heading (default "Submissions close in"). A live preview in the card renders exactly what visitors see.
+
+The timer is display only. After the deadline it reads "Deadline passed" and nothing else changes; the submission page **Open/Closed** switch is still the gate. Screen readers get a summary label and the ticking digits are hidden from them.
+
+## Shortlist
+
+For large fields, run the AI judge first and hand human judges only the top of the ranking. Everything stays in one group, so links, passcode, criteria, and results do not change.
+
+1. Enable the AI judge and run a review. AI runs always cover every submission in the group, so the shortlist is picked from the full field.
+2. In **AI results**, set the number next to **Shortlist top N** and click it. A confirm explains that it replaces the current shortlist with the top N completed results by weighted score. Ties at position N are all included so sort order never cuts a team.
+3. Fine tune with the star toggle on any AI result row, or in **View submissions**, which has a **Shortlisted** column with the same toggle and a **Shortlist only** filter.
+4. In **Settings**, switch **Judge queue** to **Shortlist only**. Human judges, the judge progress bar, agent judge queues (\`submissions.json\`), and the results completion percentage all use the shortlist from that moment. Switch back to **All submissions** to restore the full queue; the flags stay so you can flip again.
+
+Every shortlist change is written to the group Activity log. Removing a submission from the group drops its flag with it. AI results and AI runs are never filtered by the shortlist.
+
 Removing a submission from a group also removes its scores in that group. The app itself is untouched.`,
   },
   {
@@ -487,6 +571,10 @@ Removing a submission from a group also removes its scores in that group. The ap
 
 Judges do not need site accounts. Sessions can later be linked to real user accounts from Judge Tracking.
 
+**Shortlist queues.** When the group's Judge queue is **Shortlist only**, judges see only the shortlisted submissions and their progress bar counts against that number. Nothing about login or scoring changes; the queue is just shorter. Point judges at the group's **How to judge page**, which explains the shortlist round in plain words.
+
+**AI review card.** When **Show AI review to judges** is on in the AI judge section, every submission with a completed AI review shows a collapsed **AI review** card under Project Links with the AI's per criterion scores and reasoning. It is advisory. Judges are told to score first and compare after. Pending or failed reviews show nothing.
+
 For the full external facing guide (login, passwords, criteria, notes, filters, multi judge, troubleshooting), see **External Judging Process** in this Docs sidebar. Use Copy Markdown or Download .md to send it to judges.`,
   },
   {
@@ -499,6 +587,7 @@ For the full external facing guide (login, passwords, criteria, notes, filters, 
 
 - **Public results page**: \`/judging/your-slug/results\`. Public when the group marks results public, otherwise protected by the results password.
 - **Admin results**: the same dashboard inside the admin (visible when results are not public), showing rankings, weighted totals, per-criterion averages, and per-judge detail.
+- When the group's Judge queue is **Shortlist only**, the completion percentage uses the shortlist size as its denominator so progress reflects what judges were actually asked to score.
 
 ## Submission downloads
 
@@ -585,6 +674,16 @@ The AI judge gets a fixed rule it cannot be prompted out of: never invent or est
 
 Snapshots refresh on their own during an AI run once they are older than a day. The **Social proof snapshots** card in the AI judge section has a **Refresh social proof** button that re captures every submission in the group right now; run it once when submissions close so all teams are measured at the same moment.
 
+## Sponsor stack detection
+
+When the repo is fetched, the judge also records which sponsor tools the team really integrated and how: **AgentMail**, **Firecrawl**, and **OpenAI**, each tagged as a Convex component used in code, an npm SDK dependency or import, an API key env var referenced in \`convex/\` source, a direct HTTP call to the sponsor API, or (for OpenAI) a model routed through the Convex AI gateway. It also names every **model provider** it can see (OpenAI, Anthropic, Google, Mistral, Groq, xAI, OpenRouter, Meta, DeepSeek) from SDK deps, API key env vars, and model id families.
+
+These are recorded facts, not scores. The prompt gets a \`SPONSOR STACK EVIDENCE\` section and a providers line, plus a fixed rule that the model must describe what those sections show, never claim an integration they do not show, and never move a rubric score because of sponsor usage. The sponsor stack stays a human criterion. Results show green sponsor chips (with the matched signals in the tooltip) and a neutral \`models:\` chip on each card, in the compare view, and on the public results page; the brief, recap, and report exports carry the same lines, and the Stats tab rolls them up. An empty list means the repo was scanned and nothing was found; no list means the repo was not fetched.
+
+## Show AI review to judges
+
+The **Show AI review to judges** block under Custom AI criteria is a single Visible/Hidden toggle (Hidden by default). When Visible, every submission with a completed AI review shows a collapsed **AI review** card in the human judging interface, under Project Links: the weighted score in the header, per criterion score and reasoning, the overall note, the model, and whether the live app answered. Harness signals, git facts, discrepancies, and second opinion data never reach judges. Pending or failed reviews render nothing, so a broken run cannot leak an error. Switching the toggle updates open judge sessions immediately, and the group's How to judge page describes the card in its AI review section while the toggle is on.
+
 ## Second opinion (Jev)
 
 The **Second opinion** block under Custom AI criteria turns on a per group advisory pass by **Jev**, the Convex AI gateway's decisions model (alpha). When on, each review also asks Jev to score the same rubric from the text context (repo, verified facts, scraped page, transcript; no screenshot, and very large repos are truncated to fit its window). Jev returns a score plus how sure it was, and AI Results shows it beside the judge's score with a **disagrees** flag when the two sit 3 or more points apart. It is advisory only: totals, weighted scores, and ranking never change. If the Jev call fails, the review still completes without it.
@@ -608,6 +707,7 @@ Model calls go through the **Convex AI gateway**, which authenticates with the d
 
 - **AI Results** on a group row opens the AI dashboard: start a review run, watch per-submission status, retry failures, and read full reasoning per criterion.
 - Failed submissions can be **retried** individually.
+- **Shortlist top N**: once results are complete, type a number and click Shortlist top N to flag the top N by weighted score for human judges (ties at N included). Each result row has a star toggle to add or remove it by hand, and a Shortlisted badge. Judges only see the shortlist after the group's **Judge queue** setting is switched to Shortlist only. See Shortlist under Submissions.
 - Admins can **edit AI scores** and reasoning; edits are stamped with the editor and time.
 - **Rubric weights** are editable per group and re-rank existing results instantly since weighted totals are computed at read time. Per-criterion on/off toggles take effect on the next AI run.
 - AI results can be exposed at \`/api/judging/your-slug/results.json\` (public, password protected, or key protected depending on group settings).`,

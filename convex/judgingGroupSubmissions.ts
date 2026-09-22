@@ -9,6 +9,8 @@ import {
 } from "./adminAccess";
 import { internal } from "./_generated/api";
 import { logActivity } from "./activityLog";
+import { isInJudgeQueue } from "./lib/judgeQueue";
+import { computeWeightedScore } from "./aiJudge";
 
 // Helper function to check if a story should be included in judging
 // Returns true if story is valid for judging (not deleted, hidden, archived, or rejected)
@@ -556,6 +558,188 @@ export const removeSubmission = mutation({
 });
 
 /**
+ * Flag or unflag submissions for the judge shortlist. Idempotent: rows that
+ * already match are skipped so repeated clicks never write. Only matters
+ * when the group's judgeQueueMode is "shortlist"; the flag is stored either
+ * way so organizers can build the list before switching the mode.
+ */
+export const setShortlisted = mutation({
+  args: {
+    groupId: v.id("judgingGroups"),
+    storyIds: v.array(v.id("stories")),
+    shortlisted: v.boolean(),
+  },
+  returns: v.object({ changed: v.number(), shortlistCount: v.number() }),
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.manage");
+    const group = await ctx.db.get(args.groupId);
+    if (!group) throw new Error("Judging group not found");
+
+    const rows = await ctx.db
+      .query("judgingGroupSubmissions")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+    const targets = new Set(args.storyIds);
+    const now = Date.now();
+
+    let changed = 0;
+    await Promise.all(
+      rows
+        .filter(
+          (row) =>
+            targets.has(row.storyId) &&
+            (row.shortlisted === true) !== args.shortlisted,
+        )
+        .map(async (row) => {
+          changed += 1;
+          await ctx.db.patch(row._id, {
+            shortlisted: args.shortlisted,
+            shortlistedAt: args.shortlisted ? now : undefined,
+          });
+        }),
+    );
+
+    // Count after the patch so the UI badge is exact
+    const shortlistCount = rows.filter((row) =>
+      targets.has(row.storyId)
+        ? args.shortlisted
+        : row.shortlisted === true,
+    ).length;
+
+    if (changed > 0) {
+      const label =
+        args.storyIds.length === 1
+          ? ((await ctx.db.get(args.storyIds[0]))?.title ?? "a submission")
+          : `${changed} submission${changed === 1 ? "" : "s"}`;
+      await logActivity(ctx, {
+        category: "judging",
+        action: "judging.shortlistChanged",
+        message: `${args.shortlisted ? "Shortlisted" : "Removed from shortlist"} ${label} in ${group.name} (${shortlistCount} shortlisted)`,
+        targetType: "judgingGroup",
+        targetId: args.groupId,
+        targetLabel: group.name,
+        groupId: args.groupId,
+        metadata: {
+          shortlisted: args.shortlisted,
+          storyIds: args.storyIds,
+          shortlistCount,
+        },
+      });
+    }
+
+    return { changed, shortlistCount };
+  },
+});
+
+/**
+ * Replace the shortlist with the top N submissions by AI weighted score.
+ * Ties at position N are all kept so sort order never cuts a team. Only
+ * completed AI results count; submissions without a completed review are
+ * dropped from the shortlist. Returns the new shortlist size.
+ */
+export const shortlistTopByAiScore = mutation({
+  args: {
+    groupId: v.id("judgingGroups"),
+    count: v.number(),
+  },
+  returns: v.object({ shortlistCount: v.number(), cutoffScore: v.optional(v.number()) }),
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.manage");
+    const group = await ctx.db.get(args.groupId);
+    if (!group) throw new Error("Judging group not found");
+    // Bound the input: whole number, at least 1, at most the row cap
+    if (!Number.isFinite(args.count) || args.count < 1 || args.count > 8192) {
+      throw new Error("Shortlist size must be a whole number of 1 or more");
+    }
+    const count = Math.floor(args.count);
+
+    const [rows, aiResults] = await Promise.all([
+      ctx.db
+        .query("judgingGroupSubmissions")
+        .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+        .collect(),
+      ctx.db
+        .query("aiJudgeResults")
+        .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+        .collect(),
+    ]);
+
+    // Weighted score per story from completed reviews, same math as AI results
+    const scoreByStory = new Map<Id<"stories">, number>();
+    for (const result of aiResults) {
+      if (result.status !== "completed") continue;
+      const weighted = computeWeightedScore(
+        result.criteriaScores,
+        group.aiRubricWeights,
+        {
+          platform: result.frontendHosting?.platform,
+          platformWeights: group.aiFrontendWeights,
+        },
+      );
+      const score = weighted ?? result.averageScore;
+      if (typeof score === "number") scoreByStory.set(result.storyId, score);
+    }
+
+    // Only rank stories that still count for judging (not hidden, archived,
+    // or rejected), matching what the AI results view and judges see
+    const validity = await Promise.all(
+      rows.map(async (row) =>
+        scoreByStory.has(row.storyId)
+          ? isStoryValidForJudging(await ctx.db.get(row.storyId))
+          : false,
+      ),
+    );
+    const ranked = rows
+      .filter((_, i) => validity[i])
+      .sort(
+        (a, b) =>
+          (scoreByStory.get(b.storyId) ?? 0) - (scoreByStory.get(a.storyId) ?? 0),
+      );
+    // Include every row tied with the Nth score
+    const cutoffScore =
+      ranked.length >= count
+        ? scoreByStory.get(ranked[count - 1].storyId)
+        : ranked.length > 0
+          ? scoreByStory.get(ranked[ranked.length - 1].storyId)
+          : undefined;
+    const keep = new Set(
+      ranked
+        .filter(
+          (row) =>
+            cutoffScore !== undefined &&
+            (scoreByStory.get(row.storyId) ?? -Infinity) >= cutoffScore,
+        )
+        .map((row) => row.storyId),
+    );
+
+    const now = Date.now();
+    await Promise.all(
+      rows.map(async (row) => {
+        const next = keep.has(row.storyId);
+        if ((row.shortlisted === true) === next) return; // idempotent
+        await ctx.db.patch(row._id, {
+          shortlisted: next,
+          shortlistedAt: next ? now : undefined,
+        });
+      }),
+    );
+
+    await logActivity(ctx, {
+      category: "judging",
+      action: "judging.shortlistChanged",
+      message: `Shortlisted top ${count} by AI score in ${group.name} (${keep.size} shortlisted${keep.size > count ? ", ties included" : ""})`,
+      targetType: "judgingGroup",
+      targetId: args.groupId,
+      targetLabel: group.name,
+      groupId: args.groupId,
+      metadata: { requested: count, shortlistCount: keep.size, cutoffScore },
+    });
+
+    return { shortlistCount: keep.size, cutoffScore };
+  },
+});
+
+/**
  * Get submissions in a group with scoring details
  */
 export const listByGroup = query({
@@ -725,6 +909,7 @@ export const listSubmissionsTable = query({
       linkedinUrl: v.optional(v.string()),
       githubUrl: v.optional(v.string()),
       twitterUrl: v.optional(v.string()),
+      shortlisted: v.boolean(),
     }),
   ),
   handler: async (ctx, args) => {
@@ -739,7 +924,11 @@ export const listSubmissionsTable = query({
       submissions.map(async (submission) => {
         const story = await ctx.db.get(submission.storyId);
         return isStoryValidForJudging(story)
-          ? { addedAt: submission.addedAt, story }
+          ? {
+              addedAt: submission.addedAt,
+              shortlisted: submission.shortlisted === true,
+              story,
+            }
           : null;
       }),
     );
@@ -771,7 +960,7 @@ export const listSubmissionsTable = query({
         .map((user) => [user._id, user]),
     );
 
-    const rows = visible.map(({ addedAt, story }) => {
+    const rows = visible.map(({ addedAt, shortlisted, story }) => {
       const submitter = story.userId ? userMap.get(story.userId) : undefined;
       return {
         storyId: story._id,
@@ -780,6 +969,7 @@ export const listSubmissionsTable = query({
         url: story.url,
         submittedAt: story._creationTime,
         addedAt,
+        shortlisted,
         status: story.status,
         tags: (story.tagIds ?? [])
           .map((tagId) => tagMap.get(tagId))
@@ -1155,10 +1345,13 @@ export const getGroupSubmissions = query({
       throw new Error("Judging group not found or inactive");
     }
 
-    const submissions = await ctx.db
-      .query("judgingGroupSubmissions")
-      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
-      .collect();
+    // Shortlist mode narrows the judge queue to flagged rows only
+    const submissions = (
+      await ctx.db
+        .query("judgingGroupSubmissions")
+        .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+        .collect()
+    ).filter((submission) => isInJudgeQueue(group, submission));
 
     const stories = (
       await Promise.all(

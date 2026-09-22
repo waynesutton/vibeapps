@@ -967,6 +967,99 @@ export const updateAiIncludeHumanCriteria = mutation({
 });
 
 /**
+ * Admin: show or hide the AI review card for human judges. When on, each
+ * submission in the judging interface gets a collapsed card with the AI's
+ * per criterion scores and reasoning. Advisory only; the AI judge itself
+ * must also be enabled for the card to render.
+ */
+export const updateAiReviewVisibleToJudges = mutation({
+  args: {
+    groupId: v.id("judgingGroups"),
+    enabled: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.ai");
+    await ctx.db.patch(args.groupId, {
+      aiReviewVisibleToJudges: args.enabled ? true : undefined,
+    });
+    return null;
+  },
+});
+
+/**
+ * Judge session view of one completed AI review. Gated by a valid judge
+ * session for the group plus the group's aiReviewVisibleToJudges toggle.
+ * Returns only what a judge should weigh: scores, reasoning, model, live
+ * check. Harness signals, git facts, discrepancies, and second opinions
+ * stay admin only. Null when hidden, missing, or not completed.
+ */
+export const getAiReviewForJudge = query({
+  args: {
+    groupId: v.id("judgingGroups"),
+    storyId: v.id("stories"),
+    sessionId: v.string(),
+  },
+  returns: v.union(
+    v.null(),
+    v.object({
+      criteriaScores: v.array(criteriaScoreValidator),
+      averageScore: v.optional(v.number()),
+      weightedScore: v.optional(v.number()),
+      overallReasoning: v.optional(v.string()),
+      judgeModel: v.optional(v.string()),
+      isLive: v.optional(v.boolean()),
+      editedAt: v.optional(v.number()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const judge = await ctx.db
+      .query("judges")
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
+      .unique();
+    if (!judge || judge.groupId !== args.groupId) {
+      throw new ConvexError("Judge session not found");
+    }
+
+    const group = await ctx.db.get(args.groupId);
+    if (
+      !group ||
+      group.aiJudgeEnabled !== true ||
+      group.aiReviewVisibleToJudges !== true
+    ) {
+      return null;
+    }
+
+    const result = await ctx.db
+      .query("aiJudgeResults")
+      .withIndex("by_groupId_storyId", (q) =>
+        q.eq("groupId", args.groupId).eq("storyId", args.storyId),
+      )
+      .unique();
+    if (!result || result.status !== "completed" || !result.criteriaScores) {
+      return null;
+    }
+
+    return {
+      criteriaScores: result.criteriaScores,
+      averageScore: result.averageScore,
+      weightedScore: computeWeightedScore(
+        result.criteriaScores,
+        group.aiRubricWeights,
+        {
+          platform: result.frontendHosting?.platform,
+          platformWeights: group.aiFrontendWeights,
+        },
+      ),
+      overallReasoning: result.overallReasoning,
+      judgeModel: result.judgeModel ?? result.model,
+      isLive: result.urlCheck?.isLive,
+      editedAt: result.editedAt,
+    };
+  },
+});
+
+/**
  * Admin: toggle the Jev second opinion for a group. When on, each AI review
  * also asks the gateway's decisions model to score the same rubric from text
  * only context. The result is advisory: shown beside the judge model's
@@ -1154,6 +1247,11 @@ export const getGroupAiResults = query({
         isStale: v.boolean(),
       }),
     ),
+    // Shortlist state so the admin results view can badge rows and offer
+    // Shortlist top N without a second subscription
+    judgeQueueMode: v.union(v.literal("all"), v.literal("shortlist")),
+    shortlistCount: v.number(),
+    shortlistedStoryIds: v.array(v.id("stories")),
   }),
   handler: async (ctx, args) => {
     await requireJudgingGroupPermission(ctx, args.groupId, "judging.ai");
@@ -1163,6 +1261,13 @@ export const getGroupAiResults = query({
       .query("aiJudgeResults")
       .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
       .collect();
+    const memberships = await ctx.db
+      .query("judgingGroupSubmissions")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+    const shortlistedStoryIds = memberships
+      .filter((m) => m.shortlisted === true)
+      .map((m) => m.storyId);
 
     const results = await enrichResults(
       ctx,
@@ -1198,6 +1303,9 @@ export const getGroupAiResults = query({
       counts,
       weights: group?.aiRubricWeights,
       groupSummary,
+      judgeQueueMode: group?.judgeQueueMode ?? "all",
+      shortlistCount: shortlistedStoryIds.length,
+      shortlistedStoryIds,
     };
   },
 });

@@ -20,6 +20,7 @@ import {
   Users,
   Video,
   Megaphone,
+  Star,
 } from "lucide-react";
 import { ConvexError } from "convex/values";
 import { api } from "../../../convex/_generated/api";
@@ -882,10 +883,22 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
   const startReview = useMutation(api.aiJudge.startReview);
   const retrySubmission = useMutation(api.aiJudge.retrySubmission);
   const updateResultScore = useMutation(api.aiJudge.updateResultScore);
+  // Shortlist: pick the top N by AI weighted score for human judges, or
+  // flag rows one at a time. Judges only see the shortlist once the group's
+  // Judge queue setting is switched to Shortlist only.
+  const shortlistTopByAiScore = useMutation(
+    api.judgingGroupSubmissions.shortlistTopByAiScore,
+  );
+  const setShortlisted = useMutation(api.judgingGroupSubmissions.setShortlisted);
+  const [shortlistN, setShortlistN] = useState(10);
+  const [isShortlisting, setIsShortlisting] = useState(false);
+  const [togglingStoryId, setTogglingStoryId] = useState<Id<"stories"> | null>(
+    null,
+  );
   const generateGroupSummary = useAction(
     api.aiJudgeAnalysis.generateGroupSummary,
   );
-  const { showMessage, DialogComponents } = useDialog();
+  const { showMessage, showConfirm, DialogComponents } = useDialog();
 
   const [isStarting, setIsStarting] = useState(false);
   const [expandedId, setExpandedId] = useState<Id<"aiJudgeResults"> | null>(
@@ -1062,6 +1075,49 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
       await retrySubmission({ resultId });
     } catch (error) {
       showMessage("Retry Failed", errorMessage(error), "error");
+    }
+  };
+
+  // Replace the shortlist with the top N completed results. Ties at the
+  // cutoff are kept so ordering never decides who is cut.
+  const handleShortlistTop = () => {
+    const count = Math.max(1, Math.floor(shortlistN));
+    const existing = data?.shortlistCount ?? 0;
+    showConfirm(
+      `Shortlist top ${count}?`,
+      existing > 0
+        ? `This replaces the current shortlist of ${existing} with the top ${count} submissions by AI weighted score. Submissions tied at the cutoff are all included. Human judges only see the shortlist when the Judge queue setting is Shortlist only.`
+        : `Flags the top ${count} submissions by AI weighted score for human judges. Submissions tied at the cutoff are all included. Human judges only see the shortlist when the Judge queue setting is Shortlist only.`,
+      () => {
+        setIsShortlisting(true);
+        shortlistTopByAiScore({ groupId, count })
+          .then((res) => {
+            showMessage(
+              "Shortlist updated",
+              `${res.shortlistCount} submission${res.shortlistCount === 1 ? "" : "s"} shortlisted${res.cutoffScore !== undefined ? ` (cutoff weighted score ${res.cutoffScore})` : ""}. Switch the Judge queue setting to Shortlist only so judges see just these.`,
+              "success",
+            );
+          })
+          .catch((error) => {
+            showMessage("Shortlist failed", errorMessage(error), "error");
+          })
+          .finally(() => setIsShortlisting(false));
+      },
+      { confirmButtonText: existing > 0 ? "Replace shortlist" : "Shortlist" },
+    );
+  };
+
+  const handleToggleShortlisted = async (
+    storyId: Id<"stories">,
+    shortlisted: boolean,
+  ) => {
+    setTogglingStoryId(storyId);
+    try {
+      await setShortlisted({ groupId, storyIds: [storyId], shortlisted });
+    } catch (error) {
+      showMessage("Shortlist failed", errorMessage(error), "error");
+    } finally {
+      setTogglingStoryId(null);
     }
   };
 
@@ -1546,6 +1602,61 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
           {/* Ranked results */}
           {activeTab === "results" && data.results.length > 0 && (
             <div className="space-y-3">
+              {/* Shortlist bar: AI first, then hand the top N to human judges */}
+              <div className="bg-surface rounded-lg border border-hairline p-3 flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-ink flex items-center gap-1.5">
+                    <Star className="w-3.5 h-3.5" />
+                    Shortlist for human judges
+                    <span className="text-xs font-normal text-soft">
+                      {data.shortlistCount} of {data.results.length} flagged
+                    </span>
+                  </p>
+                  <p className="text-xs text-soft mt-0.5">
+                    {data.judgeQueueMode === "shortlist"
+                      ? data.shortlistCount === 0
+                        ? "Judge queue is set to Shortlist only but nothing is shortlisted, so judges see an empty queue."
+                        : "Judge queue is set to Shortlist only: judges see just the starred rows."
+                      : "Judge queue is set to All submissions. Star rows here, then switch the Judge queue setting in Settings so judges see only the shortlist."}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="shortlist-n" className="text-xs text-soft">
+                    Top
+                  </label>
+                  <input
+                    id="shortlist-n"
+                    type="number"
+                    min={1}
+                    max={Math.max(1, completedResults.length)}
+                    value={shortlistN}
+                    onChange={(e) =>
+                      setShortlistN(Math.max(1, parseInt(e.target.value) || 1))
+                    }
+                    disabled={isShortlisting || completedResults.length === 0}
+                    className="w-16 h-8 px-2 text-sm text-right tabular-nums rounded-md border border-hairline bg-surface text-ink disabled:opacity-50"
+                    aria-label="Number of submissions to shortlist"
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={handleShortlistTop}
+                    disabled={isShortlisting || completedResults.length === 0}
+                    title={
+                      completedResults.length === 0
+                        ? "Available after at least one review completes"
+                        : "Replace the shortlist with the top N by AI weighted score"
+                    }
+                  >
+                    {isShortlisting ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Star className="w-4 h-4 mr-2" />
+                    )}
+                    Shortlist top {Math.max(1, Math.floor(shortlistN))}
+                  </Button>
+                </div>
+              </div>
+
               {/* Build-timeline filter */}
               <div className="flex items-center justify-end gap-2">
                 <label htmlFor="timeline-filter" className="text-xs text-soft">
@@ -1580,6 +1691,10 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                 const isExpanded = expandedId === result._id;
                 const isBriefOpen = openBriefId === result._id;
                 const isEditing = editingId === result._id;
+                const isShortlisted = data.shortlistedStoryIds.includes(
+                  result.storyId,
+                );
+                const isToggling = togglingStoryId === result.storyId;
                 return (
                   <div
                     key={result._id}
@@ -1605,6 +1720,12 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                             </a>
                             <ExternalLink className="w-3.5 h-3.5 text-faint flex-shrink-0" />
                             {statusBadge(result.status)}
+                            {isShortlisted && (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-50 text-green-700 rounded-full">
+                                <Star className="w-3 h-3 fill-current" />
+                                Shortlisted
+                              </span>
+                            )}
                             {result.editedAt && (
                               <span className="px-2 py-1 text-xs bg-amber-50 text-amber-700 rounded-full">
                                 Edited by admin
@@ -1825,6 +1946,37 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                               </p>
                             </div>
                           )}
+                        {/* Per row shortlist toggle */}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void handleToggleShortlisted(
+                              result.storyId,
+                              !isShortlisted,
+                            )
+                          }
+                          disabled={isToggling}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors font-medium disabled:opacity-50 ${
+                            isShortlisted
+                              ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                              : "bg-surface border-hairline text-copy hover:text-ink hover:bg-surface-hover hover:border-hairline-strong"
+                          }`}
+                          title={
+                            isShortlisted
+                              ? "Remove from the human judge shortlist"
+                              : "Add to the human judge shortlist"
+                          }
+                          aria-pressed={isShortlisted}
+                        >
+                          {isToggling ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Star
+                              className={`w-3.5 h-3.5 ${isShortlisted ? "fill-current" : ""}`}
+                            />
+                          )}
+                          {isShortlisted ? "Shortlisted" : "Shortlist"}
+                        </button>
                         {result.status === "failed" && (
                           <button
                             onClick={() => handleRetry(result._id)}

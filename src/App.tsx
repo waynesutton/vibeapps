@@ -38,6 +38,7 @@ import JudgingGroupPage from "./pages/JudgingGroupPage";
 import JudgingInterfacePage from "./pages/JudgingInterfacePage";
 import PublicJudgingResultsPage from "./pages/PublicJudgingResultsPage";
 import AIJudgeResultsPage from "./pages/AIJudgeResultsPage";
+import HowToJudgePage from "./pages/HowToJudgePage";
 import JudgeTrackingPage from "./pages/JudgeTrackingPage";
 import AdminJudgingGroupPage from "./pages/AdminJudgingGroupPage";
 import { JudgingGroupSubmitPage } from "./pages/JudgingGroupSubmitPage";
@@ -206,6 +207,11 @@ function App() {
           <Route
             path="/judging/:slug/ai-results"
             element={<AIJudgeResultsPage />}
+          />
+          {/* Public judge one sheet; no login, never shows a passcode */}
+          <Route
+            path="/judging/:slug/howtojudge"
+            element={<HowToJudgePage />}
           />
           <Route
             path="/admin/judging/:slug/tracking"

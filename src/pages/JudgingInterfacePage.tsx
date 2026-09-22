@@ -35,6 +35,7 @@ import { renderTextWithMentions } from "../utils/mentions";
 import { MentionTextarea } from "../components/ui/MentionTextarea";
 import { Markdown } from "../components/Markdown";
 import { SocialProofCard } from "../components/judging/SocialProofCard";
+import { AiReviewCard } from "../components/judging/AiReviewCard";
 import { useDialog } from "../hooks/useDialog";
 
 export default function JudgingInterfacePage() {
@@ -1356,6 +1357,18 @@ export default function JudgingInterfacePage() {
                         ((currentSubmission as any).linkedinUrl ||
                           (currentSubmission as any).twitterUrl) && (
                           <SocialProofCard
+                            groupId={judgeSession.group._id}
+                            storyId={currentSubmission._id}
+                            sessionId={sessionId}
+                          />
+                        )}
+
+                      {/* AI review card: only when the organizer turned it on
+                          for this group and the AI run completed */}
+                      {sessionId &&
+                        judgeSession &&
+                        judgeSession.group.aiReviewVisibleToJudges && (
+                          <AiReviewCard
                             groupId={judgeSession.group._id}
                             storyId={currentSubmission._id}
                             sessionId={sessionId}

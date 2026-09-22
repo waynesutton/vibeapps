@@ -10,6 +10,7 @@ import { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { getAuthenticatedUserId } from "./users";
 import { requireJudgingGroupPermission } from "./adminAccess";
+import { isInJudgeQueue } from "./lib/judgeQueue";
 
 // --- Agent judging keys ---
 //
@@ -194,8 +195,7 @@ export const listAgentKeys = query({
     for (const key of keys) {
       const scores = await ctx.db
         .query("judgeScores")
-        .withIndex("by_groupId_storyId", (q) => q.eq("groupId", args.groupId))
-        .filter((q) => q.eq(q.field("judgeId"), key.judgeId))
+        .withIndex("by_judge_story_criteria", (q) => q.eq("judgeId", key.judgeId))
         .collect();
       result.push({
         _id: key._id,
@@ -394,12 +394,13 @@ export const getAgentQueue = internalQuery({
 
     const myScores = await ctx.db
       .query("judgeScores")
-      .withIndex("by_groupId_storyId", (q) => q.eq("groupId", args.groupId))
-      .filter((q) => q.eq(q.field("judgeId"), args.judgeId))
+      .withIndex("by_judge_story_criteria", (q) => q.eq("judgeId", args.judgeId))
       .collect();
 
     const queue = [];
     for (const submission of submissions) {
+      // Shortlist mode: agents see the same narrowed queue as human judges
+      if (!isInJudgeQueue(group, submission)) continue;
       const story = await ctx.db.get(submission.storyId);
       if (!isStoryValidForJudging(story)) continue;
 

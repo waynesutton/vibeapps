@@ -754,6 +754,7 @@ function CustomCriteriaCard({ group }: { group: GroupDetails }) {
     >
       <HumanCriteriaMirrorBlock group={group} />
       <SecondOpinionBlock group={group} />
+      <AiReviewForJudgesBlock group={group} />
 
       <div className="flex flex-wrap items-center gap-2">
         <button
@@ -971,6 +972,60 @@ function SecondOpinionBlock({ group }: { group: GroupDetails }) {
           onToggle={handleToggle}
           onLabel="On"
           offLabel="Off"
+          disabled={pending}
+        />
+      </div>
+      {toggleError && (
+        <p className="px-3 pb-2 text-[13px] text-red-600">{toggleError}</p>
+      )}
+    </div>
+  );
+}
+
+// Per group switch that lets human judges open a collapsed AI review card
+// (per criterion score and reasoning) on each submission in the judging
+// interface. Off by default so judges score blind unless the organizer
+// decides otherwise. Saves immediately.
+function AiReviewForJudgesBlock({ group }: { group: GroupDetails }) {
+  const updateAiReviewVisibleToJudges = useMutation(
+    api.aiJudge.updateAiReviewVisibleToJudges,
+  );
+  const [pending, setPending] = useState(false);
+  const [toggleError, setToggleError] = useState("");
+  const enabled = group.aiReviewVisibleToJudges === true;
+
+  const handleToggle = () => {
+    setToggleError("");
+    setPending(true);
+    updateAiReviewVisibleToJudges({ groupId: group._id, enabled: !enabled })
+      .catch((err) => {
+        setToggleError(
+          err instanceof Error ? err.message : "Failed to update setting",
+        );
+      })
+      .finally(() => setPending(false));
+  };
+
+  return (
+    <div className="rounded-md border border-hairline">
+      <div className="flex items-start justify-between gap-3 px-3 py-2.5">
+        <div className="min-w-0">
+          <p className="text-[13px] font-medium text-copy">
+            Show AI review to judges
+          </p>
+          <p className="text-xs text-soft mt-0.5">
+            Adds a collapsed AI review card to each submission in the judging
+            interface with the per criterion score and reasoning, marked
+            advisory. Only completed reviews appear; harness signals, git
+            facts, and discrepancies stay admin only. The How to judge page
+            updates its AI section to match.
+          </p>
+        </div>
+        <TogglePill
+          enabled={enabled}
+          onToggle={handleToggle}
+          onLabel="Visible"
+          offLabel="Hidden"
           disabled={pending}
         />
       </div>

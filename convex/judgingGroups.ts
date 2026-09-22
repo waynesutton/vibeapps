@@ -1,7 +1,8 @@
 import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { Doc } from "./_generated/dataModel";
+import { Doc, Id } from "./_generated/dataModel";
 import { isUserAdmin, getAuthenticatedUserId } from "./users";
+import { getRubricForGroup } from "./aiJudge";
 import {
   requirePermission,
   requireJudgingGroupPermission,
@@ -93,6 +94,26 @@ const submissionCountdownFields = {
   ),
   submissionCountdownLabel: v.optional(v.string()),
 };
+
+// Which submissions human judges see: every row or only shortlisted rows
+const judgeQueueModeValidator = v.union(
+  v.literal("all"),
+  v.literal("shortlist"),
+);
+
+// Organizer fields for the public How to judge page. Mirrors the schema
+// object so updateGroup, getGroupWithDetails, and getHowToJudgePage agree.
+export const howToJudgeValidator = v.object({
+  enabled: v.optional(v.boolean()),
+  accessCodeNote: v.optional(v.string()),
+  deadlineAt: v.optional(v.number()),
+  contact: v.optional(v.string()),
+  privateRepoNote: v.optional(v.string()),
+  assignments: v.optional(v.string()),
+  notes: v.optional(v.string()),
+  links: v.optional(v.array(v.object({ label: v.string(), url: v.string() }))),
+  showResultsLink: v.optional(v.boolean()),
+});
 
 // Helper to generate slugs (consistent with existing forms.ts)
 function generateSlug(name: string): string {
@@ -475,10 +496,24 @@ export const updateGroup = mutation({
     aiResultsPassword: v.optional(v.union(v.string(), v.null())),
     // Organizer emails for new-submission alerts (null clears the list)
     notificationEmails: v.optional(v.union(v.array(v.string()), v.null())),
+    // Judge queue: all submissions or shortlist only
+    judgeQueueMode: v.optional(judgeQueueModeValidator),
+    // How to judge page organizer fields (null clears every field)
+    howToJudge: v.optional(v.union(howToJudgeValidator, v.null())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     await requireJudgingGroupPermission(ctx, args.groupId, "judging.manage");
+
+    // How to judge deadline must be a real epoch ms value when set
+    if (
+      args.howToJudge &&
+      typeof args.howToJudge.deadlineAt === "number" &&
+      (!Number.isFinite(args.howToJudge.deadlineAt) ||
+        args.howToJudge.deadlineAt <= 0)
+    ) {
+      throw new Error("The judging deadline is not a valid date");
+    }
 
     // Snapshot the existing required tag so we can detect a change below.
     const existingGroup = await ctx.db.get(args.groupId);
@@ -903,6 +938,9 @@ export const getGroupWithDetails = query({
       agentScoresAdvisory: v.optional(v.boolean()),
       agentKeysEnabled: v.optional(v.boolean()),
       notificationEmails: v.optional(v.array(v.string())),
+      aiReviewVisibleToJudges: v.optional(v.boolean()),
+      judgeQueueMode: v.optional(judgeQueueModeValidator),
+      howToJudge: v.optional(howToJudgeValidator),
       criteria: v.array(
         v.object({
           _id: v.id("judgingCriteria"),
@@ -915,6 +953,7 @@ export const getGroupWithDetails = query({
         }),
       ),
       submissionCount: v.number(),
+      shortlistCount: v.number(),
       judgeCount: v.number(),
     }),
   ),
@@ -960,6 +999,9 @@ export const getGroupWithDetails = query({
     );
 
     const submissionCount = validSubmissions.length;
+    const shortlistCount = validSubmissions.filter(
+      (submission) => submission.shortlisted === true,
+    ).length;
 
     const judgeCount = await ctx.db
       .query("judges")
@@ -1026,14 +1068,157 @@ export const getGroupWithDetails = query({
       agentScoresAdvisory: group.agentScoresAdvisory,
       agentKeysEnabled: group.agentKeysEnabled,
       notificationEmails: group.notificationEmails,
+      aiReviewVisibleToJudges: group.aiReviewVisibleToJudges,
+      judgeQueueMode: group.judgeQueueMode,
+      howToJudge: group.howToJudge,
       criteria,
       submissionCount,
+      shortlistCount,
       judgeCount,
     };
   },
 });
 
 // --- Public Functions ---
+
+/**
+ * Everything the public How to judge page needs, read live from the group.
+ * No auth: the page is meant to be pasted into Slack or email for judges.
+ * No password or hash ever leaves this query, only has* booleans. Returns
+ * null when the group is missing or the organizer switched the page off.
+ * Inactive groups still return (with isActive false) so judges can read
+ * ahead behind a paused banner. `preview: true` is for the admin editor: it
+ * requires judging.manage on the group and ignores the enabled switch so
+ * organizers can preview and export Markdown before turning the page on.
+ */
+export const getHowToJudgePage = query({
+  args: { slug: v.string(), preview: v.optional(v.boolean()) },
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("judgingGroups"),
+      name: v.string(),
+      slug: v.string(),
+      description: v.optional(v.string()),
+      isPublic: v.boolean(),
+      isActive: v.boolean(),
+      hasJudgePassword: v.boolean(),
+      scoreScale: v.number(),
+      judgesPerSubmission: v.number(),
+      judgeQueueMode: judgeQueueModeValidator,
+      submissionCount: v.number(),
+      shortlistCount: v.number(),
+      startDate: v.optional(v.number()),
+      endDate: v.optional(v.number()),
+      criteria: v.array(
+        v.object({
+          _id: v.id("judgingCriteria"),
+          question: v.string(),
+          description: v.optional(v.string()),
+        }),
+      ),
+      resultsIsPublic: v.boolean(),
+      hasResultsPassword: v.boolean(),
+      aiJudgeEnabled: v.boolean(),
+      aiResultsIsPublic: v.boolean(),
+      hasAiResultsPassword: v.boolean(),
+      aiReviewVisibleToJudges: v.boolean(),
+      aiRubricLabels: v.array(v.string()),
+      tags: v.array(v.object({ name: v.string(), slug: v.string() })),
+      howToJudge: v.optional(howToJudgeValidator),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const group = await ctx.db
+      .query("judgingGroups")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!group) return null;
+    if (args.preview === true) {
+      await requireJudgingGroupPermission(ctx, group._id, "judging.manage");
+    } else if (group.howToJudge?.enabled === false) {
+      return null;
+    }
+
+    const criteria = await ctx.db
+      .query("judgingCriteria")
+      .withIndex("by_groupId_order", (q) => q.eq("groupId", group._id))
+      .order("asc")
+      .collect();
+
+    // Counts skip hidden, archived, and rejected stories like every other view
+    const submissions = await ctx.db
+      .query("judgingGroupSubmissions")
+      .withIndex("by_groupId", (q) => q.eq("groupId", group._id))
+      .collect();
+    const valid = (
+      await Promise.all(
+        submissions.map(async (submission) => {
+          const story = await ctx.db.get(submission.storyId);
+          return isStoryValidForJudging(story) ? submission : null;
+        }),
+      )
+    ).filter((s): s is NonNullable<typeof s> => s !== null);
+
+    // Tag pages judges can browse: the required form tag plus auto include tags
+    const tagIds = new Set<Id<"tags">>();
+    if (group.submissionFormRequiredTagId)
+      tagIds.add(group.submissionFormRequiredTagId);
+    for (const tagId of group.autoIncludeTagIds ?? []) tagIds.add(tagId);
+    const tags = (
+      await Promise.all([...tagIds].map((tagId) => ctx.db.get(tagId)))
+    )
+      .filter(
+        (tag): tag is Doc<"tags"> & { slug: string } =>
+          tag !== null && !tag.isHidden && typeof tag.slug === "string",
+      )
+      .map((tag) => ({ name: tag.name, slug: tag.slug }));
+
+    // AI rubric labels only matter when the AI judge is on for this group
+    const aiJudgeEnabled = group.aiJudgeEnabled === true;
+    const aiRubricLabels = aiJudgeEnabled
+      ? getRubricForGroup(
+          group,
+          criteria.map((c) => ({
+            _id: c._id,
+            question: c.question,
+            description: c.description,
+          })),
+        ).map((c) => c.label)
+      : [];
+
+    return {
+      _id: group._id,
+      name: group.name,
+      slug: group.slug,
+      description: group.description,
+      isPublic: group.isPublic,
+      isActive: group.isActive,
+      hasJudgePassword: !!(group.judgePassword || group.password),
+      scoreScale: group.scoreScale ?? 10,
+      judgesPerSubmission: group.judgesPerSubmission ?? 1,
+      judgeQueueMode: group.judgeQueueMode ?? "all",
+      submissionCount: valid.length,
+      shortlistCount: valid.filter((s) => s.shortlisted === true).length,
+      startDate: group.startDate,
+      endDate: group.endDate,
+      criteria: criteria.map((c) => ({
+        _id: c._id,
+        question: c.question,
+        description: c.description,
+      })),
+      resultsIsPublic: group.resultsIsPublic === true,
+      hasResultsPassword: !!group.resultsPassword,
+      aiJudgeEnabled,
+      aiResultsIsPublic: group.aiResultsIsPublic === true,
+      hasAiResultsPassword: !!group.aiResultsPassword,
+      aiReviewVisibleToJudges: group.aiReviewVisibleToJudges === true,
+      aiRubricLabels,
+      tags,
+      howToJudge: group.howToJudge,
+    };
+  },
+});
 
 /**
  * Get public group details by slug (for judge access)

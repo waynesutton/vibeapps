@@ -61,6 +61,10 @@ export function GroupLinksSection({ group }: { group: GroupDetails }) {
   // density and scans reliably from a screen or printed sign.
   const joinUrl = `${window.location.origin}/judging/${group.slug}/join`;
 
+  // The How to judge guide is public and holds no secrets, so it is listed
+  // only while the organizer has it switched on
+  const howToJudgeOn = group.howToJudge?.enabled !== false;
+
   const shareLinks: Array<LinkEntry> = [
     {
       label: "Judging interface",
@@ -74,6 +78,17 @@ export function GroupLinksSection({ group }: { group: GroupDetails }) {
         ? decodeStoredPassword(group.judgePassword)
         : undefined,
     },
+    ...(howToJudgeOn
+      ? [
+          {
+            label: "How to judge page",
+            url: `${window.location.origin}/judging/${group.slug}/howtojudge`,
+            locked: false,
+            passwordSet: false,
+            note: "Public one sheet for judges: TL;DR, links, live criteria, and your organizer notes. Never shows a passcode",
+          },
+        ]
+      : []),
     {
       label: "Results page",
       url: `${window.location.origin}/judging/${group.slug}/results`,

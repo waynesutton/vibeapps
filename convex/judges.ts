@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { requireJudgingGroupPermission } from "./adminAccess";
 import { verifyPassword } from "./judgingGroups";
+import { isInJudgeQueue } from "./lib/judgeQueue";
 
 // 32-byte session token as hex (unguessable; Math.random is not)
 function generateSessionId(): string {
@@ -72,9 +73,10 @@ export const listByGroup = query({
       judges.map(async (judge) => {
         const scores = await ctx.db
           .query("judgeScores")
-          .filter((q) => q.eq(q.field("judgeId"), judge._id))
-          .filter((q) => q.neq(q.field("isHidden"), true))
-          .collect();
+          .withIndex("by_judge_story_criteria", (q) => q.eq("judgeId", judge._id))
+          .collect()
+          // Hidden scores are excluded after the indexed read
+          .then((rows) => rows.filter((row) => row.isHidden !== true));
 
         const scoreCount = scores.length;
         const completionPercentage =
@@ -110,7 +112,7 @@ export const removeJudge = mutation({
     // Delete all scores by this judge
     const scores = await ctx.db
       .query("judgeScores")
-      .filter((q) => q.eq(q.field("judgeId"), args.judgeId))
+      .withIndex("by_judge_story_criteria", (q) => q.eq("judgeId", args.judgeId))
       .collect();
     for (const score of scores) {
       await ctx.db.delete(score._id);
@@ -291,6 +293,9 @@ export const getJudgeSession = query({
         isActive: v.boolean(),
         judgesPerSubmission: v.number(),
         scoreScale: v.number(),
+        // Shortlist queue and AI review card flags for the judge interface
+        judgeQueueMode: v.union(v.literal("all"), v.literal("shortlist")),
+        aiReviewVisibleToJudges: v.boolean(),
       }),
     }),
   ),
@@ -323,6 +328,10 @@ export const getJudgeSession = query({
         isActive: group.isActive,
         judgesPerSubmission: group.judgesPerSubmission ?? 1,
         scoreScale: group.scoreScale ?? 10,
+        judgeQueueMode: group.judgeQueueMode ?? "all",
+        aiReviewVisibleToJudges:
+          group.aiJudgeEnabled === true &&
+          group.aiReviewVisibleToJudges === true,
       },
     };
   },
@@ -417,10 +426,14 @@ export const getJudgeProgress = query({
     const judgesPerSubmission = group?.judgesPerSubmission ?? 1;
     const isMultiJudge = judgesPerSubmission > 1;
 
-    const submissions = await ctx.db
-      .query("judgingGroupSubmissions")
-      .withIndex("by_groupId", (q) => q.eq("groupId", judge.groupId))
-      .collect();
+    // Same queue rule as getGroupSubmissions so the progress bar denominator
+    // matches what the judge can see (shortlist mode narrows both)
+    const submissions = (
+      await ctx.db
+        .query("judgingGroupSubmissions")
+        .withIndex("by_groupId", (q) => q.eq("groupId", judge.groupId))
+        .collect()
+    ).filter((submission) => isInJudgeQueue(group, submission));
 
     const submissionStatuses = await ctx.db
       .query("submissionStatuses")
@@ -443,9 +456,10 @@ export const getJudgeProgress = query({
 
     const scores = await ctx.db
       .query("judgeScores")
-      .filter((q) => q.eq(q.field("judgeId"), judge._id))
-      .filter((q) => q.neq(q.field("isHidden"), true))
-      .collect();
+      .withIndex("by_judge_story_criteria", (q) => q.eq("judgeId", judge._id))
+      .collect()
+      // Hidden scores are excluded after the indexed read
+      .then((rows) => rows.filter((row) => row.isHidden !== true));
 
     const totalCriteria = criteria.length;
     const completedScores = scores.length;

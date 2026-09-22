@@ -5,6 +5,7 @@ import { requireJudgingGroupPermission } from "./adminAccess";
 import { logActivity } from "./activityLog";
 import { isUserAdmin } from "./users";
 import { verifyPassword } from "./judgingGroups";
+import { isInJudgeQueue } from "./lib/judgeQueue";
 
 // Helper function to check if a story should be included in judging
 // Returns true if story is valid for judging (not deleted, hidden, archived, or rejected)
@@ -79,12 +80,12 @@ export const getCompletedSubmissionScores = query({
     // Get all scores by the assigned judge for this submission
     const judgeScores = await ctx.db
       .query("judgeScores")
-      .withIndex("by_groupId_storyId", (q) =>
-        q.eq("groupId", judge.groupId).eq("storyId", args.storyId),
+      .withIndex("by_judge_story_criteria", (q) =>
+        q.eq("judgeId", assignedJudge._id).eq("storyId", args.storyId),
       )
-      .filter((q) => q.eq(q.field("judgeId"), submissionStatus.assignedJudgeId))
-      .filter((q) => q.neq(q.field("isHidden"), true))
-      .collect();
+      .collect()
+      // Hidden scores are excluded after the indexed read
+      .then((rows) => rows.filter((row) => row.isHidden !== true));
 
     const scores = judgeScores.map((score) => ({
       criteriaId: score.criteriaId,
@@ -252,11 +253,8 @@ export const getJudgeSubmissionScores = query({
     // Get scores for this submission by this judge
     const scores = await ctx.db
       .query("judgeScores")
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("judgeId"), judge._id),
-          q.eq(q.field("storyId"), args.storyId),
-        ),
+      .withIndex("by_judge_story_criteria", (q) =>
+        q.eq("judgeId", judge._id).eq("storyId", args.storyId),
       )
       .collect();
 
@@ -375,8 +373,9 @@ export const getSubmissionJudgeBreakdown = query({
       .withIndex("by_groupId_storyId", (q) =>
         q.eq("groupId", judge.groupId).eq("storyId", args.storyId),
       )
-      .filter((q) => q.neq(q.field("isHidden"), true))
-      .collect();
+      .collect()
+      // Hidden scores are excluded after the indexed read
+      .then((rows) => rows.filter((row) => row.isHidden !== true));
 
     // Only include scores from judges who have completed
     const completedJudgeIds = new Set(completions.map((c) => c.judgeId));
@@ -495,8 +494,9 @@ export const getGroupScores = query({
     const allScores = await ctx.db
       .query("judgeScores")
       .withIndex("by_groupId_storyId", (q) => q.eq("groupId", args.groupId))
-      .filter((q) => q.neq(q.field("isHidden"), true))
-      .collect();
+      .collect()
+      // Hidden scores are excluded after the indexed read
+      .then((rows) => rows.filter((row) => row.isHidden !== true));
 
     // Filter scores to only include completed submissions
     const scores = allScores.filter((score) =>
@@ -504,10 +504,15 @@ export const getGroupScores = query({
     );
 
     // Get group metadata - Filter out invalid stories (deleted, hidden, archived, rejected)
-    const allSubmissions = await ctx.db
-      .query("judgingGroupSubmissions")
-      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
-      .collect();
+    const group = await ctx.db.get(args.groupId);
+
+    // Shortlist mode: the completion denominator counts only the judge queue
+    const allSubmissions = (
+      await ctx.db
+        .query("judgingGroupSubmissions")
+        .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+        .collect()
+    ).filter((submission) => isInJudgeQueue(group, submission));
 
     const submissions = (
       await Promise.all(
@@ -533,7 +538,6 @@ export const getGroupScores = query({
 
     // Agent judging (Phase 6): while agent scores are advisory (the default),
     // they are excluded from rankings and aggregates until promoted by an admin.
-    const group = await ctx.db.get(args.groupId);
     const agentScoresAdvisory = group?.agentScoresAdvisory ?? true;
     const scoreScale = group?.scoreScale ?? 10;
     const agentJudgeIds = new Set(
@@ -826,8 +830,9 @@ export const getSubmissionScores = query({
       .withIndex("by_groupId_storyId", (q) =>
         q.eq("groupId", args.groupId).eq("storyId", args.storyId),
       )
-      .filter((q) => q.neq(q.field("isHidden"), true))
-      .collect();
+      .collect()
+      // Hidden scores are excluded after the indexed read
+      .then((rows) => rows.filter((row) => row.isHidden !== true));
 
     // Get criteria and judges for context
     const criteria = await ctx.db
@@ -1016,8 +1021,9 @@ export const getPublicGroupScores = query({
     const allScores = await ctx.db
       .query("judgeScores")
       .withIndex("by_groupId_storyId", (q) => q.eq("groupId", args.groupId))
-      .filter((q) => q.neq(q.field("isHidden"), true))
-      .collect();
+      .collect()
+      // Hidden scores are excluded after the indexed read
+      .then((rows) => rows.filter((row) => row.isHidden !== true));
 
     // Filter scores to only include completed submissions
     const completedScores = allScores.filter((score) =>
@@ -1286,8 +1292,9 @@ export const getValidatedGroupScores = query({
     const allScores = await ctx.db
       .query("judgeScores")
       .withIndex("by_groupId_storyId", (q) => q.eq("groupId", args.groupId))
-      .filter((q) => q.neq(q.field("isHidden"), true))
-      .collect();
+      .collect()
+      // Hidden scores are excluded after the indexed read
+      .then((rows) => rows.filter((row) => row.isHidden !== true));
 
     // Filter scores to only include completed submissions
     const completedScores = allScores.filter((score) =>
@@ -1538,8 +1545,9 @@ export const getPublicGroupJudgeDetails = query({
         const allGroupScores = await ctx.db
           .query("judgeScores")
           .withIndex("by_groupId_storyId", (q) => q.eq("groupId", args.groupId))
-          .filter((q) => q.neq(q.field("isHidden"), true))
-          .collect();
+          .collect()
+          // Hidden scores are excluded after the indexed read
+          .then((rows) => rows.filter((row) => row.isHidden !== true));
 
         // Filter scores to only include completed submissions
         const scores = allGroupScores.filter(

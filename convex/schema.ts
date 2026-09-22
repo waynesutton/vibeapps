@@ -678,6 +678,36 @@ export default defineSchema({
     // to score the same rubric from text only context. Stored on the result
     // as secondOpinion; advisory, never used for ranking.
     aiSecondOpinionEnabled: v.optional(v.boolean()),
+    // When true, human judges see a collapsed AI review card (per criterion
+    // score and reasoning) on each submission in the judging interface.
+    // Advisory only; never changes human scores. Absent = hidden.
+    aiReviewVisibleToJudges: v.optional(v.boolean()),
+    // Which submissions human judges see. "all" (default) = every submission
+    // in the group; "shortlist" = only rows with shortlisted = true on
+    // judgingGroupSubmissions. AI runs always cover every submission.
+    judgeQueueMode: v.optional(
+      v.union(v.literal("all"), v.literal("shortlist")),
+    ),
+    // Organizer content for the public How to judge page at
+    // /judging/{slug}/howtojudge. Everything else on that page is read live
+    // from the group. No passwords are stored here; accessCodeNote is a
+    // display placeholder (default "passcodegoeshere") and the real code is
+    // sent to judges separately.
+    howToJudge: v.optional(
+      v.object({
+        enabled: v.optional(v.boolean()), // Absent = page is live
+        accessCodeNote: v.optional(v.string()),
+        deadlineAt: v.optional(v.number()), // Epoch ms judging deadline
+        contact: v.optional(v.string()), // Markdown
+        privateRepoNote: v.optional(v.string()), // Markdown
+        assignments: v.optional(v.string()), // Markdown
+        notes: v.optional(v.string()), // Markdown
+        links: v.optional(
+          v.array(v.object({ label: v.string(), url: v.string() })),
+        ),
+        showResultsLink: v.optional(v.boolean()), // Absent = shown when shareable
+      }),
+    ),
     // Custom AI judge system prompt body. Absent = built-in default prompt.
     // Supports a {{rubric}} placeholder; the JSON response contract is
     // always appended by the analysis action and is never editable.
@@ -984,6 +1014,11 @@ export default defineSchema({
     storyId: v.id("stories"), // Submission being judged
     addedBy: v.id("users"), // Admin who added the submission
     addedAt: v.number(), // When it was added to the group
+    // Organizer shortlist flag. When the group's judgeQueueMode is
+    // "shortlist", only rows with shortlisted = true reach human judges.
+    // Filtered in JS after the by_groupId read, no extra index needed.
+    shortlisted: v.optional(v.boolean()),
+    shortlistedAt: v.optional(v.number()),
   })
     .index("by_groupId", ["groupId"])
     .index("by_storyId", ["storyId"])

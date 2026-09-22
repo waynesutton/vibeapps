@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import type { FunctionReturnType } from "convex/server";
@@ -14,7 +14,9 @@ import {
   ExternalLink,
   Github,
   Linkedin,
+  Loader2,
   Search,
+  Star,
   Twitter,
 } from "lucide-react";
 import {
@@ -33,6 +35,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { api } from "../../../../convex/_generated/api";
+import type { Id } from "../../../../convex/_generated/dataModel";
 import { Input } from "../../ui/input";
 import { SimpleSelect } from "../../ui/SimpleSelect";
 import { useAdminAccess } from "../useAdminAccess";
@@ -142,14 +145,74 @@ function LinkCell({
   );
 }
 
-// Read-only roster of everything in the group. List, copy, and open only:
-// no mutation is wired into this section by design.
+// Star toggle for the human judge shortlist. Shown to judging.manage only;
+// everyone else sees a read-only star when the row is shortlisted.
+function ShortlistCell({
+  groupId,
+  storyId,
+  shortlisted,
+  canManage,
+}: {
+  groupId: Id<"judgingGroups">;
+  storyId: Id<"stories">;
+  shortlisted: boolean;
+  canManage: boolean;
+}) {
+  const setShortlisted = useMutation(api.judgingGroupSubmissions.setShortlisted);
+  const [pending, setPending] = useState(false);
+
+  if (!canManage) {
+    return shortlisted ? (
+      <Star
+        className="w-4 h-4 text-green-600 fill-current"
+        aria-label="Shortlisted"
+      />
+    ) : (
+      <span className="text-faint">&mdash;</span>
+    );
+  }
+
+  const handleToggle = () => {
+    setPending(true);
+    setShortlisted({ groupId, storyIds: [storyId], shortlisted: !shortlisted })
+      .catch(() => {
+        // Row state streams back from Convex, so nothing to roll back
+      })
+      .finally(() => setPending(false));
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleToggle}
+      disabled={pending}
+      aria-pressed={shortlisted}
+      title={shortlisted ? "Remove from shortlist" : "Add to shortlist"}
+      aria-label={shortlisted ? "Remove from shortlist" : "Add to shortlist"}
+      className={`p-1 rounded transition-colors disabled:opacity-50 ${
+        shortlisted
+          ? "text-green-600 hover:bg-green-50"
+          : "text-faint hover:text-copy hover:bg-surface-hover"
+      }`}
+    >
+      {pending ? (
+        <Loader2 className="w-4 h-4 animate-spin" />
+      ) : (
+        <Star className={`w-4 h-4 ${shortlisted ? "fill-current" : ""}`} />
+      )}
+    </button>
+  );
+}
+
+// Roster of everything in the group: list, copy, open, and (for managers)
+// star rows for the human judge shortlist. Nothing here edits the entry.
 export function GroupSubmissionsTableSection({
   group,
 }: {
   group: GroupDetails;
 }) {
   const { can } = useAdminAccess();
+  const canManage = can("judging.manage");
   const rows = useQuery(api.judgingGroupSubmissions.listSubmissionsTable, {
     groupId: group._id,
   });
@@ -162,14 +225,17 @@ export function GroupSubmissionsTableSection({
     pageSize: 25,
   });
   const [search, setSearch] = useState("");
+  const [shortlistOnly, setShortlistOnly] = useState(false);
 
-  // Search spans title, slug, submitter, and tag names in one box
+  // Search spans title, slug, submitter, and tag names in one box; the
+  // shortlist filter narrows to starred rows
   const filteredRows = useMemo(() => {
     if (!rows) return [];
     const term = search.trim().toLowerCase();
-    if (!term) return rows;
-    return rows.filter((row) =>
-      [
+    return rows.filter((row) => {
+      if (shortlistOnly && !row.shortlisted) return false;
+      if (!term) return true;
+      return [
         row.title,
         row.slug,
         row.submitterName ?? "",
@@ -178,12 +244,29 @@ export function GroupSubmissionsTableSection({
       ]
         .join(" ")
         .toLowerCase()
-        .includes(term),
-    );
-  }, [rows, search]);
+        .includes(term);
+    });
+  }, [rows, search, shortlistOnly]);
+
+  const shortlistCount = rows?.filter((row) => row.shortlisted).length ?? 0;
+  const isFiltering = search.trim().length > 0 || shortlistOnly;
 
   const columns = useMemo<ColumnDef<SubmissionTableFeatures, SubmissionRow>[]>(
     () => [
+      {
+        id: "shortlisted",
+        accessorKey: "shortlisted",
+        header: "Shortlist",
+        sortFn: "basic",
+        cell: ({ row }) => (
+          <ShortlistCell
+            groupId={group._id}
+            storyId={row.original.storyId}
+            shortlisted={row.original.shortlisted}
+            canManage={canManage}
+          />
+        ),
+      },
       {
         id: "title",
         accessorKey: "title",
@@ -350,7 +433,7 @@ export function GroupSubmissionsTableSection({
         ),
       },
     ],
-    [],
+    [group._id, canManage],
   );
 
   const table = useTable({
@@ -376,14 +459,18 @@ export function GroupSubmissionsTableSection({
               Submissions in this group
             </h3>
             <p className="text-[13px] text-soft mt-0.5">
-              Read-only roster. Open a submission or copy a link; nothing here
-              edits the entry.
+              Open a submission or copy a link; nothing here edits the entry.
+              {canManage &&
+                " Star a row to add it to the human judge shortlist."}
             </p>
           </div>
           <span className="text-[13px] text-soft tabular-nums flex-shrink-0">
-            {search.trim()
+            {isFiltering
               ? `${filteredRows.length} of ${totalCount}`
               : `${totalCount} submission${totalCount === 1 ? "" : "s"}`}
+            {shortlistCount > 0 && !isFiltering && (
+              <span className="text-faint"> · {shortlistCount} shortlisted</span>
+            )}
           </span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -401,6 +488,23 @@ export function GroupSubmissionsTableSection({
               aria-label="Search submissions in this group"
             />
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              setShortlistOnly((v) => !v);
+              setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+            }}
+            aria-pressed={shortlistOnly}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium rounded-md border transition-colors ${
+              shortlistOnly
+                ? "bg-green-50 border-green-200 text-green-700"
+                : "bg-surface border-hairline text-copy hover:bg-surface-hover"
+            }`}
+            title="Show only shortlisted submissions"
+          >
+            <Star className={`w-3.5 h-3.5 ${shortlistOnly ? "fill-current" : ""}`} />
+            Shortlist only
+          </button>
           <SimpleSelect
             value={String(pagination.pageSize)}
             onChange={(value) =>
@@ -485,7 +589,9 @@ export function GroupSubmissionsTableSection({
                       colSpan={columns.length}
                       className="px-4 py-8 text-center text-[13px] text-soft"
                     >
-                      No submissions match "{search}"
+                      {shortlistOnly && !search.trim()
+                        ? "Nothing is shortlisted yet. Star rows here or use Shortlist top N in AI results."
+                        : `No submissions match "${search}"`}
                     </td>
                   </tr>
                 ) : (

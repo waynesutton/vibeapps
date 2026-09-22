@@ -40,6 +40,11 @@ export function GroupSettingsSection({
   const [scoreScale, setScoreScale] = useState<5 | 10>(
     group.scoreScale === 5 ? 5 : 10,
   );
+  // Which submissions human (and agent) judges see: everything, or only
+  // the rows starred in AI results or the submissions table
+  const [judgeQueueMode, setJudgeQueueMode] = useState<"all" | "shortlist">(
+    group.judgeQueueMode ?? "all",
+  );
   const [deleteArmed, setDeleteArmed] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -56,6 +61,7 @@ export function GroupSettingsSection({
         isActive,
         judgesPerSubmission,
         scoreScale,
+        judgeQueueMode,
       });
     });
   };
@@ -204,6 +210,48 @@ export function GroupSettingsSection({
             scale after judging starts keeps existing scores as they were
             entered.
           </p>
+        </div>
+        <div>
+          <Label>Judge queue</Label>
+          <div
+            className="mt-1 flex items-center gap-2"
+            role="radiogroup"
+            aria-label="Judge queue"
+          >
+            {(
+              [
+                { value: "all", label: "All submissions" },
+                { value: "shortlist", label: "Shortlist only" },
+              ] as const
+            ).map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={judgeQueueMode === option.value}
+                onClick={() => setJudgeQueueMode(option.value)}
+                disabled={saving}
+                className={`px-3.5 py-1.5 text-[13px] font-medium rounded-md border transition-colors disabled:opacity-50 ${
+                  judgeQueueMode === option.value
+                    ? "bg-cta border-ink text-on-cta"
+                    : "bg-surface border-hairline text-copy hover:bg-surface-hover"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-soft mt-1">
+            {judgeQueueMode === "shortlist"
+              ? `Human and agent judges see only shortlisted submissions (${group.shortlistCount} right now). Star rows in AI results or the View submissions table, or use Shortlist top N after an AI run. The AI judge still reviews every submission.`
+              : "Human and agent judges see every submission in this group. Shortlisting works on top of this: run the AI judge, star the top N, then switch here."}
+          </p>
+          {judgeQueueMode === "shortlist" && group.shortlistCount === 0 && (
+            <p className="text-xs text-red-600 mt-1">
+              Nothing is shortlisted yet. Judges will see an empty queue until
+              you star at least one submission.
+            </p>
+          )}
         </div>
       </SectionCard>
 
