@@ -5,6 +5,7 @@
 ### Configuration Files
 
 - `package.json`: Project dependencies and scripts configuration
+- `.npmrc`: Sets `legacy-peer-deps=true` so Netlify installs past the `@waynesutton/agent-ready` (workpool `^0.3.0`) vs `@convex-dev/resend` (workpool `^0.4.10`) peer conflict; remove once agent-ready widens its peer range
 - `tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json`: TypeScript configuration files
 - `vite.config.ts`: `Vite` build tool configuration
 - `tailwind.config.js`: Tailwind CSS styling configuration, including the shared `0.25rem` non-pill corner radius scale and the Geist `font-sans` / `font-mono` token mappings

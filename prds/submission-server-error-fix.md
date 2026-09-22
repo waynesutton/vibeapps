@@ -1,8 +1,8 @@
 # Submission and edit "Server Error" fix
 
 Created: 2026-09-22 01:30 UTC
-Last Updated: 2026-09-22 02:20 UTC
-Status: Done (all edits applied and verified on dev; prod needs `npx convex deploy` plus a frontend push)
+Last Updated: 2026-09-22 02:35 UTC
+Status: Done (backend live on prod; frontend ships with the next green Netlify build after the `.npmrc` fix)
 
 ## Problem
 
@@ -234,3 +234,11 @@ keep the one already saved for that member." The earlier strict
   `updateStoryAdmin`), hook re enabled. `StoryDetail.tsx` relaxed to "blank
   keeps the stored email". Pushed to dev and the issue #19 repro now
   succeeds with the email preserved. Prod deploy left to the user.
+- 2026-09-22 02:35 UTC - Backend deployed to prod by the user (second
+  `npx convex deploy` after `git add .`). Commit 5551dbe pushed, but the
+  Netlify build failed at `npm install`: `@waynesutton/agent-ready` peers
+  `@convex-dev/workpool ^0.3.0`, `@convex-dev/resend` 0.2.7 needs `^0.4.10`,
+  and no agent-ready release accepts 0.4 yet. Added root `.npmrc` with
+  `legacy-peer-deps=true`; a clean temp dir install from the lockfile
+  passes. Frontend half of #19 ships when that build goes green; close the
+  issue after one owner edit on prod succeeds.
