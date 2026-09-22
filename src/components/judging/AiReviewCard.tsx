@@ -4,31 +4,39 @@ import { ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 
-// Collapsed AI review for the judge interface. Only renders when the group's
-// organizer turned on "Show AI review to judges" and the AI run for this
-// submission completed. The query is session gated and returns just the
-// scores and reasoning: harness signals and git facts never reach judges.
+// Collapsed AI review for the judge interface. Renders when the group's
+// organizer turned on "Show AI review to judges", or for below-cut rows when
+// the organizer shows them (the server decides). The query is session gated
+// and returns just the scores, reasoning, and rank: harness signals and git
+// facts never reach judges.
 export function AiReviewCard({
   groupId,
   storyId,
   sessionId,
+  defaultOpen = false,
 }: {
   groupId: Id<"judgingGroups">;
   storyId: Id<"stories">;
   sessionId: string;
+  // Start expanded (used for below-cut rows where the review is the point)
+  defaultOpen?: boolean;
 }) {
   const review = useQuery(api.aiJudge.getAiReviewForJudge, {
     groupId,
     storyId,
     sessionId,
   });
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
 
   if (!review) return null;
 
   const headline =
     review.averageScore !== undefined
       ? `${review.averageScore.toFixed(1)}/10`
+      : null;
+  const rankLabel =
+    review.rank !== undefined && review.rankTotal !== undefined
+      ? `#${review.rank} of ${review.rankTotal}`
       : null;
 
   return (
@@ -42,6 +50,9 @@ export function AiReviewCard({
         <span className="flex items-center gap-2 min-w-0">
           <Sparkles className="w-4 h-4 text-copy flex-shrink-0" />
           <span className="font-medium text-ink">AI review</span>
+          {rankLabel && (
+            <span className="text-sm text-copy tabular-nums">{rankLabel}</span>
+          )}
           {headline && (
             <span className="text-sm text-soft tabular-nums">{headline}</span>
           )}

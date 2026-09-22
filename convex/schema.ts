@@ -688,6 +688,10 @@ export default defineSchema({
     judgeQueueMode: v.optional(
       v.union(v.literal("all"), v.literal("shortlist")),
     ),
+    // Shortlist mode only. When true, judges still see submissions that did
+    // not make the cut: grayed out, read only, with their AI rank and score
+    // and the AI review. They cannot be scored. Absent = hidden (default).
+    showBelowCutToJudges: v.optional(v.boolean()),
     // Organizer content for the public How to judge page at
     // /judging/{slug}/howtojudge. Everything else on that page is read live
     // from the group. No passwords are stored here; accessCodeNote is a

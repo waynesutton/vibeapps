@@ -18,3 +18,21 @@ export function isInJudgeQueue(
   if ((group?.judgeQueueMode ?? "all") !== "shortlist") return true;
   return submission.shortlisted === true;
 }
+
+/**
+ * Whether judges should also see the rows that are NOT in the queue. Only
+ * true in shortlist mode with the organizer's below-cut toggle on. Those rows
+ * are read only in the judging interface: visible with their AI rank and
+ * score, never scorable. Progress denominators still use isInJudgeQueue.
+ */
+export function showsBelowCut(
+  group:
+    | Pick<Doc<"judgingGroups">, "judgeQueueMode" | "showBelowCutToJudges">
+    | null
+    | undefined,
+): boolean {
+  return (
+    (group?.judgeQueueMode ?? "all") === "shortlist" &&
+    group?.showBelowCutToJudges === true
+  );
+}

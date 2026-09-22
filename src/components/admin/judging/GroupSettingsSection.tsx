@@ -45,6 +45,11 @@ export function GroupSettingsSection({
   const [judgeQueueMode, setJudgeQueueMode] = useState<"all" | "shortlist">(
     group.judgeQueueMode ?? "all",
   );
+  // Shortlist mode only: keep below-cut rows visible to judges, read only,
+  // with their AI rank and score and the AI review
+  const [showBelowCutToJudges, setShowBelowCutToJudges] = useState(
+    group.showBelowCutToJudges ?? false,
+  );
   const [deleteArmed, setDeleteArmed] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -62,6 +67,7 @@ export function GroupSettingsSection({
         judgesPerSubmission,
         scoreScale,
         judgeQueueMode,
+        showBelowCutToJudges,
       });
     });
   };
@@ -243,16 +249,45 @@ export function GroupSettingsSection({
           </div>
           <p className="text-xs text-soft mt-1">
             {judgeQueueMode === "shortlist"
-              ? `Human and agent judges see only shortlisted submissions (${group.shortlistCount} right now). Star rows in AI results or the View submissions table, or use Shortlist top N after an AI run. The AI judge still reviews every submission.`
-              : "Human and agent judges see every submission in this group. Shortlisting works on top of this: run the AI judge, star the top N, then switch here."}
+              ? group.aiJudgeEnabled
+                ? `Human and agent judges see only shortlisted submissions (${group.shortlistCount} right now). Star rows in AI results or the View submissions table, or use Shortlist top N after an AI run. The AI judge still reviews every submission.`
+                : `Human and agent judges see only shortlisted submissions (${group.shortlistCount} right now). Star rows in the View submissions table to build the shortlist by hand; no AI run is needed.`
+              : group.aiJudgeEnabled
+                ? "Human and agent judges see every submission in this group. Shortlisting works on top of this: run the AI judge, star the top N, then switch here."
+                : "Human and agent judges see every submission in this group. Shortlisting works on top of this: star rows in View submissions, then switch here."}
           </p>
           {judgeQueueMode === "shortlist" && group.shortlistCount === 0 && (
             <p className="text-xs text-red-600 mt-1">
-              Nothing is shortlisted yet. Judges will see an empty queue until
-              you star at least one submission.
+              Nothing is shortlisted yet.{" "}
+              {showBelowCutToJudges
+                ? "Judges will see only read-only rows until you star at least one submission."
+                : "Judges will see an empty queue until you star at least one submission."}
             </p>
           )}
         </div>
+        {judgeQueueMode === "shortlist" && (
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-hairline bg-surface-alt px-4 py-3">
+            <div>
+              <p className="text-sm font-medium text-ink">
+                Show submissions below the cut to judges
+              </p>
+              <p className="text-xs text-soft mt-0.5">
+                {showBelowCutToJudges
+                  ? group.aiJudgeEnabled
+                    ? "Judges see the rest of the group grayed out with the AI rank and score and the AI review. They cannot score them, but can leave notes to suggest a second look."
+                    : "Judges see the rest of the group grayed out and read only. They cannot score them, but can leave notes to suggest a second look."
+                  : "Judges see only the shortlist. Everything else stays hidden from the judging interface."}
+              </p>
+            </div>
+            <TogglePill
+              enabled={showBelowCutToJudges}
+              onToggle={() => setShowBelowCutToJudges((v) => !v)}
+              onLabel="Visible"
+              offLabel="Hidden"
+              disabled={saving}
+            />
+          </div>
+        )}
       </SectionCard>
 
       <NotificationEmailsCard group={group} />

@@ -23,6 +23,8 @@ import {
   Search,
   Users,
   Play,
+  Sparkles,
+  Lock,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
@@ -37,6 +39,31 @@ import { Markdown } from "../components/Markdown";
 import { SocialProofCard } from "../components/judging/SocialProofCard";
 import { AiReviewCard } from "../components/judging/AiReviewCard";
 import { useDialog } from "../hooks/useDialog";
+
+// Which rows the judge is looking at when below-cut rows are visible:
+// the shortlist queue (default), only the rows that missed the cut, or both
+type QueueFilter = "queue" | "belowCut" | "all";
+
+// Compact AI rank and average score, advisory only. Rendered next to titles
+// in the interface when the judge has AI scores switched on.
+function AiRankBadge({
+  ai,
+}: {
+  ai: { rank: number; total: number; averageScore?: number };
+}) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full border border-hairline bg-surface-alt px-2 py-0.5 text-xs text-copy tabular-nums whitespace-nowrap"
+      title="AI judge rank and average score. Advisory only, never changes your scores."
+    >
+      <Sparkles className="w-3 h-3 text-soft" aria-hidden="true" />
+      AI #{ai.rank}/{ai.total}
+      {ai.averageScore !== undefined && (
+        <span className="text-soft">{ai.averageScore.toFixed(1)}/10</span>
+      )}
+    </span>
+  );
+}
 
 export default function JudgingInterfacePage() {
   const { slug } = useParams<{ slug: string }>();
@@ -64,6 +91,11 @@ export default function JudgingInterfacePage() {
   );
   // Index into choiceFilterOptions ("" = no choice-answer filter)
   const [selectedChoiceFilter, setSelectedChoiceFilter] = useState<string>("");
+  // Shortlist mode with below-cut rows visible: which rows to page through
+  const [queueFilter, setQueueFilter] = useState<QueueFilter>("queue");
+  // Judge-side switch for AI rank badges and the AI review card. Persisted
+  // per group so a judge who wants to score blind stays blind on reload.
+  const [showAiScores, setShowAiScores] = useState(true);
 
   // Get session ID from localStorage on mount
   useEffect(() => {
@@ -108,6 +140,33 @@ export default function JudgingInterfacePage() {
   // Show ALL submissions in the group (no filtering)
   // The backend determines edit permissions via canEdit field
   const submissions = allSubmissions;
+
+  // Below-cut rows exist only in shortlist mode with the organizer toggle on.
+  // Every other mode returns queue rows only, so these counts stay 0.
+  const showsBelowCut = judgeSession?.group.showBelowCutToJudges === true;
+  const queueCount = submissions?.filter((s) => s.inJudgeQueue).length ?? 0;
+  const belowCutCount = (submissions?.length ?? 0) - queueCount;
+  // Any AI badge data at all (queue rows with AI review on, or below-cut rows)
+  const hasAnyAiScores = submissions?.some((s) => s.ai !== undefined) ?? false;
+
+  // Restore the judge's AI scores preference for this group
+  const aiScoresStorageKey = judgeSession
+    ? `judgeShowAiScores:${judgeSession.group._id}`
+    : null;
+  useEffect(() => {
+    if (!aiScoresStorageKey) return;
+    const stored = localStorage.getItem(aiScoresStorageKey);
+    if (stored === "0") setShowAiScores(false);
+  }, [aiScoresStorageKey]);
+  const toggleAiScores = () => {
+    setShowAiScores((prev) => {
+      const next = !prev;
+      if (aiScoresStorageKey) {
+        localStorage.setItem(aiScoresStorageKey, next ? "1" : "0");
+      }
+      return next;
+    });
+  };
 
   // Flat "Field label: Option" list; the select value is the array index
   const choiceFilterOptions: Array<{
@@ -159,7 +218,8 @@ export default function JudgingInterfacePage() {
     selectedTagId !== null ||
     filterNotJudged ||
     selectedJudgeName !== null ||
-    activeChoiceFilter !== undefined;
+    activeChoiceFilter !== undefined ||
+    (showsBelowCut && queueFilter !== "queue");
 
   // Get unique list of judges who have completed at least one submission
   const activeJudges = judgeProgress?.submissionProgress
@@ -172,9 +232,18 @@ export default function JudgingInterfacePage() {
       ).sort((a, b) => a.localeCompare(b))
     : [];
 
-  // Filter submissions based on selected tag, judged status, and judge name
+  // Filter submissions based on queue, selected tag, judged status, and judge name
   const displaySubmissions =
     submissions?.filter((submission) => {
+      // Filter by queue position (only meaningful when below-cut rows are shown)
+      const matchesQueue =
+        !showsBelowCut ||
+        queueFilter === "all" ||
+        (queueFilter === "queue"
+          ? submission.inJudgeQueue
+          : !submission.inJudgeQueue);
+      if (!matchesQueue) return false;
+
       // Filter by tag
       const matchesTag =
         !selectedTagId ||
@@ -620,8 +689,13 @@ export default function JudgingInterfacePage() {
     );
   }
 
+  // Nothing shortlisted yet while below-cut rows are visible: point judges
+  // at the read-only rows instead of an endless spinner
+  const queueIsEmpty =
+    showsBelowCut && queueFilter === "queue" && queueCount === 0;
+
   // Show filtered message if no submissions match filters
-  if (displaySubmissions.length === 0 && hasActiveFilters) {
+  if (displaySubmissions.length === 0 && (hasActiveFilters || queueIsEmpty)) {
     return (
       <div className="min-h-screen bg-canvas">
         <div className="bg-canvas border-b border-hairline sticky top-0 z-10">
@@ -640,23 +714,51 @@ export default function JudgingInterfacePage() {
         </div>
         <div className="max-w-6xl mx-auto px-4 py-8">
           <div className="bg-surface rounded-lg border border-hairline p-6 text-center">
-            <h2 className="text-lg font-medium text-ink mb-2">
-              No Submissions Match Filters
-            </h2>
-            <p className="text-copy mb-4">
-              Try adjusting your filters to see more submissions.
-            </p>
-            <Button
-              onClick={() => {
-                setSelectedTagId(null);
-                setFilterNotJudged(false);
-                setSelectedJudgeName(null);
-                setSelectedChoiceFilter("");
-              }}
-              className="inline-flex items-center gap-2"
-            >
-              Clear All Filters
-            </Button>
+            {queueIsEmpty && !hasActiveFilters ? (
+              <>
+                <h2 className="text-lg font-medium text-ink mb-2">
+                  Nothing shortlisted yet
+                </h2>
+                <p className="text-copy mb-4">
+                  The organizer has not picked the shortlist for this round.{" "}
+                  {belowCutCount} submission{belowCutCount === 1 ? "" : "s"}{" "}
+                  {belowCutCount === 1 ? "is" : "are"} below the cut and can be
+                  read but not scored.
+                </p>
+                <Button
+                  onClick={() => {
+                    setQueueFilter("belowCut");
+                    setCurrentSubmissionIndex(0);
+                  }}
+                  className="inline-flex items-center gap-2"
+                >
+                  <Lock className="w-4 h-4" />
+                  View below the cut
+                </Button>
+              </>
+            ) : (
+              <>
+                <h2 className="text-lg font-medium text-ink mb-2">
+                  No Submissions Match Filters
+                </h2>
+                <p className="text-copy mb-4">
+                  Try adjusting your filters to see more submissions.
+                </p>
+                <Button
+                  onClick={() => {
+                    setSelectedTagId(null);
+                    setFilterNotJudged(false);
+                    setSelectedJudgeName(null);
+                    setSelectedChoiceFilter("");
+                    setQueueFilter(queueCount === 0 ? "all" : "queue");
+                    setCurrentSubmissionIndex(0);
+                  }}
+                  className="inline-flex items-center gap-2"
+                >
+                  Clear All Filters
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -664,6 +766,14 @@ export default function JudgingInterfacePage() {
   }
 
   const currentSubmission = displaySubmissions[currentSubmissionIndex];
+
+  // Below-cut rows are read only: no scoring, no status changes, notes allowed
+  const isBelowCut = currentSubmission ? !currentSubmission.inJudgeQueue : false;
+  // AI badges and card follow the judge's local switch. Below-cut rows get
+  // the card regardless of the organizer's AI review setting (server gated).
+  const showAiForCurrent =
+    showAiScores &&
+    (judgeSession.group.aiReviewVisibleToJudges || isBelowCut);
 
   // If no current submission after filters (edge case), show loading
   if (!currentSubmission) {
@@ -843,6 +953,15 @@ export default function JudgingInterfacePage() {
                     <strong>Skip</strong> - Not being judged
                   </span>
                 </div>
+                {showsBelowCut && (
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-copy" />
+                    <span className="text-blue-800">
+                      <strong>Below the cut</strong> - Read only, not in this
+                      round
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -905,19 +1024,31 @@ export default function JudgingInterfacePage() {
                                   onClick={() =>
                                     handleSearchSubmission(submission._id)
                                   }
-                                  className="w-full text-left px-3 py-2 hover:bg-surface-hover border-b border-hairline last:border-b-0"
+                                  className={`w-full text-left px-3 py-2 hover:bg-surface-hover border-b border-hairline last:border-b-0 ${
+                                    submission.inJudgeQueue ? "" : "opacity-60"
+                                  }`}
                                 >
                                   <div className="flex items-center justify-between gap-2">
                                     <span className="app-title-sm text-ink truncate">
                                       {submission.title}
                                     </span>
                                     <div className="flex items-center gap-1 flex-shrink-0">
+                                      {!submission.inJudgeQueue && (
+                                        <span className="inline-flex items-center gap-1 text-xs text-soft">
+                                          <Lock className="w-3 h-3" aria-hidden="true" />
+                                          Below the cut
+                                        </span>
+                                      )}
+                                      {showAiScores && submission.ai && (
+                                        <AiRankBadge ai={submission.ai} />
+                                      )}
                                       {progressInfo?.isComplete && (
                                         <CheckCircle className="w-3 h-3 text-green-600" />
                                       )}
-                                      {!progressInfo?.canEdit && (
+                                      {/* Below-cut rows have no progress entry, so skip the label */}
+                                      {progressInfo && !progressInfo.canEdit && (
                                         <span className="text-xs text-soft">
-                                          (by {progressInfo?.completedBy})
+                                          (by {progressInfo.completedBy})
                                         </span>
                                       )}
                                       <span className="text-xs text-soft">
@@ -948,6 +1079,30 @@ export default function JudgingInterfacePage() {
                           </div>
                         )}
                     </div>
+
+                    {/* Queue filter: only when below-cut rows are visible */}
+                    {showsBelowCut && (
+                      <SimpleSelect
+                        value={queueFilter}
+                        onChange={(value) => {
+                          setQueueFilter(value as QueueFilter);
+                          setCurrentSubmissionIndex(0);
+                        }}
+                        aria-label="Filter by judging round"
+                        className="w-full sm:w-48 h-8 text-sm px-2"
+                        options={[
+                          { value: "queue", label: `Shortlist (${queueCount})` },
+                          {
+                            value: "belowCut",
+                            label: `Below the cut (${belowCutCount})`,
+                          },
+                          {
+                            value: "all",
+                            label: `All (${submissions.length})`,
+                          },
+                        ]}
+                      />
+                    )}
 
                     {/* Filter by tag */}
                     <SimpleSelect
@@ -1013,7 +1168,47 @@ export default function JudgingInterfacePage() {
                         ]}
                       />
                     )}
+
+                    {/* Judge-side switch for AI rank badges and the AI review card */}
+                    {hasAnyAiScores && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={toggleAiScores}
+                        aria-pressed={showAiScores}
+                        title={
+                          showAiScores
+                            ? "Hide AI rank and score badges"
+                            : "Show AI rank and score badges"
+                        }
+                        className={`h-8 px-2 text-xs sm:text-sm flex items-center gap-1.5 ${
+                          showAiScores ? "" : "text-soft"
+                        }`}
+                      >
+                        <Sparkles className="w-3 h-3" aria-hidden="true" />
+                        {showAiScores ? "Hide AI scores" : "Show AI scores"}
+                      </Button>
+                    )}
                   </div>
+
+                  {/* Below-cut pill: quick jump from the shortlist to the rest */}
+                  {showsBelowCut &&
+                    queueFilter === "queue" &&
+                    belowCutCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQueueFilter("belowCut");
+                          setCurrentSubmissionIndex(0);
+                        }}
+                        className="self-start inline-flex items-center gap-1.5 rounded-full border border-hairline bg-surface-alt px-2.5 py-1 text-xs text-copy hover:bg-surface-hover transition-colors"
+                      >
+                        <Lock className="w-3 h-3 text-soft" aria-hidden="true" />
+                        {belowCutCount} below the cut, read only
+                        <ChevronRight className="w-3 h-3" aria-hidden="true" />
+                      </button>
+                    )}
 
                   {/* Navigation Row */}
                   <div className="flex items-center gap-2">
@@ -1068,18 +1263,52 @@ export default function JudgingInterfacePage() {
                 </div>
 
                 <div className="space-y-3">
+                  {/* Below the cut: read-only banner with the AI verdict */}
+                  {isBelowCut && (
+                    <div
+                      role="status"
+                      className="flex items-start gap-3 rounded-lg border border-hairline bg-surface-alt p-3"
+                    >
+                      <Lock
+                        className="w-4 h-4 text-soft mt-0.5 flex-shrink-0"
+                        aria-hidden="true"
+                      />
+                      <div className="text-sm">
+                        <p className="font-medium text-ink">
+                          Not in this judging round
+                        </p>
+                        <p className="text-copy mt-0.5">
+                          {currentSubmission.ai
+                            ? `The AI judge ranked it #${currentSubmission.ai.rank} of ${currentSubmission.ai.total}${
+                                currentSubmission.ai.averageScore !== undefined
+                                  ? ` (${currentSubmission.ai.averageScore.toFixed(1)}/10)`
+                                  : ""
+                              }. `
+                            : "It did not make the shortlist. "}
+                          You can read everything and leave notes, but scoring
+                          is off.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   <div>
-                    <h3 className="app-title text-ink mb-2">
-                      {currentSubmission.title}
-                    </h3>
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <h3 className="app-title text-ink">
+                        {currentSubmission.title}
+                      </h3>
+                      {showAiScores && currentSubmission.ai && (
+                        <AiRankBadge ai={currentSubmission.ai} />
+                      )}
+                    </div>
 
                     {/* App/Project Tagline Description */}
                     <p className="app-desc text-copy mb-3">
                       {currentSubmission.description}
                     </p>
 
-                    {/* Status Section */}
-                    {submissionStatus && (
+                    {/* Status Section (hidden for below-cut rows: nothing to change) */}
+                    {submissionStatus && !submissionStatus.belowCut && (
                       <div className="mb-3 p-3 bg-surface-alt rounded-lg border border-hairline">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -1363,17 +1592,17 @@ export default function JudgingInterfacePage() {
                           />
                         )}
 
-                      {/* AI review card: only when the organizer turned it on
-                          for this group and the AI run completed */}
-                      {sessionId &&
-                        judgeSession &&
-                        judgeSession.group.aiReviewVisibleToJudges && (
-                          <AiReviewCard
-                            groupId={judgeSession.group._id}
-                            storyId={currentSubmission._id}
-                            sessionId={sessionId}
-                          />
-                        )}
+                      {/* AI review card: when the organizer turned it on for
+                          this group, or always for below-cut rows (it explains
+                          the cut). Hidden by the judge's local AI switch. */}
+                      {sessionId && judgeSession && showAiForCurrent && (
+                        <AiReviewCard
+                          groupId={judgeSession.group._id}
+                          storyId={currentSubmission._id}
+                          sessionId={sessionId}
+                          defaultOpen={isBelowCut}
+                        />
+                      )}
 
                       {/* Tags */}
                       {(currentSubmission as any).tags &&
@@ -1940,6 +2169,33 @@ export default function JudgingInterfacePage() {
                   Scoring Criteria
                 </h3>
 
+                {isBelowCut ? (
+                  /* Below the cut: no score buttons at all, so nothing flashes
+                     disabled. The AI review card in the left column explains
+                     the cut; notes stay open for "give this a second look". */
+                  <div className="rounded-lg border border-hairline bg-surface-alt p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Lock className="w-4 h-4 text-soft" aria-hidden="true" />
+                      <h4 className="font-medium text-ink">
+                        Scoring is off for this submission
+                      </h4>
+                    </div>
+                    <p className="text-sm text-copy">
+                      Only shortlisted submissions are scored in this round.
+                      If you think this one deserves a second look, leave a
+                      note in the discussion and the organizer can add it to
+                      the shortlist.
+                    </p>
+                    {criteria.length > 0 && (
+                      <ul className="mt-3 space-y-1 text-sm text-soft">
+                        {criteria.map((criterion) => (
+                          <li key={criterion._id}>{criterion.question}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ) : (
+                  <>
                 {/* Show completion notice if completed by another judge (single-judge) */}
                 {!isMultiJudge &&
                   submissionStatus &&
@@ -2099,6 +2355,8 @@ export default function JudgingInterfacePage() {
                     );
                   })}
                 </div>
+                  </>
+                )}
               </div>
 
               {/* Progress Summary */}

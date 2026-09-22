@@ -149,7 +149,11 @@ export function queueSummary(data: HowToJudgeData): string {
     const ai = data.aiJudgeEnabled
       ? `The AI judge reviewed all ${data.submissionCount} submissions first. `
       : "";
-    return `${ai}Organizers shortlisted ${data.shortlistCount} for human judges, and your queue shows only those ${data.shortlistCount}.${multi}`;
+    // Only promise an AI rank when the AI judge actually ran
+    const belowCut = data.showBelowCutToJudges
+      ? ` The other ${Math.max(0, data.submissionCount - data.shortlistCount)} stay visible below the cut, grayed out${data.aiJudgeEnabled ? " with their AI rank and score" : ""}. You can read them and leave notes, but scoring is off.`
+      : "";
+    return `${ai}Organizers shortlisted ${data.shortlistCount} for human judges, and your queue shows only those ${data.shortlistCount}.${belowCut}${multi}`;
   }
   return `Your queue shows every one of the ${data.submissionCount} submissions in this group.${multi}`;
 }
@@ -195,7 +199,9 @@ export function aiReviewParagraphs(
   }
   if (data.judgeQueueMode === "shortlist") {
     paragraphs.push(
-      "The AI reviewed every submission first. Organizers used those results to build the shortlist you are judging, so every app in your queue already passed that pass.",
+      data.showBelowCutToJudges
+        ? "The AI reviewed every submission first. Organizers used those results to build the shortlist you are judging. Submissions below the cut stay visible read only with their AI rank and the AI review, so you can see why they missed. If one deserves a second look, say so in a note and the organizer can add it to the shortlist."
+        : "The AI reviewed every submission first. Organizers used those results to build the shortlist you are judging, so every app in your queue already passed that pass.",
     );
   }
   const seen: Array<string> = [];

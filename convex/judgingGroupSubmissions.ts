@@ -9,8 +9,12 @@ import {
 } from "./adminAccess";
 import { internal } from "./_generated/api";
 import { logActivity } from "./activityLog";
-import { isInJudgeQueue } from "./lib/judgeQueue";
-import { computeWeightedScore } from "./aiJudge";
+import { isInJudgeQueue, showsBelowCut } from "./lib/judgeQueue";
+import {
+  computeWeightedScore,
+  rankCompletedAiResults,
+  type AiRankEntry,
+} from "./lib/aiRank";
 
 // Helper function to check if a story should be included in judging
 // Returns true if story is valid for judging (not deleted, hidden, archived, or rejected)
@@ -1226,8 +1230,23 @@ export const exportGroupSubmissions = query({
 
 // --- Public Functions (for judges) ---
 
+// AI rank and score shown as a badge in the judge interface. Attached to
+// below-cut rows always (that is why they are visible) and to queue rows only
+// when the organizer turned on "Show AI review to judges".
+const judgeAiRankValidator = v.object({
+  rank: v.number(),
+  total: v.number(),
+  averageScore: v.optional(v.number()),
+  weightedScore: v.optional(v.number()),
+});
+
 /**
- * Get submissions for a judging group (public access for judges)
+ * Get submissions for a judging group (public access for judges).
+ *
+ * In shortlist mode with "Show submissions below the cut" on, rows that are
+ * not shortlisted are returned too with inJudgeQueue = false so the interface
+ * can render them grayed out and read only. Otherwise every returned row is
+ * in the queue, matching the previous behavior.
  */
 export const getGroupSubmissions = query({
   args: { groupId: v.id("judgingGroups"), sessionId: v.string() },
@@ -1235,6 +1254,9 @@ export const getGroupSubmissions = query({
     v.object({
       _id: v.id("stories"),
       _creationTime: v.number(),
+      // False only for below-cut rows in shortlist mode; never scorable
+      inJudgeQueue: v.boolean(),
+      ai: v.optional(judgeAiRankValidator),
       title: v.string(),
       slug: v.string(),
       description: v.string(),
@@ -1345,13 +1367,31 @@ export const getGroupSubmissions = query({
       throw new Error("Judging group not found or inactive");
     }
 
-    // Shortlist mode narrows the judge queue to flagged rows only
+    // Shortlist mode narrows the judge queue to flagged rows only, unless the
+    // organizer chose to keep below-cut rows visible (read only)
+    const includeBelowCut = showsBelowCut(group);
     const submissions = (
       await ctx.db
         .query("judgingGroupSubmissions")
         .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
         .collect()
-    ).filter((submission) => isInJudgeQueue(group, submission));
+    ).filter(
+      (submission) => includeBelowCut || isInJudgeQueue(group, submission),
+    );
+
+    // AI results are needed for below-cut badges, and for queue rows when the
+    // organizer shows the AI review to judges. Skipped otherwise so groups
+    // without the AI judge never read aiJudgeResults. Ranked further below
+    // once we know which stories are still valid for judging.
+    const showAiOnQueueRows =
+      group.aiJudgeEnabled === true && group.aiReviewVisibleToJudges === true;
+    const aiRows =
+      group.aiJudgeEnabled === true && (includeBelowCut || showAiOnQueueRows)
+        ? await ctx.db
+            .query("aiJudgeResults")
+            .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+            .collect()
+        : [];
 
     const stories = (
       await Promise.all(
@@ -1361,6 +1401,8 @@ export const getGroupSubmissions = query({
           if (!isStoryValidForJudging(story)) {
             return null;
           }
+
+          const inJudgeQueue = isInJudgeQueue(group, submission);
 
           // Resolve screenshot URL if screenshot exists
           const screenshotUrl = story.screenshotId
@@ -1403,6 +1445,8 @@ export const getGroupSubmissions = query({
           return {
             _id: story._id,
             _creationTime: story._creationTime,
+            inJudgeQueue,
+            ai: undefined as AiRankEntry | undefined,
             title: story.title,
             slug: story.slug,
             description: story.description,
@@ -1436,7 +1480,34 @@ export const getGroupSubmissions = query({
       )
     ).filter((story): story is NonNullable<typeof story> => story !== null);
 
-    return stories;
+    // Rank completed AI results over valid stories only, same population the
+    // admin AI results view ranks, then attach the badge where allowed
+    if (aiRows.length > 0) {
+      const validIds = new Set(stories.map((s) => s._id));
+      const aiRanks = rankCompletedAiResults(
+        aiRows.filter((row) => validIds.has(row.storyId)),
+        group,
+      );
+      for (const story of stories) {
+        if (!story.inJudgeQueue || showAiOnQueueRows) {
+          story.ai = aiRanks.get(story._id);
+        }
+      }
+    }
+
+    if (!includeBelowCut) return stories;
+
+    // Queue rows keep their existing order; below-cut rows follow, best AI
+    // rank first so judges see who just missed the cut, unranked rows last
+    const queueRows = stories.filter((s) => s.inJudgeQueue);
+    const belowCutRows = stories
+      .filter((s) => !s.inJudgeQueue)
+      .sort(
+        (a, b) =>
+          (a.ai?.rank ?? Number.MAX_SAFE_INTEGER) -
+          (b.ai?.rank ?? Number.MAX_SAFE_INTEGER),
+      );
+    return [...queueRows, ...belowCutRows];
   },
 });
 
@@ -1460,16 +1531,30 @@ export const updateSubmissionStatus = mutation({
   handler: async (ctx, args) => {
     const judge = await requireJudgeSession(ctx, args.sessionId, args.groupId);
 
-    // Find existing status
-    const existingStatus = await ctx.db
-      .query("submissionStatuses")
-      .withIndex("by_groupId_storyId", (q) =>
-        q.eq("groupId", args.groupId).eq("storyId", args.storyId),
-      )
-      .unique();
+    // Find existing status and the membership row (for the queue check)
+    const [existingStatus, membership, group] = await Promise.all([
+      ctx.db
+        .query("submissionStatuses")
+        .withIndex("by_groupId_storyId", (q) =>
+          q.eq("groupId", args.groupId).eq("storyId", args.storyId),
+        )
+        .unique(),
+      ctx.db
+        .query("judgingGroupSubmissions")
+        .withIndex("by_groupId_storyId", (q) =>
+          q.eq("groupId", args.groupId).eq("storyId", args.storyId),
+        )
+        .unique(),
+      ctx.db.get(args.groupId),
+    ]);
 
     if (!existingStatus) {
       throw new Error("Submission status not found");
+    }
+
+    // Below-cut rows can be visible to judges but their status is frozen
+    if (membership && !isInJudgeQueue(group, membership)) {
+      throw new Error("This submission is not in the judge queue");
     }
 
     // Update the status
@@ -1589,6 +1674,9 @@ export const getSubmissionStatusForJudge = query({
       completionCount: v.optional(v.number()),
       judgesPerSubmission: v.optional(v.number()),
       thisJudgeCompleted: v.optional(v.boolean()),
+      // True when the row is visible but outside the judge queue (shortlist
+      // mode with below-cut rows shown). Always read only.
+      belowCut: v.optional(v.boolean()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -1601,15 +1689,36 @@ export const getSubmissionStatusForJudge = query({
     const judgesPerSubmission = group?.judgesPerSubmission ?? 1;
     const isMultiJudge = judgesPerSubmission > 1;
 
-    const status = await ctx.db
-      .query("submissionStatuses")
-      .withIndex("by_groupId_storyId", (q) =>
-        q.eq("groupId", args.groupId).eq("storyId", args.storyId),
-      )
-      .unique();
+    const [status, membership] = await Promise.all([
+      ctx.db
+        .query("submissionStatuses")
+        .withIndex("by_groupId_storyId", (q) =>
+          q.eq("groupId", args.groupId).eq("storyId", args.storyId),
+        )
+        .unique(),
+      ctx.db
+        .query("judgingGroupSubmissions")
+        .withIndex("by_groupId_storyId", (q) =>
+          q.eq("groupId", args.groupId).eq("storyId", args.storyId),
+        )
+        .unique(),
+    ]);
 
     if (!status) {
       return null;
+    }
+
+    // Below the cut: nothing is judgeable, regardless of status or mode
+    if (membership && !isInJudgeQueue(group, membership)) {
+      return {
+        status: status.status,
+        canJudge: false,
+        assignedJudgeName: undefined,
+        completionCount: undefined,
+        judgesPerSubmission: undefined,
+        thisJudgeCompleted: undefined,
+        belowCut: true,
+      };
     }
 
     if (isMultiJudge) {
@@ -1703,6 +1812,11 @@ export const markJudgeCompleted = mutation({
 
     if (!groupSubmission) {
       throw new Error("Submission not found in this judging group");
+    }
+
+    // Below-cut rows can be visible to judges but are never completable
+    if (!isInJudgeQueue(group, groupSubmission)) {
+      throw new Error("This submission is not in the judge queue");
     }
 
     // Idempotent: check if this judge already completed

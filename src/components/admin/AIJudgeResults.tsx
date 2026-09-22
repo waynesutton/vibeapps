@@ -1083,18 +1083,31 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
   const handleShortlistTop = () => {
     const count = Math.max(1, Math.floor(shortlistN));
     const existing = data?.shortlistCount ?? 0;
+    // What happens to the rest depends on the Settings toggles
+    const restNote =
+      data?.judgeQueueMode !== "shortlist"
+        ? "Human judges only see the shortlist when the Judge queue setting is Shortlist only."
+        : data.showBelowCutToJudges
+          ? "Judges keep seeing the rest read only, grayed out with the AI rank and score."
+          : "Judges will not see the rest. Turn on Show submissions below the cut in Settings to keep them visible read only.";
     showConfirm(
       `Shortlist top ${count}?`,
       existing > 0
-        ? `This replaces the current shortlist of ${existing} with the top ${count} submissions by AI weighted score. Submissions tied at the cutoff are all included. Human judges only see the shortlist when the Judge queue setting is Shortlist only.`
-        : `Flags the top ${count} submissions by AI weighted score for human judges. Submissions tied at the cutoff are all included. Human judges only see the shortlist when the Judge queue setting is Shortlist only.`,
+        ? `This replaces the current shortlist of ${existing} with the top ${count} submissions by AI weighted score. Submissions tied at the cutoff are all included. ${restNote}`
+        : `Flags the top ${count} submissions by AI weighted score for human judges. Submissions tied at the cutoff are all included. ${restNote}`,
       () => {
         setIsShortlisting(true);
         shortlistTopByAiScore({ groupId, count })
           .then((res) => {
+            const followUp =
+              data?.judgeQueueMode !== "shortlist"
+                ? "Switch the Judge queue setting to Shortlist only so judges see just these."
+                : data.showBelowCutToJudges
+                  ? "Judges see these as the shortlist and the rest read only."
+                  : "Judges see only these.";
             showMessage(
               "Shortlist updated",
-              `${res.shortlistCount} submission${res.shortlistCount === 1 ? "" : "s"} shortlisted${res.cutoffScore !== undefined ? ` (cutoff weighted score ${res.cutoffScore})` : ""}. Switch the Judge queue setting to Shortlist only so judges see just these.`,
+              `${res.shortlistCount} submission${res.shortlistCount === 1 ? "" : "s"} shortlisted${res.cutoffScore !== undefined ? ` (cutoff weighted score ${res.cutoffScore})` : ""}. ${followUp}`,
               "success",
             );
           })
@@ -1615,12 +1628,47 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                   <p className="text-xs text-soft mt-0.5">
                     {data.judgeQueueMode === "shortlist"
                       ? data.shortlistCount === 0
-                        ? "Judge queue is set to Shortlist only but nothing is shortlisted, so judges see an empty queue."
-                        : "Judge queue is set to Shortlist only: judges see just the starred rows."
+                        ? data.showBelowCutToJudges
+                          ? "Judge queue is set to Shortlist only but nothing is shortlisted, so judges see only read-only rows."
+                          : "Judge queue is set to Shortlist only but nothing is shortlisted, so judges see an empty queue."
+                        : "Judge queue is set to Shortlist only: judges score just the starred rows."
                       : "Judge queue is set to All submissions. Star rows here, then switch the Judge queue setting in Settings so judges see only the shortlist."}
                   </p>
+                  {/* Below the cut: what judges see of the rows that were not starred */}
+                  {data.judgeQueueMode === "shortlist" && (
+                    <p className="text-xs text-soft mt-0.5">
+                      {data.showBelowCutToJudges
+                        ? "Below the cut: judges see the rest grayed out with the AI rank and score, read only."
+                        : "Below the cut: judges do not see the rest. Turn on Show submissions below the cut in Settings to keep them visible read only."}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
+                  {/* Common cut sizes */}
+                  <div
+                    className="flex items-center gap-1"
+                    role="group"
+                    aria-label="Shortlist size presets"
+                  >
+                    {[5, 10, 20].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setShortlistN(preset)}
+                        disabled={
+                          isShortlisting || completedResults.length === 0
+                        }
+                        aria-pressed={shortlistN === preset}
+                        className={`h-8 px-2.5 text-xs font-medium rounded-md border transition-colors disabled:opacity-50 tabular-nums ${
+                          shortlistN === preset
+                            ? "bg-cta border-ink text-on-cta"
+                            : "bg-surface border-hairline text-copy hover:bg-surface-hover"
+                        }`}
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                  </div>
                   <label htmlFor="shortlist-n" className="text-xs text-soft">
                     Top
                   </label>

@@ -157,6 +157,11 @@ export const submitScore = mutation({
       throw new Error("Story is not part of this judging group");
     }
 
+    // Below-cut rows can be visible to judges but are never scorable
+    if (!isInJudgeQueue(group, submission)) {
+      throw new Error("This submission is not in the judge queue");
+    }
+
     // Check if score already exists
     const existingScore = await ctx.db
       .query("judgeScores")

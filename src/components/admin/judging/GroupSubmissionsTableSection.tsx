@@ -473,6 +473,55 @@ export function GroupSubmissionsTableSection({
             )}
           </span>
         </div>
+        {/* Shortlist for human judges: the same status the AI results page
+            shows, so the workflow is visible with the AI judge off. Starring
+            here is the whole shortlist tool when there is no AI run. */}
+        {canManage && (
+          <div className="rounded-lg border border-hairline bg-surface-alt px-3 py-2.5">
+            <p className="text-sm font-medium text-ink flex items-center gap-1.5">
+              <Star className="w-3.5 h-3.5" />
+              Shortlist for human judges
+              <span className="text-xs font-normal text-soft tabular-nums">
+                {shortlistCount} of {totalCount} starred
+              </span>
+            </p>
+            <p className="text-xs text-soft mt-0.5">
+              {group.judgeQueueMode === "shortlist"
+                ? shortlistCount === 0
+                  ? group.showBelowCutToJudges
+                    ? "Judge queue is set to Shortlist only but nothing is starred, so judges see only read-only rows."
+                    : "Judge queue is set to Shortlist only but nothing is starred, so judges see an empty queue."
+                  : "Judge queue is set to Shortlist only: judges score just the starred rows."
+                : "Judge queue is set to All submissions. Star rows here, then switch the Judge queue setting so judges see only the shortlist."}{" "}
+              <Link
+                to="?section=settings"
+                className="text-ink underline underline-offset-2 hover:text-copy"
+              >
+                Judge queue settings
+              </Link>
+              {group.aiJudgeEnabled && (
+                <>
+                  {" · "}
+                  <Link
+                    to="?section=ai-results"
+                    className="text-ink underline underline-offset-2 hover:text-copy"
+                  >
+                    Shortlist top N from AI results
+                  </Link>
+                </>
+              )}
+            </p>
+            {group.judgeQueueMode === "shortlist" && (
+              <p className="text-xs text-soft mt-0.5">
+                {group.showBelowCutToJudges
+                  ? group.aiJudgeEnabled
+                    ? "Below the cut: judges see the rest grayed out with the AI rank and score, read only."
+                    : "Below the cut: judges see the rest grayed out and read only."
+                  : "Below the cut: judges do not see the rest. Turn on Show submissions below the cut in Settings to keep them visible read only."}
+              </p>
+            )}
+          </div>
+        )}
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative flex-1 min-w-[14rem]">
             <Search className="w-4 h-4 text-faint absolute left-3 top-1/2 -translate-y-1/2" />

@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { requireJudgingGroupPermission } from "./adminAccess";
 import { verifyPassword } from "./judgingGroups";
-import { isInJudgeQueue } from "./lib/judgeQueue";
+import { isInJudgeQueue, showsBelowCut } from "./lib/judgeQueue";
 
 // 32-byte session token as hex (unguessable; Math.random is not)
 function generateSessionId(): string {
@@ -295,6 +295,8 @@ export const getJudgeSession = query({
         scoreScale: v.number(),
         // Shortlist queue and AI review card flags for the judge interface
         judgeQueueMode: v.union(v.literal("all"), v.literal("shortlist")),
+        // Shortlist mode with below-cut rows visible read only
+        showBelowCutToJudges: v.boolean(),
         aiReviewVisibleToJudges: v.boolean(),
       }),
     }),
@@ -329,6 +331,7 @@ export const getJudgeSession = query({
         judgesPerSubmission: group.judgesPerSubmission ?? 1,
         scoreScale: group.scoreScale ?? 10,
         judgeQueueMode: group.judgeQueueMode ?? "all",
+        showBelowCutToJudges: showsBelowCut(group),
         aiReviewVisibleToJudges:
           group.aiJudgeEnabled === true &&
           group.aiReviewVisibleToJudges === true,

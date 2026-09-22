@@ -438,7 +438,12 @@ function HowToJudgeDocument({
                 <Star className="mt-0.5 h-4 w-4 shrink-0 text-soft" aria-hidden="true" />
                 <p>
                   Shortlist round. {data.shortlistCount} of {data.submissionCount} submissions
-                  made the cut. Judge only what appears in your queue.
+                  made the cut.{" "}
+                  {data.showBelowCutToJudges
+                    ? data.aiJudgeEnabled
+                      ? "The rest stay visible below the cut with their AI rank, read only. Notes are welcome; scoring is off for them."
+                      : "The rest stay visible below the cut, read only. Notes are welcome; scoring is off for them."
+                    : "Judge only what appears in your queue."}
                 </p>
               </div>
             )}

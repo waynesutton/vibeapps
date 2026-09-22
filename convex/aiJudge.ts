@@ -14,6 +14,13 @@ import { requireJudgingGroupPermission } from "./adminAccess";
 import { verifyPassword } from "./judgingGroups";
 import { parseHackathonLogHeader } from "./hackathonLog"; // hackathon.md header parsing (admin views)
 import { logActivity } from "./activityLog";
+import {
+  FRONTEND_CHECKER_KEY,
+  computeWeightedScore,
+  compareAiResults,
+  rankCompletedAiResults,
+} from "./lib/aiRank";
+import { isInJudgeQueue, showsBelowCut } from "./lib/judgeQueue";
 
 // Analyses run through a workpool with limited parallelism: faster than the
 // old one-at-a-time scheduler chain while staying inside GitHub rate limits.
@@ -74,7 +81,9 @@ export type RubricCriterion = {
 // Frontend checker: preset custom criterion key plus the fixed hosting
 // platform list for per-platform sub-weights. The detected platform's weight
 // multiplies the frontend-checker criterion weight in the weighted ranking.
-export const FRONTEND_CHECKER_KEY = "frontend-checker";
+// The key and the weighted score math live in lib/aiRank.ts so ranking is
+// identical everywhere; re-exported here for existing importers.
+export { FRONTEND_CHECKER_KEY, computeWeightedScore } from "./lib/aiRank";
 // Social proof: preset custom criterion key. Scored from the SOCIAL PROOF
 // snapshot section (X and Bluesky metrics, LinkedIn liveness), never from
 // numbers the model guesses. Mirrored in groupSection.tsx.
@@ -308,35 +317,6 @@ const secondOpinionValidator = v.object({
   ),
 });
 
-// Weighted score derived from stored criteriaScores plus the group's current
-// aiRubricWeights. Never stored: weight edits and admin score edits both stay
-// consistent because every read recomputes.
-export function computeWeightedScore(
-  criteriaScores: Array<{ key: string; score: number }> | undefined,
-  weights: Array<{ key: string; weight: number }> | undefined,
-  // Detected hosting platform for this result plus the group's per-platform
-  // weights. The platform weight multiplies the frontend-checker criterion
-  // weight only (default 1 keeps behavior unchanged).
-  frontend?: {
-    platform?: string;
-    platformWeights?: Array<{ key: string; weight: number }>;
-  },
-): number | undefined {
-  if (!criteriaScores || criteriaScores.length === 0) return undefined;
-  const weightByKey = new Map((weights ?? []).map((w) => [w.key, w.weight]));
-  const platformWeight = frontend?.platform
-    ? ((frontend.platformWeights ?? []).find((w) => w.key === frontend.platform)
-        ?.weight ?? 1)
-    : 1;
-  const total = criteriaScores.reduce((sum, cs) => {
-    const base = weightByKey.get(cs.key) ?? 1;
-    const multiplier =
-      cs.key === FRONTEND_CHECKER_KEY ? base * platformWeight : base;
-    return sum + cs.score * multiplier;
-  }, 0);
-  return Math.round(total * 100) / 100;
-}
-
 // Shared validator for a fully-shaped AI result returned to clients
 const aiResultValidator = v.object({
   _id: v.id("aiJudgeResults"),
@@ -451,13 +431,33 @@ function isStoryValidForJudging(
 // weightedScore is derived here from the group's current rubric weights.
 async function enrichResults(
   ctx: QueryCtx,
+  groupId: Id<"judgingGroups">,
   results: Array<Doc<"aiJudgeResults">>,
   weights: Array<{ key: string; weight: number }> | undefined,
   frontendWeights?: Array<{ key: string; weight: number }>,
-  // When true (admin views only), include hackathon.md cross-check notes and
-  // the header event text. Public callers leave this undefined.
-  options?: { includeLogMeta?: boolean },
+  options?: {
+    // When true (admin views only), include hackathon.md cross-check notes and
+    // the header event text. Public callers leave this undefined.
+    includeLogMeta?: boolean;
+    // Story ids currently in the group. Pass when the caller already loaded
+    // memberships; otherwise they are read here.
+    memberStoryIds?: Set<Id<"stories">>;
+  },
 ) {
+  // Only rank stories that are still members of the group. AI rows can
+  // outlive a membership (older removals), and counting them would push real
+  // submissions down a rank and disagree with the judge badges.
+  const memberStoryIds =
+    options?.memberStoryIds ??
+    new Set(
+      (
+        await ctx.db
+          .query("judgingGroupSubmissions")
+          .withIndex("by_groupId", (q) => q.eq("groupId", groupId))
+          .collect()
+      ).map((m) => m.storyId),
+    );
+
   const enriched: Array<{
     _id: Id<"aiJudgeResults">;
     _creationTime: number;
@@ -515,6 +515,7 @@ async function enrichResults(
   }> = [];
 
   for (const result of results) {
+    if (!memberStoryIds.has(result.storyId)) continue;
     const story = await ctx.db.get(result.storyId);
     if (!isStoryValidForJudging(story)) continue;
     enriched.push({
@@ -571,23 +572,9 @@ async function enrichResults(
     });
   }
 
-  // Rank on weightedScore (equals totalScore when all weights are 1) with
-  // deterministic tiebreaks: components used, then depth score, then earliest
-  // submission first
-  const depthScore = (r: (typeof enriched)[number]) =>
-    r.criteriaScores?.find((cs) => cs.key === "depth")?.score ?? 0;
-  enriched.sort((a, b) => {
-    const scoreDiff =
-      (b.weightedScore ?? b.totalScore ?? -1) -
-      (a.weightedScore ?? a.totalScore ?? -1);
-    if (scoreDiff !== 0) return scoreDiff;
-    const componentDiff =
-      (b.componentsUsed?.length ?? 0) - (a.componentsUsed?.length ?? 0);
-    if (componentDiff !== 0) return componentDiff;
-    const depthDiff = depthScore(b) - depthScore(a);
-    if (depthDiff !== 0) return depthDiff;
-    return a._creationTime - b._creationTime;
-  });
+  // Rank on weightedScore with the shared comparator (lib/aiRank.ts) so the
+  // admin view, public page, shortlist, and judge badges all agree
+  enriched.sort(compareAiResults);
   return enriched;
 }
 
@@ -1010,6 +997,9 @@ export const getAiReviewForJudge = query({
       judgeModel: v.optional(v.string()),
       isLive: v.optional(v.boolean()),
       editedAt: v.optional(v.number()),
+      // Position among completed AI results for this group (1 = best)
+      rank: v.optional(v.number()),
+      rankTotal: v.optional(v.number()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -1022,23 +1012,55 @@ export const getAiReviewForJudge = query({
     }
 
     const group = await ctx.db.get(args.groupId);
-    if (
-      !group ||
-      group.aiJudgeEnabled !== true ||
-      group.aiReviewVisibleToJudges !== true
-    ) {
+    if (!group || group.aiJudgeEnabled !== true) {
       return null;
     }
 
-    const result = await ctx.db
+    // Visible when the organizer shows AI reviews to judges, or when this
+    // row is below the cut and below-cut rows are shown (the AI review is
+    // the explanation for why it was cut)
+    if (group.aiReviewVisibleToJudges !== true) {
+      if (!showsBelowCut(group)) return null;
+      const membership = await ctx.db
+        .query("judgingGroupSubmissions")
+        .withIndex("by_groupId_storyId", (q) =>
+          q.eq("groupId", args.groupId).eq("storyId", args.storyId),
+        )
+        .unique();
+      if (!membership || isInJudgeQueue(group, membership)) return null;
+    }
+
+    const rows = await ctx.db
       .query("aiJudgeResults")
-      .withIndex("by_groupId_storyId", (q) =>
-        q.eq("groupId", args.groupId).eq("storyId", args.storyId),
-      )
-      .unique();
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+    const result = rows.find((row) => row.storyId === args.storyId);
     if (!result || result.status !== "completed" || !result.criteriaScores) {
       return null;
     }
+
+    // Rank over current group members whose story is still valid for
+    // judging: the same population getGroupSubmissions ranks, so the badge in
+    // the judge list and this card always agree. Stale AI rows for stories
+    // removed from the group are ignored.
+    const memberIds = new Set(
+      (
+        await ctx.db
+          .query("judgingGroupSubmissions")
+          .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+          .collect()
+      ).map((m) => m.storyId),
+    );
+    const validRows: Array<Doc<"aiJudgeResults">> = [];
+    for (const row of rows) {
+      if (row.status !== "completed" || !memberIds.has(row.storyId)) continue;
+      if (isStoryValidForJudging(await ctx.db.get(row.storyId))) {
+        validRows.push(row);
+      }
+    }
+    const rankEntry = rankCompletedAiResults(validRows, group).get(
+      args.storyId,
+    );
 
     return {
       criteriaScores: result.criteriaScores,
@@ -1055,6 +1077,8 @@ export const getAiReviewForJudge = query({
       judgeModel: result.judgeModel ?? result.model,
       isLive: result.urlCheck?.isLive,
       editedAt: result.editedAt,
+      rank: rankEntry?.rank,
+      rankTotal: rankEntry?.total,
     };
   },
 });
@@ -1250,6 +1274,8 @@ export const getGroupAiResults = query({
     // Shortlist state so the admin results view can badge rows and offer
     // Shortlist top N without a second subscription
     judgeQueueMode: v.union(v.literal("all"), v.literal("shortlist")),
+    // True when judges also see below-cut rows read only (shortlist mode)
+    showBelowCutToJudges: v.boolean(),
     shortlistCount: v.number(),
     shortlistedStoryIds: v.array(v.id("stories")),
   }),
@@ -1271,10 +1297,14 @@ export const getGroupAiResults = query({
 
     const results = await enrichResults(
       ctx,
+      args.groupId,
       rows,
       group?.aiRubricWeights,
       group?.aiFrontendWeights,
-      { includeLogMeta: true }, // Admin view: show log cross-check notes
+      {
+        includeLogMeta: true, // Admin view: show log cross-check notes
+        memberStoryIds: new Set(memberships.map((m) => m.storyId)),
+      },
     );
     const counts = { pending: 0, running: 0, completed: 0, failed: 0 };
     for (const r of results) {
@@ -1304,6 +1334,7 @@ export const getGroupAiResults = query({
       weights: group?.aiRubricWeights,
       groupSummary,
       judgeQueueMode: group?.judgeQueueMode ?? "all",
+      showBelowCutToJudges: showsBelowCut(group),
       shortlistCount: shortlistedStoryIds.length,
       shortlistedStoryIds,
     };
@@ -1944,6 +1975,7 @@ async function getCompletedResultsForGroup(
     .collect();
   const enriched = await enrichResults(
     ctx,
+    groupId,
     rows.filter((r) => r.status === "completed"),
     group?.aiRubricWeights,
     group?.aiFrontendWeights,

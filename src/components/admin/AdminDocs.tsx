@@ -162,6 +162,8 @@ Open the live app and repo when they exist. Scores should reflect what you can v
 
 Some groups run the AI judge over every submission first and then hand human judges a shortlist. When that is the case your queue only contains the shortlisted submissions, your progress bar counts against that shorter list, and the group's How to judge page says how many made the cut. You do not need to do anything different.
 
+Organizers can also keep the rest of the field visible. When they do, a **Shortlist / Below the cut / All** filter appears in the toolbar and a pill under it says how many are below the cut. Those submissions are grayed out and read only: you can open them, read everything, see the AI judge's rank and score (\`AI #12/40 7.2/10\`) and its full review, and leave notes, but there are no score buttons and no Skip or Mark Complete. If you think one deserves a second look, say so in a note and the organizer can star it into the shortlist. A **Hide AI scores** button hides the AI badges and card for you alone if you prefer to score blind; the choice is remembered per group in your browser.
+
 ## Scoring criteria
 
 Criteria are set by organizers for that group. Each criterion has a question and often a short description telling you what to look for.
@@ -407,6 +409,8 @@ Optional start and end dates control the auto-include tag window (see Submission
 
 **Judge queue** in Settings decides which submissions human and agent judges see: **All submissions** (default) or **Shortlist only**, which limits the queue to submissions flagged as shortlisted. The setting shows the live shortlist count and warns in red when Shortlist only is on with nothing shortlisted, because judges would see an empty queue. See **Shortlist** under Submissions for the full workflow.
 
+**Show submissions below the cut to judges** (\`showBelowCutToJudges\`) appears under Judge queue only when Shortlist only is selected. Off (default) hides the rest of the field from judges, exactly as before. On keeps every submission visible in the judging interface, but rows outside the shortlist are grayed out and read only with their AI rank and score and the AI review. Judges cannot score them, skip them, or mark them complete; the server rejects those calls too. Notes stay open so judges can flag one for a second look. Agent judges, progress bars, and results are unchanged because below-cut rows never count toward completion.
+
 ## The group workspace
 
 Opening a group takes you to \`/admin/judging/your-slug\`, a workspace with a section sidebar. What you see depends on your permissions (see Delegated access):
@@ -542,12 +546,29 @@ The timer is display only. After the deadline it reads "Deadline passed" and not
 
 ## Shortlist
 
-For large fields, run the AI judge first and hand human judges only the top of the ranking. Everything stays in one group, so links, passcode, criteria, and results do not change.
+Hand human judges only part of the field. Everything stays in one group, so links, passcode, criteria, and results do not change. The shortlist is a star flag on each submission (\`shortlisted\` on \`judgingGroupSubmissions\`); the AI judge is one way to set those stars, not a requirement.
+
+**Without the AI judge.** Open **View submissions** and star the rows you want judged. The **Shortlist for human judges** bar at the top of that table shows the starred count, the current Judge queue mode, and links to the setting. Then do step 4 below.
+
+**With the AI judge.**
 
 1. Enable the AI judge and run a review. AI runs always cover every submission in the group, so the shortlist is picked from the full field.
-2. In **AI results**, set the number next to **Shortlist top N** and click it. A confirm explains that it replaces the current shortlist with the top N completed results by weighted score. Ties at position N are all included so sort order never cuts a team.
-3. Fine tune with the star toggle on any AI result row, or in **View submissions**, which has a **Shortlisted** column with the same toggle and a **Shortlist only** filter.
+2. In **AI results**, pick **5**, **10**, or **20** or type a number next to **Shortlist top N** and click it. A confirm explains that it replaces the current shortlist with the top N completed results by weighted score and what judges will see of the rest. Ties at position N are all included so sort order never cuts a team.
+3. Fine tune with the star toggle on any AI result row, or in **View submissions**, which has a **Shortlist** column with the same toggle and a **Shortlist only** filter. This is how you add a submission the AI ranked outside the top N: star it and it joins the shortlist immediately, and judges see it in their queue on the next refresh. Unstar to drop one. Shortlist top N replaces the whole set, so run it first and hand pick after.
 4. In **Settings**, switch **Judge queue** to **Shortlist only**. Human judges, the judge progress bar, agent judge queues (\`submissions.json\`), and the results completion percentage all use the shortlist from that moment. Switch back to **All submissions** to restore the full queue; the flags stay so you can flip again.
+5. Optional: turn on **Show submissions below the cut to judges** (same Settings card). See **Below the cut** below. With the AI judge off, below-cut rows are still grayed out and read only; they just have no AI badge or review card.
+
+### Below the cut
+
+By default shortlist mode hides everything that did not make the cut. **Show submissions below the cut to judges** keeps those rows visible in the judging interface as read only context:
+
+- Judges get a **Shortlist / Below the cut / All** filter with counts, and a "N below the cut, read only" pill under the toolbar. The default view is still the shortlist.
+- Below-cut rows are grayed out in search results and carry a **Below the cut** chip. Opening one shows a banner ("Not in this judging round. The AI judge ranked it #12 of 40 (7.2/10).") and the **AI review** card expanded, even when Show AI review to judges is off for the shortlist. There are no score buttons, no Skip, no Mark Complete or Judged & Next, and \`submitScore\`, \`updateSubmissionStatus\`, and \`markJudgeCompleted\` throw "This submission is not in the judge queue" if anything tries.
+- Notes stay open, so a judge can write "give this one a second look" and you can star it from AI results or View submissions.
+- Shortlisted rows show an **AI #rank/total score** badge next to the title only when **Show AI review to judges** is on. Judges can hide all AI badges and cards for themselves with **Hide AI scores** in the toolbar (stored per group in their browser).
+- AI results shows a **Below the cut** status line under the Shortlist bar so you can see which way the toggle is set without leaving the page. The How to judge page and its Markdown export explain the same thing to judges.
+
+Ranking is computed at read time from the same comparator everywhere (weighted score, then components used, then depth, then earliest submission), so the rank judges see matches the AI results order.
 
 Every shortlist change is written to the group Activity log. Removing a submission from the group drops its flag with it. AI results and AI runs are never filtered by the shortlist.
 
@@ -573,6 +594,8 @@ Judges do not need site accounts. Sessions can later be linked to real user acco
 
 **Shortlist queues.** When the group's Judge queue is **Shortlist only**, judges see only the shortlisted submissions and their progress bar counts against that number. Nothing about login or scoring changes; the queue is just shorter. Point judges at the group's **How to judge page**, which explains the shortlist round in plain words.
 
+**Below the cut.** With **Show submissions below the cut to judges** on, judges also see the rest of the field grayed out and read only, with a Shortlist / Below the cut / All filter, the AI rank and score badge, and the AI review card expanded. Scoring, Skip, and Mark Complete are hidden for those rows and rejected server side; notes still work. Progress and completion math ignore them.
+
 **AI review card.** When **Show AI review to judges** is on in the AI judge section, every submission with a completed AI review shows a collapsed **AI review** card under Project Links with the AI's per criterion scores and reasoning. It is advisory. Judges are told to score first and compare after. Pending or failed reviews show nothing.
 
 For the full external facing guide (login, passwords, criteria, notes, filters, multi judge, troubleshooting), see **External Judging Process** in this Docs sidebar. Use Copy Markdown or Download .md to send it to judges.`,
@@ -587,7 +610,7 @@ For the full external facing guide (login, passwords, criteria, notes, filters, 
 
 - **Public results page**: \`/judging/your-slug/results\`. Public when the group marks results public, otherwise protected by the results password.
 - **Admin results**: the same dashboard inside the admin (visible when results are not public), showing rankings, weighted totals, per-criterion averages, and per-judge detail.
-- When the group's Judge queue is **Shortlist only**, the completion percentage uses the shortlist size as its denominator so progress reflects what judges were actually asked to score.
+- When the group's Judge queue is **Shortlist only**, the completion percentage uses the shortlist size as its denominator so progress reflects what judges were actually asked to score. Below-cut rows shown to judges as read only never count: they cannot be completed, so they are excluded from both the numerator and the denominator.
 
 ## Submission downloads
 
@@ -707,7 +730,7 @@ Model calls go through the **Convex AI gateway**, which authenticates with the d
 
 - **AI Results** on a group row opens the AI dashboard: start a review run, watch per-submission status, retry failures, and read full reasoning per criterion.
 - Failed submissions can be **retried** individually.
-- **Shortlist top N**: once results are complete, type a number and click Shortlist top N to flag the top N by weighted score for human judges (ties at N included). Each result row has a star toggle to add or remove it by hand, and a Shortlisted badge. Judges only see the shortlist after the group's **Judge queue** setting is switched to Shortlist only. See Shortlist under Submissions.
+- **Shortlist top N**: once results are complete, pick a **5**, **10**, or **20** preset or type a number and click Shortlist top N to flag the top N by weighted score for human judges (ties at N included). Each result row has a star toggle to add or remove it by hand, and a Shortlisted badge. Judges only see the shortlist after the group's **Judge queue** setting is switched to Shortlist only; a **Below the cut** status line under the bar says whether the rest stay visible read only (**Show submissions below the cut to judges** in Settings) or are hidden. See Shortlist under Submissions.
 - Admins can **edit AI scores** and reasoning; edits are stamped with the editor and time.
 - **Rubric weights** are editable per group and re-rank existing results instantly since weighted totals are computed at read time. Per-criterion on/off toggles take effect on the next AI run.
 - AI results can be exposed at \`/api/judging/your-slug/results.json\` (public, password protected, or key protected depending on group settings).`,

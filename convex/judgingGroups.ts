@@ -11,6 +11,7 @@ import {
 } from "./adminAccess";
 import { logActivity } from "./activityLog";
 import { ensureStoryInGroup } from "./judgingGroupSubmissions";
+import { showsBelowCut } from "./lib/judgeQueue";
 
 // Validator for admin-selectable required fields on the custom submission form.
 // Each key is optional; unset keys fall back to defaults on the public page.
@@ -498,6 +499,8 @@ export const updateGroup = mutation({
     notificationEmails: v.optional(v.union(v.array(v.string()), v.null())),
     // Judge queue: all submissions or shortlist only
     judgeQueueMode: v.optional(judgeQueueModeValidator),
+    // Shortlist mode: keep below-cut rows visible to judges (read only)
+    showBelowCutToJudges: v.optional(v.boolean()),
     // How to judge page organizer fields (null clears every field)
     howToJudge: v.optional(v.union(howToJudgeValidator, v.null())),
   },
@@ -940,6 +943,7 @@ export const getGroupWithDetails = query({
       notificationEmails: v.optional(v.array(v.string())),
       aiReviewVisibleToJudges: v.optional(v.boolean()),
       judgeQueueMode: v.optional(judgeQueueModeValidator),
+      showBelowCutToJudges: v.optional(v.boolean()),
       howToJudge: v.optional(howToJudgeValidator),
       criteria: v.array(
         v.object({
@@ -1070,6 +1074,7 @@ export const getGroupWithDetails = query({
       notificationEmails: group.notificationEmails,
       aiReviewVisibleToJudges: group.aiReviewVisibleToJudges,
       judgeQueueMode: group.judgeQueueMode,
+      showBelowCutToJudges: group.showBelowCutToJudges,
       howToJudge: group.howToJudge,
       criteria,
       submissionCount,
@@ -1106,6 +1111,8 @@ export const getHowToJudgePage = query({
       scoreScale: v.number(),
       judgesPerSubmission: v.number(),
       judgeQueueMode: judgeQueueModeValidator,
+      // True only in shortlist mode with the below-cut toggle on
+      showBelowCutToJudges: v.boolean(),
       submissionCount: v.number(),
       shortlistCount: v.number(),
       startDate: v.optional(v.number()),
@@ -1198,6 +1205,7 @@ export const getHowToJudgePage = query({
       scoreScale: group.scoreScale ?? 10,
       judgesPerSubmission: group.judgesPerSubmission ?? 1,
       judgeQueueMode: group.judgeQueueMode ?? "all",
+      showBelowCutToJudges: showsBelowCut(group),
       submissionCount: valid.length,
       shortlistCount: valid.filter((s) => s.shortlisted === true).length,
       startDate: group.startDate,
