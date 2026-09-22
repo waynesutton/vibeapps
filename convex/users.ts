@@ -76,9 +76,17 @@ export const ensureUser = mutation({
       candidateUsername = identity.username.trim();
     }
 
+    // Convex maps the OIDC `picture` claim to identity.pictureUrl; Clerk also
+    // sends image_url, which arrives as a passthrough claim. Check the standard
+    // field first and fall back, so the Google avatar is picked up by default.
     let clerkImageUrl: string | undefined = undefined;
-    if (typeof identity.imageUrl === "string") {
-      clerkImageUrl = identity.imageUrl || undefined; // Ensure empty string becomes undefined if desired, or just identity.imageUrl
+    const identityImage =
+      (typeof identity.pictureUrl === "string" ? identity.pictureUrl : undefined) ??
+      (typeof (identity as { imageUrl?: unknown }).imageUrl === "string"
+        ? ((identity as { imageUrl?: string }).imageUrl as string)
+        : undefined);
+    if (identityImage) {
+      clerkImageUrl = identityImage || undefined;
     }
 
     if (existingUser) {
@@ -106,7 +114,13 @@ export const ensureUser = mutation({
         updates.email = clerkEmail;
         changed = true;
       }
-      if (clerkImageUrl && clerkImageUrl !== existingUser.imageUrl) {
+      // Skip the Clerk image sync once the user has set their own picture
+      // in-app, otherwise their upload reverts on every page load.
+      if (
+        !existingUser.imageCustomized &&
+        clerkImageUrl &&
+        clerkImageUrl !== existingUser.imageUrl
+      ) {
         updates.imageUrl = clerkImageUrl;
         changed = true;
       }
@@ -261,19 +275,6 @@ export async function ensureUserNotBanned(ctx: MutationCtx): Promise<void> {
   // If user is null (not authenticated), other auth checks should handle it.
   // If isBanned is false or undefined, the user is not banned.
 }
-
-// After getAuthenticatedUserDoc and before getUserRole or at the end of user-related queries
-
-const userDocValidator = v.object({
-  // Re-using/defining for clarity, ensure it matches Doc<"users">
-  _id: v.id("users"),
-  _creationTime: v.number(),
-  name: v.string(),
-  clerkId: v.string(),
-  // role: v.optional(v.string()), // Role is no longer on the user document in Convex DB
-  email: v.optional(v.string()),
-  username: v.optional(v.string()),
-});
 
 /**
  * Query to get the currently authenticated user's full document from Convex.
@@ -1083,7 +1084,9 @@ export const setUserProfileImage = mutation({
       );
     }
 
-    await ctx.db.patch(user._id, { imageUrl: imageUrl });
+    await ctx.db.patch(user._id, { imageUrl: imageUrl,
+      imageCustomized: true,
+    });
     return { success: true, imageUrl };
   },
 });
@@ -2037,18 +2040,6 @@ export const getRecentVibers = query({
     return recentActiveUsers;
   },
 });
-
-/**
- * Define allowed emoji themes
- */
-const ALLOWED_EMOJI_THEMES = [
-  "default",
-  "red",
-  "blue",
-  "green",
-  "purple",
-  "orange",
-] as const;
 
 export const emojiThemeValidator = v.union(
   v.literal("default"),

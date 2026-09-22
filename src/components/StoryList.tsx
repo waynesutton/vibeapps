@@ -1,7 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import {
-  ChevronUp,
   MessageSquare,
   ArrowDown,
   Github,
@@ -9,8 +8,8 @@ import {
   Bookmark,
   BookmarkCheck,
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
 import type { Story } from "../types";
+import { VibeButton } from "./ui/VibeButton";
 import { UsePaginatedQueryResult, useMutation, useQuery } from "convex/react";
 import { Id, Doc } from "../../convex/_generated/dataModel";
 import { api } from "../../convex/_generated/api";
@@ -148,6 +147,20 @@ const TagPills = ({
   </>
 );
 
+// Same medal tints as the leaderboard and the sidebar card, so this week's top
+// three are recognisable wherever they show up.
+const RANK_RIBBON: Record<number, string> = {
+  1: "bg-[rgb(245_197_24)] text-[rgb(61_46_0)]",
+  2: "bg-[rgb(148_163_184)] text-[rgb(30_36_46)]",
+  3: "bg-[rgb(205_127_50)] text-[rgb(48_28_6)]",
+};
+
+const RANK_TINT: Record<number, string> = {
+  1: "bg-[rgb(245_197_24_/_0.08)]",
+  2: "bg-[rgb(148_163_184_/_0.10)]",
+  3: "bg-[rgb(205_127_50_/_0.08)]",
+};
+
 export function StoryList({
   stories,
   viewMode,
@@ -157,6 +170,47 @@ export function StoryList({
 }: StoryListProps) {
   const { isSignedIn, isLoaded: isClerkLoaded } = useAuth();
   const voteStory = useMutation(api.stories.voteStory);
+  const myVotedIds = useQuery(api.stories.getMyVotedStoryIds);
+  const vibedSet = React.useMemo(
+    () => new Set((myVotedIds ?? []).map((id) => id as unknown as string)),
+    [myVotedIds],
+  );
+
+  // The feed is usually sorted by recency, so position is not rank. Look up
+  // this week's top three by id instead of tinting the first three rows, which
+  // would be wrong under every sort but "most vibes".
+  const weeklyTop = useQuery(api.stories.getWeeklyLeaderboardStories, {
+    limit: 3,
+  });
+  const weeklyRank = React.useMemo(() => {
+    const map = new Map<string, number>();
+    weeklyTop?.forEach((s, i) => map.set(s._id as unknown as string, i + 1));
+    return map;
+  }, [weeklyTop]);
+  const rankTint = (storyId: string) =>
+    RANK_TINT[weeklyRank.get(storyId) ?? 0] ?? "";
+
+  // Rank ribbon for this week's top three, sat on the screenshot corner.
+  const RankRibbon = ({
+    storyId,
+    inline = false,
+  }: {
+    storyId: string;
+    inline?: boolean;
+  }) => {
+    const rank = weeklyRank.get(storyId);
+    if (!rank || !RANK_RIBBON[rank]) return null;
+    return (
+      <span
+        className={`inline-flex items-center h-6 px-2 rounded-md text-[12px] font-semibold tabular-nums shadow-sm ${
+          inline ? "flex-shrink-0" : "absolute top-2 left-2 z-10"
+        } ${RANK_RIBBON[rank]}`}
+        aria-label={`Number ${rank} this week`}
+      >
+        #{rank}
+      </span>
+    );
+  };
   const { showMessage, DialogComponents } = useDialog();
 
   // Auth required dialog state
@@ -173,15 +227,6 @@ export function StoryList({
     }
 
     voteStory({ storyId });
-  };
-
-  const formatDate = (creationTime: number) => {
-    try {
-      return formatDistanceToNow(creationTime) + " ago";
-    } catch (error) {
-      console.error("Error formatting date:", error);
-      return "Date not available";
-    }
   };
 
   // Compact relative time for list scanning ("14h ago"), matching the mockup.
@@ -201,99 +246,47 @@ export function StoryList({
     return `${Math.round(days / 365)}y ago`;
   };
 
-  // Shared byline + comments + bookmark + repo meta row
-  const MetaRow = ({
-    story,
-    className = "",
-    size = "sm",
-    compactTime = false,
-    commentsClassName,
-  }: {
-    story: Story;
-    className?: string;
-    size?: "sm" | "md";
-    compactTime?: boolean;
-    commentsClassName?: string;
-  }) => (
-    <div
-      className={`flex items-center gap-x-2.5 gap-y-1 ${size === "sm" ? "text-[13px]" : "text-sm"} text-soft flex-wrap ${className}`}
-    >
-      {story.authorUsername ? (
-        <ProfileHoverCard username={story.authorUsername}>
-          <Link
-            to={`/${story.authorUsername}`}
-            className="hover:text-copy hover:underline"
-          >
-            by {story.submitterName || story.authorName || story.authorUsername}
-          </Link>
-        </ProfileHoverCard>
-      ) : (
-        <span>
-          by {story.submitterName || story.authorName || "Anonymous User"}
-        </span>
-      )}
-      <span aria-hidden="true" className="text-faint">
-        &middot;
-      </span>
-      <span>
-        {compactTime
-          ? compactTimeAgo(story._creationTime)
-          : formatDate(story._creationTime)}
-      </span>
-      <span
-        aria-hidden="true"
-        className={`text-faint ${commentsClassName ?? ""}`}
-      >
-        &middot;
-      </span>
-      <Link
-        to={`/s/${story.slug}#comments`}
-        className={`flex items-center gap-1 hover:text-copy ${commentsClassName ?? ""}`}
-      >
-        <MessageSquare className="w-3.5 h-3.5" />
-        {story.commentCount}
-      </Link>
-      <BookmarkButton
-        storyId={story._id}
-        showMessage={showMessage}
-        onAuthRequired={() => {
-          setAuthDialogAction("bookmark");
-          setShowAuthDialog(true);
-        }}
-      />
-      {story.githubUrl && (
-        <a
-          href={story.githubUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1 text-soft hover:text-copy"
-          title="View GitHub Repo"
+  // Author name, carrying the hover card when we know their username. Both
+  // layouts render it, so it lives here rather than being duplicated.
+  const AuthorName = ({ story }: { story: Story }) => {
+    const label =
+      story.submitterName ||
+      story.authorName ||
+      story.authorUsername ||
+      "Anonymous User";
+    if (!story.authorUsername) {
+      return <>by {label}</>;
+    }
+    return (
+      <ProfileHoverCard username={story.authorUsername}>
+        <Link
+          to={`/${story.authorUsername}`}
+          className="hover:text-copy hover:underline underline-offset-2"
         >
-          <Github className="w-3.5 h-3.5" />
-          <span>Repo</span>
-        </a>
-      )}
-    </div>
-  );
+          by {label}
+        </Link>
+      </ProfileHoverCard>
+    );
+  };
 
-  // LIST VIEW: ranked editorial row (rank, 16:9 shot, copy, Vibe it pill)
+  // LIST VIEW: a dense ranked row. Two lines of text at every width — the
+  // previous version wrapped to five on a phone, with the blurb truncated to
+  // "Amet quo voluptate qui…" and the vote pill stranded on its own line.
   const renderListRow = (story: Story, index: number) => {
     const leadTag = visibleTags(story.tags ?? []).slice(0, 1);
 
     return (
       <article
         key={story._id}
-        className="group flex items-center gap-3 sm:gap-4 px-4 py-5 hover:bg-surface-hover transition-colors motion-reduce:transition-none"
+        className={`group flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-4 transition-colors motion-reduce:transition-none hover:bg-surface-hover ${rankTint(
+          story._id,
+        )}`}
       >
-        {/* Two-digit rank. Sized under the 18px title so it stays a quiet index. */}
-        <span className="w-7 sm:w-8 flex-shrink-0 text-right text-[15px] font-normal text-faint tabular-nums tracking-tight leading-none select-none">
-          {String(index + 1).padStart(2, "0")}
-        </span>
-
-        {/* 16:9 screenshot. Aspect box reserved so missing images do not shift the row. */}
+        {/* Square thumbnail. A square holds its size in a dense row far better
+            than a 16:9 box, which had to go wide to stay legible. */}
         <Link
           to={`/s/${story.slug}`}
-          className="flex-shrink-0 w-20 sm:w-[8.5rem] aspect-video rounded-md overflow-hidden border border-hairline bg-surface-alt block"
+          className="flex-shrink-0 w-14 h-14 sm:w-[4.5rem] sm:h-[4.5rem] rounded-lg overflow-hidden border border-hairline bg-surface-alt block"
           tabIndex={-1}
           aria-hidden="true"
         >
@@ -302,30 +295,25 @@ export function StoryList({
               src={story.screenshotUrl}
               alt=""
               className="w-full h-full object-cover"
-              loading={index < 3 ? "eager" : "lazy"}
+              loading={index < 6 ? "eager" : "lazy"}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-base sm:text-lg font-semibold text-soft">
+            <div className="w-full h-full flex items-center justify-center text-sm font-semibold text-soft">
               {story.title.charAt(0).toUpperCase()}
             </div>
           )}
         </Link>
 
-        {/* Copy: title + one tag, one-line description, byline */}
         <div className="flex-1 min-w-0">
-          {story.customMessage && (
-            <div className="mb-1.5 text-[13px] text-on-cta bg-cta border border-hairline rounded-md px-2 py-1 italic inline-block">
-              {story.customMessage}
-            </div>
-          )}
           <div className="flex items-center gap-2 min-w-0">
             {story.isPinned && (
               <Pin
-                className="w-4 h-4 text-faint flex-shrink-0"
+                className="w-3.5 h-3.5 text-faint flex-shrink-0"
                 aria-label="Pinned Story"
               />
             )}
-            <h2 className="app-title text-ink min-w-0 truncate">
+            <RankRibbon storyId={story._id} inline />
+            <h2 className="app-title text-ink truncate min-w-0">
               <Link
                 to={`/s/${story.slug}`}
                 className="hover:underline underline-offset-2"
@@ -334,139 +322,87 @@ export function StoryList({
               </Link>
             </h2>
             {leadTag.length > 0 && (
-              <div className="hidden sm:flex flex-shrink-0">
+              <span className="hidden sm:flex flex-shrink-0">
                 <TagPills tags={leadTag} size="sm" shape="pill" />
-              </div>
+              </span>
             )}
           </div>
-          {leadTag.length > 0 && (
-            <div className="flex sm:hidden mt-1">
-              <TagPills tags={leadTag} size="sm" shape="pill" />
-            </div>
-          )}
+
           {story.description && (
-            <p className="app-desc text-copy line-clamp-1 mt-0.5">
+            <p className="text-[13px] text-copy line-clamp-1 mt-0.5">
               {story.description}
             </p>
           )}
-          <MetaRow
-            story={story}
-            compactTime
-            commentsClassName="sm:hidden"
-            className="mt-1"
-          />
+
+          {/* Everything secondary on one line so the row stays two lines tall. */}
+          <div className="mt-1 flex items-center gap-2 min-w-0 text-[13px] text-soft">
+            <span className="truncate">
+              <AuthorName story={story} />
+            </span>
+            <span aria-hidden="true">·</span>
+            <span className="tabular-nums flex-shrink-0">
+              {compactTimeAgo(story._creationTime)}
+            </span>
+            <Link
+              to={`/s/${story.slug}#comments`}
+              className="flex items-center gap-1 flex-shrink-0 hover:text-copy"
+              aria-label={`${story.commentCount} ${story.commentCount === 1 ? "comment" : "comments"}`}
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span className="tabular-nums">{story.commentCount}</span>
+            </Link>
+            <span className="hidden sm:flex items-center gap-2 flex-shrink-0">
+              <BookmarkButton
+                storyId={story._id}
+                showMessage={showMessage}
+                onAuthRequired={() => {
+                  setAuthDialogAction("bookmark");
+                  setShowAuthDialog(true);
+                }}
+              />
+              {story.githubUrl && (
+                <a
+                  href={story.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-copy"
+                  title="View GitHub Repo"
+                >
+                  <Github className="w-3.5 h-3.5" />
+                </a>
+              )}
+            </span>
+          </div>
         </div>
 
-        {/* Comments + Vibe it pill. Comments sit here from sm up; mobile keeps them in the byline. */}
-        <div className="flex-shrink-0 flex items-center gap-2 sm:gap-3">
-          <Link
-            to={`/s/${story.slug}#comments`}
-            className="hidden sm:inline-flex items-center justify-end min-w-[1.75rem] h-8 text-[13px] text-faint hover:text-copy tabular-nums"
-            aria-label={`${story.commentCount} ${story.commentCount === 1 ? "comment" : "comments"}`}
-          >
-            {story.commentCount}c
-          </Link>
-          <button
-            type="button"
-            onClick={() => handleVote(story._id)}
-            disabled={!isClerkLoaded}
-            className="inline-flex items-center justify-center gap-1 h-8 px-3 rounded-full border border-ink bg-surface text-ink whitespace-nowrap hover:bg-surface-hover active:bg-surface-alt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Vibe it"
-            aria-label={`Vibe it, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
-          >
-            <span className="text-[13px] font-medium">Vibe it</span>
-            <span className="text-[13px] font-semibold tabular-nums">
-              {story.votes}
-            </span>
-          </button>
-        </div>
+        <VibeButton
+          count={story.votes}
+          vibed={vibedSet.has(story._id as unknown as string)}
+          onToggle={() => handleVote(story._id)}
+          disabled={!isClerkLoaded}
+          className="flex-shrink-0"
+        />
       </article>
     );
   };
 
-  // VIBE VIEW: modern card row (vibes block + thumbnail + copy)
-  const renderVibeRow = (story: Story) => (
+
+  // VIBE VIEW: wide editorial row — a prominent vibe block on the left, then
+  // the screenshot, then the copy. Grid keeps the poster card; this is the
+  // scannable feed layout.
+  const renderVibeRow = (story: Story, index: number) => (
     <article
       key={story._id}
-      className="flex flex-col md:flex-row items-stretch gap-4 bg-surface rounded-xl border border-hairline p-4"
+      className={`flex flex-col sm:flex-row items-stretch gap-3 sm:gap-4 rounded-lg border border-hairline p-3 sm:p-4 transition-colors motion-reduce:transition-none hover:bg-surface-hover ${
+        rankTint(story._id) || "bg-surface"
+      }`}
     >
-      {/* Vibes block */}
-      <div className="flex md:flex-col items-center md:items-stretch gap-0 w-full md:w-[76px] flex-shrink-0 order-2 md:order-1">
-        <div className="bg-brand-soft rounded-l-lg md:rounded-l-none md:rounded-t-lg flex-1 md:flex-none md:h-[64px] flex flex-col items-center justify-center border border-hairline py-1.5">
-          {/* Geist at 22px semibold holds the weight the slab face gave this
-              number. Tabular figures stop 3 and 4 digit counts shifting. */}
-          <span className="text-[22px] font-semibold tracking-[-0.02em] tabular-nums text-ink leading-none">
-            {story.votes}
-          </span>
-          <span className="text-[12px] text-copy mt-0.5">Vibes</span>
-        </div>
-        <button
-          onClick={() => handleVote(story._id)}
-          className="bg-surface border border-l-0 md:border-l md:border-t-0 border-hairline text-ink hover:bg-brand-soft rounded-r-lg md:rounded-r-none md:rounded-b-lg py-1.5 px-3 md:px-2 flex items-center justify-center gap-1 text-sm font-medium transition-colors"
-        >
-          Vibe it
-        </button>
-      </div>
-
-      {/* Thumbnail */}
-      {story.screenshotUrl && (
-        <Link
-          to={`/s/${story.slug}`}
-          className="w-full md:w-[195px] md:flex-shrink-0 aspect-video block overflow-hidden rounded-lg border border-hairline order-1 md:order-2"
-        >
-          <img
-            src={story.screenshotUrl}
-            alt={`${story.title} thumbnail`}
-            className="w-full h-full object-cover transition-transform duration-200 hover:scale-[1.02]"
-            loading="lazy"
-          />
-        </Link>
-      )}
-
-      {/* Copy */}
-      <div className="flex-1 min-w-0 order-3">
-        {story.customMessage && (
-          <div className="mb-2 text-[13px] text-on-cta bg-cta border border-hairline rounded-md px-2 py-1 italic inline-block">
-            {story.customMessage}
-          </div>
-        )}
-        <h2 className="app-title text-ink flex items-center gap-1.5 min-w-0 mb-1">
-          {story.isPinned && (
-            <Pin
-              className="w-4 h-4 text-faint flex-shrink-0"
-              aria-label="Pinned Story"
-            />
-          )}
-          <Link
-            to={`/s/${story.slug}`}
-            className="truncate hover:underline underline-offset-2"
-          >
-            {story.title}
-          </Link>
-        </h2>
-        <p className="app-desc text-copy mb-2 line-clamp-2">
-          {story.description}
-        </p>
-        {story.tags && story.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-2">
-            <TagPills tags={story.tags} size="sm" />
-          </div>
-        )}
-        <MetaRow story={story} />
-      </div>
-    </article>
-  );
-
-  // GRID VIEW: screenshot first, title, blurb, time left / vote pill right
-  const renderGridCard = (story: Story, index: number) => (
-    <article
-      key={story._id}
-      className="flex flex-col h-full bg-surface rounded-lg p-4 border border-hairline hover:bg-surface-hover transition-colors motion-reduce:transition-none"
-    >
-      {/* 16:9 screenshot. Aspect box reserved so missing images do not collapse the card. */}
+      {/* Screenshot */}
+      <div className="relative w-full sm:w-[190px] sm:flex-shrink-0 order-1">
+      <RankRibbon storyId={story._id} />
       <Link
         to={`/s/${story.slug}`}
-        className="flex-shrink-0 w-full aspect-video rounded-md overflow-hidden border border-hairline bg-surface-alt block mb-3"
+        className="w-full aspect-video block overflow-hidden rounded-lg border border-hairline bg-surface-alt"
         tabIndex={-1}
         aria-hidden="true"
       >
@@ -475,7 +411,7 @@ export function StoryList({
             src={story.screenshotUrl}
             alt=""
             className="w-full h-full object-cover"
-            loading={index < 3 ? "eager" : "lazy"}
+            loading={index < 4 ? "eager" : "lazy"}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-lg font-semibold text-soft">
@@ -483,94 +419,226 @@ export function StoryList({
           </div>
         )}
       </Link>
-
-      {story.customMessage && (
-        <div className="mb-2 text-[13px] text-on-cta bg-cta border border-hairline rounded-md p-2 italic">
-          {story.customMessage}
-        </div>
-      )}
-
-      <h2 className="app-title text-ink flex items-center gap-1.5 min-w-0 mb-1">
-        {story.isPinned && (
-          <Pin
-            className="w-4 h-4 text-faint flex-shrink-0"
-            aria-label="Pinned Story"
-          />
-        )}
-        <Link
-          to={`/s/${story.slug}`}
-          className="truncate hover:underline underline-offset-2"
-        >
-          {story.title}
-        </Link>
-      </h2>
-
-      {story.description && (
-        <p className="app-desc text-copy mb-2 line-clamp-2">{story.description}</p>
-      )}
-
-      {story.tags && story.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-3">
-          <TagPills tags={story.tags} size="sm" shape="pill" />
-        </div>
-      )}
-
-      {/* Footer stays on the bottom of short cards. Time left, vote pill right. */}
-      <div className="mt-auto pt-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0 text-[13px] text-soft">
-          <span className="tabular-nums">
-            {compactTimeAgo(story._creationTime)}
-          </span>
-          <Link
-            to={`/s/${story.slug}#comments`}
-            className="flex items-center gap-1 hover:text-copy"
-            aria-label={`${story.commentCount} ${story.commentCount === 1 ? "comment" : "comments"}`}
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            <span className="tabular-nums">{story.commentCount}</span>
-          </Link>
-          <BookmarkButton
-            storyId={story._id}
-            showMessage={showMessage}
-            onAuthRequired={() => {
-              setAuthDialogAction("bookmark");
-              setShowAuthDialog(true);
-            }}
-          />
-          {story.githubUrl && (
-            <a
-              href={story.githubUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-soft hover:text-copy"
-              title="View GitHub Repo"
-            >
-              <Github className="w-3.5 h-3.5" />
-            </a>
+      </div>
+      {/* Below sm the copy and the vibe control share a row under the image.
+          sm:contents dissolves this wrapper so the desktop three-column row is
+          unchanged. */}
+      <div className="flex flex-row items-start gap-3 min-w-0 order-2 sm:contents">
+        <div className="flex-1 min-w-0 sm:order-2">
+          {story.customMessage && (
+            <div className="mb-2 text-[13px] text-on-cta bg-cta rounded-lg px-2 py-1 italic inline-block">
+              {story.customMessage}
+            </div>
           )}
+          <h2 className="app-card-title text-ink flex items-start gap-1.5 min-w-0">
+            {story.isPinned && (
+              <Pin
+                className="w-4 h-4 mt-1 text-faint flex-shrink-0"
+                aria-label="Pinned Story"
+              />
+            )}
+            <Link
+              to={`/s/${story.slug}`}
+              className="hover:underline underline-offset-2 line-clamp-1"
+            >
+              {story.title}
+            </Link>
+          </h2>
+          <p className="mt-1 text-[15px] leading-snug text-copy line-clamp-2">
+            {story.description}
+          </p>
+          {story.tags && story.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              <TagPills tags={story.tags} size="sm" shape="pill" />
+            </div>
+          )}
+          <div className="mt-2 flex items-center gap-2 text-[13px] text-soft">
+            <span className="truncate">
+              <AuthorName story={story} />
+            </span>
+            <span aria-hidden="true">·</span>
+            <span className="tabular-nums flex-shrink-0">
+              {compactTimeAgo(story._creationTime)}
+            </span>
+            <Link
+              to={`/s/${story.slug}#comments`}
+              className="flex items-center gap-1 flex-shrink-0 hover:text-copy"
+              aria-label={`${story.commentCount} ${story.commentCount === 1 ? "comment" : "comments"}`}
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span className="tabular-nums">{story.commentCount}</span>
+            </Link>
+            <span className="flex items-center gap-2 flex-shrink-0">
+              <BookmarkButton
+                storyId={story._id}
+                showMessage={showMessage}
+                onAuthRequired={() => {
+                  setAuthDialogAction("bookmark");
+                  setShowAuthDialog(true);
+                }}
+              />
+              {story.githubUrl && (
+                <a
+                  href={story.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-copy"
+                  title="View GitHub Repo"
+                >
+                  <Github className="w-3.5 h-3.5" />
+                </a>
+              )}
+            </span>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={() => handleVote(story._id)}
-          disabled={!isClerkLoaded}
-          className="inline-flex items-center justify-center gap-1 h-8 px-2.5 flex-shrink-0 rounded-full bg-brand-soft border border-hairline text-ink whitespace-nowrap hover:bg-surface-alt active:bg-surface-alt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-canvas transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Vibe it"
-          aria-label={`Vibe it, ${story.votes} ${story.votes === 1 ? "vote" : "votes"} for ${story.title}`}
-        >
-          <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
-          <span className="text-[13px] font-semibold tabular-nums">
+      <div className="flex flex-col items-stretch gap-2 flex-shrink-0 sm:order-3 sm:w-[92px]">
+        <div className="flex flex-col items-center justify-center rounded-lg bg-surface-alt border border-hairline py-2 px-3">
+          <span className="text-[22px] font-semibold tracking-[-0.02em] tabular-nums text-ink leading-none">
             {story.votes}
           </span>
-        </button>
+          <span className="text-[11px] text-copy mt-1">
+            {story.votes === 1 ? "Vibe" : "Vibes"}
+          </span>
+        </div>
+        <VibeButton
+          count={story.votes}
+          vibed={vibedSet.has(story._id as unknown as string)}
+          onToggle={() => handleVote(story._id)}
+          disabled={!isClerkLoaded}
+          hideCount
+          compact
+          className="w-full"
+        />
+      </div>
       </div>
     </article>
   );
+
+  // GRID VIEW: poster card — screenshot, title, byline, blurb, two stat
+  // tiles, then a full-width primary action.
+  const renderGridCard = (story: Story, index: number) => {
+    return (
+      <article
+        key={story._id}
+        className={`flex flex-col h-full rounded-lg p-2.5 border border-hairline shadow-sm hover:shadow-md transition-shadow motion-reduce:transition-none ${
+        rankTint(story._id) || "bg-surface"
+      }`}
+      >
+        {/* 16:9 screenshot. Aspect box reserved so missing images do not collapse the card. */}
+        <div className="relative flex-shrink-0">
+          <RankRibbon storyId={story._id} />
+          <Link
+            to={`/s/${story.slug}`}
+            className="w-full aspect-[2/1] rounded-lg overflow-hidden bg-surface-alt block"
+            tabIndex={-1}
+            aria-hidden="true"
+          >
+            {story.screenshotUrl ? (
+              <img
+                src={story.screenshotUrl}
+                alt=""
+                className="w-full h-full object-cover"
+                loading={index < 3 ? "eager" : "lazy"}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-lg font-semibold text-soft">
+                {story.title.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </Link>
+
+          {/* Bookmark and repo sit on the image so they cost no card height. */}
+          <div className="absolute top-2 right-2 flex items-center gap-1">
+            <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-surface/90 text-soft hover:text-copy shadow-sm">
+              <BookmarkButton
+                storyId={story._id}
+                showMessage={showMessage}
+                onAuthRequired={() => {
+                  setAuthDialogAction("bookmark");
+                  setShowAuthDialog(true);
+                }}
+              />
+            </span>
+            {story.githubUrl && (
+              <a
+                href={story.githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center w-7 h-7 rounded-lg bg-surface/90 text-soft hover:text-copy shadow-sm"
+                title="View GitHub Repo"
+              >
+                <Github className="w-3.5 h-3.5" />
+              </a>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col flex-1 px-2 pt-3">
+          {story.customMessage && (
+            <div className="mb-2 text-[13px] text-on-cta bg-cta rounded-lg p-2 italic">
+              {story.customMessage}
+            </div>
+          )}
+
+          <h2 className="app-card-title text-ink flex items-start gap-1.5 min-w-0">
+            {story.isPinned && (
+              <Pin
+                className="w-4 h-4 mt-1 text-faint flex-shrink-0"
+                aria-label="Pinned Story"
+              />
+            )}
+            <Link
+              to={`/s/${story.slug}`}
+              className="line-clamp-2 hover:underline underline-offset-2"
+            >
+              {story.title}
+            </Link>
+          </h2>
+
+          <p className="mt-1 text-[14px] text-soft truncate">
+            <AuthorName story={story} />
+            <span className="mx-1.5">·</span>
+            <span className="tabular-nums">
+              {compactTimeAgo(story._creationTime)}
+            </span>
+            <span className="mx-1.5">·</span>
+            <MessageSquare className="inline w-3.5 h-3.5 -mt-0.5" />
+            <span className="tabular-nums ml-1">{story.commentCount}</span>
+          </p>
+
+          {story.description && (
+            <p className="mt-2 text-[15px] leading-snug text-copy line-clamp-2">
+              {story.description}
+            </p>
+          )}
+
+          {story.tags && story.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              <TagPills tags={story.tags} size="sm" shape="pill" />
+            </div>
+          )}
+
+          {/* Everything below is pinned to the bottom so cards in a row line up. */}
+          <div className="mt-auto pt-3">
+            <VibeButton
+              count={story.votes}
+              vibed={vibedSet.has(story._id as unknown as string)}
+              onToggle={() => handleVote(story._id)}
+              disabled={!isClerkLoaded}
+              className="w-full"
+            />
+
+          </div>
+        </div>
+      </article>
+    );
+  };
 
   const containerClass =
     viewMode === "grid"
       ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
       : viewMode === "vibe"
-        ? "flex flex-col space-y-4"
+        ? "flex flex-col gap-4"
         : "flex flex-col divide-y divide-hairline bg-surface rounded-lg border border-hairline overflow-hidden";
 
   return (
@@ -584,7 +652,7 @@ export function StoryList({
                 viewMode === "grid"
                   ? renderGridCard(story, index)
                   : viewMode === "vibe"
-                    ? renderVibeRow(story)
+                    ? renderVibeRow(story, index)
                     : renderListRow(story, index),
               )}
             </div>

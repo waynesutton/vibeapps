@@ -1,16 +1,49 @@
-import React from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "convex/react";
+import React from "react";
+import { useQuery, useMutation } from "convex/react";
+import { useUser } from "@clerk/clerk-react";
 import { api } from "../../convex/_generated/api";
-import { ThumbsUp, UserCircle } from "lucide-react";
+import { UserCircle } from "lucide-react";
 import { ProfileHoverCard } from "../components/ui/ProfileHoverCard";
 import { BackToAppsLink } from "../components/BackToAppsLink";
+import { VibeButton } from "../components/ui/VibeButton";
 
 export function LeaderboardPage() {
   // Get top stories for the leaderboard
-  const topStories = useQuery(api.stories.getWeeklyLeaderboardStories, {
+  const myVotedIds = useQuery(api.stories.getMyVotedStoryIds);
+  const vibedSet = React.useMemo(
+    () => new Set((myVotedIds ?? []).map((id) => id as unknown as string)),
+    [myVotedIds],
+  );
+  const liveStories = useQuery(api.stories.getWeeklyLeaderboardStories, {
     limit: 20, // Show more stories on the dedicated page
   });
+
+  // Voting bumps the count, the reactive query re-sorts, and the row jumps to a
+  // new rank while its animation is still playing — which reads as the feedback
+  // firing on somebody else's app. Hold the order still until it finishes, then
+  // let the new ranking land.
+  const [votingId, setVotingId] = React.useState<string | null>(null);
+  const frozen = React.useRef<typeof liveStories>(undefined);
+  const voteTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  if (!votingId) {
+    frozen.current = liveStories;
+  }
+  const topStories = votingId ? frozen.current : liveStories;
+
+  React.useEffect(
+    () => () => {
+      if (voteTimer.current) clearTimeout(voteTimer.current);
+    },
+    [],
+  );
+
+  const handleVoted = (storyId: string) => {
+    setVotingId(storyId);
+    if (voteTimer.current) clearTimeout(voteTimer.current);
+    voteTimer.current = setTimeout(() => setVotingId(null), 950);
+  };
 
   return (
     <div className="min-h-screen">
@@ -42,6 +75,8 @@ export function LeaderboardPage() {
                   key={story._id}
                   story={story}
                   rank={index + 1}
+                  vibed={vibedSet.has(story._id as unknown as string)}
+                  onVoted={handleVoted}
                 />
               ))}
             </div>
@@ -52,69 +87,138 @@ export function LeaderboardPage() {
   );
 }
 
+// Top three get a medal tint. Low-opacity accents rather than solid colours so
+// they read the same over the light and dark surface tokens.
+const RANK_STYLES: Record<number, { row: string; badge: string }> = {
+  1: {
+    row: "bg-[rgb(245_197_24_/_0.10)]",
+    badge: "bg-[rgb(245_197_24)] text-[rgb(61_46_0)] animate-rank-shine motion-reduce:animate-none",
+  },
+  2: {
+    row: "bg-[rgb(148_163_184_/_0.12)]",
+    badge: "bg-[rgb(148_163_184)] text-[rgb(30_36_46)]",
+  },
+  3: {
+    row: "bg-[rgb(205_127_50_/_0.10)]",
+    badge: "bg-[rgb(205_127_50)] text-[rgb(48_28_6)]",
+  },
+};
+
 interface LeaderboardItemProps {
   story: {
-    _id: string;
+    _id: any;
     title: string;
     slug: string;
     votes: number;
+    description: string;
+    screenshotUrl: string | null;
     authorUsername?: string;
     authorName?: string;
   };
   rank: number;
+  vibed: boolean;
+  onVoted: (storyId: string) => void;
 }
 
-function LeaderboardItem({ story, rank }: LeaderboardItemProps) {
+function LeaderboardItem({
+  story,
+  rank,
+  vibed,
+  onVoted,
+}: LeaderboardItemProps) {
+  const { isSignedIn, isLoaded } = useUser();
+  const voteStory = useMutation(api.stories.voteStory);
+
+  const handleVote = () => {
+    if (!isLoaded || !isSignedIn) return;
+    onVoted(story._id);
+    voteStory({ storyId: story._id });
+  };
+
   return (
-    <div className="p-4 hover:bg-surface-hover transition-colors">
-      <div className="flex items-start gap-3">
-        {/* Rank Number */}
-        <div className="flex-shrink-0">
-          <div className="w-8 h-8 rounded-full bg-cta flex items-center justify-center">
-            <span className="text-on-cta text-sm font-medium tabular-nums">
-              {rank}
+    <div
+      className={`px-3 sm:px-4 py-3 transition-colors motion-reduce:transition-none ${
+        RANK_STYLES[rank]?.row ?? ""
+      } hover:bg-surface-hover`}
+    >
+      <div className="flex items-center gap-3">
+        <span
+          className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[13px] font-semibold tabular-nums ${
+            RANK_STYLES[rank]?.badge ?? "bg-cta text-on-cta"
+          }`}
+        >
+          {rank}
+        </span>
+
+        <Link
+          to={`/s/${story.slug}`}
+          className="flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-hairline bg-surface-alt block"
+          tabIndex={-1}
+          aria-hidden="true"
+        >
+          {story.screenshotUrl ? (
+            <img
+              src={story.screenshotUrl}
+              alt=""
+              className="w-full h-full object-cover"
+              loading={rank <= 6 ? "eager" : "lazy"}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-sm font-semibold text-soft">
+              {story.title.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </Link>
+
+        <div className="flex-1 min-w-0">
+          <Link
+            to={`/s/${story.slug}`}
+            className="app-title-sm text-ink hover:underline underline-offset-2 block truncate"
+          >
+            {story.title}
+          </Link>
+          {story.description && (
+            <p className="text-[13px] text-copy line-clamp-1 mt-0.5">
+              {story.description}
+            </p>
+          )}
+          {story.authorUsername ? (
+            <ProfileHoverCard username={story.authorUsername}>
+              <Link
+                to={`/${story.authorUsername}`}
+                className="mt-0.5 text-xs text-soft hover:text-copy inline-flex items-center gap-1 max-w-full"
+              >
+                <UserCircle className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate">
+                  {story.authorName || story.authorUsername}
+                </span>
+              </Link>
+            </ProfileHoverCard>
+          ) : story.authorName ? (
+            <span className="mt-0.5 text-xs text-soft inline-flex items-center gap-1 max-w-full">
+              <UserCircle className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{story.authorName}</span>
             </span>
-          </div>
+          ) : null}
         </div>
 
-        {/* Story Content */}
-        <div className="flex-1 min-w-0">
-          <div className="text-ink">
-            <Link
-              to={`/s/${story.slug}`}
-              className="app-title-sm hover:underline block"
-            >
-              {story.title}
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-4 mt-2">
-            {/* Author Info */}
-            {story.authorUsername ? (
-              <ProfileHoverCard username={story.authorUsername}>
-                <Link
-                  to={`/${story.authorUsername}`}
-                  className="text-xs text-soft hover:underline flex items-center gap-1"
-                >
-                  <UserCircle className="w-3 h-3" />
-                  {story.authorName || story.authorUsername}
-                </Link>
-              </ProfileHoverCard>
-            ) : story.authorName ? (
-              <span className="text-xs text-soft flex items-center gap-1">
-                <UserCircle className="w-3 h-3" />
-                {story.authorName}
-              </span>
-            ) : null}
-
-            {/* Vote Count */}
-            <div className="flex items-center gap-1">
-              <ThumbsUp className="w-4 h-4 text-soft" />
-              <span className="text-sm font-medium text-ink">
-                {story.votes} vibes
-              </span>
+        {/* Count reads as a figure, not a footnote, and the row can be voted on
+            directly rather than only from the feed. */}
+        <div className="flex-shrink-0 flex items-center gap-2 sm:gap-3">
+          <div className="hidden sm:block text-right leading-none">
+            <div className="text-[20px] font-semibold text-ink tabular-nums">
+              {story.votes}
+            </div>
+            <div className="text-[11px] text-soft mt-0.5">
+              {story.votes === 1 ? "vibe" : "vibes"}
             </div>
           </div>
+          <VibeButton
+            count={story.votes}
+            vibed={vibed}
+            onToggle={handleVote}
+            disabled={!isLoaded}
+          />
         </div>
       </div>
     </div>

@@ -1,11 +1,8 @@
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, Infer } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import type { ReactionEmoji } from "./lib/reactionEmojis";
 
-// Define allowed emoji reactions
-const ALLOWED_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "👏"] as const;
-
-// Validator for allowed emojis
 export const emojiValidator = v.union(
   v.literal("👍"),
   v.literal("❤️"),
@@ -14,6 +11,16 @@ export const emojiValidator = v.union(
   v.literal("😢"),
   v.literal("👏"),
 );
+
+type Exactly<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
+
+// Compile-time guard: adding an emoji to ALLOWED_EMOJIS without adding it to
+// emojiValidator (or vice versa) makes this `never` and fails the build.
+const emojisMatchValidator: Exactly<
+  ReactionEmoji,
+  Infer<typeof emojiValidator>
+> = true;
+void emojisMatchValidator;
 
 /**
  * Add or update a reaction to a message

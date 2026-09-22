@@ -89,6 +89,19 @@ export default {
       },
       animation: {
         "fade-in": "fadeIn 0.2s ease-out",
+        // Vote feedback: a squash-and-stretch press, a halo that swells out of
+        // the button, a quick count pop and a +1 drifting off the top.
+        "vibe-pop": "vibePop 0.42s cubic-bezier(0.22, 1, 0.36, 1)",
+        "vibe-bump": "vibeBump 0.42s cubic-bezier(0.22, 1, 0.36, 1)",
+        "vibe-halo": "vibeHalo 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards",
+        // Jumping to the comments highlights them for three seconds so it is
+        // clear where you landed.
+        "comment-spotlight": "commentSpotlight 3s ease-out forwards",
+        "comment-rise": "commentRise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both",
+        // Route changes slide the new view in from the right.
+        "page-in": "pageIn 0.26s cubic-bezier(0.22, 1, 0.36, 1)",
+        // A slow sheen across the first-place badge.
+        "rank-shine": "rankShine 2.8s ease-in-out infinite",
       },
       keyframes: {
         fadeIn: {
@@ -100,6 +113,44 @@ export default {
             opacity: "1",
             transform: "translateY(0)",
           },
+        },
+        // Squash on the press, overshoot on the release. No rotation: on a
+        // wide button a tilt reads as a glitch rather than a bounce.
+        vibePop: {
+          "0%": { transform: "scale(1)" },
+          "18%": { transform: "scale(0.94)" },
+          "50%": { transform: "scale(1.05)" },
+          "100%": { transform: "scale(1)" },
+        },
+        // The count stays put and pops in place; making it jump out of the
+        // button looked like a layout break.
+        vibeBump: {
+          "0%": { transform: "scale(1)" },
+          "40%": { transform: "scale(1.28)" },
+          "100%": { transform: "scale(1)" },
+        },
+        // A filled halo swelling out of the button, rather than a hard border
+        // ring scaling up, which read as an outline artefact.
+        pageIn: {
+          "0%": { opacity: "0", transform: "translateX(1.25rem)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        rankShine: {
+          "0%, 65%, 100%": { boxShadow: "0 0 0 0 rgb(245 197 24 / 0)" },
+          "80%": { boxShadow: "0 0 0 4px rgb(245 197 24 / 0.35)" },
+        },
+        commentSpotlight: {
+          "0%": { backgroundColor: "rgb(148 163 184 / 0.20)" },
+          "55%": { backgroundColor: "rgb(148 163 184 / 0.14)" },
+          "100%": { backgroundColor: "rgb(148 163 184 / 0)" },
+        },
+        commentRise: {
+          "0%": { opacity: "0", transform: "translateY(0.5rem)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        vibeHalo: {
+          "0%": { opacity: "0.32", transform: "scale(1)" },
+          "100%": { opacity: "0", transform: "scale(1.28)" },
         },
       },
     },

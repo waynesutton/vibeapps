@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  ChevronUp,
   MessageSquare,
   Star,
   Linkedin,
@@ -40,6 +39,7 @@ import { ProfileHoverCard } from "./ui/ProfileHoverCard";
 import { Markdown } from "./Markdown";
 import { useDialog } from "../hooks/useDialog";
 import { BackToAppsLink } from "./BackToAppsLink";
+import { VibeButton } from "./ui/VibeButton";
 import { LumaEventList } from "./LumaEventList";
 import { isLumaWidgetVisible } from "../lib/sidebarWidgets";
 import { getConvexErrorMessage } from "../lib/convexErrors";
@@ -464,6 +464,26 @@ export function StoryDetail({ story }: StoryDetailProps) {
     setSearchParams,
   ]);
 
+  const myVotedIds = useQuery(api.stories.getMyVotedStoryIds);
+  const hasVibed = React.useMemo(
+    () =>
+      (myVotedIds ?? []).some(
+        (id) => (id as unknown as string) === (story._id as unknown as string),
+      ),
+    [myVotedIds, story._id],
+  );
+
+  const [highlightComments, setHighlightComments] = React.useState(false);
+  const highlightTimer = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  React.useEffect(
+    () => () => {
+      if (highlightTimer.current) clearTimeout(highlightTimer.current);
+    },
+    [],
+  );
+
   const handleVote = () => {
     if (!isClerkLoaded) return; // Don't do anything if Clerk hasn't loaded
 
@@ -473,7 +493,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
       return;
     }
     voteStory({ storyId: story._id })
-      .then((result) => {
+      .then(() => {
         // Optionally, update UI based on result.action and result.newVoteCount
       })
       .catch((error) => {
@@ -496,7 +516,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
       return;
     }
     rateStory({ storyId: story._id, rating: value })
-      .then((result) => {
+      .then(() => {
         // Optimistically update UI or refetch currentUserRating might be needed here
         // For now, a simple alert.
       })
@@ -519,6 +539,204 @@ export function StoryDetail({ story }: StoryDetailProps) {
       parentId: replyToId || undefined,
     });
     setReplyToId(null);
+  };
+
+  // Threads render as cards: a top-level comment, then its replies collapsed
+  // behind a summary row with the repliers' avatars, following the reference.
+  // Nesting stops after a few levels so a long exchange does not walk off the
+  // right edge on a phone.
+  const MAX_THREAD_INDENT = 2;
+  const [expandedThreads, setExpandedThreads] = React.useState<Set<string>>(
+    new Set(),
+  );
+  const toggleThread = (id: string) =>
+    setExpandedThreads((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const commentsByParent = React.useMemo(() => {
+    const map = new Map<string, CommentType[]>();
+    (comments ?? []).forEach((c) => {
+      const comment = c as CommentType;
+      const key = (comment.parentId as string | undefined) ?? "root";
+      const bucket = map.get(key);
+      if (bucket) bucket.push(comment);
+      else map.set(key, [comment]);
+    });
+    return map;
+  }, [comments]);
+
+  // Every descendant, so the summary can count a whole sub-thread rather than
+  // only its direct children.
+  const descendantsOf = (id: string): CommentType[] => {
+    const direct = commentsByParent.get(id) ?? [];
+    return direct.flatMap((c) => [
+      c,
+      ...descendantsOf(c._id as unknown as string),
+    ]);
+  };
+
+  const PREVIEW_REPLIES = 2;
+
+  const renderCommentThread = (
+    parentKey: string,
+    depth: number,
+  ): React.ReactNode =>
+    (commentsByParent.get(parentKey) ?? []).map((comment) => {
+      const id = comment._id as unknown as string;
+      const directReplies = commentsByParent.get(id) ?? [];
+      // The first couple of replies read inline; only the rest collapse, so a
+      // thread shows its shape without needing a click.
+      const preview = directReplies.slice(0, PREVIEW_REPLIES);
+      const rest = directReplies.slice(PREVIEW_REPLIES);
+      const hiddenCount = rest.reduce(
+        (n, r) => n + 1 + descendantsOf(r._id as unknown as string).length,
+        0,
+      );
+      const isOpen = expandedThreads.has(id);
+      const hiddenAuthors = Array.from(
+        new Map(
+          rest.map((r) => [
+            r.authorName ?? "?",
+            r as CommentType & { authorImageUrl?: string },
+          ]),
+        ).values(),
+      ).slice(0, 4);
+
+      const nestClass =
+        depth < MAX_THREAD_INDENT
+          ? "mt-2 ml-3 sm:ml-5 border-l border-hairline pl-2.5 sm:pl-4 space-y-2"
+          : "mt-2 space-y-2";
+
+      return (
+        <div key={id} className={depth === 0 ? "" : "mt-2"}>
+          <div
+            className={`rounded-lg border border-hairline p-2.5 sm:p-3 ${
+              depth === 0 ? "bg-surface" : "bg-surface-alt"
+            }`}
+          >
+            <Comment
+              comment={comment}
+              onReply={(parentId) => setReplyToId(parentId)}
+            />
+
+            {replyToId === comment._id && (
+              <div className="mt-2">
+                <CommentForm
+                  onSubmit={handleCommentSubmit}
+                  parentId={comment._id}
+                  onCancel={() => setReplyToId(null)}
+                />
+              </div>
+            )}
+          </div>
+
+          {preview.length > 0 && (
+            <div className={nestClass}>
+              {preview.map((reply) => (
+                <React.Fragment key={reply._id as unknown as string}>
+                  {renderSingleThread(reply, depth + 1)}
+                </React.Fragment>
+              ))}
+
+              {hiddenCount > 0 && !isOpen && (
+                <button
+                  type="button"
+                  onClick={() => toggleThread(id)}
+                  className="inline-flex items-center gap-2 text-[13px] text-soft hover:text-ink transition-colors motion-reduce:transition-none"
+                  aria-expanded={false}
+                >
+                  <span className="flex -space-x-1.5">
+                    {hiddenAuthors.map((r, i) =>
+                      r.authorImageUrl ? (
+                        <img
+                          key={i}
+                          src={r.authorImageUrl}
+                          alt=""
+                          className="w-5 h-5 rounded-full object-cover ring-2 ring-canvas"
+                        />
+                      ) : (
+                        <span
+                          key={i}
+                          className="w-5 h-5 rounded-full bg-surface-hover ring-2 ring-canvas flex items-center justify-center text-[10px] font-semibold text-soft"
+                        >
+                          {(r.authorName ?? "?").charAt(0).toUpperCase()}
+                        </span>
+                      ),
+                    )}
+                  </span>
+                  View {hiddenCount} more{" "}
+                  {hiddenCount === 1 ? "reply" : "replies"}
+                </button>
+              )}
+
+              {hiddenCount > 0 && isOpen && (
+                <>
+                  {rest.map((reply) => (
+                    <React.Fragment key={reply._id as unknown as string}>
+                      {renderSingleThread(reply, depth + 1)}
+                    </React.Fragment>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => toggleThread(id)}
+                    className="text-[13px] text-soft hover:text-ink transition-colors motion-reduce:transition-none"
+                    aria-expanded
+                  >
+                    Show fewer replies
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    });
+
+  // One comment plus its own sub-thread, so the preview/collapse logic above
+  // applies at every level rather than only the top.
+  const renderSingleThread = (
+    comment: CommentType,
+    depth: number,
+  ): React.ReactNode => {
+    const id = comment._id as unknown as string;
+    return (
+      <div>
+        <div
+          className={`rounded-lg border border-hairline p-2.5 sm:p-3 ${
+            depth === 0 ? "bg-surface" : "bg-surface-alt"
+          }`}
+        >
+          <Comment
+            comment={comment}
+            onReply={(parentId) => setReplyToId(parentId)}
+          />
+          {replyToId === comment._id && (
+            <div className="mt-2">
+              <CommentForm
+                onSubmit={handleCommentSubmit}
+                parentId={comment._id}
+                onCancel={() => setReplyToId(null)}
+              />
+            </div>
+          )}
+        </div>
+        {(commentsByParent.get(id) ?? []).length > 0 && (
+          <div
+            className={
+              depth < MAX_THREAD_INDENT
+                ? "mt-2 ml-3 sm:ml-5 border-l border-hairline pl-2.5 sm:pl-4 space-y-2"
+                : "mt-2 space-y-2"
+            }
+          >
+            {renderCommentThread(id, depth + 1)}
+          </div>
+        )}
+      </div>
+    );
   };
 
   const handleOpenReportModal = () => {
@@ -1019,30 +1237,11 @@ export function StoryDetail({ story }: StoryDetailProps) {
     <>
       <DialogComponents />
       <div className="max-w-7xl mx-auto pb-10">
-        <div className="flex gap-8">
+        <div className="flex gap-8 items-start">
           {/* Main Content */}
         <div className="flex-1 min-w-0">
           <article className="bg-surface rounded-lg p-4 sm:p-6 border border-hairline">
             <div className="flex gap-4">
-              <div className="flex flex-col items-center gap-1 pt-1 min-w-[40px]">
-                <button
-                  onClick={handleVote}
-                  disabled={!isClerkLoaded} // Disable while Clerk is loading to prevent premature clicks
-                  className={`text-ink hover:bg-surface-hover p-1 rounded ${
-                    !isSignedIn && isClerkLoaded ? "opacity-50 cursor-help" : ""
-                  }`}
-                  title={
-                    !isSignedIn && isClerkLoaded
-                      ? "Sign in to vote"
-                      : "Vote for this app"
-                  }
-                >
-                  <ChevronUp className="w-5 h-5" />
-                </button>
-                <span className="text-copy font-medium text-[15px] tabular-nums">
-                  {story.votes}
-                </span>
-              </div>
               <div className="flex-1 min-w-0">
                 <h1 className="text-[26px] sm:text-[30px] leading-[1.2] tracking-[-0.02em] font-semibold capitalize text-ink mb-2">
                   <a
@@ -1062,11 +1261,65 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 <p className="app-desc text-ink mb-4 max-w-none">
                   {story.description}
                 </p>
+
                 <ImageGallery
                   mainImageUrl={story.screenshotUrl}
                   additionalImageUrls={story.additionalImageUrls || []}
                   altText={`${story.title} screenshot`}
                 />
+                {/* Primary actions. Everywhere else in the app voting is a
+                    filled Vibe button; this page used a bare chevron over a
+                    number, which read as a different product. */}
+                <div className="flex w-full flex-wrap items-stretch gap-2 sm:gap-3 mb-4">
+                  <VibeButton
+                    count={story.votes}
+                    vibed={hasVibed}
+                    onToggle={handleVote}
+                    disabled={!isClerkLoaded}
+                    title={
+                      !isSignedIn && isClerkLoaded
+                        ? "Sign in to vote"
+                        : undefined
+                    }
+                    className="flex-1 min-w-[8rem] justify-center"
+                  />
+                  {story.url && (
+                    <a
+                      href={story.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 min-w-[8rem] inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-lg border border-hairline bg-surface text-copy text-[15px] font-medium hover:bg-surface-hover hover:text-ink transition-colors motion-reduce:transition-none"
+                    >
+                      Visit app
+                    </a>
+                  )}
+                  <a
+                    href="#comments"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      document
+                        .getElementById("comments")
+                        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      // Replay cleanly if the button is pressed twice.
+                      setHighlightComments(false);
+                      requestAnimationFrame(() => setHighlightComments(true));
+                      if (highlightTimer.current)
+                        clearTimeout(highlightTimer.current);
+                      highlightTimer.current = setTimeout(
+                        () => setHighlightComments(false),
+                        3000,
+                      );
+                    }}
+                    className="flex-1 min-w-[8rem] inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-lg border border-hairline bg-surface text-copy text-[15px] font-medium hover:bg-surface-hover hover:text-ink transition-colors motion-reduce:transition-none"
+                  >
+                    <MessageSquare className="w-4 h-4" aria-hidden="true" />
+                    Comments
+                    <span className="tabular-nums text-soft">
+                      {story.commentCount ?? comments?.length ?? 0}
+                    </span>
+                  </a>
+                </div>
+
                 {story.longDescription && (
                   <div className="text-copy mb-4 prose prose-base max-w-none">
                     <Markdown>{story.longDescription}</Markdown>
@@ -1110,7 +1363,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
         {/* Project Links & Tags Sidebar */}
           <div className="w-80 flex-shrink-0 hidden lg:block self-start">
-            <div className="sticky top-8 space-y-4">
+            <div className="sticky top-[60px] max-h-[calc(100vh-72px)] overflow-y-auto space-y-4 pb-4">
             {(story.url ||
           story.videoUrl ||
           story.githubUrl ||
@@ -1333,12 +1586,33 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   <LumaEventList placement="story_detail" compact />
                 </div>
               )}
+
+              {/* The owner's edit action lives with the other project controls
+                  rather than in a banner far below the fold. */}
+              {!isEditing &&
+                isClerkLoaded &&
+                isSignedIn &&
+                currentUser &&
+                story.userId === currentUser._id && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newSearchParams = new URLSearchParams(searchParams);
+                      newSearchParams.set("edit", "true");
+                      setSearchParams(newSearchParams);
+                    }}
+                    className="mt-3 w-full inline-flex items-center justify-center gap-1.5 h-9 rounded-md border border-hairline bg-surface text-sm font-medium text-copy hover:bg-surface-hover hover:text-ink transition-colors motion-reduce:transition-none"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" aria-hidden="true" />
+                    Edit submission
+                  </button>
+                )}
             </div>
             </div>
             )}
             <div className="space-y-3">
               <div className="flex items-center min-h-11">
-                <BackToAppsLink label="Back to apps list" />
+                <BackToAppsLink label="Back to apps list" showLabel />
               </div>
             </div>
             </div>
@@ -2425,7 +2699,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
       <div className="lg:hidden mt-6 space-y-3">
         <div className="flex items-center min-h-11">
-          <BackToAppsLink label="Back to apps list" />
+          <BackToAppsLink label="Back to apps list" showLabel />
         </div>
       </div>
 
@@ -2919,35 +3193,22 @@ export function StoryDetail({ story }: StoryDetailProps) {
 
       {/* Comments Section */}
       {!isEditing && (
-        <div id="comments" className="mt-8 scroll-mt-20">
+        <div
+          id="comments"
+          className={`mt-8 scroll-mt-20 rounded-lg -mx-2 px-2 py-2 ${
+            highlightComments
+              ? "animate-comment-spotlight motion-reduce:animate-none [&_article]:animate-comment-rise motion-reduce:[&_article]:animate-none"
+              : ""
+          }`}
+        >
           <h2 className="text-xl font-medium text-copy mb-4">
             {comments?.length ?? 0}{" "}
             {(comments?.length ?? 0) === 1 ? "Comment" : "Comments"}
           </h2>
           <CommentForm onSubmit={handleCommentSubmit} />
-          <div className="mt-8 space-y-6 border-t border-hairline pt-6">
+          <div className="mt-5 space-y-2.5 border-t border-hairline pt-5">
             {comments === undefined && <div>Loading comments...</div>}
-            {comments?.map((commentData) => {
-              // Rename variable to avoid conflict
-              // Ensure commentData conforms to CommentType, though validation should happen in backend
-              const comment = commentData as CommentType;
-              return (
-                <React.Fragment key={comment._id}>
-                  <Comment
-                    comment={comment}
-                    onReply={(parentId) => setReplyToId(parentId)}
-                  />
-                  {replyToId === comment._id && (
-                    <div className="pl-8 pt-4">
-                      <CommentForm
-                        onSubmit={handleCommentSubmit}
-                        parentId={comment._id}
-                      />
-                    </div>
-                  )}
-                </React.Fragment>
-              );
-            })}
+            {renderCommentThread("root", 0)}
             {comments && comments.length === 0 && (
               <div className="text-soft">
                 No comments yet. Be the first!
@@ -3012,34 +3273,6 @@ export function StoryDetail({ story }: StoryDetailProps) {
           </div>
         </div>
       )}
-
-      {/* Edit Submission Section */}
-      {!isEditing &&
-        isClerkLoaded &&
-        isSignedIn &&
-        currentUser &&
-        story.userId === currentUser._id && (
-          <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200 flex items-center justify-between text-sm text-blue-600">
-            <div className="flex items-center gap-3">
-              <Edit3 className="w-4 h-4 text-blue-500 flex-shrink-0" />
-              <span className="font-medium text-blue-700">
-                Want to update your submission?
-              </span>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs border-blue-200 text-blue-600 hover:bg-blue-100"
-              onClick={() => {
-                const newSearchParams = new URLSearchParams(searchParams);
-                newSearchParams.set("edit", "true");
-                setSearchParams(newSearchParams);
-              }}
-            >
-              Edit Submission
-            </Button>
-          </div>
-        )}
 
       {/* Flag/Report Section */}
       {!isEditing && (

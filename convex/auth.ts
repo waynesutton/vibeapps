@@ -1,6 +1,4 @@
 import { QueryCtx, MutationCtx } from "./_generated/server";
-// Remove Id import if no longer needed elsewhere, kept for now
-import { Id } from "./_generated/dataModel";
 
 // Return the Clerk User ID (string) instead of a Convex table ID
 export async function requireAuth(ctx: QueryCtx | MutationCtx): Promise<string> {

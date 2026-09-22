@@ -27,3 +27,10 @@ bun.lockb
 *.sw?
 
 /prds/env-deploy-fix.md
+# Local env
+.env
+.env.local
+.env.*.local
+
+# TS incremental build info
+*.tsbuildinfo

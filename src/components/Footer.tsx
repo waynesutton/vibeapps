@@ -8,15 +8,12 @@ export function Footer() {
 
   return (
     <footer className="mt-12">
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col items-start md:flex-row md:items-center gap-2 md:gap-4 text-xs text-soft">
+      <div className="container mx-auto px-4 pt-6 pb-28 sm:pb-6">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-soft">
           <span className="text-soft"> © {new Date().getFullYear()} </span>
           <button onClick={() => setShowAboutModal(true)} className="hover:text-copy">
             About
           </button>
-          <Link to="/leaderboard" className="hover:text-copy">
-            Leaderboard
-          </Link>
           <Link to="/events" className="hover:text-copy">
             Events
           </Link>

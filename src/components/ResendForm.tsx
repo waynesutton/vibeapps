@@ -4,7 +4,7 @@ import { BackToAppsLink } from "./BackToAppsLink";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
-import { Github, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { SignUpButton } from "@clerk/clerk-react";
 import { ChoiceFieldInput } from "./ui/ChoiceFieldInput";
 
@@ -42,6 +42,10 @@ export function ResendForm() {
 
   const generateUploadUrl = useMutation(api.stories.generateUploadUrl);
   const submitStoryAnonymous = useMutation(api.stories.submitAnonymous);
+
+  // Precomputed: this file's JSX tree is large enough that TypeScript stops
+  // narrowing `formData.image` inside it, so resolve the name up front.
+  const selectedImageName = formData.image?.name ?? null;
 
   // Tag limits from admin settings (hidden tracking tag never counts)
   const maxTags = settings?.maxTagsPerSubmission ?? 6;
@@ -393,9 +397,9 @@ export function ResendForm() {
                 className="w-full px-3 py-2 bg-surface rounded-md text-copy focus:outline-none focus:ring-1 focus:ring-ink border border-hairline file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-surface-alt file:text-copy hover:file:bg-surface-hover"
                 disabled={isSubmitting}
               />
-              {formData.image && (
+              {selectedImageName && (
                 <div className="text-sm text-soft mt-1">
-                  Selected: {formData.image.name}
+                  Selected: {selectedImageName}
                 </div>
               )}
             </div>
@@ -579,7 +583,7 @@ export function ResendForm() {
             </div>
             {settings?.showSubmissionLimit && (
               <div className="text-sm text-soft">
-                You can submit up to {settings.submissionLimitCount || 10}{" "}
+                You can submit up to {settings?.submissionLimitCount || 10}{" "}
                 projects per day.
               </div>
             )}

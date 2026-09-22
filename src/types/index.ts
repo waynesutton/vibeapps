@@ -1,4 +1,4 @@
-import { Doc, Id } from "../convex/_generated/dataModel";
+import { Doc, Id } from "../../convex/_generated/dataModel";
 
 // Represents a full Story document fetched from Convex,
 // potentially including resolved tags and screenshot URL.

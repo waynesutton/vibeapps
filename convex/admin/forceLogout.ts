@@ -16,7 +16,7 @@ export const revokeAllSessions = internalAction({
     revokedSessions: v.number(),
     errors: v.number(),
   }),
-  handler: async (ctx, args) => {
+  handler: async (_ctx, args) => {
     // Note: This requires CLERK_SECRET_KEY environment variable
     const clerkSecretKey = process.env.CLERK_SECRET_KEY;
 

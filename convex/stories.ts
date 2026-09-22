@@ -1033,6 +1033,32 @@ export const generateUploadUrl = mutation({
 });
 
 // Renamed vote to voteStory - Fixed: Removed read before write to avoid conflicts
+/**
+ * Story ids the signed-in user has already vibed.
+ *
+ * voteStory is a toggle, but nothing exposed the current state, so a vote
+ * control could not show whether you had already voted — it always rendered as
+ * un-pressed and flipped back on reload. Returns an empty list when signed out.
+ */
+export const getMyVotedStoryIds = query({
+  args: {},
+  returns: v.array(v.id("stories")),
+  handler: async (ctx): Promise<Id<"stories">[]> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+    if (!user) return [];
+    const votes = await ctx.db
+      .query("votes")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .collect();
+    return votes.map((v) => v.storyId);
+  },
+});
+
 export const voteStory = mutation({
   args: { storyId: v.id("stories") },
   handler: async (ctx, args) => {
@@ -2484,6 +2510,8 @@ export const leaderboardStoryValidator = v.object({
   title: v.string(),
   slug: v.string(),
   votes: v.number(),
+  description: v.string(),
+  screenshotUrl: v.union(v.string(), v.null()),
   authorUsername: v.optional(v.string()),
   authorName: v.optional(v.string()),
   // Add _creationTime if you plan to display it
@@ -2528,6 +2556,10 @@ export const getWeeklyLeaderboardStories = query({
         title: story.title,
         slug: story.slug,
         votes: story.votes,
+        description: story.description,
+        screenshotUrl: story.screenshotId
+          ? await ctx.storage.getUrl(story.screenshotId)
+          : null,
         authorUsername: authorUsername,
         authorName: authorName,
       });

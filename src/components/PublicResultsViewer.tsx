@@ -1,8 +1,6 @@
-import React from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Doc, Id } from "../../convex/_generated/dataModel";
 import type { FormField } from "../types"; // Import FormField type
 
 // Helper function to format date (same as in FormResults)

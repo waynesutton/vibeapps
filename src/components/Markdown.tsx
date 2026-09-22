@@ -29,21 +29,16 @@ export function Markdown({ children }: Props) {
 
           return <p {...props}>{children}</p>;
         },
-        code: ({ inline, className, children, ...props }) => {
-          const match = /language-(\w+)/.exec(className || "");
-          if (inline) {
-            return (
-              <code className={className} {...props}>
-                {children}
-              </code>
-            );
-          }
-          return (
-            <pre className={`hljs ${match ? className : ""}`}>
-              <code {...props}>{String(children).replace(/\n$/, "")}</code>
-            </pre>
-          );
-        },
+        // react-markdown v9 dropped the `inline` prop that used to tell these
+        // two cases apart. It already wraps fenced blocks in a `pre` and
+        // leaves inline spans bare, so styling the wrapper is enough:
+        // rehype-highlight puts the `hljs` and `language-*` classes on the
+        // inner `code` itself.
+        pre: ({ node, children, ...props }) => (
+          <pre className="hljs" {...props}>
+            {children}
+          </pre>
+        ),
       }}
     >
       {children}

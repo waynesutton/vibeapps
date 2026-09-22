@@ -6,7 +6,7 @@ import { NotFoundPage } from "../../pages/NotFoundPage";
 import { api } from "../../../convex/_generated/api";
 import { useAdminAccessQuery } from "./useAdminAccess";
 import { Id } from "../../../convex/_generated/dataModel";
-import type { CustomForm, FormSubmission, FormField } from "../../types";
+import type { FormSubmission, FormField } from "../../types";
 
 // Helper function to format date
 const formatDate = (timestamp: number): string => {

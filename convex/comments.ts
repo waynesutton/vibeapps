@@ -35,6 +35,7 @@ const commentWithAuthorValidator = v.object({
   // Added author details
   authorName: v.optional(v.string()),
   authorUsername: v.optional(v.string()),
+  authorImageUrl: v.optional(v.string()),
 });
 
 // Query to list APPROVED comments for a specific story, now with author details
@@ -45,7 +46,13 @@ export const listApprovedByStory = query({
     ctx,
     args,
   ): Promise<
-    Array<Doc<"comments"> & { authorName?: string; authorUsername?: string }>
+    Array<
+      Doc<"comments"> & {
+        authorName?: string;
+        authorUsername?: string;
+        authorImageUrl?: string;
+      }
+    >
   > => {
     const comments = await ctx.db
       .query("comments")
@@ -63,6 +70,7 @@ export const listApprovedByStory = query({
           ...comment,
           authorName: author?.name,
           authorUsername: author?.username,
+          authorImageUrl: author?.imageUrl,
         };
       }),
     );

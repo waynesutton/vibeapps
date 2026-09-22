@@ -7,36 +7,24 @@ import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import { authUrlWithReturn } from "../lib/redirectPath";
 import {
   ThumbsUp,
-  MessageCircle,
   Trash2,
   Star,
   Edit3,
   Camera,
   Save,
   XCircle,
-  Globe,
-  Twitter,
-  Linkedin,
   LogOut,
-  Lock,
   Mail,
   UserPlus,
   UserMinus,
   Users,
-  AlertTriangle,
   Settings,
-  Bookmark,
-  BookmarkCheck,
   BookmarkMinus,
   BookKey,
-  BookOpen,
-  Award,
   Flag,
   Inbox,
-  Send,
   ChevronDown,
 } from "lucide-react";
-import type { Story } from "../types"; // Import the Story type
 import AlertDialog from "../components/ui/AlertDialog"; // Corrected path
 import { NotFoundPage } from "./NotFoundPage"; // Added import for NotFoundPage
 import {
@@ -115,16 +103,6 @@ const VerifiedBadge = () => (
 
 // Explicitly define types for the items in arrays if not perfectly inferred
 // These should align with what api.users.getUserProfileByUsername returns for these arrays
-type StoryInProfile = Doc<"stories"> & {
-  slug: string;
-  title: string;
-  description: string;
-  status: string;
-  authorName?: string | null;
-  authorUsername?: string | null;
-  authorIsVerified?: boolean;
-};
-
 type VoteInProfile = Doc<"votes"> & {
   storySlug?: string;
   storyTitle?: string;
@@ -284,7 +262,6 @@ export default function UserProfilePage() {
 
   const generateUploadUrl = useAction(api.users.generateUploadUrl);
   const setUserProfileImage = useMutation(api.users.setUserProfileImage);
-  const updateUsernameMutation = useMutation(api.users.updateUsername);
   const updateProfileDetails = useMutation(api.users.updateProfileDetails);
 
   const userBookmarksCount = useQuery(
@@ -303,7 +280,6 @@ export default function UserProfilePage() {
   );
 
   const [isEditing, setIsEditing] = useState(false);
-  const [newUsername, setNewUsername] = useState("");
   const [newProfileImageFile, setNewProfileImageFile] = useState<File | null>(
     null,
   );
@@ -319,7 +295,7 @@ export default function UserProfilePage() {
   const [newBluesky, setNewBluesky] = useState("");
   const [newLinkedin, setNewLinkedin] = useState("");
   const [activeTab, setActiveTab] = useState<string | null>(null);
-  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isRedirecting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isLoadingFollowAction, setIsLoadingFollowAction] = useState(false);
   const [isEmailUpdating, setIsEmailUpdating] = useState(false);
@@ -769,7 +745,7 @@ export default function UserProfilePage() {
     size?: string;
   }) => (
     <div
-      className={`rounded-full bg-surface-hover flex items-center justify-center text-soft text-4xl font-bold border-2 border-hairline-strong ${size}`}
+      className={`rounded-full bg-surface-hover flex items-center justify-center text-soft text-2xl sm:text-4xl font-bold border-2 border-hairline-strong ${size}`}
     >
       {name ? name.charAt(0).toUpperCase() : "U"}
     </div>
@@ -780,7 +756,7 @@ export default function UserProfilePage() {
   // --- Action Handlers with Confirmation ---
   const confirmAndExecute = (
     actionFn: () => Promise<void>,
-    successMsg: string,
+    _successMsg: string,
     errorMsg: string,
     itemContext?: any,
   ) => {
@@ -919,6 +895,7 @@ export default function UserProfilePage() {
     });
   };
 
+  // TODO: not wired up yet — the Account Actions column only renders Sign Out.
   const handleDeleteAccount = () => {
     setDialogState({
       isOpen: true,
@@ -950,6 +927,8 @@ export default function UserProfilePage() {
         ),
     });
   };
+
+  void handleDeleteAccount;
 
   const handleUnsubscribeAllEmails = async () => {
     try {
@@ -1050,30 +1029,30 @@ export default function UserProfilePage() {
       <DialogComponents />
       <div className="max-w-4xl mx-auto p-4 sm:p-6 from-slate-50 to-gray-100 min-h-screen">
         <header
-          className="mb-4 p-6 bg-surface rounded-lg border border-hairline"
+          className="mb-4 p-4 sm:p-6 bg-surface rounded-lg border border-hairline"
           style={{ fontFamily: "var(--th-font-sans)" }}
         >
-          <div className="flex flex-col sm:flex-row items-start sm:items-start">
+          <div className="flex flex-col items-center text-center gap-3 sm:flex-row sm:items-start sm:text-left sm:gap-0">
             {/* Profile Image Section */}
-            <div className="relative mb-4 sm:mb-0 sm:mr-6 rounded-full w-24 h-24 overflow-hidden">
+            <div className="relative flex-shrink-0 sm:mr-6 rounded-full w-20 h-20 sm:w-24 sm:h-24 overflow-hidden">
               {isEditing ? (
                 <button
                   onClick={triggerFileEdit}
-                  className="relative group rounded-full overflow-hidden"
+                  className="relative group w-full h-full rounded-full overflow-hidden"
                 >
                   {newProfileImagePreview ? (
                     <img
                       src={newProfileImagePreview}
                       alt="Profile preview"
-                      className="w-full h-full object-cover border-4 border-hairline-strong group-hover:opacity-75 w-24 h-24 overflow-hidden rounded-full transition-opacity"
+                      className="w-full h-full object-cover border-4 border-hairline-strong group-hover:opacity-75 overflow-hidden rounded-full transition-opacity"
                     />
                   ) : (
                     <ProfileImagePlaceholder
                       name={loadedProfileUser?.name}
-                      size="w-24 h-24"
+                      size="w-full h-full"
                     />
                   )}
-                  <div className="absolute inset-0 rounded-full bg-black w-auto h-19 bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                  <div className="absolute inset-0 rounded-full bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                     <Camera className="w-8 h-8 text-white" />
                   </div>
                   <input
@@ -1088,18 +1067,18 @@ export default function UserProfilePage() {
                 <img
                   src={currentImageUrl}
                   alt={`${loadedProfileUser?.name || "User"}'s profile`}
-                  className="rounded-full h-19 object-cover border-2 border-hairline-strong"
+                  className="w-full h-full rounded-full object-cover border-2 border-hairline-strong"
                 />
               ) : (
                 <ProfileImagePlaceholder
                   name={loadedProfileUser?.name}
-                  size="w-24 h-24"
+                  size="w-full h-full"
                 />
               )}
             </div>
 
             {/* Profile Info Section */}
-            <div className="flex-grow text-left sm:text-left">
+            <div className="flex-grow w-full text-center sm:text-left">
               {isEditing ? (
                 <div className="space-y-2 mb-2">
                   {/* Name Input */}
@@ -1129,7 +1108,7 @@ export default function UserProfilePage() {
                 </div> */}
                 </div>
               ) : (
-                <div className="flex items-baseline mb-1">
+                <div className="flex items-baseline justify-center mb-1 sm:justify-start">
                   <h1
                     className="text-lg font-normal text-ink mr-2"
                     style={{ fontFamily: "var(--th-font-sans)" }}
@@ -1154,7 +1133,7 @@ export default function UserProfilePage() {
               )}
 
               {/* Bio Section - Full Width */}
-              <div className="mb-3 w-full text-left">
+              <div className="mb-3 w-full text-center sm:text-left">
                 {isEditing ? (
                   <textarea
                     value={newBio}
@@ -1167,14 +1146,14 @@ export default function UserProfilePage() {
                   />
                 ) : loadedProfileUser?.bio ? (
                   <p
-                    className="text-sm text-copy w-full text-left"
+                    className="text-sm text-copy w-full text-center sm:text-left"
                     style={{ fontFamily: "var(--th-font-sans)" }}
                   >
                     {loadedProfileUser.bio}
                   </p>
                 ) : (
                   <p
-                    className="text-sm text-faint italic w-full text-left"
+                    className="text-sm text-faint italic w-full text-center sm:text-left"
                     style={{ fontFamily: "var(--th-font-sans)" }}
                   >
                     No bio yet.
@@ -1330,19 +1309,25 @@ export default function UserProfilePage() {
                 </div>
               )}
 
-              {/* INBOX BUTTON & TOGGLE - Only on own profile */}
+              {/* Own-profile actions. One compact row rather than four stacked
+                  full-width buttons; only Edit carries fill. */}
               {isOwnProfile && !isEditing && (
-                <div className="mt-3 flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-                  {/* Go to Inbox Button */}
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                   <button
-                    onClick={() =>
-                      ownInboxEnabled !== false && navigate("/inbox")
-                    }
+                    onClick={handleEditToggle}
+                    className="h-8 px-3 rounded-md bg-cta text-on-cta text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap hover:bg-cta-hover transition-colors"
+                    style={{ fontFamily: "var(--th-font-sans)" }}
+                  >
+                    <Edit3 className="w-3.5 h-3.5" /> Edit profile
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/inbox")}
                     disabled={ownInboxEnabled === false}
-                    className={`h-8 px-3 rounded-md border border-hairline text-xs font-medium inline-flex items-center justify-center whitespace-nowrap shrink-0 transition-colors ${
+                    className={`h-8 px-3 rounded-md border border-hairline text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap transition-colors ${
                       ownInboxEnabled === false
                         ? "bg-surface-hover text-soft cursor-not-allowed"
-                        : "bg-cta text-on-cta hover:bg-surface-hover hover:text-ink"
+                        : "bg-surface text-copy hover:bg-surface-hover hover:text-ink"
                     }`}
                     style={{ fontFamily: "var(--th-font-sans)" }}
                     title={
@@ -1351,61 +1336,47 @@ export default function UserProfilePage() {
                         : "View your inbox"
                     }
                   >
-                    <Inbox className="w-3.5 h-3.5 mr-1.5" />
-                    Inbox
+                    <Inbox className="w-3.5 h-3.5" /> Inbox
                   </button>
 
-                  {/* Inbox Toggle Controls */}
-                  <div className="flex items-center gap-2 md:flex-shrink-0">
-                    <div className="flex items-center gap-2 text-sm text-copy">
-                      <span>Inbox Status:</span>
-                    </div>
-
-                    {/* Toggle Button */}
-                    <button
-                      onClick={handleInboxToggle}
-                      disabled={isTogglingInbox}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        ownInboxEnabled !== false
-                          ? "bg-cta"
-                          : "bg-surface-hover"
-                      }`}
-                      aria-label="Toggle inbox"
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-surface transition-transform ${
-                          ownInboxEnabled !== false
-                            ? "translate-x-6"
-                            : "translate-x-1"
-                        }`}
-                      />
-                    </button>
-
-                    <span className="text-sm text-copy">
-                      {isTogglingInbox
-                        ? "Updating..."
-                        : ownInboxEnabled !== false
-                          ? "Enabled"
-                          : "Disabled"}
-                    </span>
-                  </div>
-
-                  {/* Compact one-line CTAs next to Inbox */}
-                  <button
-                    onClick={handleEditToggle}
-                    className="h-8 px-3 rounded-md bg-cta border border-hairline text-on-cta text-xs font-medium hover:bg-surface-hover hover:text-ink inline-flex items-center justify-center whitespace-nowrap shrink-0 transition-colors"
-                    style={{ fontFamily: "var(--th-font-sans)" }}
-                  >
-                    <Edit3 className="w-3.5 h-3.5 mr-1.5" /> Edit my profile
-                  </button>
                   <a
                     href="#manage-profile"
-                    className="h-8 px-3 rounded-md bg-cta border border-hairline text-on-cta text-xs font-medium hover:bg-surface-hover hover:text-ink inline-flex items-center justify-center whitespace-nowrap shrink-0 transition-colors"
+                    className="h-8 px-3 rounded-md border border-hairline bg-surface text-copy text-xs font-medium inline-flex items-center gap-1.5 whitespace-nowrap hover:bg-surface-hover hover:text-ink transition-colors"
                     style={{ fontFamily: "var(--th-font-sans)" }}
                   >
-                    <Settings className="w-3.5 h-3.5 mr-1.5" /> Manage Account
-                    & Email
+                    <Settings className="w-3.5 h-3.5" /> Account
                   </a>
+
+                  {/* Inbox on/off, as a quiet inline switch rather than its own
+                      labelled row. */}
+                  <button
+                    onClick={handleInboxToggle}
+                    disabled={isTogglingInbox}
+                    role="switch"
+                    aria-checked={ownInboxEnabled !== false}
+                    className="h-8 px-2.5 rounded-md border border-hairline bg-surface text-xs text-copy inline-flex items-center gap-2 whitespace-nowrap hover:bg-surface-hover transition-colors disabled:opacity-50"
+                    style={{ fontFamily: "var(--th-font-sans)" }}
+                    title="Toggle whether other people can message you"
+                  >
+                    <span
+                      className={`relative inline-flex h-4 w-7 flex-shrink-0 items-center rounded-full transition-colors ${
+                        ownInboxEnabled !== false ? "bg-cta" : "bg-surface-hover"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-3 w-3 transform rounded-full bg-surface transition-transform ${
+                          ownInboxEnabled !== false
+                            ? "translate-x-3.5"
+                            : "translate-x-0.5"
+                        }`}
+                      />
+                    </span>
+                    {isTogglingInbox
+                      ? "Saving…"
+                      : ownInboxEnabled !== false
+                        ? "Messages on"
+                        : "Messages off"}
+                  </button>
                 </div>
               )}
             </div>
@@ -1451,155 +1422,89 @@ export default function UserProfilePage() {
           )}
         </header>
 
-        {/* Mini Dashboard Section */}
+        {/* Identity summary: a single stats line and a pill tab row, in place
+            of the six stat boxes that stacked one per row on a phone. Radii and
+            colours stay on the project scale — rounded-md/rounded-full from the
+            flattened tailwind scale, and the existing cta/surface tokens. */}
         <section
           className="mb-4 p-4 rounded-md border bg-surface border-hairline"
           style={{ fontFamily: "var(--th-font-sans)" }}
         >
-          <h2 className="text-lg font-normal text-ink mb-4 pb-2 border-b border-hairline-strong">
-            My Vibes
-            {loadedProfileUser?._creationTime && (
-              <span className="ml-2 text-xs text-faint">
-                Joined Vibe Apps{" "}
-                {new Date(loadedProfileUser._creationTime).toLocaleDateString(
-                  "en-US",
-                  {
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
-                  },
-                )}
-              </span>
-            )}
-          </h2>
-          <div className="flex flex-col gap-2 md:flex-row md:flex-wrap md:gap-3 md:justify-start">
-            {/* Submissions */}
-            <button
-              onClick={() => handleMiniDashboardClick("submissions")}
-              aria-label={`View ${loadedProfileUser?.name || "user"}'s submissions`}
-              className="flex items-center p-3 bg-surface border border-hairline rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ink md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
-            >
-              <BookOpen className="w-6 h-6 mr-3 text-copy md:w-8 md:h-8 md:mb-2 md:mr-0" />
-              <div className="flex flex-col md:items-center">
-                <span className="text-xl font-bold text-ink">
-                  {stories.length}
-                </span>
-                <span className="text-xs text-soft md:mt-0.5">
-                  Submissions
-                </span>
-              </div>
-            </button>
+          <p className="text-center text-sm text-copy">
+            <span className="font-semibold text-ink tabular-nums">
+              {stories.length}
+            </span>{" "}
+            submissions
+            <span className="mx-1.5 text-faint">·</span>
+            <span className="font-semibold text-ink tabular-nums">
+              {votes.length}
+            </span>{" "}
+            votes
+            <span className="mx-1.5 text-faint">·</span>
+            <span className="font-semibold text-ink tabular-nums">
+              {followersCount ?? 0}
+            </span>{" "}
+            followers
+            <span className="mx-1.5 text-faint">·</span>
+            <span className="font-semibold text-ink tabular-nums">
+              {followingCount ?? 0}
+            </span>{" "}
+            following
+          </p>
 
-            {/* Votes */}
-            <button
-              onClick={() => handleMiniDashboardClick("votes")}
-              aria-label={`View ${loadedProfileUser?.name || "user"}'s votes`}
-              className="flex items-center p-3 bg-surface border border-hairline rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ink md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
-            >
-              <ThumbsUp className="w-6 h-6 mr-3 text-copy md:w-8 md:h-8 md:mb-2 md:mr-0" />
-              <div className="flex flex-col md:items-center">
-                <span className="text-xl font-bold text-ink">
-                  {votes.length}
-                </span>
-                <span className="text-xs text-soft md:mt-0.5">Votes</span>
-              </div>
-            </button>
+          {loadedProfileUser?._creationTime && (
+            <p className="mt-1 text-center text-xs text-faint">
+              Joined{" "}
+              {new Date(loadedProfileUser._creationTime).toLocaleDateString(
+                "en-US",
+                { month: "long", day: "numeric", year: "numeric" },
+              )}
+            </p>
+          )}
 
-            {/* Ratings Given */}
-            <button
-              onClick={() => handleMiniDashboardClick("ratings")}
-              aria-label={`View ratings given by ${loadedProfileUser?.name || "user"}`}
-              className="flex items-center p-3 bg-surface border border-hairline rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ink md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
-            >
-              <Star className="w-6 h-6 mr-3 text-copy md:w-8 md:h-8 md:mb-2 md:mr-0" />
-              <div className="flex flex-col md:items-center">
-                <span className="text-xl font-bold text-ink">
-                  {ratings.length}
-                </span>
-                <span className="text-xs text-soft md:mt-0.5">Ratings</span>
-              </div>
-            </button>
-
-            {/* Comments */}
-            <button
-              onClick={() => handleMiniDashboardClick("comments")}
-              aria-label={`View comments made by ${loadedProfileUser?.name || "user"}`}
-              className="flex items-center p-3 bg-surface border border-hairline rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ink md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
-            >
-              <MessageCircle className="w-6 h-6 mr-3 text-copy md:w-8 md:h-8 md:mb-2 md:mr-0" />
-              <div className="flex flex-col md:items-center">
-                <span className="text-xl font-bold text-ink">
-                  {comments.length}
-                </span>
-                <span className="text-xs text-soft md:mt-0.5">
-                  Comments
-                </span>
-              </div>
-            </button>
-
-            {/* Bookmarks (Own Profile Only) */}
-            {isOwnProfile && (
-              <button
-                onClick={() => handleMiniDashboardClick("bookmarks")}
-                aria-label={`View your bookmarks`}
-                className="flex items-center p-3 bg-surface border border-hairline rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ink md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
-              >
-                <Bookmark className="w-6 h-6 mr-3 text-copy md:w-8 md:h-8 md:mb-2 md:mr-0" />
-                <div className="flex flex-col md:items-center">
-                  <span className="text-xl font-bold text-ink">
-                    {userBookmarksCount ?? 0}
-                  </span>
-                  <span className="text-xs text-soft md:mt-0.5">
-                    Bookmarks
-                  </span>
-                </div>
-              </button>
-            )}
-
-            {/* Followers */}
-            <button
-              onClick={() => handleMiniDashboardClick("followers")}
-              aria-label={`View followers of ${loadedProfileUser?.name || "user"}`}
-              className="flex items-center p-3 bg-surface border border-hairline rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ink md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
-            >
-              <Users className="w-6 h-6 mr-3 text-copy md:w-8 md:h-8 md:mb-2 md:mr-0" />
-              <div className="flex flex-col md:items-center">
-                <span className="text-xl font-bold text-ink">
-                  {followersCount ?? 0}
-                </span>
-                <span className="text-xs text-soft md:mt-0.5">
-                  Followers
-                </span>
-              </div>
-            </button>
-
-            {/* Following */}
-            <button
-              onClick={() => handleMiniDashboardClick("following")}
-              aria-label={`View users followed by ${loadedProfileUser?.name || "user"}`}
-              className="flex items-center p-3 bg-surface border border-hairline rounded-lg shadow-sm w-full h-auto justify-start hover:transform hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ease-in-out cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ink md:flex-col md:text-center md:w-24 md:flex-shrink-0 md:h-24 md:justify-center md:p-4"
-            >
-              <UserPlus className="w-6 h-6 mr-3 text-copy md:w-8 md:h-8 md:mb-2 md:mr-0" />
-              <div className="flex flex-col md:items-center">
-                <span className="text-xl font-bold text-ink">
-                  {followingCount ?? 0}
-                </span>
-                <span className="text-xs text-soft md:mt-0.5">
-                  Following
-                </span>
-              </div>
-            </button>
-
-            {/* Achievements (Hidden for later) */}
-            {/*
-          <div className="flex flex-col items-center p-3 bg-surface border border-hairline rounded-lg shadow-sm text-center w-32 md:w-36 flex-shrink-0 h-32 justify-center">
-            <Award className="w-7 h-7 mb-2 text-copy" />
-            <span className="text-2xl font-bold text-ink">{0}</span>
-            <span className="text-xs text-soft mt-0.5">Achievements</span>
-          </div>
-          */}
+          {/* Scrolls rather than wrapping, so the row stays one line however
+              many tabs the profile has. */}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            {[
+              { key: "submissions", label: "Submissions", count: stories.length },
+              { key: "votes", label: "Votes", count: votes.length },
+              { key: "ratings", label: "Ratings", count: ratings.length },
+              { key: "comments", label: "Comments", count: comments.length },
+              ...(isOwnProfile
+                ? [
+                    {
+                      key: "bookmarks",
+                      label: "Bookmarks",
+                      count: userBookmarksCount ?? 0,
+                    },
+                  ]
+                : []),
+              { key: "followers", label: "Followers", count: followersCount ?? 0 },
+              { key: "following", label: "Following", count: followingCount ?? 0 },
+            ].map((tab) => {
+              const isActive =
+                tab.key === "submissions"
+                  ? activeTab === null
+                  : activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => handleMiniDashboardClick(tab.key)}
+                  aria-pressed={isActive}
+                  className={`flex-shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-full border text-xs font-medium transition-colors ${
+                    isActive
+                      ? "bg-cta border-cta text-on-cta"
+                      : "bg-surface border-hairline text-copy hover:bg-surface-hover"
+                  }`}
+                >
+                  {tab.label}
+                  <span className="tabular-nums opacity-70">{tab.count}</span>
+                </button>
+              );
+            })}
           </div>
         </section>
+
 
         {/* Section for User's Submissions (Stories) - Always Visible */}
         <section
@@ -1615,19 +1520,19 @@ export default function UserProfilePage() {
           )}
           {stories.length > 0 && (
             <ul className="space-y-4">
-              {stories.map((story: StoryInProfile) => (
+              {stories.map((story) => (
                 <li
                   key={story._id}
-                  className="p-4 bg-surface-alt border border-hairline rounded-md flex justify-between items-center transition-shadow"
+                  className="p-3 sm:p-4 bg-surface-alt border border-hairline rounded-md flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between transition-shadow"
                 >
-                  <div className="flex-grow mr-4">
+                  <div className="min-w-0 flex-grow sm:mr-4">
                     <Link
                       to={`/s/${story.slug}`}
-                      className="app-title text-ink hover:underline"
+                      className="app-title text-ink hover:underline break-words"
                     >
                       {story.title}
                     </Link>
-                    <p className="app-desc text-copy whitespace-normal break-words mt-1">
+                    <p className="app-desc text-copy break-words mt-1 line-clamp-2">
                       {story.description}
                     </p>
                     <p className="text-[13px] text-soft mt-1">
@@ -1637,7 +1542,7 @@ export default function UserProfilePage() {
                     </p>
                   </div>
                   {isOwnProfile && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0 border-t border-hairline pt-2 sm:border-0 sm:pt-0">
                       <Link
                         to={`/s/${story.slug}?edit=true`}
                         className="text-sm text-blue-500 hover:text-blue-700 hover:bg-blue-100 p-2 rounded-md flex items-center gap-1 flex-shrink-0"
