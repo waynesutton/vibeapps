@@ -500,7 +500,7 @@ For the full external facing guide (login, passwords, criteria, notes, filters, 
 
 ## Submission downloads
 
-- The **Download** dropdown in a group's View submissions toolbar exports the same submission details as the existing CSV in CSV, JSON, or Markdown format. Markdown downloads are packaged as a ZIP with one file per submission.
+- The **Download** dropdown in a group's View submissions toolbar exports the same submission details as the existing CSV in CSV, JSON, or Markdown format. Markdown downloads are a ZIP with one file per submission (YAML frontmatter, then the description as the author wrote it) plus a README.md index. Visible to anyone with the judging.results permission.
 - Judge Tracking has its own export with per-judge scores.
 
 ## Judge Tracking

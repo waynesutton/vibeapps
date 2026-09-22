@@ -1,8 +1,8 @@
 # Submission and edit "Server Error" fix
 
 Created: 2026-09-22 01:30 UTC
-Last Updated: 2026-09-22 02:35 UTC
-Status: Done (backend live on prod; frontend ships with the next green Netlify build after the `.npmrc` fix)
+Last Updated: 2026-09-22 02:40 UTC
+Status: Done (backend and frontend live on prod as of 2026-09-22 02:40 UTC)
 
 ## Problem
 
@@ -242,3 +242,8 @@ keep the one already saved for that member." The earlier strict
   `legacy-peer-deps=true`; a clean temp dir install from the lockfile
   passes. Frontend half of #19 ships when that build goes green; close the
   issue after one owner edit on prod succeeds.
+- 2026-09-22 02:40 UTC - `.npmrc` committed as 64301c5 and pushed. Netlify
+  build green: the live bundle `index-B2lS85Mq.js` on vibeapps.dev contains
+  "Connecting your account", the blank email hint, and
+  `isProjectUrlTakenInGroup`. Both halves of the fix are in production.
+  Issue #19 close left to the user (shell tool unavailable this session).

@@ -66,6 +66,7 @@ The community where you go to show off what you've built, and see what others ar
 - **Submission Management**: Add/remove submissions from judging groups with search functionality
 - **Real-time Scoring**: Live score submission and progress tracking across all submissions
 - **Results Dashboard**: Comprehensive results with rankings, analytics, and CSV export
+- **Submission Downloads**: Download every submission in a judging group as CSV, JSON, or a Markdown ZIP (one file per submission with YAML frontmatter plus a README index) from the View submissions toolbar
 - **Public Results**: Optional public results pages with password protection
 - **Judge Collaboration**: Notes and comments system for judges with threaded discussions
 - **Status Tracking**: Pending/Completed/Skip status for submissions with assignment tracking

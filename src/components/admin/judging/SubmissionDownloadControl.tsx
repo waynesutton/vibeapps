@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useConvex } from "convex/react";
 import { ChevronDown, Download, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { api } from "../../../../convex/_generated/api";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
 import {
@@ -13,16 +14,28 @@ import type { GroupDetails } from "./groupSection";
 
 type ExportFormat = "csv" | "json" | "markdown";
 
+// Format options shown in the Download dropdown
 const EXPORT_FORMATS = [
   { value: "csv", label: "Download CSV", description: "Spreadsheet file" },
-  { value: "json", label: "Download JSON", description: "Structured data file" },
+  {
+    value: "json",
+    label: "Download JSON",
+    description: "Structured data file",
+  },
   {
     value: "markdown",
     label: "Download Markdown",
-    description: "ZIP with one file per submission",
+    description: "ZIP with one file per submission plus a README index",
   },
 ] as const;
 
+const FORMAT_NOUN: Record<ExportFormat, string> = {
+  csv: "CSV",
+  json: "JSON",
+  markdown: "Markdown",
+};
+
+// Trigger a browser download for an in-memory blob
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -35,15 +48,15 @@ function downloadBlob(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
+// Download dropdown for the View submissions toolbar. Fetches the export rows
+// on demand (judging.results gated server side) and builds the file client side.
 export function SubmissionDownloadControl({ group }: { group: GroupDetails }) {
   const convex = useConvex();
   const [isOpen, setIsOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
 
   const handleDownload = async (format: ExportFormat) => {
     setIsOpen(false);
-    setMessage(null);
     setIsDownloading(true);
     try {
       const rows = await convex.query(
@@ -51,39 +64,43 @@ export function SubmissionDownloadControl({ group }: { group: GroupDetails }) {
         { groupId: group._id },
       );
       if (rows.length === 0) {
-        setMessage("No submissions to download.");
+        toast.error("No submissions to download");
         return;
       }
 
-      const timestamp = new Date().toISOString().split("T")[0];
+      const exportedAt = new Date().toISOString();
+      const timestamp = exportedAt.split("T")[0];
       const baseFilename = `judging-${safeFilename(group.name)}-submissions-${timestamp}`;
 
       if (format === "json") {
         downloadBlob(
-          new Blob([buildSubmissionJson(group, rows)], {
+          new Blob([buildSubmissionJson(group, rows, exportedAt)], {
             type: "application/json;charset=utf-8;",
           }),
           `${baseFilename}.json`,
         );
-        return;
-      }
-
-      if (format === "markdown") {
+      } else if (format === "markdown") {
         downloadBlob(
-          await buildSubmissionMarkdownZip(rows),
+          await buildSubmissionMarkdownZip(group, rows, {
+            siteOrigin: window.location.origin,
+            exportedAt,
+          }),
           `${baseFilename}-markdown.zip`,
         );
-        return;
+      } else {
+        downloadBlob(
+          new Blob([buildSubmissionCsv(rows)], {
+            type: "text/csv;charset=utf-8;",
+          }),
+          `${baseFilename}.csv`,
+        );
       }
 
-      downloadBlob(
-        new Blob([buildSubmissionCsv(rows)], {
-          type: "text/csv;charset=utf-8;",
-        }),
-        `${baseFilename}.csv`,
+      toast.success(
+        `Downloaded ${rows.length} ${rows.length === 1 ? "submission" : "submissions"} as ${FORMAT_NOUN[format]}`,
       );
     } catch (error) {
-      setMessage(
+      toast.error(
         error instanceof Error
           ? error.message
           : "Could not download submissions. Please try again.",
@@ -94,7 +111,7 @@ export function SubmissionDownloadControl({ group }: { group: GroupDetails }) {
   };
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="flex items-center gap-2">
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
           <button
@@ -137,11 +154,6 @@ export function SubmissionDownloadControl({ group }: { group: GroupDetails }) {
           ))}
         </PopoverContent>
       </Popover>
-      {message && (
-        <span className="text-[13px] text-copy" role="status" aria-live="polite">
-          {message}
-        </span>
-      )}
     </div>
   );
 }
