@@ -36,6 +36,8 @@
 
 All PRD files are now organized in the `prds/` folder for better project structure:
 
+- `prds/admin-team-member-email-fix.md`: Stop the admin Content Moderation save from wiping stored team member emails (dirty flag plus optional email merged by position in `updateStoryAdmin`), and commit the Resend 0.2.7 and Workpool 0.4.10 bump
+- `prds/convex-filter-query-refactor.md`: Paused. Inventory of every `.filter()` on a db query in `convex/stories.ts` grouped by required work, the `isHidden === undefined` safety check, and the convex-lint guard that blocks agent edits to those files
 - `prds/judging-group-email-team-members.md`: Include the Hackathon Team Info names and emails as recipients in the judging group Email submission owners flow, with a Team members dropdown and per-person selection keys
 - `prds/profile-activity-tab-chevrons.md`: Disclosure chevrons on the profile activity tabs so closed lists read as openable
 - `prds/luma-listed-events-only.md`: Admin list is URL-added events only; add-by-URL lookup then get

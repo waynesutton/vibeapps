@@ -142,9 +142,14 @@ export function ContentModeration() {
     null,
   );
   const [removeScreenshot, setRemoveScreenshot] = useState(false);
+  // Email is optional here on purpose: the admin list query strips team member
+  // emails as PII, so the form only ever receives names for existing members.
   const [teamMembers, setTeamMembers] = useState<
-    Array<{ name: string; email: string }>
+    Array<{ name: string; email?: string }>
   >([]);
+  // Only send teamMembers when the admin actually edited them. Sending the
+  // stripped list back would otherwise wipe the stored emails.
+  const [teamMembersDirty, setTeamMembersDirty] = useState(false);
   const [confirmDeleteCommentId, setConfirmDeleteCommentId] =
     useState<Id<"comments"> | null>(null);
 
@@ -540,6 +545,7 @@ export function ContentModeration() {
       removeAdditionalImages: false,
     });
     setTeamMembers((item as any).teamMembers || []);
+    setTeamMembersDirty(false);
     setEditSelectedTagIds(item.tagIds || []);
     setNewTagNames([]);
     setNewScreenshotFile(null);
@@ -624,7 +630,15 @@ export function ContentModeration() {
         chefAppUrl: editFormData.chefAppUrl || undefined,
         teamName: editFormData.teamName || undefined,
         teamMemberCount: editFormData.teamMemberCount || undefined,
-        teamMembers: teamMembers.length > 0 ? teamMembers : undefined,
+        // Only send when edited. Omit email for members whose stored address
+        // never reached the client so the backend keeps the existing one.
+        teamMembers: teamMembersDirty
+          ? teamMembers.map((member) =>
+              member.email === undefined
+                ? { name: member.name }
+                : { name: member.name, email: member.email },
+            )
+          : undefined,
         // Always send the full selection (including an empty array) so that
         // clearing the last tag actually persists. Sending undefined makes the
         // backend skip the tag patch entirely.
@@ -1181,6 +1195,7 @@ export function ContentModeration() {
                             newMembers.splice(count);
                           }
                           setTeamMembers(newMembers);
+                          setTeamMembersDirty(true);
                         }}
                         placeholder="Number of members"
                       />
@@ -1208,12 +1223,13 @@ export function ContentModeration() {
                                   name: e.target.value,
                                 };
                                 setTeamMembers(newMembers);
+                                setTeamMembersDirty(true);
                               }}
                               placeholder={`Member ${index + 1} name`}
                             />
                             <Input
                               type="email"
-                              value={member.email}
+                              value={member.email ?? ""}
                               onChange={(e) => {
                                 const newMembers = [...teamMembers];
                                 newMembers[index] = {
@@ -1221,8 +1237,13 @@ export function ContentModeration() {
                                   email: e.target.value,
                                 };
                                 setTeamMembers(newMembers);
+                                setTeamMembersDirty(true);
                               }}
-                              placeholder={`Member ${index + 1} email`}
+                              placeholder={
+                                member.email === undefined
+                                  ? "Email hidden, leave blank to keep"
+                                  : `Member ${index + 1} email`
+                              }
                             />
                           </div>
                         ))}

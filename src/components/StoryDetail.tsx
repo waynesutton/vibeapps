@@ -893,7 +893,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
         teamMembers:
           showTeamInfo && teamData.teamName
             ? teamData.teamMembers.filter(
-                (member) => member.name.trim() || member.email.trim(),
+                (member) => member.name.trim() || member.email?.trim(),
               )
             : undefined,
         ...(newScreenshotFile || removeScreenshot
