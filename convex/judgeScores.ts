@@ -573,8 +573,11 @@ export const getGroupScores = query({
     const criteriaCount = criteria.length;
 
     // Calculate completion based on submissions marked as "completed" (already fetched above)
+    // Only completed rows still in the queue, so Progress never passes 100%
+    const queueStoryIds = new Set(submissions.map((s) => s.storyId));
     const completedSubmissions = submissionStatuses.filter(
-      (status) => status.status === "completed",
+      (status) =>
+        status.status === "completed" && queueStoryIds.has(status.storyId),
     ).length;
 
     const completionPercentage =
@@ -1036,10 +1039,13 @@ export const getPublicGroupScores = query({
     );
 
     // Get group metadata - Filter out invalid stories (deleted, hidden, archived, rejected)
-    const allSubmissions = await ctx.db
-      .query("judgingGroupSubmissions")
-      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
-      .collect();
+    // Shortlist mode: the completion denominator counts only the judge queue
+    const allSubmissions = (
+      await ctx.db
+        .query("judgingGroupSubmissions")
+        .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+        .collect()
+    ).filter((submission) => isInJudgeQueue(group, submission));
 
     const submissions = (
       await Promise.all(
@@ -1097,8 +1103,11 @@ export const getPublicGroupScores = query({
     const criteriaCount = criteria.length;
 
     // Calculate completion based on submissions marked as "completed" (already fetched above)
+    // Only completed rows still in the queue, so Progress never passes 100%
+    const queueStoryIds = new Set(submissions.map((s) => s.storyId));
     const completedSubmissions = submissionStatuses.filter(
-      (status) => status.status === "completed",
+      (status) =>
+        status.status === "completed" && queueStoryIds.has(status.storyId),
     ).length;
 
     const completionPercentage =
@@ -1307,10 +1316,13 @@ export const getValidatedGroupScores = query({
     );
 
     // Get group metadata - Filter out invalid stories (deleted, hidden, archived, rejected)
-    const allSubmissions = await ctx.db
-      .query("judgingGroupSubmissions")
-      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
-      .collect();
+    // Shortlist mode: the completion denominator counts only the judge queue
+    const allSubmissions = (
+      await ctx.db
+        .query("judgingGroupSubmissions")
+        .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+        .collect()
+    ).filter((submission) => isInJudgeQueue(group, submission));
 
     const submissions = (
       await Promise.all(
@@ -1368,8 +1380,11 @@ export const getValidatedGroupScores = query({
     const criteriaCount = criteria.length;
 
     // Calculate completion based on submissions marked as "completed"
+    // Only completed rows still in the queue, so Progress never passes 100%
+    const queueStoryIds = new Set(submissions.map((s) => s.storyId));
     const completedSubmissions = submissionStatuses.filter(
-      (status) => status.status === "completed",
+      (status) =>
+        status.status === "completed" && queueStoryIds.has(status.storyId),
     ).length;
 
     const completionPercentage =

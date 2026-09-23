@@ -142,6 +142,13 @@ export function tldrSteps(data: HowToJudgeData, origin: string): Array<string> {
     data.judgeQueueMode === "shortlist"
       ? data.shortlistCount
       : data.submissionCount;
+  if (data.judgeQueueMode === "shortlist") {
+    steps.push(
+      data.showBelowCutToJudges
+        ? `This is a shortlist round: score the ${count} shortlisted submission${count === 1 ? "" : "s"}. Anything below the cut is read only, so leave a note if one deserves a second look.`
+        : `This is a shortlist round: your queue holds only the ${count} shortlisted submission${count === 1 ? "" : "s"}.`,
+    );
+  }
   steps.push(
     `Score every criterion (1 to ${data.scoreScale}) for each of the ${count} submission${count === 1 ? "" : "s"}, then press Mark Complete or Judged & Next.`,
   );
@@ -245,6 +252,193 @@ export function aiReviewParagraphs(
   return paragraphs;
 }
 
+// A titled group of bullets. Shared shape for the Shortlist round and
+// Reading scores sections so the page and the Markdown export match.
+export type GuideBlock = { title: string; points: Array<string> };
+
+// Whether AI rank badges can appear in the judging interface at all
+function judgesSeeAiBadges(data: HowToJudgeData): boolean {
+  return (
+    data.aiJudgeEnabled &&
+    (data.aiReviewVisibleToJudges || data.showBelowCutToJudges)
+  );
+}
+
+// The Shortlist round section. Empty outside shortlist mode.
+export function shortlistBlocks(data: HowToJudgeData): Array<GuideBlock> {
+  if (data.judgeQueueMode !== "shortlist") return [];
+  const belowCount = Math.max(0, data.submissionCount - data.shortlistCount);
+  const blocks: Array<GuideBlock> = [];
+
+  blocks.push({
+    title: "How the cut was made",
+    points: [
+      `${data.shortlistCount} of ${data.submissionCount} submissions made the cut. Those are the only ones you score this round.`,
+      data.aiJudgeEnabled
+        ? "The AI judge reviewed every submission first. Organizers took the top ranked apps and can add or remove any app by hand, so a strong entry the AI missed can still land on your list."
+        : "Organizers picked the shortlist by hand.",
+      "Your progress bar and Judged & Next only count shortlisted submissions.",
+    ],
+  });
+
+  if (data.showBelowCutToJudges) {
+    blocks.push({
+      title: "Seeing the rest (below the cut)",
+      points: [
+        `The other ${belowCount} submission${belowCount === 1 ? " stays" : "s stay"} visible so you have context. Your queue opens on the shortlist.`,
+        `Use the round filter in the filter row to switch between Shortlist (${data.shortlistCount}), Below the cut (${belowCount}), and All (${data.submissionCount}). The "${belowCount} below the cut, read only" pill under the filters jumps straight there.`,
+        `A below the cut submission shows a lock and a "Not in this judging round" banner${data.aiJudgeEnabled ? " with its AI rank and score" : ""}. The legend at the top of the page lists it as Below the cut.`,
+        "Score buttons, Skip, Mark Complete, and Judged & Next are hidden on those submissions. That is expected, not a bug.",
+        ...(data.aiJudgeEnabled
+          ? [
+              "Their AI review card opens on its own so you can read why each one missed the cut.",
+            ]
+          : []),
+        "Notes stay open. If one deserves a second look, say so in a note. When the organizer adds it to the shortlist it moves into your queue with scoring on, no reload needed.",
+        'If the organizer has not picked the shortlist yet, you see "Nothing shortlisted yet" with a button to browse the below the cut submissions.',
+      ],
+    });
+  } else {
+    blocks.push({
+      title: "What you do not see",
+      points: [
+        `The other ${belowCount} submission${belowCount === 1 ? " is" : "s are"} hidden from judges this round. You do not need to look for them.`,
+        "If you think an app is missing from your queue, message the organizer. They can add it to the shortlist and it shows up for you right away.",
+      ],
+    });
+  }
+  return blocks;
+}
+
+// The Reading scores section: your own scores, the AI badge and card,
+// and the two results pages when their links are shared.
+export function readingScoresBlocks(
+  data: HowToJudgeData,
+  origin: string,
+): Array<GuideBlock> {
+  const scale = data.scoreScale;
+  const blocks: Array<GuideBlock> = [];
+
+  blocks.push({
+    title: "Your scores",
+    points: [
+      `Each criterion gets its own number from 1 to ${scale}. It saves the moment you click. Change it any time before you mark the submission complete, or reopen it later with Edit Scores when that button is shown.`,
+      "Your first name is attached to every score and comment. Organizers see who gave what, and the results page can show each judge's average.",
+      "A submission only counts toward results after it is marked complete. Half scored submissions stay out of the rankings.",
+      "Human scores and AI scores are kept apart. The AI never changes your numbers and never enters the human rankings.",
+    ],
+  });
+
+  if (judgesSeeAiBadges(data)) {
+    const where = data.aiReviewVisibleToJudges
+      ? "next to the title of every reviewed submission and in the search list"
+      : "on submissions below the cut";
+    blocks.push({
+      title: "The AI badge and AI review card",
+      points: [
+        `You see a small badge ${where}. "AI #12/40 7.2/10" means the AI judge ranked the app 12th of the 40 apps it reviewed and gave it an average of 7.2 out of 10 across its rubric.`,
+        "Rank follows the AI's weighted total, so it can differ slightly from the order of the averages.",
+        scale === 10
+          ? "The AI always scores out of 10, same as you, but on its own rubric. Treat it as a second opinion, not an answer key."
+          : `The AI always scores out of 10 and you score out of ${scale}, so the numbers do not line up. Compare the reasoning, not the digits.`,
+        "The AI review card repeats the rank and average in its header. Open it for a score and a short reason per rubric item, an overall note, and the model name. It says so when the live app failed during the AI check or an organizer edited the review.",
+        "Want to score blind? Press Hide AI scores in the filter row. Badges and the card disappear on your device, and the choice is remembered for this group. Press Show AI scores to bring them back.",
+      ],
+    });
+  }
+
+  if (showResultsLink(data)) {
+    blocks.push({
+      title: `Results page (${origin}/judging/${data.slug}/results)`,
+      points: [
+        data.judgeQueueMode === "shortlist"
+          ? `The four cards on top: Submissions Judged (apps with at least one completed score), Judges, Submissions (the ${data.shortlistCount} shortlisted apps in this round), and Progress (the share of those marked complete). Progress hits 100% when every shortlisted app is done.`
+          : "The four cards on top: Submissions Judged (apps with at least one completed score), Judges, Submissions (every app in the group), and Progress (the share of submissions marked complete).",
+        `Rankings sort by average score. That average takes every criterion score from every judge who completed the app, adds them up, and divides by how many scores there are. The big number is on the 1 to ${scale} scale.`,
+        "Total is the raw sum of those scores. An app with more judges gets a bigger total, so compare averages, not totals.",
+        "The line under each title says how many judges completed it. When more than one did, open the judge scores row to see each judge's own average.",
+        `Criteria Performance shows the group average for each criterion, with a bar out of ${scale}.`,
+        ...(data.judgeQueueMode === "shortlist"
+          ? [
+              "Below the cut submissions cannot be scored, so they never appear in the human rankings.",
+            ]
+          : []),
+        ...(data.resultsIsPublic
+          ? []
+          : ["The page asks for a results passcode. Your organizer sends it."]),
+      ],
+    });
+  }
+
+  if (showAiResultsLink(data)) {
+    blocks.push({
+      title: `AI results page (${origin}/judging/${data.slug}/ai-results)`,
+      points: [
+        "Apps are listed in AI rank order, the same order the badges use. It covers every submission, including any below the cut.",
+        "The number on the right is the AI average out of 10.",
+        'The chips under each title show what the AI read: "repo reviewed", "site reviewed", and a live link check at review time ("app live", "app URL down", "app URL 404", or "no app URL").',
+        "Click a row for the overall AI note, the score and reason per rubric item, and the Convex features, components, and repo facts it found.",
+        ...(data.aiResultsIsPublic
+          ? []
+          : ["The page asks for an AI results passcode. Your organizer sends it."]),
+      ],
+    });
+  }
+  return blocks;
+}
+
+// Tips for moving around the judging interface
+export function navigationTips(data: HowToJudgeData): Array<string> {
+  const tips: Array<string> = [
+    "Search by title, or filter by tag, by judged status (All Submissions or Not Judged), or by judge.",
+    "The arrows step to the previous or next submission. Type a number in the # box and press Go to jump to that position.",
+    "The progress bar counts completed submissions against your queue.",
+    "Use the Completed Submissions list to jump back to anything you finished.",
+  ];
+  if (data.showBelowCutToJudges) {
+    tips.push(
+      "The round filter (Shortlist, Below the cut, All) decides which submissions you page through. The other filters apply on top of it.",
+    );
+  }
+  if (judgesSeeAiBadges(data)) {
+    tips.push(
+      "Show AI scores and Hide AI scores in the filter row toggle the AI badges and card on your device only.",
+    );
+  }
+  return tips;
+}
+
+// Common problems plus the ones that only apply to shortlist rounds or AI
+export function troubleshootingRows(
+  data: HowToJudgeData,
+): Array<{ problem: string; fix: string }> {
+  const rows = [...TROUBLESHOOTING];
+  if (data.showBelowCutToJudges) {
+    rows.push(
+      {
+        problem: "I cannot score a submission",
+        fix: 'It is below the cut. Look for the lock and the "Not in this judging round" banner. Leave a note if it deserves a second look.',
+      },
+      {
+        problem: "My queue says Nothing shortlisted yet",
+        fix: "The organizer has not picked the shortlist. Browse the below the cut submissions or check back later.",
+      },
+    );
+  } else if (data.judgeQueueMode === "shortlist") {
+    rows.push({
+      problem: "An app I expected is missing",
+      fix: "It did not make the shortlist this round. Message the organizer if you think it should be added.",
+    });
+  }
+  if (judgesSeeAiBadges(data)) {
+    rows.push({
+      problem: "The AI badge is gone",
+      fix: "You or someone on this device pressed Hide AI scores. Press Show AI scores in the filter row.",
+    });
+  }
+  return rows;
+}
+
 export const TROUBLESHOOTING: Array<{ problem: string; fix: string }> = [
   {
     problem: "The access code is rejected",
@@ -270,6 +464,13 @@ export const TROUBLESHOOTING: Array<{ problem: string; fix: string }> = [
 
 function mdLink(label: string, url: string): string {
   return `[${label}](${url})`;
+}
+
+// Bold label plus bullets per block; Google Docs keeps both on paste
+function blocksMarkdown(blocks: Array<GuideBlock>): Array<string> {
+  return blocks.map(
+    (b) => `**${b.title}**\n\n${b.points.map((p) => `- ${p}`).join("\n")}`,
+  );
 }
 
 function linksBlock(links: Array<HowToJudgeLink>): string {
@@ -321,6 +522,9 @@ export function buildHowToJudgeMarkdown(
   );
 
   out.push("## Your queue", queueSummary(data));
+
+  const shortlist = shortlistBlocks(data);
+  if (shortlist.length > 0) out.push("## Shortlist round", ...blocksMarkdown(shortlist));
 
   const criteriaLines =
     data.criteria.length > 0
@@ -377,18 +581,23 @@ export function buildHowToJudgeMarkdown(
   if (ai.length > 0) out.push("## AI review", ...ai);
 
   out.push(
+    "## Reading scores",
+    ...blocksMarkdown(readingScoresBlocks(data, origin)),
+  );
+
+  out.push(
     "## Finding your way around",
-    [
-      "- Search by title, filter by tag, by judged status, or by judge.",
-      "- The progress bar counts completed submissions against your queue.",
-      "- Use the Completed Submissions list to jump back to anything you finished.",
-    ].join("\n"),
+    navigationTips(data)
+      .map((tip) => `- ${tip}`)
+      .join("\n"),
   );
 
   out.push(
     "## Troubleshooting",
     "| Problem | Fix |\n| --- | --- |\n" +
-      TROUBLESHOOTING.map((t) => `| ${t.problem} | ${t.fix} |`).join("\n"),
+      troubleshootingRows(data)
+        .map((t) => `| ${t.problem} | ${t.fix} |`)
+        .join("\n"),
   );
 
   if (settings?.privateRepoNote?.trim())

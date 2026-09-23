@@ -24,12 +24,16 @@ import {
   judgingLinks,
   judgingUrl,
   lateSubmissionNote,
+  navigationTips,
   queueSummary,
   ratingAnchors,
+  readingScoresBlocks,
   scaleSummary,
+  shortlistBlocks,
   showAiResultsLink,
   tldrSteps,
-  TROUBLESHOOTING,
+  troubleshootingRows,
+  type GuideBlock,
   type HowToJudgeData,
   type HowToJudgeLink,
 } from "../lib/howToJudgeMarkdown";
@@ -209,6 +213,24 @@ function SectionNav({ sections }: { sections: Array<Section> }) {
   );
 }
 
+// Titled bullet cards for the Shortlist round and Reading scores sections
+function BlockList({ blocks }: { blocks: Array<GuideBlock> }) {
+  return (
+    <div className="mt-4 space-y-3">
+      {blocks.map((block) => (
+        <div key={block.title} className="rounded-lg border border-hairline bg-surface p-4">
+          <h3 className="text-sm font-medium text-ink">{block.title}</h3>
+          <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-copy">
+            {block.points.map((point) => (
+              <li key={point}>{point}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Prose({ children }: { children: string }) {
   return (
     <div className="prose prose-sm max-w-none text-copy prose-headings:text-ink prose-a:text-ink prose-strong:text-ink">
@@ -254,6 +276,10 @@ function HowToJudgeDocument({
   const lateNote = lateSubmissionNote(data);
   const settings = data.howToJudge;
   const code = accessCodeNote(data);
+  const shortlist = useMemo(() => shortlistBlocks(data), [data]);
+  const scoreBlocks = useMemo(() => readingScoresBlocks(data, origin), [data, origin]);
+  const navTips = useMemo(() => navigationTips(data), [data]);
+  const troubleRows = useMemo(() => troubleshootingRows(data), [data]);
   const queueCount =
     data.judgeQueueMode === "shortlist" ? data.shortlistCount : data.submissionCount;
 
@@ -268,18 +294,22 @@ function HowToJudgeDocument({
       { id: "tldr", label: "TL;DR" },
       { id: "getting-in", label: "Getting in" },
       { id: "queue", label: "Your queue" },
+    ];
+    if (shortlist.length > 0) list.push({ id: "shortlist", label: "Shortlist round" });
+    list.push(
       { id: "criteria", label: "Scoring criteria" },
       { id: "status", label: "Status and finishing" },
       { id: "submission", label: "What you will see" },
-    ];
+    );
     if (lateNote) list.push({ id: "late-submissions", label: "Late submissions" });
     if (ai.length > 0) list.push({ id: "ai-review", label: "AI review" });
+    list.push({ id: "reading-scores", label: "Reading scores" });
     list.push({ id: "navigation", label: "Finding your way" });
     list.push({ id: "troubleshooting", label: "Troubleshooting" });
     if (hasOrganizerBlocks) list.push({ id: "organizer", label: "From the organizer" });
     list.push({ id: "links", label: "Links" });
     return list;
-  }, [ai.length, hasOrganizerBlocks, lateNote]);
+  }, [ai.length, hasOrganizerBlocks, lateNote, shortlist.length]);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-24 pt-6 sm:px-6">
@@ -446,7 +476,10 @@ function HowToJudgeDocument({
                     ? data.aiJudgeEnabled
                       ? "The rest stay visible below the cut with their AI rank, read only. Notes are welcome; scoring is off for them."
                       : "The rest stay visible below the cut, read only. Notes are welcome; scoring is off for them."
-                    : "Judge only what appears in your queue."}
+                    : "Judge only what appears in your queue."}{" "}
+                  <a href="#shortlist" className="font-medium text-ink underline underline-offset-2">
+                    How the shortlist works
+                  </a>
                 </p>
               </div>
             )}
@@ -456,6 +489,16 @@ function HowToJudgeDocument({
               caption="The submission card. Counter and filters on top, status and project links below. Scoring sits in the right column."
             />
           </div>
+
+          {/* Shortlist round, only in shortlist mode */}
+          {shortlist.length > 0 && (
+            <>
+              <SectionHeading id="shortlist" eyebrow="This round">
+                Shortlist round
+              </SectionHeading>
+              <BlockList blocks={shortlist} />
+            </>
+          )}
 
           {/* Criteria */}
           <SectionHeading id="criteria" eyebrow="Live from this group">
@@ -625,18 +668,20 @@ function HowToJudgeDocument({
             </>
           )}
 
+          {/* Reading scores: own scores, AI badge and card, results pages */}
+          <SectionHeading id="reading-scores" eyebrow="What the numbers mean">
+            Reading scores
+          </SectionHeading>
+          <BlockList blocks={scoreBlocks} />
+
           {/* Navigation */}
           <SectionHeading id="navigation" eyebrow="Tips">
             Finding your way around
           </SectionHeading>
           <ul className="mt-3 list-disc space-y-1.5 pl-5 text-sm text-copy">
-            <li>Search by title, filter by tag, by judged status, or by judge.</li>
-            <li>The progress bar counts completed submissions against your queue.</li>
-            <li>Use the Completed Submissions list to jump back to anything you finished.</li>
-            <li>
-              Type a number in the # box and press Go to jump straight to that position in the
-              list.
-            </li>
+            {navTips.map((tip) => (
+              <li key={tip}>{tip}</li>
+            ))}
           </ul>
 
           {/* Troubleshooting */}
@@ -652,7 +697,7 @@ function HowToJudgeDocument({
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline bg-surface">
-                {TROUBLESHOOTING.map((t) => (
+                {troubleRows.map((t) => (
                   <tr key={t.problem} className="align-top">
                     <td className="px-4 py-2.5 font-medium text-ink">{t.problem}</td>
                     <td className="px-4 py-2.5 text-copy">{t.fix}</td>
