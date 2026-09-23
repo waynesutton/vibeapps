@@ -138,6 +138,15 @@ Never use native `<select>` for single-value pickers; the OS popup cannot be the
 - Keyboard: Enter/Space opens, arrows navigate, Enter selects, Escape closes (Radix built-in).
 - Known exception: the `multiple` select in `PublicForm.tsx` stays native (inline listbox, already themed; Radix Select has no multi-select).
 
+### Fact chips (admin results)
+Use `FactChip` (`src/components/ui/FactChip.tsx`) for recorded facts and review states. Tones: `neutral` (default, `surface-alt`), `good`, `warn`, `bad`, `info`; each semantic tone carries its own `dark:` tint. Chips are nowrap and truncate with `max-w-full`, so always pass the full text in `title` when it can be long. Put chips in a `flex flex-wrap gap-1.5` container, never a non-wrapping row.
+
+### Admin result rows (AI results)
+Header: rank circle, title block (`min-w-0 flex-1`, title truncates), score pinned top right (`tabular-nums`). Under the title: a wrapping sources line, then a wrapping chip line (`empty:hidden`). Footer: `border-t border-hairline px-4 py-2.5` toolbar with meta text left and actions right. Every row action shares one style (`h-8 px-3 text-xs rounded-md border`); open or expanded state uses `bg-surface-alt border-hairline-strong`. Label expand toggles ("Details"), no bare chevrons.
+
+### Shared Button
+`Button` is `inline-flex items-center justify-center`, so leading icons sit on the label line. `size="sm"` is `h-8 px-3 text-xs`; use it next to other `h-8` controls.
+
 ### Confirm dialogs (AlertDialog)
 Destructive confirms (`src/components/ui/AlertDialog.tsx`) follow this keyboard contract:
 

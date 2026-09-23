@@ -13,6 +13,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { Button } from "../ui/button";
+import { FactChip } from "../ui/FactChip";
 import { useDialog } from "../../hooks/useDialog";
 
 // Rendered inside the group workspace; the workspace header and sidebar
@@ -65,16 +66,18 @@ export function JudgingResultsDashboard({
         "Timestamp",
       ];
 
+      // Quote every text cell and double inner quotes (RFC 4180)
+      const csvCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
       const csvRows = [
         headers.join(","),
         ...exportScores.data.map((row) =>
           [
-            `"${row.storyTitle}"`,
-            `"${row.storyUrl}"`,
-            `"${row.judgeName}"`,
-            `"${row.criteriaQuestion}"`,
+            csvCell(row.storyTitle),
+            csvCell(row.storyUrl),
+            csvCell(row.judgeName),
+            csvCell(row.criteriaQuestion),
             row.score,
-            `"${row.comments || ""}"`,
+            csvCell(row.comments || ""),
             new Date(row.scoreTimestamp).toISOString(),
           ].join(","),
         ),
@@ -104,7 +107,7 @@ export function JudgingResultsDashboard({
   if (!groupScores || !judgeDetails) {
     return (
       <div className="text-center py-8">
-        <div className="w-8 h-8 border-2 border-hairline-strong border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+        <div className="w-8 h-8 border-2 border-hairline-strong border-t-ink rounded-full animate-spin mx-auto mb-4"></div>
         <p className="text-copy">Loading results...</p>
       </div>
     );
@@ -117,6 +120,7 @@ export function JudgingResultsDashboard({
     completionPercentage,
     submissionRankings,
     criteriaBreakdown,
+    scoreScale,
   } = groupScores;
 
   return (
@@ -285,7 +289,7 @@ export function JudgingResultsDashboard({
                             href={`/s/${submission.storySlug}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 hover:text-blue-800 text-xs flex items-center gap-1"
+                            className="text-copy hover:text-ink hover:underline text-xs inline-flex items-center gap-1"
                           >
                             <ExternalLink className="w-3 h-3" />
                             View
@@ -310,28 +314,36 @@ export function JudgingResultsDashboard({
                   {criteriaBreakdown.map((criterion) => (
                     <div
                       key={criterion.criteriaId}
-                      className="flex items-center justify-between"
+                      className="flex items-center justify-between gap-4"
                     >
-                      <div className="flex-1">
-                        <p className="font-medium text-ink">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-ink break-words">
                           {criterion.question}
                         </p>
                         <p className="text-sm text-copy">
                           {criterion.scoreCount} scores
                         </p>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-shrink-0">
                         <div className="flex items-center gap-1">
                           <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                          <span className="font-medium">
+                          <span className="font-medium tabular-nums">
                             {criterion.averageScore.toFixed(1)}
                           </span>
+                          <span className="text-xs text-soft">
+                            /{scoreScale}
+                          </span>
                         </div>
-                        <div className="w-24 bg-surface-hover rounded-full h-2">
+                        {/* Bar scales to the group's score range, never past full */}
+                        <div
+                          className="w-24 bg-surface-hover rounded-full h-2 overflow-hidden"
+                          role="img"
+                          aria-label={`${criterion.averageScore.toFixed(1)} of ${scoreScale}`}
+                        >
                           <div
-                            className="bg-blue-500 h-2 rounded-full"
+                            className="bg-cta h-2 rounded-full"
                             style={{
-                              width: `${(criterion.averageScore / 5) * 100}%`,
+                              width: `${Math.min(100, (criterion.averageScore / scoreScale) * 100)}%`,
                             }}
                           ></div>
                         </div>
@@ -359,19 +371,26 @@ export function JudgingResultsDashboard({
                         <button
                           key={judge.judgeId}
                           onClick={() => setSelectedJudgeIndex(index)}
-                          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                          aria-pressed={selectedJudgeIndex === index}
+                          className={`inline-flex items-center gap-1.5 h-9 px-3 text-sm font-medium rounded-md border transition-colors ${
                             selectedJudgeIndex === index
-                              ? "bg-blue-100 text-blue-700 border border-blue-200"
-                              : "text-copy hover:text-ink hover:bg-surface-hover border border-transparent"
+                              ? "bg-cta text-on-cta border-cta"
+                              : "text-copy hover:text-ink hover:bg-surface-hover border-hairline"
                           }`}
                         >
                           {judge.judgeName}
                           {judge.judgeType === "agent" && (
-                            <span className="ml-1 text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">
+                            <span className="text-[11px] font-normal opacity-80">
                               Agent
                             </span>
                           )}
-                          <span className="ml-2 text-xs bg-surface-alt text-copy px-2 py-1 rounded-full">
+                          <span
+                            className={`text-xs tabular-nums px-1.5 rounded-full border ${
+                              selectedJudgeIndex === index
+                                ? "border-on-cta opacity-80"
+                                : "border-hairline bg-surface-alt"
+                            }`}
+                          >
                             {judge.totalScores}
                           </span>
                         </button>
@@ -388,14 +407,12 @@ export function JudgingResultsDashboard({
                           key={judge.judgeId}
                           className="border-b border-hairline last:border-b-0 pb-6 last:pb-0"
                         >
-                          <div className="flex items-center justify-between mb-4">
-                            <div>
+                          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                            <div className="min-w-0">
                               <h4 className="font-medium text-ink flex items-center gap-2">
                                 {judge.judgeName}
                                 {judge.judgeType === "agent" && (
-                                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-normal">
-                                    Agent
-                                  </span>
+                                  <FactChip>Agent</FactChip>
                                 )}
                               </h4>
                               {judge.judgeEmail && (
@@ -460,8 +477,8 @@ export function JudgingResultsDashboard({
                                     }`}
                                   >
                                     {/* Submission Header */}
-                                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-hairline">
-                                      <h5 className="app-title-sm font-semibold text-ink">
+                                    <div className="flex items-center justify-between gap-3 mb-3 pb-2 border-b border-hairline">
+                                      <h5 className="app-title-sm font-semibold text-ink min-w-0 break-words">
                                         {submissionData.storyTitle}
                                       </h5>
                                       <div className="text-right">
@@ -481,8 +498,8 @@ export function JudgingResultsDashboard({
                                           key={`${score.storyId}-${score.criteriaId}`}
                                           className="bg-surface bg-opacity-50 rounded p-3 border border-hairline"
                                         >
-                                          <div className="flex items-center justify-between mb-2">
-                                            <div className="flex-1">
+                                          <div className="flex items-center justify-between gap-3 mb-2">
+                                            <div className="flex-1 min-w-0">
                                               <p className="text-sm font-medium text-copy">
                                                 {score.criteriaQuestion}
                                               </p>
@@ -496,7 +513,7 @@ export function JudgingResultsDashboard({
                                             </div>
                                           </div>
                                           {score.comments && (
-                                            <p className="text-sm text-copy italic bg-surface rounded p-2 border bg-canvas mt-2">
+                                            <p className="text-sm text-copy italic bg-canvas rounded p-2 border border-hairline mt-2 break-words">
                                               "{score.comments}"
                                             </p>
                                           )}

@@ -338,7 +338,8 @@ All PRD files are now organized in the `prds/` folder for better project structu
 
 ### UI Components (src/components/ui/)
 
-- `src/components/ui/button.tsx`: Reusable button component
+- `src/components/ui/button.tsx`: Reusable button component (inline-flex so icons sit beside labels; variant and size maps with `sm` = `h-8 text-xs`; visible focus ring)
+- `src/components/ui/FactChip.tsx`: Small nowrap status pill for recorded facts with neutral, good, warn, bad, and info tones (dark theme tints included); long labels truncate and keep full text in the tooltip. Used by admin AI results and the results dashboard
 - `src/components/ui/input.tsx`: Form input component
 - `src/components/ui/textarea.tsx`: Multi-line text input
 - `src/components/ui/select.tsx`: Radix select primitives themed with site tokens (used by SimpleSelect)

@@ -29,6 +29,7 @@ import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
 import { SimpleSelect } from "../ui/SimpleSelect";
+import { FactChip } from "../ui/FactChip";
 import { useDialog } from "../../hooks/useDialog";
 import {
   LateSubmissionBadge,
@@ -761,6 +762,13 @@ function buildHackathonReport(
   return lines.join("\n");
 }
 
+// One size for every per row action so the toolbar lines up
+const ROW_ACTION =
+  "inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md border px-3 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-hairline-strong disabled:opacity-50";
+const ROW_ACTION_NEUTRAL =
+  "bg-surface border-hairline text-copy hover:bg-surface-hover hover:text-ink";
+const ROW_ACTION_OPEN = "bg-surface-alt border-hairline-strong text-ink";
+
 // Fable and Jev disagree when their scores sit 3 or more points apart
 const SECOND_OPINION_DISAGREE_GAP = 3;
 
@@ -1201,30 +1209,20 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
   const statusBadge = (status: string) => {
     switch (status) {
       case "completed":
-        return (
-          <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">
-            Completed
-          </span>
-        );
+        return <FactChip tone="good">Completed</FactChip>;
       case "running":
         return (
-          <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full inline-flex items-center gap-1">
-            <Loader2 className="w-3 h-3 animate-spin" />
+          <FactChip
+            tone="info"
+            icon={<Loader2 className="w-3 h-3 animate-spin" />}
+          >
             Reviewing
-          </span>
+          </FactChip>
         );
       case "failed":
-        return (
-          <span className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full">
-            Failed
-          </span>
-        );
+        return <FactChip tone="bad">Failed</FactChip>;
       default:
-        return (
-          <span className="px-2 py-1 text-xs bg-surface-alt text-copy rounded-full">
-            Pending
-          </span>
-        );
+        return <FactChip>Pending</FactChip>;
     }
   };
 
@@ -1270,7 +1268,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
           <Sparkles className="w-4 h-4" />
           AI Judge: Best Use of Convex
         </h2>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3">
           {!aiEnabled && (
             <span className="text-sm text-soft">
               AI judge is turned off. Enable it in the AI judge section to run
@@ -1676,7 +1674,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {/* Common cut sizes */}
                   <div
                     className="flex items-center gap-1"
@@ -1720,6 +1718,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                   />
                   <Button
                     variant="outline"
+                    size="sm"
                     onClick={handleShortlistTop}
                     disabled={isShortlisting || completedResults.length === 0}
                     title={
@@ -1729,9 +1728,9 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                     }
                   >
                     {isShortlisting ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                     ) : (
-                      <Star className="w-4 h-4 mr-2" />
+                      <Star className="w-3.5 h-3.5 mr-1.5" />
                     )}
                     Shortlist top {Math.max(1, Math.floor(shortlistN))}
                   </Button>
@@ -1785,255 +1784,251 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                     key={result._id}
                     className="bg-surface rounded-lg border border-hairline"
                   >
-                    {/* Row header */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-                      <div className="flex items-center gap-3 min-w-0">
-                        {result.status === "completed" && (
-                          <span className="flex-shrink-0 w-8 h-8 rounded-full bg-surface-alt text-copy flex items-center justify-center text-sm font-semibold">
-                            {index + 1}
-                          </span>
-                        )}
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <a
-                              href={`/s/${result.storySlug}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="app-title-sm text-ink hover:underline truncate"
-                            >
-                              {result.storyTitle}
-                            </a>
-                            <ExternalLink className="w-3.5 h-3.5 text-faint flex-shrink-0" />
-                            {statusBadge(result.status)}
-                            <LateSubmissionBadge
-                              timing={result.submissionTiming}
+                    {/* Row header: rank, title with facts, score on the right */}
+                    <div className="flex items-start gap-3 p-4">
+                      {result.status === "completed" && (
+                        <span className="flex-shrink-0 w-8 h-8 rounded-full bg-surface-alt text-copy flex items-center justify-center text-sm font-semibold tabular-nums">
+                          {index + 1}
+                        </span>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        {/* Title and review state */}
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-h-8">
+                          <a
+                            href={`/s/${result.storySlug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="app-title-sm text-ink hover:underline inline-flex items-center gap-1.5 min-w-0 max-w-full"
+                          >
+                            <span className="truncate">{result.storyTitle}</span>
+                            <ExternalLink
+                              className="w-3.5 h-3.5 text-faint flex-shrink-0"
+                              aria-hidden="true"
                             />
-                            {isShortlisted && (
-                              <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-50 text-green-700 rounded-full">
-                                <Star className="w-3 h-3 fill-current" />
-                                Shortlisted
-                              </span>
-                            )}
-                            {result.editedAt && (
-                              <span className="px-2 py-1 text-xs bg-amber-50 text-amber-700 rounded-full">
-                                Edited by admin
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-soft">
-                            {result.sourcesUsed && (
-                              <>
-                                <span
-                                  className={`inline-flex items-center gap-1 ${result.sourcesUsed.github ? "text-green-600" : "text-faint"}`}
-                                  title={
-                                    result.sourcesUsed.github
-                                      ? "GitHub repo was analyzed"
-                                      : "GitHub repo was not accessible"
-                                  }
-                                >
-                                  <Github className="w-3 h-3" />
-                                  {result.sourcesUsed.github
-                                    ? "repo"
-                                    : "no repo"}
-                                </span>
-                                <span
-                                  className={`inline-flex items-center gap-1 ${result.sourcesUsed.liveUrl ? "text-green-600" : "text-faint"}`}
-                                  title={
-                                    result.sourcesUsed.liveUrl
-                                      ? "Live site was scraped"
-                                      : "Live site was not scraped"
-                                  }
-                                >
-                                  <Globe className="w-3 h-3" />
-                                  {result.sourcesUsed.liveUrl
-                                    ? "site"
-                                    : "no site"}
-                                </span>
-                                <span
-                                  className={`inline-flex items-center gap-1 ${result.sourcesUsed.videoTranscript ? "text-green-600" : "text-faint"}`}
-                                  title={
-                                    result.sourcesUsed.videoTranscript
-                                      ? "Video transcript/content was included in the review"
-                                      : "No video transcript was available for this review"
-                                  }
-                                >
-                                  <Video className="w-3 h-3" />
-                                  {result.sourcesUsed.videoTranscript
-                                    ? "video"
-                                    : "no video"}
-                                </span>
-                                {/* Social proof chip: only shown once a run
-                                    has recorded the field, so old rows are unchanged */}
-                                {result.sourcesUsed.socialProof !==
-                                  undefined && (
-                                  <span
-                                    className={`inline-flex items-center gap-1 ${result.sourcesUsed.socialProof ? "text-green-600" : "text-faint"}`}
-                                    title={
-                                      result.sourcesUsed.socialProof
-                                        ? "A social launch post was read and included in the review"
-                                        : "No readable social post (none submitted, profile only, or not found)"
-                                    }
-                                  >
-                                    <Megaphone className="w-3 h-3" />
-                                    {result.sourcesUsed.socialProof
-                                      ? "social"
-                                      : "no social"}
-                                  </span>
-                                )}
-                              </>
-                            )}
-                            {result.urlCheck && (
+                          </a>
+                          {statusBadge(result.status)}
+                          <LateSubmissionBadge
+                            timing={result.submissionTiming}
+                          />
+                          {result.editedAt && (
+                            <FactChip tone="warn">Edited by admin</FactChip>
+                          )}
+                        </div>
+
+                        {/* Sources the review read */}
+                        {result.sourcesUsed && (
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs">
+                            {(
+                              [
+                                {
+                                  key: "repo",
+                                  on: result.sourcesUsed.github,
+                                  Icon: Github,
+                                  label: "repo",
+                                  title: result.sourcesUsed.github
+                                    ? "GitHub repo was analyzed"
+                                    : "GitHub repo was not accessible",
+                                },
+                                {
+                                  key: "site",
+                                  on: result.sourcesUsed.liveUrl,
+                                  Icon: Globe,
+                                  label: "site",
+                                  title: result.sourcesUsed.liveUrl
+                                    ? "Live site was scraped"
+                                    : "Live site was not scraped",
+                                },
+                                {
+                                  key: "video",
+                                  on: result.sourcesUsed.videoTranscript,
+                                  Icon: Video,
+                                  label: "video",
+                                  title: result.sourcesUsed.videoTranscript
+                                    ? "Video transcript/content was included in the review"
+                                    : "No video transcript was available for this review",
+                                },
+                                // Social proof: only once a run has recorded the field
+                                ...(result.sourcesUsed.socialProof !== undefined
+                                  ? [
+                                      {
+                                        key: "social",
+                                        on: result.sourcesUsed.socialProof,
+                                        Icon: Megaphone,
+                                        label: "social",
+                                        title: result.sourcesUsed.socialProof
+                                          ? "A social launch post was read and included in the review"
+                                          : "No readable social post (none submitted, profile only, or not found)",
+                                      },
+                                    ]
+                                  : []),
+                              ]
+                            ).map(({ key, on, Icon, label, title }) => (
                               <span
-                                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border ${
-                                  result.urlCheck.isLive
-                                    ? "bg-green-50 text-green-700 border-green-200"
-                                    : "bg-red-50 text-red-700 border-red-200"
-                                }`}
-                                title={`Live app URL check: ${result.urlCheck.note}${result.urlCheck.checkedUrl ? ` (${result.urlCheck.checkedUrl})` : ""}`}
+                                key={key}
+                                className={`inline-flex items-center gap-1 whitespace-nowrap ${on ? "text-green-700 dark:text-green-300" : "text-faint"}`}
+                                title={title}
                               >
-                                {result.urlCheck.isLive
-                                  ? "URL live"
-                                  : result.urlCheck.statusCode === 404
-                                    ? "URL 404"
-                                    : result.urlCheck.checkedUrl
-                                      ? "URL down"
-                                      : "no URL"}
-                              </span>
-                            )}
-                            {result.frontendHosting && (
-                              <span
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-surface-alt text-soft border-hairline"
-                                title={`Frontend hosting detected: ${result.frontendHosting.evidence}. The platform's weight multiplies the frontend checker score in the weighted ranking.`}
-                              >
-                                {FRONTEND_PLATFORM_LABELS[
-                                  result.frontendHosting.platform
-                                ] ?? result.frontendHosting.platform}
-                              </span>
-                            )}
-                            {result.hackathonLogEvent && (
-                              <span
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-surface-alt text-soft border-hairline"
-                                title="Event named in this submission's hackathon.md header. Self-reported, informational only; never used to route, match, or score."
-                              >
-                                {result.hackathonLogEvent}
-                              </span>
-                            )}
-                            {result.authProvider &&
-                              result.authProvider !== "none" && (
-                                <span
-                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-blue-50 text-blue-700 border-blue-200"
-                                  title="Auth library detected from package.json or convex/auth config. Independent of hackathon.md."
-                                >
-                                  {result.authProvider}
-                                </span>
-                              )}
-                            {result.usesAiGateway && (
-                              <span
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200"
-                                title={
-                                  result.aiModelIdsDetected?.length
-                                    ? `Convex AI Gateway used. Models: ${result.aiModelIdsDetected.join(", ")}`
-                                    : "convexGateway() found in convex/ source"
-                                }
-                              >
-                                AI Gateway
-                              </span>
-                            )}
-                            {/* Sponsor integrations: recorded facts, never scored */}
-                            {result.sponsorStack?.map((s) => (
-                              <span
-                                key={`sponsor-${s.sponsor}`}
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200"
-                                title={`${s.sponsor} detected in package.json or convex/ source: ${s.evidence}. Recorded only; sponsor stack is judged by humans.`}
-                              >
-                                {formatSponsor(s)}
+                                <Icon className="w-3 h-3" aria-hidden="true" />
+                                {on ? label : `no ${label}`}
                               </span>
                             ))}
-                            {(result.modelProvidersDetected?.length ?? 0) >
-                              0 && (
-                              <span
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-surface-alt text-soft border-hairline"
-                                title={`Model providers referenced via SDK deps, API key env vars, or model ids${result.aiModelIdsDetected?.length ? `: ${result.aiModelIdsDetected.join(", ")}` : ""}`}
-                              >
-                                models:{" "}
-                                {result.modelProvidersDetected?.join(", ")}
-                              </span>
-                            )}
-                            {(result.logDiscrepancies?.length ?? 0) > 0 && (
-                              <span
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200"
-                                title={`hackathon.md claims that do not match detected facts (recorded only, never scored):\n${(result.logDiscrepancies ?? []).join("\n")}`}
-                              >
-                                {result.logDiscrepancies?.length} log{" "}
-                                {result.logDiscrepancies?.length === 1
-                                  ? "discrepancy"
-                                  : "discrepancies"}
-                              </span>
-                            )}
-                            {result.repoAccess === "private_or_missing" && (
-                              <span
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-red-50 text-red-700 border-red-200"
-                                title="The GitHub repo returned 404: it is private or was deleted. Repo-based criteria were capped."
-                              >
-                                repo private/missing
-                              </span>
-                            )}
-                            {result.gitFacts?.isFork && (
-                              <span
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200"
-                                title={`Forked from ${result.gitFacts.parentRepo || "another repo"}`}
-                              >
-                                fork
-                              </span>
-                            )}
-                            {result.gitFacts?.builtDuringEvent ===
-                              "in_window" && (
-                              <span
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200"
-                                title="First commit falls inside the event window. Commit dates can be rewritten with force-push, so treat this as a strong signal, not proof."
-                              >
-                                built in window
-                              </span>
-                            )}
-                            {result.gitFacts?.builtDuringEvent ===
-                              "started_before" && (
-                              <span
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200"
-                                title="First commit predates the event window. Commit dates can be rewritten with force-push, so verify before disqualifying."
-                              >
-                                started before
-                              </span>
-                            )}
-                            {result.judgeProvider && (
-                              <span title={result.judgeModel}>
-                                via {result.judgeProvider}
-                              </span>
-                            )}
                           </div>
+                        )}
+
+                        {/* Recorded facts: detected, never scored unless noted */}
+                        <div className="flex flex-wrap items-center gap-1.5 mt-2 empty:hidden">
+                          {result.urlCheck && (
+                            <FactChip
+                              tone={result.urlCheck.isLive ? "good" : "bad"}
+                              title={`Live app URL check: ${result.urlCheck.note}${result.urlCheck.checkedUrl ? ` (${result.urlCheck.checkedUrl})` : ""}`}
+                            >
+                              {result.urlCheck.isLive
+                                ? "URL live"
+                                : result.urlCheck.statusCode === 404
+                                  ? "URL 404"
+                                  : result.urlCheck.checkedUrl
+                                    ? "URL down"
+                                    : "no URL"}
+                            </FactChip>
+                          )}
+                          {result.frontendHosting && (
+                            <FactChip
+                              title={`Frontend hosting detected: ${result.frontendHosting.evidence}. The platform's weight multiplies the frontend checker score in the weighted ranking.`}
+                            >
+                              {FRONTEND_PLATFORM_LABELS[
+                                result.frontendHosting.platform
+                              ] ?? result.frontendHosting.platform}
+                            </FactChip>
+                          )}
+                          {result.hackathonLogEvent && (
+                            <FactChip
+                              title={`${result.hackathonLogEvent}: event named in this submission's hackathon.md header. Self-reported, informational only; never used to route, match, or score.`}
+                            >
+                              {result.hackathonLogEvent}
+                            </FactChip>
+                          )}
+                          {result.authProvider &&
+                            result.authProvider !== "none" && (
+                              <FactChip
+                                tone="info"
+                                title="Auth library detected from package.json or convex/auth config. Independent of hackathon.md."
+                              >
+                                {result.authProvider}
+                              </FactChip>
+                            )}
+                          {result.usesAiGateway && (
+                            <FactChip
+                              tone="good"
+                              title={
+                                result.aiModelIdsDetected?.length
+                                  ? `Convex AI Gateway used. Models: ${result.aiModelIdsDetected.join(", ")}`
+                                  : "convexGateway() found in convex/ source"
+                              }
+                            >
+                              AI Gateway
+                            </FactChip>
+                          )}
+                          {/* Sponsor integrations: recorded facts, never scored */}
+                          {result.sponsorStack?.map((s) => (
+                            <FactChip
+                              key={`sponsor-${s.sponsor}`}
+                              tone="good"
+                              title={`${formatSponsor(s)}: detected in package.json or convex/ source: ${s.evidence}. Recorded only; sponsor stack is judged by humans.`}
+                            >
+                              {formatSponsor(s)}
+                            </FactChip>
+                          ))}
+                          {(result.modelProvidersDetected?.length ?? 0) > 0 && (
+                            <FactChip
+                              title={`Model providers referenced via SDK deps, API key env vars, or model ids${result.aiModelIdsDetected?.length ? `: ${result.aiModelIdsDetected.join(", ")}` : ""}`}
+                            >
+                              models: {result.modelProvidersDetected?.join(", ")}
+                            </FactChip>
+                          )}
+                          {(result.logDiscrepancies?.length ?? 0) > 0 && (
+                            <FactChip
+                              tone="warn"
+                              title={`hackathon.md claims that do not match detected facts (recorded only, never scored):\n${(result.logDiscrepancies ?? []).join("\n")}`}
+                            >
+                              {result.logDiscrepancies?.length} log{" "}
+                              {result.logDiscrepancies?.length === 1
+                                ? "discrepancy"
+                                : "discrepancies"}
+                            </FactChip>
+                          )}
+                          {result.repoAccess === "private_or_missing" && (
+                            <FactChip
+                              tone="bad"
+                              title="The GitHub repo returned 404: it is private or was deleted. Repo-based criteria were capped."
+                            >
+                              repo private/missing
+                            </FactChip>
+                          )}
+                          {result.gitFacts?.isFork && (
+                            <FactChip
+                              tone="warn"
+                              title={`Forked from ${result.gitFacts.parentRepo || "another repo"}`}
+                            >
+                              fork
+                            </FactChip>
+                          )}
+                          {result.gitFacts?.builtDuringEvent === "in_window" && (
+                            <FactChip
+                              tone="good"
+                              title="First commit falls inside the event window. Commit dates can be rewritten with force-push, so treat this as a strong signal, not proof."
+                            >
+                              built in window
+                            </FactChip>
+                          )}
+                          {result.gitFacts?.builtDuringEvent ===
+                            "started_before" && (
+                            <FactChip
+                              tone="warn"
+                              title="First commit predates the event window. Commit dates can be rewritten with force-push, so verify before disqualifying."
+                            >
+                              started before
+                            </FactChip>
+                          )}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        {result.status === "completed" &&
-                          result.averageScore !== undefined && (
-                            <div className="text-right">
-                              <p className="text-lg font-semibold text-ink">
-                                {result.averageScore.toFixed(1)}
-                                <span className="text-sm text-faint">/10</span>
-                              </p>
-                              <p className="text-xs text-soft">
-                                total {result.totalScore}
-                                {result.weightedScore !== undefined &&
-                                  result.weightedScore !==
-                                    result.totalScore && (
-                                    <span title="Weighted total using this group's rubric weights; ranking uses this value.">
-                                      {" "}
-                                      / weighted {result.weightedScore}
-                                    </span>
-                                  )}
-                              </p>
-                            </div>
-                          )}
+                      {/* Score: average leads, totals underneath */}
+                      {result.status === "completed" &&
+                        result.averageScore !== undefined && (
+                          <div className="flex-shrink-0 pl-2 text-right">
+                            <p className="text-xl font-semibold leading-8 text-ink tabular-nums">
+                              {result.averageScore.toFixed(1)}
+                              <span className="text-sm font-normal text-faint">
+                                /10
+                              </span>
+                            </p>
+                            <p className="text-xs text-soft tabular-nums whitespace-nowrap">
+                              total {result.totalScore}
+                            </p>
+                            {result.weightedScore !== undefined &&
+                              result.weightedScore !== result.totalScore && (
+                                <p
+                                  className="text-xs text-soft tabular-nums whitespace-nowrap"
+                                  title="Weighted total using this group's rubric weights; ranking uses this value."
+                                >
+                                  weighted {result.weightedScore}
+                                </p>
+                              )}
+                          </div>
+                        )}
+                    </div>
+
+                    {/* Row toolbar: reviewer meta left, actions right */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-hairline px-4 py-2.5">
+                      <span
+                        className="text-xs text-faint truncate min-w-0"
+                        title={result.judgeModel}
+                      >
+                        {result.judgeProvider
+                          ? `Reviewed via ${result.judgeProvider}`
+                          : ""}
+                      </span>
+                      <div className="flex flex-wrap items-center gap-2 ml-auto">
                         {/* Per row shortlist toggle */}
                         <button
                           type="button"
@@ -2044,10 +2039,10 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                             )
                           }
                           disabled={isToggling}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors font-medium disabled:opacity-50 ${
+                          className={`${ROW_ACTION} ${
                             isShortlisted
-                              ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
-                              : "bg-surface border-hairline text-copy hover:text-ink hover:bg-surface-hover hover:border-hairline-strong"
+                              ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100 dark:bg-green-500/10 dark:border-green-500/30 dark:text-green-300 dark:hover:bg-green-500/20"
+                              : ROW_ACTION_NEUTRAL
                           }`}
                           title={
                             isShortlisted
@@ -2067,8 +2062,9 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                         </button>
                         {result.status === "failed" && (
                           <button
+                            type="button"
                             onClick={() => handleRetry(result._id)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
+                            className={`${ROW_ACTION} ${ROW_ACTION_NEUTRAL}`}
                             title="Retry AI review for this submission"
                           >
                             <RefreshCw className="w-3.5 h-3.5" />
@@ -2077,12 +2073,13 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                         )}
                         {result.status === "completed" && (
                           <button
+                            type="button"
                             onClick={() =>
                               setOpenBriefId(
                                 isBriefOpen ? null : result._id,
                               )
                             }
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-colors font-medium"
+                            className={`${ROW_ACTION} ${isBriefOpen ? ROW_ACTION_OPEN : ROW_ACTION_NEUTRAL}`}
                             title={
                               isBriefOpen
                                 ? "Close submission brief"
@@ -2102,16 +2099,23 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                         )}
                         {result.status === "completed" && (
                           <button
+                            type="button"
                             onClick={() =>
                               setExpandedId(isExpanded ? null : result._id)
                             }
-                            className="p-2 text-soft hover:text-copy hover:bg-surface-hover rounded-lg transition-colors"
-                            title={isExpanded ? "Collapse" : "Expand details"}
+                            className={`${ROW_ACTION} ${isExpanded ? ROW_ACTION_OPEN : ROW_ACTION_NEUTRAL}`}
+                            title={
+                              isExpanded
+                                ? "Hide criteria scores and repo facts"
+                                : "Show criteria scores and repo facts"
+                            }
+                            aria-expanded={isExpanded}
                           >
+                            Details
                             {isExpanded ? (
-                              <ChevronUp className="w-4 h-4" />
+                              <ChevronUp className="w-3.5 h-3.5" />
                             ) : (
-                              <ChevronDown className="w-4 h-4" />
+                              <ChevronDown className="w-3.5 h-3.5" />
                             )}
                           </button>
                         )}
@@ -2191,8 +2195,9 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                           </h4>
                           {!isEditing ? (
                             <button
+                              type="button"
                               onClick={() => startEditing(result)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
+                              className={`${ROW_ACTION} ${ROW_ACTION_NEUTRAL}`}
                             >
                               <Pencil className="w-3.5 h-3.5" />
                               Edit Scores
@@ -2231,12 +2236,16 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                               key={cs.key}
                               className="bg-surface-alt border border-hairline rounded-md p-3"
                             >
-                              <div className="flex items-center justify-between gap-3">
-                                <p className="text-sm font-medium text-ink">
+                              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                                <p className="text-sm font-medium text-ink min-w-0">
                                   {cs.label}
                                 </p>
                                 {isEditing ? (
-                                  <div className="flex items-center gap-1">
+                                  <div
+                                    className="flex flex-wrap items-center gap-1"
+                                    role="group"
+                                    aria-label={`Score for ${cs.label}`}
+                                  >
                                     {Array.from(
                                       { length: 10 },
                                       (_, i) => i + 1,
@@ -2253,7 +2262,8 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                             ),
                                           )
                                         }
-                                        className={`w-7 h-7 rounded text-xs font-medium border transition-colors ${
+                                        aria-pressed={cs.score === score}
+                                        className={`w-7 h-7 rounded text-xs font-medium tabular-nums border transition-colors ${
                                           cs.score === score
                                             ? "bg-cta text-on-cta border-ink"
                                             : "bg-surface text-copy border-hairline hover:border-hairline-strong"
