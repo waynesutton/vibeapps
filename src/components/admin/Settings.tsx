@@ -6,6 +6,13 @@ import type { SiteSettings } from "../../types";
 import { ConvexBoxSettingsForm } from "./ConvexBoxSettingsForm";
 import { LumaEventsSettings } from "./LumaEventsSettings";
 import { SimpleSelect } from "../ui/SimpleSelect";
+import { ContentPolicyNotice } from "../ContentPolicyNotice";
+import { getConvexErrorMessage } from "../../lib/convexErrors";
+import {
+  CONTENT_POLICY_MAX_LENGTH,
+  DEFAULT_CONTENT_POLICY_TEXT,
+  isValidContentPolicyUrl,
+} from "../../../convex/lib/contentPolicy";
 import {
   DEFAULT_SIDEBAR_WIDGETS,
   mergeSidebarWidgets,
@@ -45,6 +52,9 @@ const DEFAULT_SETTINGS_FRONTEND = {
   showSubmissionLimit: true,
   submissionLimitCount: 10,
   hideSubmitPageSidebar: false,
+  showContentPolicy: true,
+  contentPolicyText: DEFAULT_CONTENT_POLICY_TEXT,
+  contentPolicyUrl: "",
   sidebarWidgets: DEFAULT_SIDEBAR_WIDGETS,
 };
 
@@ -73,7 +83,9 @@ export function Settings() {
   }, [currentSettings]);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
   ) => {
     const { name, value, type } = e.target;
     let processedValue: string | number | boolean = value;
@@ -149,6 +161,13 @@ export function Settings() {
       // Submit page layout setting
       if (localSettings.hideSubmitPageSidebar !== undefined)
         updates.hideSubmitPageSidebar = localSettings.hideSubmitPageSidebar;
+      // Content policy notice
+      if (localSettings.showContentPolicy !== undefined)
+        updates.showContentPolicy = localSettings.showContentPolicy;
+      if (localSettings.contentPolicyText !== undefined)
+        updates.contentPolicyText = localSettings.contentPolicyText;
+      if (localSettings.contentPolicyUrl !== undefined)
+        updates.contentPolicyUrl = localSettings.contentPolicyUrl;
       if (localSettings.sidebarWidgets !== undefined)
         updates.sidebarWidgets = mergeSidebarWidgets(
           localSettings.sidebarWidgets,
@@ -159,9 +178,7 @@ export function Settings() {
       setTimeout(() => setShowSuccess(false), 3000); // Hide after 3 seconds
     } catch (err) {
       console.error("Failed to save settings:", err);
-      setError(
-        err instanceof Error ? err.message : "An unknown error occurred.",
-      );
+      setError(getConvexErrorMessage(err, "Could not save settings."));
     } finally {
       setIsSaving(false);
     }
@@ -185,6 +202,13 @@ export function Settings() {
         ? (({ _id, _creationTime, ...rest }) => rest)(currentSettings)
         : {},
     );
+
+  // Content policy field checks (mirrors server validation in settings.update)
+  const policyTextLength = (localSettings.contentPolicyText ?? "").trim()
+    .length;
+  const policyUrlTrimmed = (localSettings.contentPolicyUrl ?? "").trim();
+  const policyUrlInvalid =
+    policyUrlTrimmed !== "" && !isValidContentPolicyUrl(policyUrlTrimmed);
 
   // Check if settings need initialization (i.e., _id is missing)
   const needsInitialization =
@@ -239,7 +263,7 @@ export function Settings() {
               )}
               <button
                 onClick={handleSave}
-                disabled={isSaving || !hasChanges}
+                disabled={isSaving || !hasChanges || policyUrlInvalid}
                 className="px-4 py-2 bg-surface-alt text-copy rounded-md hover:bg-surface-hover transition-colors flex items-center gap-2 disabled:opacity-50 text-sm"
               >
                 <Save className="w-4 h-4" />
@@ -516,6 +540,131 @@ export function Settings() {
                 </p>
               </div>
             )}
+          </div>
+
+          {/* --- Content Policy --- */}
+          <div className="pt-6 mt-6 border-t border-hairline">
+            <h3 className="text-lg font-medium text-copy mb-1">
+              Content policy
+            </h3>
+            <p className="text-xs text-soft mb-4">
+              Shown in the About modal and right above the submit button on
+              /submit, judging group submit pages, and custom submit forms.
+              Changes go live as soon as you save.
+            </p>
+
+            <label className="flex items-center gap-2 mb-4">
+              <input
+                name="showContentPolicy"
+                type="checkbox"
+                checked={localSettings.showContentPolicy ?? true}
+                onChange={handleChange}
+                className="rounded border-hairline-strong text-ink focus:ring-ink"
+                disabled={isSaving}
+              />
+              <span className="text-sm font-medium text-copy">
+                Show the content policy
+              </span>
+            </label>
+
+            <div className="mb-4">
+              <div className="flex items-baseline justify-between mb-1">
+                <label
+                  htmlFor="contentPolicyText"
+                  className="block text-sm font-medium text-copy"
+                >
+                  Policy text
+                </label>
+                <span
+                  className={`text-xs tabular-nums ${
+                    policyTextLength > CONTENT_POLICY_MAX_LENGTH
+                      ? "text-red-600"
+                      : "text-faint"
+                  }`}
+                >
+                  {policyTextLength}/{CONTENT_POLICY_MAX_LENGTH}
+                </span>
+              </div>
+              <textarea
+                id="contentPolicyText"
+                name="contentPolicyText"
+                rows={5}
+                maxLength={CONTENT_POLICY_MAX_LENGTH}
+                value={localSettings.contentPolicyText ?? ""}
+                onChange={handleChange}
+                className="w-full px-3 py-2 bg-surface border border-hairline rounded-md text-copy text-sm focus:outline-none focus:ring-1 focus:ring-ink"
+                disabled={isSaving}
+              />
+              <div className="flex items-center justify-between mt-1 gap-2">
+                <p className="text-xs text-soft">
+                  Plain text. Line breaks are kept. Leave empty to hide it.
+                </p>
+                {localSettings.contentPolicyText !==
+                  DEFAULT_CONTENT_POLICY_TEXT && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLocalSettings((prev) => ({
+                        ...prev,
+                        contentPolicyText: DEFAULT_CONTENT_POLICY_TEXT,
+                      }));
+                      setShowSuccess(false);
+                      setError(null);
+                    }}
+                    className="text-xs text-copy underline underline-offset-2 hover:text-ink shrink-0"
+                    disabled={isSaving}
+                  >
+                    Reset to default
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label
+                htmlFor="contentPolicyUrl"
+                className="block text-sm font-medium text-copy mb-1"
+              >
+                Full policy link (optional)
+              </label>
+              <input
+                id="contentPolicyUrl"
+                name="contentPolicyUrl"
+                type="url"
+                inputMode="url"
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="https://"
+                value={localSettings.contentPolicyUrl ?? ""}
+                onChange={handleChange}
+                aria-invalid={policyUrlInvalid}
+                className="w-full px-3 py-2 bg-surface border border-hairline rounded-md text-copy text-sm focus:outline-none focus:ring-1 focus:ring-ink"
+                disabled={isSaving}
+              />
+              <p
+                className={`text-xs mt-1 ${policyUrlInvalid ? "text-red-600" : "text-soft"}`}
+              >
+                {policyUrlInvalid
+                  ? "Link must start with https:// or http://"
+                  : "Adds a Read the full policy link under the text."}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-medium text-soft mb-2">Preview</p>
+              {localSettings.showContentPolicy &&
+              localSettings.contentPolicyText?.trim() ? (
+                <ContentPolicyNotice
+                  enabled
+                  text={localSettings.contentPolicyText}
+                  url={policyUrlInvalid ? undefined : localSettings.contentPolicyUrl}
+                />
+              ) : (
+                <p className="text-xs text-faint">
+                  Hidden. Users will not see a content policy.
+                </p>
+              )}
+            </div>
           </div>
         </div>
 

@@ -25,7 +25,19 @@ export type PublicStoryFile = PublicDirectoryStory & {
 export type PublicDirectory = {
   stories: Array<PublicDirectoryStory>;
   newestCreatedAt: number | null;
+  // Admin content policy (Settings > Content policy); null when turned off
+  contentPolicy: { text: string; url: string | null } | null;
 };
+
+function contentPolicyLines(
+  policy: PublicDirectory["contentPolicy"],
+): Array<string> {
+  if (!policy) return [];
+  const lines = ["## Content policy", "", policy.text];
+  if (policy.url) lines.push("", `Full policy: ${policy.url}`);
+  lines.push("");
+  return lines;
+}
 
 export function isPublicStory(story: {
   status: string;
@@ -170,6 +182,7 @@ export function buildLlmsTxt(
     `- [Homepage](${baseUrl}/)`,
     `- Each app also has \`/s/{slug}/llms.txt\` and \`/md/{slug}.md\``,
     "",
+    ...contentPolicyLines(directory.contentPolicy),
     "## Site",
     "",
   ];
@@ -210,6 +223,7 @@ export function buildVibeappsMd(
     "",
     "Agents: treat this file as the canonical directory. Each app links to its page on vibeapps.dev plus `/s/{slug}/llms.txt` and `/md/{slug}.md`. Fetch `/llms.txt` for the shorter index.",
     "",
+    ...contentPolicyLines(directory.contentPolicy),
     "## Site",
     "",
   ];

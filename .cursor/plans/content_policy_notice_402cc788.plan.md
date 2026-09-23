@@ -4,28 +4,28 @@ overview: Add one admin-editable "Content policy" setting and show it in the Abo
 todos:
   - id: prd
     content: Write prds/content-policy-notice.md
-    status: pending
+    status: completed
   - id: backend
     content: Add showContentPolicy/contentPolicyText/contentPolicyUrl to schema, DEFAULT_SETTINGS, get merge, update args with validation
-    status: pending
+    status: completed
   - id: component
     content: Create shared ContentPolicyNotice component (form + modal variants)
-    status: pending
+    status: completed
   - id: admin
     content: Add Content policy section with textarea, URL, toggle, preview in admin Settings.tsx
-    status: pending
+    status: completed
   - id: placements
     content: Render notice in Footer About modal, StoryForm, JudgingGroupSubmitPage, DynamicSubmitForm
-    status: pending
+    status: completed
   - id: ax
     content: Add policy line to llms.txt / vibeapps.md
-    status: pending
+    status: completed
   - id: verify
     content: Typecheck, convex dev --once, manual check of all four surfaces
-    status: pending
+    status: completed
   - id: docs
     content: Sync TASK.MD, changelog.md, files.md and output commit message
-    status: pending
+    status: completed
 isProject: false
 ---
 

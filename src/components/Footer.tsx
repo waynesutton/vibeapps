@@ -2,9 +2,13 @@ import React from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { ContentPolicyNotice } from "./ContentPolicyNotice";
 
 export function Footer() {
   const [showAboutModal, setShowAboutModal] = React.useState(false);
+  const settings = useQuery(api.settings.get);
 
   return (
     <footer className="mt-12">
@@ -58,7 +62,7 @@ export function Footer() {
       <Dialog.Root open={showAboutModal} onOpenChange={setShowAboutModal}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50 z-40" />
-          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface p-6 rounded-lg shadow-xl w-[90vw] max-w-md z-50">
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface p-6 rounded-lg shadow-xl w-[90vw] max-w-md max-h-[85vh] overflow-y-auto overscroll-contain z-50">
             <div className="flex justify-between items-start mb-4">
               <Dialog.Title className="text-lg font-medium text-ink">About Vibe Apps</Dialog.Title>
               <Dialog.Close className="text-soft hover:text-copy">
@@ -89,7 +93,14 @@ export function Footer() {
                 Whether it's a weekend build, for a hackathon, or just vibe coding, drop it
                 here.{" "}
               </p>
-              <p></p>
+
+              <ContentPolicyNotice
+                variant="modal"
+                enabled={settings?.showContentPolicy}
+                text={settings?.contentPolicyText}
+                url={settings?.contentPolicyUrl}
+                className="border-l-2 border-hairline-strong pl-3 my-4"
+              />
 
               <p>
                 <a

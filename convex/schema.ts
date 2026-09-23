@@ -302,6 +302,10 @@ export default defineSchema({
     showHackathonTeamInfo: v.optional(v.boolean()),
     // Default /submit page layout: hide right sidebar and widen the form
     hideSubmitPageSidebar: v.optional(v.boolean()),
+    // Content policy notice shown in the About modal and above submit buttons
+    showContentPolicy: v.optional(v.boolean()),
+    contentPolicyText: v.optional(v.string()),
+    contentPolicyUrl: v.optional(v.string()),
     // Catalog sidebar widgets. entireApp false hides that widget everywhere
     // and wins over judging group pages for Most Vibes / Recent Vibers /
     // Top Categories. Luma is different: judging groups have their own hide

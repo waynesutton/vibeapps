@@ -5,7 +5,7 @@ import {
   internalMutation,
   type MutationCtx,
 } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { requirePermission, hasPermission } from "./adminAccess"; // Granular admin permissions
 import { logActivity } from "./activityLog"; // Admin activity log
@@ -15,6 +15,11 @@ import {
   emailTypeSettingKey,
   emailTypeValidator,
 } from "./emails/emailTypes";
+import {
+  CONTENT_POLICY_MAX_LENGTH,
+  DEFAULT_CONTENT_POLICY_TEXT,
+  isValidContentPolicyUrl,
+} from "./lib/contentPolicy";
 
 // Define the type for SortPeriod based on schema/frontend usage
 export type SortPeriodConvex = Doc<"settings">["defaultSortPeriod"]; // Infer from schema
@@ -40,6 +45,10 @@ const DEFAULT_SETTINGS = {
   showHackathonTeamInfo: false,
   // Default /submit page layout: hide right sidebar and widen the form
   hideSubmitPageSidebar: false,
+  // Content policy notice (About modal and above submit buttons)
+  showContentPolicy: true,
+  contentPolicyText: DEFAULT_CONTENT_POLICY_TEXT,
+  contentPolicyUrl: "",
   // Catalog sidebar widgets. entireApp off hides the block everywhere
   // except Luma on judging group pages (those use hideLumaEvents).
   sidebarWidgets: {
@@ -201,6 +210,12 @@ export const get = query({
       hideSubmitPageSidebar:
         settingsDoc.hideSubmitPageSidebar ??
         DEFAULT_SETTINGS.hideSubmitPageSidebar,
+      showContentPolicy:
+        settingsDoc.showContentPolicy ?? DEFAULT_SETTINGS.showContentPolicy,
+      contentPolicyText:
+        settingsDoc.contentPolicyText ?? DEFAULT_SETTINGS.contentPolicyText,
+      contentPolicyUrl:
+        settingsDoc.contentPolicyUrl ?? DEFAULT_SETTINGS.contentPolicyUrl,
       sidebarWidgets: mergeSidebarWidgets(settingsDoc.sidebarWidgets),
       maxTagsPerSubmission:
         settingsDoc.maxTagsPerSubmission ??
@@ -315,6 +330,10 @@ export const update = mutation({
     showHackathonTeamInfo: v.optional(v.boolean()),
     // Default /submit page layout: hide right sidebar and widen the form
     hideSubmitPageSidebar: v.optional(v.boolean()),
+    // Content policy notice
+    showContentPolicy: v.optional(v.boolean()),
+    contentPolicyText: v.optional(v.string()),
+    contentPolicyUrl: v.optional(v.string()),
     sidebarWidgets: v.optional(sidebarWidgetsValidator),
     // Tag limit settings
     maxTagsPerSubmission: v.optional(v.number()),
@@ -327,8 +346,29 @@ export const update = mutation({
     if (!settings) {
       throw new Error("Settings not initialized. Cannot update.");
     }
-    const { sidebarWidgets, ...rest } = args;
+    const { sidebarWidgets, contentPolicyText, contentPolicyUrl, ...rest } =
+      args;
     const patch: Record<string, unknown> = { ...rest };
+    // Content policy text: trimmed and capped; empty string hides the notice
+    if (contentPolicyText !== undefined) {
+      const text = contentPolicyText.trim();
+      if (text.length > CONTENT_POLICY_MAX_LENGTH) {
+        throw new ConvexError(
+          `Content policy must be ${CONTENT_POLICY_MAX_LENGTH} characters or fewer`,
+        );
+      }
+      patch.contentPolicyText = text;
+    }
+    // Content policy link: optional, http(s) only
+    if (contentPolicyUrl !== undefined) {
+      const url = contentPolicyUrl.trim();
+      if (url && !isValidContentPolicyUrl(url)) {
+        throw new ConvexError(
+          "Content policy link must start with https:// or http://",
+        );
+      }
+      patch.contentPolicyUrl = url;
+    }
     if (sidebarWidgets !== undefined) {
       patch.sidebarWidgets = mergeSidebarWidgets(sidebarWidgets);
     }

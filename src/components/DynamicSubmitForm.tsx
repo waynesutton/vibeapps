@@ -9,6 +9,7 @@ import { Label } from "./ui/label";
 import { CheckCircle, AlertCircle } from "lucide-react";
 import { ChoiceFieldInput } from "./ui/ChoiceFieldInput";
 import { Doc } from "../../convex/_generated/dataModel";
+import { ContentPolicyNotice } from "./ContentPolicyNotice";
 
 type FormField = Doc<"storyFormFields">;
 
@@ -22,6 +23,7 @@ export function DynamicSubmitForm() {
     slug: slug || "",
   });
   const submitFormData = useMutation(api.stories.submitDynamic);
+  const settings = useQuery(api.settings.get);
   // const generateUploadUrl = useMutation(api.stories.generateUploadUrl); // Unused - file upload removed
 
   const [formData, setFormData] = useState<FormData>({});
@@ -334,7 +336,12 @@ export function DynamicSubmitForm() {
               )}
             </div>
 
-            <div className="pt-6">
+            <div className="pt-6 space-y-4">
+              <ContentPolicyNotice
+                enabled={settings?.showContentPolicy}
+                text={settings?.contentPolicyText}
+                url={settings?.contentPolicyUrl}
+              />
               <Button
                 type="submit"
                 disabled={isSubmitting}

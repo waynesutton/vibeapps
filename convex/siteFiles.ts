@@ -17,6 +17,7 @@ import {
   type PublicDirectoryStory,
   type PublicStoryFile,
 } from "./siteDirectory";
+import { DEFAULT_CONTENT_POLICY_TEXT } from "./lib/contentPolicy";
 
 const publicDirectoryStoryValidator = v.object({
   title: v.string(),
@@ -48,6 +49,10 @@ const publicStoryFileValidator = v.object({
 const publicDirectoryValidator = v.object({
   stories: v.array(publicDirectoryStoryValidator),
   newestCreatedAt: v.union(v.number(), v.null()),
+  contentPolicy: v.union(
+    v.object({ text: v.string(), url: v.union(v.string(), v.null()) }),
+    v.null(),
+  ),
 });
 
 export const getFile = internalQuery({
@@ -118,7 +123,18 @@ export const listPublicDirectory = internalQuery({
       }
     }
 
-    return { stories, newestCreatedAt };
+    // Content policy mirrors settings.get defaults: on, default text
+    const settings = await ctx.db.query("settings").first();
+    const policyText = (
+      settings?.contentPolicyText ?? DEFAULT_CONTENT_POLICY_TEXT
+    ).trim();
+    const policyUrl = settings?.contentPolicyUrl?.trim() || null;
+    const contentPolicy =
+      (settings?.showContentPolicy ?? true) && policyText
+        ? { text: policyText, url: policyUrl }
+        : null;
+
+    return { stories, newestCreatedAt, contentPolicy };
   },
 });
 

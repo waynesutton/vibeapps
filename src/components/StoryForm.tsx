@@ -10,6 +10,7 @@ import { useAuth } from "@clerk/clerk-react";
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
 import { ChoiceFieldInput } from "./ui/ChoiceFieldInput";
 import { getConvexErrorMessage } from "../lib/convexErrors";
+import { ContentPolicyNotice } from "./ContentPolicyNotice";
 
 // Inherits _id, _creationTime, name, showInHeader, isHidden?, backgroundColor?, textColor?
 type Tag = Doc<"tags">;
@@ -1217,6 +1218,11 @@ export function StoryForm() {
               </p>
             )}
           </div>
+          <ContentPolicyNotice
+            enabled={settings?.showContentPolicy}
+            text={settings?.contentPolicyText}
+            url={settings?.contentPolicyUrl}
+          />
           <div className="flex gap-4 items-center pt-4 border-t border-hairline">
             <button
               type="submit"

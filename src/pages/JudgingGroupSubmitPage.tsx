@@ -19,6 +19,7 @@ import { Link } from "react-router-dom";
 import { authUrlWithReturn } from "../lib/redirectPath";
 import { LumaEventList } from "../components/LumaEventList";
 import { CountdownTimer } from "../components/CountdownTimer";
+import { ContentPolicyNotice } from "../components/ContentPolicyNotice";
 
 // Default required state for each configurable submission field.
 // Mirrors the admin defaults in EditJudgingGroupModal.
@@ -1876,6 +1877,12 @@ function SubmissionFormContent({
           </div>
         </>
       )}
+
+      <ContentPolicyNotice
+        enabled={siteSettings?.showContentPolicy}
+        text={siteSettings?.contentPolicyText}
+        url={siteSettings?.contentPolicyUrl}
+      />
 
       {/* Submit Button */}
       <Button

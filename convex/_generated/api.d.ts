@@ -59,6 +59,7 @@ import type * as judgingCriteria from "../judgingCriteria.js";
 import type * as judgingGroupSubmissions from "../judgingGroupSubmissions.js";
 import type * as judgingGroups from "../judgingGroups.js";
 import type * as lib_aiRank from "../lib/aiRank.js";
+import type * as lib_contentPolicy from "../lib/contentPolicy.js";
 import type * as lib_judgeQueue from "../lib/judgeQueue.js";
 import type * as lib_llm from "../lib/llm.js";
 import type * as lib_reactionEmojis from "../lib/reactionEmojis.js";
@@ -147,6 +148,7 @@ declare const fullApi: ApiFromModules<{
   judgingGroupSubmissions: typeof judgingGroupSubmissions;
   judgingGroups: typeof judgingGroups;
   "lib/aiRank": typeof lib_aiRank;
+  "lib/contentPolicy": typeof lib_contentPolicy;
   "lib/judgeQueue": typeof lib_judgeQueue;
   "lib/llm": typeof lib_llm;
   "lib/reactionEmojis": typeof lib_reactionEmojis;
