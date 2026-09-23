@@ -318,6 +318,21 @@ type GitFactsSummary = {
   parentRepo?: string;
 };
 
+// Status filter values mirror the result lifecycle
+type StatusFilter = "all" | "completed" | "failed" | "running" | "pending";
+type SortMode = "rank" | "title" | "reason";
+
+// Group key for a failure: first line of the error with URLs and long
+// numbers (ids, timestamps, byte counts) collapsed so repeats group together
+function failureReason(error?: string): string {
+  const firstLine = error?.split("\n")[0]?.trim();
+  if (!firstLine) return "No error message recorded";
+  return firstLine
+    .replace(/https?:\/\/\S+/g, "<url>")
+    .replace(/\d{4,}/g, "#")
+    .slice(0, 160);
+}
+
 // Eligibility filter values: git build timeline plus submission timing
 type TimelineFilter =
   | "all"
@@ -949,6 +964,10 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
   // Eligibility filter: build timeline (git first commit vs event start) and
   // submission timing (submitted vs event end)
   const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>("all");
+  // Status filter, failure reason pick (only used with Failed), and sort
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [reasonFilter, setReasonFilter] = useState<string | null>(null);
+  const [sortMode, setSortMode] = useState<SortMode>("rank");
   const [reportMarkdown, setReportMarkdown] = useState<string | null>(null);
   const [reportCopied, setReportCopied] = useState(false);
   const [recapMarkdown, setRecapMarkdown] = useState<string | null>(null);
@@ -1238,13 +1257,70 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
   const rankById = new Map(
     (data?.results || []).map((r, index) => [r._id, index + 1]),
   );
-  const visibleResults = (data?.results || []).filter((r) => {
-    if (timelineFilter === "all") return true;
-    if (timelineFilter === "late" || timelineFilter === "on_time") {
-      return r.submissionTiming.status === timelineFilter;
+  // Failed rows grouped by reason, most common first
+  const failureGroups = (() => {
+    const groups = new Map<string, number>();
+    for (const r of data?.results || []) {
+      if (r.status !== "failed") continue;
+      const reason = failureReason(r.error);
+      groups.set(reason, (groups.get(reason) ?? 0) + 1);
     }
-    return r.gitFacts?.builtDuringEvent === timelineFilter;
-  });
+    return [...groups.entries()]
+      .map(([reason, count]) => ({ reason, count }))
+      .sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason));
+  })();
+  // A picked reason only applies with the Failed filter and while that
+  // group still has rows (retries empty groups live)
+  const activeReason =
+    statusFilter === "failed" &&
+    reasonFilter !== null &&
+    failureGroups.some((g) => g.reason === reasonFilter)
+      ? reasonFilter
+      : null;
+
+  const visibleResults = (data?.results || [])
+    .filter((r) => {
+      if (statusFilter !== "all" && r.status !== statusFilter) return false;
+      if (activeReason !== null && failureReason(r.error) !== activeReason) {
+        return false;
+      }
+      if (timelineFilter === "all") return true;
+      if (timelineFilter === "late" || timelineFilter === "on_time") {
+        return r.submissionTiming.status === timelineFilter;
+      }
+      return r.gitFacts?.builtDuringEvent === timelineFilter;
+    })
+    .sort((a, b) => {
+      const byRank = (rankById.get(a._id) ?? 0) - (rankById.get(b._id) ?? 0);
+      if (sortMode === "title") {
+        return a.storyTitle.localeCompare(b.storyTitle) || byRank;
+      }
+      if (sortMode === "reason") {
+        // Failed rows first, grouped by reason; everything else keeps rank
+        const aFailed = a.status === "failed";
+        const bFailed = b.status === "failed";
+        if (aFailed !== bFailed) return aFailed ? -1 : 1;
+        if (aFailed) {
+          return (
+            failureReason(a.error).localeCompare(failureReason(b.error)) ||
+            byRank
+          );
+        }
+      }
+      return byRank;
+    });
+  const filtersActive =
+    statusFilter !== "all" || timelineFilter !== "all" || activeReason !== null;
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setReasonFilter(null);
+    setTimelineFilter("all");
+  };
+  // Stat cards and the Status select share this so the reason pick resets
+  const pickStatus = (next: StatusFilter) => {
+    setStatusFilter(next);
+    setReasonFilter(null);
+  };
   // Only offer the timing options when the group has a deadline
   const hasDeadline = (data?.results || []).some(
     (r) => r.submissionTiming.status !== "no_deadline_set",
@@ -1307,36 +1383,61 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
               [
                 {
                   label: "Pending",
+                  status: "pending",
                   value: data.counts.pending,
                   color: "text-copy",
                 },
                 {
                   label: "Reviewing",
+                  status: "running",
                   value: data.counts.running,
                   color: "text-blue-600",
                 },
                 {
                   label: "Completed",
+                  status: "completed",
                   value: data.counts.completed,
                   color: "text-green-600",
                 },
                 {
                   label: "Failed",
+                  status: "failed",
                   value: data.counts.failed,
                   color: "text-red-600",
                 },
               ] as const
-            ).map((stat) => (
-              <div
-                key={stat.label}
-                className="bg-surface p-4 rounded-lg border border-hairline"
-              >
-                <p className="text-sm text-soft">{stat.label}</p>
-                <p className={`text-2xl font-semibold ${stat.color}`}>
-                  {stat.value}
-                </p>
-              </div>
-            ))}
+            ).map((stat) => {
+              // Each card toggles the matching status filter
+              const selected = statusFilter === stat.status;
+              return (
+                <button
+                  key={stat.label}
+                  type="button"
+                  aria-pressed={selected}
+                  title={
+                    selected
+                      ? "Show all statuses"
+                      : `Show only ${stat.label.toLowerCase()}`
+                  }
+                  onClick={() => {
+                    pickStatus(selected ? "all" : stat.status);
+                    setActiveTab("results");
+                  }}
+                  className={`text-left bg-surface p-4 rounded-lg border transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hairline-strong ${
+                    selected
+                      ? "border-ink ring-1 ring-ink"
+                      : "border-hairline"
+                  }`}
+                >
+                  <p className="text-sm text-soft">{stat.label}</p>
+                  <p
+                    className={`text-2xl font-semibold tabular-nums ${stat.color}`}
+                  >
+                    {stat.value}
+                  </p>
+                </button>
+              );
+            })}
           </div>
 
           {/* Tabs: results / stats / Convex recap / organizer report */}
@@ -1737,38 +1838,185 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                 </div>
               </div>
 
-              {/* Eligibility filter: build timeline plus submission timing */}
-              <div className="flex items-center justify-end gap-2">
-                <label htmlFor="timeline-filter" className="text-xs text-soft">
-                  Eligibility
-                </label>
-                <SimpleSelect
-                  id="timeline-filter"
-                  value={timelineFilter}
-                  onChange={(value) =>
-                    setTimelineFilter(value as TimelineFilter)
-                  }
-                  className="w-auto h-auto px-2 py-1.5 text-xs gap-1"
-                  options={[
-                    { value: "all", label: "All submissions" },
-                    { value: "in_window", label: "Built in event window" },
-                    {
-                      value: "started_before",
-                      label: "Started before event",
-                    },
-                    ...(hasDeadline
-                      ? [
-                          { value: "on_time", label: "Submitted on time" },
-                          { value: "late", label: "Late submissions" },
-                        ]
-                      : []),
-                  ]}
-                />
-              </div>
-              {visibleResults.length === 0 && (
-                <p className="text-sm text-soft bg-surface rounded-lg border border-hairline p-4">
-                  No submissions match this filter.
+              {/* Filter toolbar: status, eligibility, sort */}
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                <p className="text-xs text-soft tabular-nums" aria-live="polite">
+                  Showing {visibleResults.length} of {data.results.length}
+                  {filtersActive && (
+                    <>
+                      {" · "}
+                      <button
+                        type="button"
+                        onClick={clearFilters}
+                        className="underline underline-offset-2 hover:text-ink"
+                      >
+                        Clear filters
+                      </button>
+                    </>
+                  )}
                 </p>
+                <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor="status-filter"
+                      className="text-xs text-soft"
+                    >
+                      Status
+                    </label>
+                    <SimpleSelect
+                      id="status-filter"
+                      value={statusFilter}
+                      onChange={(value) => pickStatus(value as StatusFilter)}
+                      className="w-auto h-auto px-2 py-1.5 text-xs gap-1"
+                      options={[
+                        {
+                          value: "all",
+                          label: `All statuses (${data.results.length})`,
+                        },
+                        {
+                          value: "completed",
+                          label: `Completed (${data.counts.completed})`,
+                        },
+                        {
+                          value: "failed",
+                          label: `Failed (${data.counts.failed})`,
+                        },
+                        {
+                          value: "running",
+                          label: `Reviewing (${data.counts.running})`,
+                        },
+                        {
+                          value: "pending",
+                          label: `Pending (${data.counts.pending})`,
+                        },
+                      ]}
+                    />
+                  </div>
+                  {/* Eligibility filter: build timeline plus submission timing */}
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor="timeline-filter"
+                      className="text-xs text-soft"
+                    >
+                      Eligibility
+                    </label>
+                    <SimpleSelect
+                      id="timeline-filter"
+                      value={timelineFilter}
+                      onChange={(value) =>
+                        setTimelineFilter(value as TimelineFilter)
+                      }
+                      className="w-auto h-auto px-2 py-1.5 text-xs gap-1"
+                      options={[
+                        { value: "all", label: "All submissions" },
+                        {
+                          value: "in_window",
+                          label: "Built in event window",
+                        },
+                        {
+                          value: "started_before",
+                          label: "Started before event",
+                        },
+                        ...(hasDeadline
+                          ? [
+                              {
+                                value: "on_time",
+                                label: "Submitted on time",
+                              },
+                              { value: "late", label: "Late submissions" },
+                            ]
+                          : []),
+                      ]}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="sort-mode" className="text-xs text-soft">
+                      Sort
+                    </label>
+                    <SimpleSelect
+                      id="sort-mode"
+                      value={sortMode}
+                      onChange={(value) => setSortMode(value as SortMode)}
+                      className="w-auto h-auto px-2 py-1.5 text-xs gap-1"
+                      options={[
+                        { value: "rank", label: "AI rank" },
+                        { value: "title", label: "Title A to Z" },
+                        { value: "reason", label: "Failure reason" },
+                      ]}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Failure reasons: grouped error messages, pick one to narrow */}
+              {statusFilter === "failed" && failureGroups.length > 0 && (
+                <div className="bg-surface rounded-lg border border-hairline p-3">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
+                    <p className="text-sm font-medium text-ink">
+                      Why they failed
+                    </p>
+                    <p className="text-xs text-soft">
+                      Grouped by error message. Use Retry on a row to rerun
+                      just that submission.
+                    </p>
+                  </div>
+                  <ul className="mt-2 space-y-0.5" role="list">
+                    {[
+                      {
+                        reason: null,
+                        label: "All reasons",
+                        count: data.counts.failed,
+                      },
+                      ...failureGroups.map((g) => ({
+                        reason: g.reason,
+                        label: g.reason,
+                        count: g.count,
+                      })),
+                    ].map((item) => {
+                      const selected = activeReason === item.reason;
+                      return (
+                        <li key={item.reason ?? "__all"}>
+                          <button
+                            type="button"
+                            aria-pressed={selected}
+                            onClick={() => setReasonFilter(item.reason)}
+                            className={`flex w-full items-start justify-between gap-3 rounded-md px-2.5 py-1.5 text-left text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hairline-strong ${
+                              selected
+                                ? "bg-cta text-on-cta"
+                                : "text-copy hover:bg-surface-hover"
+                            }`}
+                          >
+                            <span
+                              className={`min-w-0 break-words ${
+                                item.reason === null ? "font-medium" : ""
+                              }`}
+                            >
+                              {item.label}
+                            </span>
+                            <span
+                              className={`shrink-0 tabular-nums ${
+                                selected ? "" : "text-soft"
+                              }`}
+                            >
+                              {item.count}
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+
+              {visibleResults.length === 0 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-soft bg-surface rounded-lg border border-hairline p-4">
+                  <span>No submissions match these filters.</span>
+                  {filtersActive && (
+                    <Button variant="outline" size="sm" onClick={clearFilters}>
+                      Clear filters
+                    </Button>
+                  )}
+                </div>
               )}
               {visibleResults.map((result) => {
                 const index = (rankById.get(result._id) ?? 1) - 1;
@@ -2125,7 +2373,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                     {/* Failed error message */}
                     {result.status === "failed" && result.error && (
                       <div className="px-4 pb-4">
-                        <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md p-3">
+                        <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md p-3 whitespace-pre-wrap break-words dark:text-red-300 dark:bg-red-950/40 dark:border-red-900">
                           {result.error}
                         </p>
                       </div>
