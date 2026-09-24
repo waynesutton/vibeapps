@@ -2027,148 +2027,6 @@ export default function JudgingInterfacePage() {
                     </div>
                   </div>
                 )}
-
-              {/* Judge Notes Section */}
-              <div className="bg-surface rounded-lg border border-hairline p-4 sm:p-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium text-ink flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4" />
-                    Judge Collaboration Notes
-                  </h3>
-                  <span className="text-sm text-soft">
-                    {submissionNotes ? submissionNotes.length : 0} notes
-                  </span>
-                </div>
-
-                <p className="text-sm text-copy mb-4">
-                  Share observations and collaborate with other judges. These
-                  notes don't affect scoring.
-                </p>
-
-                {/* Add Note Form */}
-                <div className="mb-6">
-                  <MentionTextarea
-                    value={newNote}
-                    onChange={setNewNote}
-                    placeholder="Add a note for other judges to see... (use @username to mention users)"
-                    rows={3}
-                    className="mb-2"
-                  />
-                  <Button
-                    onClick={handleAddNote}
-                    disabled={!newNote.trim()}
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
-                    <Send className="w-3 h-3" />
-                    Add Note
-                  </Button>
-                </div>
-
-                {/* Notes Thread */}
-                <div className="space-y-4">
-                  {submissionNotes && submissionNotes.length > 0 ? (
-                    submissionNotes.map((note) => (
-                      <div
-                        key={note._id}
-                        className="border border-hairline rounded-lg p-4"
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <User className="w-4 h-4 text-faint" />
-                            <span className="text-sm font-medium text-ink">
-                              {note.judgeName}
-                            </span>
-                            <span className="text-xs text-soft">
-                              {new Date(note._creationTime).toLocaleString()}
-                            </span>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setReplyingTo(note._id)}
-                            className="text-xs"
-                          >
-                            <Reply className="w-3 h-3 mr-1" />
-                            Reply
-                          </Button>
-                        </div>
-
-                        <div className="text-sm text-copy whitespace-pre-wrap mb-3">
-                          {renderTextWithMentions(note.content)}
-                        </div>
-
-                        {/* Replies */}
-                        {note.replies && note.replies.length > 0 && (
-                          <div className="ml-6 space-y-3 border-l-2 border-hairline pl-4">
-                            {note.replies.map((reply) => (
-                              <div
-                                key={reply._id}
-                                className="bg-surface-alt rounded p-3"
-                              >
-                                <div className="flex items-center gap-2 mb-2">
-                                  <User className="w-3 h-3 text-faint" />
-                                  <span className="text-xs font-medium text-ink">
-                                    {reply.judgeName}
-                                  </span>
-                                  <span className="text-xs text-soft">
-                                    {new Date(
-                                      reply._creationTime,
-                                    ).toLocaleString()}
-                                  </span>
-                                </div>
-                                <div className="text-xs text-copy whitespace-pre-wrap">
-                                  {renderTextWithMentions(reply.content)}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Reply Form */}
-                        {replyingTo === note._id && (
-                          <div className="ml-6 mt-3 border-l-2 border-blue-200 pl-4">
-                            <MentionTextarea
-                              value={replyContent}
-                              onChange={setReplyContent}
-                              placeholder="Write a reply... (use @username to mention users)"
-                              rows={2}
-                              className="mb-2"
-                            />
-                            <div className="flex items-center gap-2">
-                              <Button
-                                onClick={() => handleReply(note._id)}
-                                disabled={!replyContent.trim()}
-                                size="sm"
-                              >
-                                <Send className="w-3 h-3 mr-1" />
-                                Reply
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setReplyingTo(null);
-                                  setReplyContent("");
-                                }}
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8 text-soft">
-                      <MessageSquare className="w-8 h-8 mx-auto mb-2 text-faint" />
-                      <p className="text-sm">
-                        No notes yet. Be the first to add one!
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
 
             {/* Scoring Section */}
@@ -2506,6 +2364,148 @@ export default function JudgingInterfacePage() {
                       </Link>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Judge Notes Section */}
+              <div className="bg-surface rounded-lg border border-hairline p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-medium text-ink flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    Judge Collaboration Notes
+                  </h3>
+                  <span className="text-sm text-soft">
+                    {submissionNotes ? submissionNotes.length : 0} notes
+                  </span>
+                </div>
+
+                <p className="text-sm text-copy mb-4">
+                  Share observations and collaborate with other judges. These
+                  notes don't affect scoring.
+                </p>
+
+                {/* Add Note Form */}
+                <div className="mb-6">
+                  <MentionTextarea
+                    value={newNote}
+                    onChange={setNewNote}
+                    placeholder="Add a note for other judges to see... (use @username to mention users)"
+                    rows={3}
+                    className="mb-2"
+                  />
+                  <Button
+                    onClick={handleAddNote}
+                    disabled={!newNote.trim()}
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <Send className="w-3 h-3" />
+                    Add Note
+                  </Button>
+                </div>
+
+                {/* Notes Thread */}
+                <div className="space-y-4">
+                  {submissionNotes && submissionNotes.length > 0 ? (
+                    submissionNotes.map((note) => (
+                      <div
+                        key={note._id}
+                        className="border border-hairline rounded-lg p-4"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4 text-faint" />
+                            <span className="text-sm font-medium text-ink">
+                              {note.judgeName}
+                            </span>
+                            <span className="text-xs text-soft">
+                              {new Date(note._creationTime).toLocaleString()}
+                            </span>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setReplyingTo(note._id)}
+                            className="text-xs"
+                          >
+                            <Reply className="w-3 h-3 mr-1" />
+                            Reply
+                          </Button>
+                        </div>
+
+                        <div className="text-sm text-copy whitespace-pre-wrap mb-3">
+                          {renderTextWithMentions(note.content)}
+                        </div>
+
+                        {/* Replies */}
+                        {note.replies && note.replies.length > 0 && (
+                          <div className="ml-6 space-y-3 border-l-2 border-hairline pl-4">
+                            {note.replies.map((reply) => (
+                              <div
+                                key={reply._id}
+                                className="bg-surface-alt rounded p-3"
+                              >
+                                <div className="flex items-center gap-2 mb-2">
+                                  <User className="w-3 h-3 text-faint" />
+                                  <span className="text-xs font-medium text-ink">
+                                    {reply.judgeName}
+                                  </span>
+                                  <span className="text-xs text-soft">
+                                    {new Date(
+                                      reply._creationTime,
+                                    ).toLocaleString()}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-copy whitespace-pre-wrap">
+                                  {renderTextWithMentions(reply.content)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Reply Form */}
+                        {replyingTo === note._id && (
+                          <div className="ml-6 mt-3 border-l-2 border-blue-200 pl-4">
+                            <MentionTextarea
+                              value={replyContent}
+                              onChange={setReplyContent}
+                              placeholder="Write a reply... (use @username to mention users)"
+                              rows={2}
+                              className="mb-2"
+                            />
+                            <div className="flex items-center gap-2">
+                              <Button
+                                onClick={() => handleReply(note._id)}
+                                disabled={!replyContent.trim()}
+                                size="sm"
+                              >
+                                <Send className="w-3 h-3 mr-1" />
+                                Reply
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setReplyingTo(null);
+                                  setReplyContent("");
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-soft">
+                      <MessageSquare className="w-8 h-8 mx-auto mb-2 text-faint" />
+                      <p className="text-sm">
+                        No notes yet. Be the first to add one!
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

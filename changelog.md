@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Clear shortlist.** Both Shortlist for human judges bars (admin AI results and View submissions) get a **Clear shortlist** button that unstars every submission in the group. If the Judge queue is on Shortlist only it switches back to All submissions in the same transaction, so judges never land on an empty queue. It asks first with the site confirm dialog, shows only when something is starred or the queue is in shortlist mode, and leaves judge scores and AI results alone. New `judgingGroupSubmissions.clearShortlist` mutation (`judging.manage`, idempotent, logged as `judging.shortlistChanged`) (2026-09-24).
+
+### Changed
+
+- **Judge Collaboration Notes moved under Your Progress.** On the judging interface the notes thread now sits in the right column directly below the Your Progress card instead of at the bottom of the left column, so judges see it next to their scores without scrolling past the submission details. Markup and behavior are unchanged. Admin docs Judge flow updated to match (2026-09-23).
+
 ### Fixed
 
 - **Public results Progress in shortlist rounds.** `getPublicGroupScores` and `getValidatedGroupScores` now filter group submissions with `isInJudgeQueue`, same as admin `getGroupScores`, so the Submissions card and Progress on `/judging/{slug}/results` count only the shortlist and reach 100% when every shortlisted app is complete. Previously they divided by every submission in the group. All three queries now count only completed statuses still in the queue, so an app completed and then removed from the shortlist (or hidden) can no longer push Progress past 100%. The How to judge Reading scores block says what the Submissions card counts in a shortlist round (2026-09-23).

@@ -940,6 +940,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
     api.judgingGroupSubmissions.shortlistTopByAiScore,
   );
   const setShortlisted = useMutation(api.judgingGroupSubmissions.setShortlisted);
+  const clearShortlist = useMutation(api.judgingGroupSubmissions.clearShortlist);
   const [shortlistN, setShortlistN] = useState(10);
   const [isShortlisting, setIsShortlisting] = useState(false);
   const [togglingStoryId, setTogglingStoryId] = useState<Id<"stories"> | null>(
@@ -1170,6 +1171,41 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
           .finally(() => setIsShortlisting(false));
       },
       { confirmButtonText: existing > 0 ? "Replace shortlist" : "Shortlist" },
+    );
+  };
+
+  // Turn the shortlist off: unflag every row and put the Judge queue back on
+  // All submissions when it was Shortlist only
+  const handleClearShortlist = () => {
+    const existing = data?.shortlistCount ?? 0;
+    const inShortlistMode = data?.judgeQueueMode === "shortlist";
+    showConfirm(
+      "Clear shortlist?",
+      `Removes the star from ${existing} submission${existing === 1 ? "" : "s"}.${
+        inShortlistMode
+          ? " The Judge queue switches back to All submissions so judges see every submission again."
+          : ""
+      } Judge scores and AI results are not touched.`,
+      () => {
+        setIsShortlisting(true);
+        clearShortlist({ groupId })
+          .then((res) => {
+            showMessage(
+              "Shortlist cleared",
+              `${res.cleared} submission${res.cleared === 1 ? "" : "s"} removed from the shortlist.${
+                res.queueReset
+                  ? " Judge queue is now All submissions."
+                  : ""
+              }`,
+              "success",
+            );
+          })
+          .catch((error) => {
+            showMessage("Clear failed", errorMessage(error), "error");
+          })
+          .finally(() => setIsShortlisting(false));
+      },
+      { confirmButtonText: "Clear shortlist", confirmButtonVariant: "destructive" },
     );
   };
 
@@ -1835,6 +1871,20 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                     )}
                     Shortlist top {Math.max(1, Math.floor(shortlistN))}
                   </Button>
+                  {/* Only offered when there is something to turn off */}
+                  {(data.shortlistCount > 0 ||
+                    data.judgeQueueMode === "shortlist") && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearShortlist}
+                      disabled={isShortlisting}
+                      title="Unstar every submission and set the Judge queue back to All submissions"
+                    >
+                      <X className="w-3.5 h-3.5 mr-1.5" />
+                      Clear shortlist
+                    </Button>
+                  )}
                 </div>
               </div>
 

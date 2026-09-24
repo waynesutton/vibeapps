@@ -27,6 +27,7 @@ bun.lockb
 *.sw?
 
 /prds/env-deploy-fix.md
+/prds/judge-message-all-gas-hackathon.md
 # Local env
 .env
 .env.local

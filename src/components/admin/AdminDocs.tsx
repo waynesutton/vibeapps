@@ -128,8 +128,8 @@ The name field is how the system identifies your scores.
 
 After **Start Judging** you land on the two column judging UI:
 
-- **Left**: submission details, media, filters, status, collaboration notes
-- **Right**: scoring criteria, optional comments per criterion, your progress, complete action
+- **Left**: submission details, media, filters, status
+- **Right**: scoring criteria, optional comments per criterion, your progress, complete action, then collaboration notes
 
 Header shows the group name, your judge name, and a progress bar for how many submissions in the group have been completed by any judge.
 
@@ -564,6 +564,7 @@ Hand human judges only part of the field. Everything stays in one group, so link
 3. Fine tune with the star toggle on any AI result row, or in **View submissions**, which has a **Shortlist** column with the same toggle and a **Shortlist only** filter. This is how you add a submission the AI ranked outside the top N: star it and it joins the shortlist immediately, and judges see it in their queue on the next refresh. Unstar to drop one. Shortlist top N replaces the whole set, so run it first and hand pick after.
 4. In **Settings**, switch **Judge queue** to **Shortlist only**. Human judges, the judge progress bar, agent judge queues (\`submissions.json\`), and the results completion percentage all use the shortlist from that moment. Switch back to **All submissions** to restore the full queue; the flags stay so you can flip again.
 5. Optional: turn on **Show submissions below the cut to judges** (same Settings card). See **Below the cut** below. With the AI judge off, below-cut rows are still grayed out and read only; they just have no AI badge or review card.
+6. To start over or turn the shortlist off, click **Clear shortlist** on the Shortlist for human judges bar in AI results or View submissions. It unstars every submission and, if the Judge queue is Shortlist only, switches it back to All submissions so judges never see an empty queue. Judge scores and AI results are kept.
 
 ### Below the cut
 

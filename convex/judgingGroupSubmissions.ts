@@ -748,6 +748,55 @@ export const shortlistTopByAiScore = mutation({
 });
 
 /**
+ * Turn the shortlist off: unflag every row in the group and, when the Judge
+ * queue is on Shortlist only, switch it back to All submissions so judges
+ * never land on an empty queue. One transaction, idempotent: rows already
+ * unflagged are skipped and nothing is logged when there is nothing to do.
+ */
+export const clearShortlist = mutation({
+  args: { groupId: v.id("judgingGroups") },
+  returns: v.object({ cleared: v.number(), queueReset: v.boolean() }),
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.manage");
+    const group = await ctx.db.get(args.groupId);
+    if (!group) throw new Error("Judging group not found");
+
+    const rows = await ctx.db
+      .query("judgingGroupSubmissions")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+    const flagged = rows.filter((row) => row.shortlisted === true);
+    const queueReset = group.judgeQueueMode === "shortlist";
+
+    if (flagged.length === 0 && !queueReset) {
+      return { cleared: 0, queueReset: false };
+    }
+
+    await Promise.all([
+      ...flagged.map((row) =>
+        ctx.db.patch(row._id, { shortlisted: false, shortlistedAt: undefined }),
+      ),
+      ...(queueReset
+        ? [ctx.db.patch(args.groupId, { judgeQueueMode: "all" as const })]
+        : []),
+    ]);
+
+    await logActivity(ctx, {
+      category: "judging",
+      action: "judging.shortlistChanged",
+      message: `Cleared shortlist in ${group.name} (${flagged.length} removed${queueReset ? ", judge queue set to All submissions" : ""})`,
+      targetType: "judgingGroup",
+      targetId: args.groupId,
+      targetLabel: group.name,
+      groupId: args.groupId,
+      metadata: { cleared: flagged.length, queueReset, shortlistCount: 0 },
+    });
+
+    return { cleared: flagged.length, queueReset };
+  },
+});
+
+/**
  * Get submissions in a group with scoring details
  */
 export const listByGroup = query({

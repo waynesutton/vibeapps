@@ -18,6 +18,7 @@ import {
   Search,
   Star,
   Twitter,
+  X,
 } from "lucide-react";
 import {
   createPaginatedRowModel,
@@ -39,6 +40,7 @@ import type { Id } from "../../../../convex/_generated/dataModel";
 import { Input } from "../../ui/input";
 import { SimpleSelect } from "../../ui/SimpleSelect";
 import { useAdminAccess } from "../useAdminAccess";
+import { useDialog } from "../../../hooks/useDialog";
 import type { GroupDetails } from "./groupSection";
 import { SubmissionDownloadControl } from "./SubmissionDownloadControl";
 import { LateSubmissionBadge } from "../../LateSubmissionBadge";
@@ -252,6 +254,46 @@ export function GroupSubmissionsTableSection({
   const shortlistCount = rows?.filter((row) => row.shortlisted).length ?? 0;
   const isFiltering = search.trim().length > 0 || shortlistOnly;
 
+  // Turn the shortlist off: unstar every row and put the Judge queue back on
+  // All submissions when it was Shortlist only
+  const clearShortlist = useMutation(api.judgingGroupSubmissions.clearShortlist);
+  const { showMessage, showConfirm, DialogComponents } = useDialog();
+  const [isClearing, setIsClearing] = useState(false);
+  const inShortlistMode = group.judgeQueueMode === "shortlist";
+  const handleClearShortlist = () => {
+    showConfirm(
+      "Clear shortlist?",
+      `Removes the star from ${shortlistCount} submission${shortlistCount === 1 ? "" : "s"}.${
+        inShortlistMode
+          ? " The Judge queue switches back to All submissions so judges see every submission again."
+          : ""
+      } Judge scores and AI results are not touched.`,
+      () => {
+        setIsClearing(true);
+        clearShortlist({ groupId: group._id })
+          .then((res) => {
+            setShortlistOnly(false);
+            showMessage(
+              "Shortlist cleared",
+              `${res.cleared} submission${res.cleared === 1 ? "" : "s"} removed from the shortlist.${
+                res.queueReset ? " Judge queue is now All submissions." : ""
+              }`,
+              "success",
+            );
+          })
+          .catch((error: unknown) => {
+            showMessage(
+              "Clear failed",
+              error instanceof Error ? error.message : "Could not clear the shortlist",
+              "error",
+            );
+          })
+          .finally(() => setIsClearing(false));
+      },
+      { confirmButtonText: "Clear shortlist", confirmButtonVariant: "destructive" },
+    );
+  };
+
   const columns = useMemo<ColumnDef<SubmissionTableFeatures, SubmissionRow>[]>(
     () => [
       {
@@ -459,6 +501,7 @@ export function GroupSubmissionsTableSection({
 
   return (
     <div className="rounded-lg border border-hairline bg-surface overflow-hidden">
+      <DialogComponents />
       {/* Header: purpose, live count, and one search box */}
       <div className="px-5 pt-4 pb-3 border-b border-hairline space-y-3">
         <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -486,13 +529,32 @@ export function GroupSubmissionsTableSection({
             here is the whole shortlist tool when there is no AI run. */}
         {canManage && (
           <div className="rounded-lg border border-hairline bg-surface-alt px-3 py-2.5">
-            <p className="text-sm font-medium text-ink flex items-center gap-1.5">
-              <Star className="w-3.5 h-3.5" />
-              Shortlist for human judges
-              <span className="text-xs font-normal text-soft tabular-nums">
-                {shortlistCount} of {totalCount} starred
-              </span>
-            </p>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-medium text-ink flex items-center gap-1.5">
+                <Star className="w-3.5 h-3.5" />
+                Shortlist for human judges
+                <span className="text-xs font-normal text-soft tabular-nums">
+                  {shortlistCount} of {totalCount} starred
+                </span>
+              </p>
+              {/* Only offered when there is something to turn off */}
+              {(shortlistCount > 0 || inShortlistMode) && (
+                <button
+                  type="button"
+                  onClick={handleClearShortlist}
+                  disabled={isClearing}
+                  title="Unstar every submission and set the Judge queue back to All submissions"
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md text-copy hover:bg-surface-hover transition-colors disabled:opacity-50 flex-shrink-0"
+                >
+                  {isClearing ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <X className="w-3.5 h-3.5" />
+                  )}
+                  Clear shortlist
+                </button>
+              )}
+            </div>
             <p className="text-xs text-soft mt-0.5">
               {group.judgeQueueMode === "shortlist"
                 ? shortlistCount === 0
