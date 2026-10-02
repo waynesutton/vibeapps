@@ -2,6 +2,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";
 import { rankCompletedAiResults } from "./aiRank";
 import { isInJudgeQueue } from "./judgeQueue";
+import { AI_FRONTEND_PLATFORMS, getRubricForGroup } from "../aiJudge";
 
 /**
  * Markdown builders for the judging research chat. The indexer stores one
@@ -565,17 +566,139 @@ export function buildOverviewDoc(snap: GroupSnapshot): string {
         .map(([status, count]) => `${count} ${status}`)
         .join(", ") || "none"
     }. AI rank = weighted criterion total (1 to 10 per criterion).`,
+    `- Human criteria: ${criteria.length}. Full rules, criteria, and the AI rubric are in the rules document.`,
   );
-  if (criteria.length > 0) {
-    lines.push("", "## Human judging criteria");
+  return lines.join("\n");
+}
+
+const CAP_RULES_TEXT = 20000;
+const CAP_PAGE_COPY = 4000;
+const CAP_ORGANIZER_NOTE = 2000;
+const CAP_AI_PROMPT = 3000;
+
+function weightLabel(weight: number | undefined): string {
+  return weight !== undefined && weight !== 1 ? ` (weight ${weight})` : "";
+}
+
+/**
+ * How this group is judged, built live from the group: organizer rules,
+ * submit page copy, How to judge notes, queue settings, human criteria in
+ * full, the effective AI rubric with weights, and custom questions. Never
+ * includes passwords or the access code note.
+ */
+export function buildRulesDoc(gc: GroupContext): string {
+  const { group, criteria } = gc;
+  const lines: Array<string> = [`# Rules and rubric: ${group.name}`];
+
+  // Organizer rules first: they override anything inferred elsewhere
+  const context = clip(group.researchContext, CAP_RULES_TEXT);
+  const legacyRules = clip(group.hackathonRules, CAP_RULES_TEXT);
+  if (context || legacyRules) {
+    lines.push("", "## Organizer rules and context");
+    if (context) lines.push(context);
+    if (legacyRules) lines.push("", "### Hackathon rules (legacy)", legacyRules);
+  }
+
+  // Submit page copy is where many organizers write eligibility and rules
+  const pageTitle = group.submissionPageTitle?.trim();
+  const pageCopy = clip(group.submissionPageDescription, CAP_PAGE_COPY);
+  const pageLinks = group.submissionPageLinks ?? [];
+  if (group.hasCustomSubmissionPage && (pageTitle || pageCopy || pageLinks.length)) {
+    lines.push("", "## Submit page");
+    lines.push(`- URL: ${SITE_URL}/judging/${group.slug}/submit`);
+    if (pageTitle) lines.push(`- Title: ${pageTitle}`);
+    for (const link of pageLinks) lines.push(`- Link: [${link.label}](${link.url})`);
+    if (pageCopy) lines.push("", pageCopy);
+  }
+
+  // Judging setup and the organizer's How to judge notes
+  const htj = group.howToJudge;
+  lines.push("", "## Judging setup");
+  if (htj && htj.enabled !== false) {
+    lines.push(`- How to judge page: ${SITE_URL}/judging/${group.slug}/howtojudge`);
+  }
+  lines.push(
+    `- Event window: ${fmtDate(group.startDate)} to ${fmtDate(group.endDate)} (end is the submission deadline; later entries are labeled late, eligibility is the organizer's call)`,
+  );
+  if (htj?.deadlineAt) lines.push(`- Judging deadline: ${fmtDate(htj.deadlineAt)}`);
+  lines.push(
+    `- Judges per submission: ${group.judgesPerSubmission ?? 1}`,
+    `- Judge queue: ${
+      group.judgeQueueMode === "shortlist"
+        ? `shortlist only (below the cut ${group.showBelowCutToJudges ? "visible read only" : "hidden"} to judges)`
+        : "all submissions"
+    }`,
+    `- Agent judge scores: ${(group.agentScoresAdvisory ?? true) ? "advisory, excluded from rankings" : "counted in rankings"}`,
+  );
+  const noteSections: Array<[string, string | undefined]> = [
+    ["Contact", htj?.contact],
+    ["Judge assignments", htj?.assignments],
+    ["Private repos", htj?.privateRepoNote],
+    ["Organizer notes", htj?.notes],
+  ];
+  for (const [label, text] of noteSections) {
+    const body = clip(text, CAP_ORGANIZER_NOTE);
+    if (body) lines.push("", `### ${label}`, body);
+  }
+  for (const link of htj?.links ?? []) {
+    lines.push(`- Organizer link: [${link.label}](${link.url})`);
+  }
+
+  // Human criteria in full
+  const scale = group.scoreScale ?? 10;
+  lines.push("", `## Human judging criteria (each scored 1 to ${scale})`);
+  if (criteria.length === 0) {
+    lines.push("No human criteria configured.");
+  } else {
     for (const c of criteria) {
+      lines.push(`- **${c.question}**${weightLabel(c.weight)}${c.description ? `: ${c.description.trim()}` : ""}`);
+    }
+    lines.push("Human rank = total of counted scores from submissions marked completed.");
+  }
+
+  // AI rubric: same source the analysis uses, so labels and weights match
+  lines.push("", "## AI judge rubric (each scored 1 to 10)");
+  if (!group.aiJudgeEnabled) {
+    lines.push("The AI judge is off for this group.");
+  } else {
+    const weights = new Map((group.aiRubricWeights ?? []).map((w) => [w.key, w.weight]));
+    for (const c of getRubricForGroup(group, criteria)) {
+      lines.push(`- **${c.label}** [${c.key}]${weightLabel(weights.get(c.key))}: ${c.description}`);
+    }
+    const disabled = group.aiDisabledCriteria ?? [];
+    if (disabled.length > 0) lines.push(`- Switched off: ${disabled.join(", ")}`);
+    const frontend = group.aiFrontendWeights ?? [];
+    if (frontend.length > 0) {
+      const byKey = new Map(frontend.map((w) => [w.key, w.weight]));
       lines.push(
-        `- ${c.question}${c.weight && c.weight !== 1 ? ` (weight ${c.weight})` : ""}${
-          c.description ? `: ${oneLine(c.description, 200)}` : ""
-        }`,
+        `- Frontend hosting weights: ${AI_FRONTEND_PLATFORMS.map((p) => `${p.label} ${byKey.get(p.key) ?? 1}`).join(", ")}`,
+      );
+    }
+    lines.push(
+      "AI rank = weighted criterion total. The AI judge is advisory; human results are the official outcome.",
+      `- Second opinion (Jev): ${group.aiSecondOpinionEnabled ? "on, advisory only" : "off"}`,
+      `- AI review shown to human judges: ${group.aiReviewVisibleToJudges ? "yes" : "no"}`,
+    );
+    const prompt = clip(group.aiJudgeSystemPrompt, CAP_AI_PROMPT);
+    lines.push(
+      prompt
+        ? `\n### Custom AI judge instructions\n${prompt}`
+        : `- AI judge instructions: built in "Best Use of Convex" prompt`,
+    );
+  }
+
+  // Custom submission questions (answers live in each dossier)
+  const questions = (group.submissionCustomQuestions ?? []).filter((q) => q.visible !== false);
+  if (questions.length > 0) {
+    lines.push("", "## Custom submission questions");
+    for (const q of questions) {
+      const options = q.options?.length ? ` Options: ${q.options.join(", ")}.` : "";
+      lines.push(
+        `- ${q.label} (${q.fieldType}, ${q.required ? "required" : "optional"})${q.description ? `: ${oneLine(q.description, 200)}` : ""}${options}`,
       );
     }
   }
+
   return lines.join("\n");
 }
 

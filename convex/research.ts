@@ -12,7 +12,11 @@ import { HOUR, RateLimiter } from "@convex-dev/rate-limiter";
 import { requireJudgingGroupPermission } from "./adminAccess";
 import { getAuthenticatedUserDoc } from "./users";
 import { logActivity } from "./activityLog";
-import { clearResearchIndex, startResearchIndex } from "./researchIndex";
+import {
+  clearResearchIndex,
+  markResearchStale,
+  startResearchIndex,
+} from "./researchIndex";
 import { isResearchModel } from "./lib/researchModels";
 import { FALLBACK_LLM_MODEL } from "./lib/llm";
 
@@ -23,6 +27,7 @@ const researchLimiter = new RateLimiter(components.rateLimiter, {
 });
 
 const MAX_MESSAGE_CHARS = 8000;
+const MAX_CONTEXT_CHARS = 20000;
 const MAX_TITLE_CHARS = 80;
 const THREAD_LIST_LIMIT = 50;
 const MESSAGE_LIST_LIMIT = 200;
@@ -148,6 +153,7 @@ export const getStatus = query({
       model: v.string(),
       override: v.union(v.string(), v.null()),
       defaultModel: v.string(),
+      context: v.string(),
       index: v.union(v.null(), indexStatusValidator),
     }),
   ),
@@ -164,6 +170,7 @@ export const getStatus = query({
       model: resolveResearchModel(group),
       override: group.researchModel ?? null,
       defaultModel: defaultResearchModel(),
+      context: group.researchContext ?? "",
       index: row
         ? {
             status: row.status,
@@ -198,6 +205,31 @@ export const listThreads = query({
       createdByName: t.createdByName,
       lastMessageAt: t.lastMessageAt,
     }));
+  },
+});
+
+// Single thread for shared links to threads older than the list window.
+// Takes the raw URL value so a mangled link returns null instead of
+// throwing. Null when malformed, deleted, or in another group.
+export const getThread = query({
+  args: {
+    groupId: v.id("judgingGroups"),
+    threadId: v.string(),
+  },
+  returns: v.union(v.null(), threadValidator),
+  handler: async (ctx, args) => {
+    await requireResearchAccess(ctx, args.groupId);
+    const threadId = ctx.db.normalizeId("researchThreads", args.threadId);
+    if (!threadId) return null;
+    const thread = await ctx.db.get(threadId);
+    if (!thread || thread.groupId !== args.groupId) return null;
+    return {
+      _id: thread._id,
+      _creationTime: thread._creationTime,
+      title: thread.title,
+      createdByName: thread.createdByName,
+      lastMessageAt: thread.lastMessageAt,
+    };
   },
 });
 
@@ -294,6 +326,39 @@ export const setModel = mutation({
     await ctx.db.patch(args.groupId, {
       researchModel: args.model === "" ? undefined : args.model,
     });
+    return null;
+  },
+});
+
+// Organizer rules and context the chat reads on every answer. Empty clears it.
+export const setContext = mutation({
+  args: { groupId: v.id("judgingGroups"), context: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireResearchAccess(ctx, args.groupId);
+    const context = args.context.trim();
+    if (context.length > MAX_CONTEXT_CHARS) {
+      throw new ConvexError(
+        `Rules and context can be up to ${MAX_CONTEXT_CHARS.toLocaleString()} characters.`,
+      );
+    }
+    const group = await ctx.db.get(args.groupId);
+    if (!group) throw new ConvexError("Judging group not found.");
+    if ((group.researchContext ?? "") === context) return null;
+
+    await Promise.all([
+      ctx.db.patch(args.groupId, { researchContext: context || undefined }),
+      markResearchStale(ctx, args.groupId),
+      logActivity(ctx, {
+        category: "judging",
+        action: "research.context_updated",
+        message: `${context ? "Updated" : "Cleared"} research rules and context for "${group.name}"`,
+        targetType: "judgingGroup",
+        targetId: args.groupId,
+        targetLabel: group.name,
+        groupId: args.groupId,
+      }),
+    ]);
     return null;
   },
 });

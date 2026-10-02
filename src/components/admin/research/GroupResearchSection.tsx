@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
@@ -135,7 +135,7 @@ function ResearchSettingsCard({
   return (
     <SectionCard
       title="Research"
-      description="An analyst chat that knows every submission, human score, judge comment, and AI judge result in this group, plus the web. Off by default."
+      description="An analyst chat that knows every submission, human score, judge comment, AI judge result, rule, and rubric in this group, plus the web. Off by default."
       headerAction={
         <TogglePill
           enabled={status.enabled}
@@ -171,10 +171,94 @@ function ResearchSettingsCard({
               className="w-full sm:w-72 text-[13px]"
             />
           </div>
+          <ResearchContextEditor
+            key={status.context}
+            groupId={group._id}
+            saved={status.context}
+          />
         </div>
       )}
       <DialogComponents />
     </SectionCard>
+  );
+}
+
+const MAX_CONTEXT_CHARS = 20000;
+
+// Organizer rules pasted from outside VibeApps (Luma, Devpost, Notion).
+// Keyed by the saved value so the draft resets when anyone saves.
+function ResearchContextEditor({
+  groupId,
+  saved,
+}: {
+  groupId: Id<"judgingGroups">;
+  saved: string;
+}) {
+  const setContext = useMutation(api.research.setContext);
+  const [draft, setDraft] = useState(saved);
+  const [saving, setSaving] = useState(false);
+  const dirty = draft.trim() !== saved;
+  const tooLong = draft.trim().length > MAX_CONTEXT_CHARS;
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await setContext({ groupId, context: draft });
+      toast.success(draft.trim() ? "Rules and context saved" : "Rules and context cleared");
+    } catch (error) {
+      toast.error(getConvexErrorMessage(error, "Could not save rules and context"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div>
+        <label htmlFor="research-context" className="text-[13px] font-medium text-ink">
+          Rules and context
+        </label>
+        <p className="text-[12px] text-soft">
+          The chat already reads this group's criteria, AI rubric, submit page,
+          and How to judge notes. Paste anything else it should follow, like
+          official rules, eligibility, prizes, or tracks. Markdown works.
+        </p>
+      </div>
+      <textarea
+        id="research-context"
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        rows={6}
+        spellCheck
+        className="w-full rounded-md border border-hairline bg-surface px-3 py-2 text-[13px] text-ink leading-relaxed resize-y focus:outline-none focus:border-hairline-strong"
+      />
+      <div className="flex items-center justify-between gap-3">
+        <p className={`text-[12px] tabular-nums ${tooLong ? "text-red-600" : "text-faint"}`}>
+          {draft.trim().length.toLocaleString()} / {MAX_CONTEXT_CHARS.toLocaleString()}
+        </p>
+        <div className="flex items-center gap-2">
+          {dirty && (
+            <button
+              type="button"
+              onClick={() => setDraft(saved)}
+              disabled={saving}
+              className="px-2.5 py-1 rounded-md border border-hairline bg-surface text-[12px] text-copy hover:text-ink hover:bg-surface-hover transition-colors"
+            >
+              Discard
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={!dirty || tooLong || saving}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-ink text-surface text-[12px] hover:opacity-90 transition-opacity disabled:opacity-30"
+          >
+            {saving && <Loader2 className="w-3 h-3 animate-spin" />}
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -268,15 +352,55 @@ function ResearchWorkspace({
   const threads = useQuery(api.research.listThreads, { groupId: group._id });
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Active thread lives in the URL so links to a thread can be shared
+  // Active thread (and optionally one answer) live in the URL so links can
+  // be shared. Threads outside the newest 50 resolve through getThread.
   const requested = searchParams.get("thread");
-  const activeThread =
-    threads?.find((thread) => thread._id === requested) ?? null;
+  const focusMessageId = searchParams.get("message");
+  const listed = threads?.find((thread) => thread._id === requested) ?? null;
+  const linked = useQuery(
+    api.research.getThread,
+    requested && threads !== undefined && !listed
+      ? { groupId: group._id, threadId: requested }
+      : "skip",
+  );
+  const activeThread = listed ?? linked ?? null;
+  const resolving =
+    requested !== null &&
+    !listed &&
+    (threads === undefined || linked === undefined);
+
+  const clearParams = useCallback(
+    (keys: Array<string>) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          for (const key of keys) next.delete(key);
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
+  // Deleted, malformed, or other group thread link: explain and clean up
+  const missingThread = requested !== null && linked === null;
+  useEffect(() => {
+    if (!missingThread) return;
+    toast.error("That research thread was deleted or is not in this group.");
+    clearParams(["thread", "message"]);
+  }, [missingThread, clearParams]);
+
+  const handleFocusMissing = useCallback(
+    () => clearParams(["message"]),
+    [clearParams],
+  );
 
   const selectThread = (threadId: Id<"researchThreads"> | null) => {
     const next = new URLSearchParams(searchParams);
     if (threadId) next.set("thread", threadId);
     else next.delete("thread");
+    next.delete("message");
     setSearchParams(next, { replace: true });
   };
 
@@ -292,15 +416,24 @@ function ResearchWorkspace({
           />
         </aside>
         <section className="flex-1 min-w-0 min-h-0">
-          <ResearchChat
-            key={activeThread?._id ?? "new"}
-            groupId={group._id}
-            groupName={group.name}
-            groupSlug={group.slug}
-            thread={activeThread}
-            ready={ready}
-            onThreadCreated={(threadId) => selectThread(threadId)}
-          />
+          {resolving ? (
+            <p className="flex items-center gap-2 px-4 py-4 text-[13px] text-soft">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Opening thread...
+            </p>
+          ) : (
+            <ResearchChat
+              key={activeThread?._id ?? "new"}
+              groupId={group._id}
+              groupName={group.name}
+              groupSlug={group.slug}
+              thread={activeThread}
+              ready={ready}
+              focusMessageId={activeThread ? focusMessageId : null}
+              onFocusMissing={handleFocusMissing}
+              onThreadCreated={(threadId) => selectThread(threadId)}
+            />
+          )}
         </section>
       </div>
     </div>

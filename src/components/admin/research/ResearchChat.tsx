@@ -8,6 +8,7 @@ import { getConvexErrorMessage } from "../../../lib/convexErrors";
 import { ResearchMessageView } from "./ResearchMessageView";
 import {
   downloadMarkdown,
+  researchMessageDomId,
   slugify,
   threadToMarkdown,
   type ResearchThread,
@@ -29,6 +30,8 @@ export function ResearchChat({
   groupSlug,
   thread,
   ready,
+  focusMessageId,
+  onFocusMissing,
   onThreadCreated,
 }: {
   groupId: Id<"judgingGroups">;
@@ -36,6 +39,8 @@ export function ResearchChat({
   groupSlug: string;
   thread: ResearchThread | null;
   ready: boolean;
+  focusMessageId: string | null;
+  onFocusMissing: () => void;
   onThreadCreated: (threadId: Id<"researchThreads">) => void;
 }) {
   const messages = useQuery(
@@ -69,6 +74,36 @@ export function ResearchChat({
     const el = scrollRef.current;
     if (el && stickToBottom.current) el.scrollTop = el.scrollHeight;
   }, [list.length, lastContentLength, lastStepCount]);
+
+  // Shared answer link: scroll to the question above the answer so context
+  // reads first, pause auto follow, and briefly outline the answer. Runs once
+  // per linked id, after the bottom scroll above on first load.
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const focusedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focusMessageId || messages === undefined) return;
+    if (focusedRef.current === focusMessageId) return;
+    focusedRef.current = focusMessageId;
+    const index = messages.findIndex((m) => m._id === focusMessageId);
+    if (index === -1) {
+      toast.error("That answer is no longer in this thread.");
+      onFocusMissing();
+      return;
+    }
+    const prev = index > 0 ? messages[index - 1] : undefined;
+    const target = prev?.role === "user" ? prev._id : focusMessageId;
+    stickToBottom.current = false;
+    document
+      .getElementById(researchMessageDomId(target))
+      ?.scrollIntoView({ block: "start" });
+    setHighlightId(focusMessageId);
+  }, [focusMessageId, messages, onFocusMissing]);
+
+  useEffect(() => {
+    if (!highlightId) return;
+    const timer = window.setTimeout(() => setHighlightId(null), 2400);
+    return () => window.clearTimeout(timer);
+  }, [highlightId]);
 
   const handleScroll = () => {
     const el = scrollRef.current;
@@ -170,20 +205,27 @@ export function ResearchChat({
             {list.map((message, index) => {
               const prev = index > 0 ? list[index - 1] : undefined;
               return (
-                <ResearchMessageView
+                <div
                   key={message._id}
-                  message={message}
-                  question={prev?.role === "user" ? prev.content : undefined}
-                  groupName={groupName}
-                  groupSlug={groupSlug}
-                  canRetry={
-                    ready &&
-                    message.role === "assistant" &&
-                    message._id === last?._id &&
-                    !sending
-                  }
-                  onRetry={() => void handleRetry(message._id)}
-                />
+                  id={researchMessageDomId(message._id)}
+                  className="scroll-mt-4"
+                >
+                  <ResearchMessageView
+                    message={message}
+                    question={prev?.role === "user" ? prev.content : undefined}
+                    groupName={groupName}
+                    groupSlug={groupSlug}
+                    threadId={thread?._id}
+                    highlighted={highlightId === message._id}
+                    canRetry={
+                      ready &&
+                      message.role === "assistant" &&
+                      message._id === last?._id &&
+                      !sending
+                    }
+                    onRetry={() => void handleRetry(message._id)}
+                  />
+                </div>
               );
             })}
           </div>

@@ -751,6 +751,9 @@ export default defineSchema({
     researchEnabled: v.optional(v.boolean()),
     // Gateway model id picked in the research chat. Absent = env default.
     researchModel: v.optional(v.string()),
+    // Organizer pasted rules and context (Markdown) the research chat reads
+    // on every answer, for rules that live outside VibeApps.
+    researchContext: v.optional(v.string()),
   })
     .index("by_slug", ["slug"])
     .index("by_isPublic", ["isPublic"])
@@ -782,6 +785,7 @@ export default defineSchema({
     storyId: v.optional(v.id("stories")),
     kind: v.union(
       v.literal("overview"),
+      v.literal("rules"),
       v.literal("submission"),
       v.literal("humanLeaderboard"),
       v.literal("aiLeaderboard"),

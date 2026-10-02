@@ -6,6 +6,7 @@ import {
   Download,
   ExternalLink,
   Globe,
+  Link2,
   Loader2,
   RotateCcw,
   Wrench,
@@ -17,6 +18,7 @@ import { researchModelLabel } from "../../../../convex/lib/researchModels";
 import {
   answerToMarkdown,
   downloadMarkdown,
+  researchAnswerUrl,
   slugify,
   type ResearchMessage,
 } from "./researchExport";
@@ -28,6 +30,8 @@ export function ResearchMessageView({
   question,
   groupName,
   groupSlug,
+  threadId,
+  highlighted,
   canRetry,
   onRetry,
 }: {
@@ -35,6 +39,8 @@ export function ResearchMessageView({
   question?: string;
   groupName: string;
   groupSlug: string;
+  threadId?: string;
+  highlighted: boolean;
   canRetry: boolean;
   onRetry: () => void;
 }) {
@@ -59,7 +65,12 @@ export function ResearchMessageView({
   const hasText = message.content.trim().length > 0;
 
   return (
-    <div className="space-y-2" aria-live={active ? "polite" : undefined}>
+    <div
+      className={`space-y-2 rounded-md outline outline-2 outline-offset-[6px] transition-[outline-color] duration-700 motion-reduce:transition-none ${
+        highlighted ? "outline-hairline-strong" : "outline-transparent"
+      }`}
+      aria-live={active ? "polite" : undefined}
+    >
       <ToolSteps steps={message.toolSteps ?? []} active={active} />
 
       {hasText ? (
@@ -97,6 +108,7 @@ export function ResearchMessageView({
           question={question}
           groupName={groupName}
           groupSlug={groupSlug}
+          threadId={threadId}
           canRetry={canRetry}
           onRetry={onRetry}
         />
@@ -188,6 +200,7 @@ function AnswerActions({
   question,
   groupName,
   groupSlug,
+  threadId,
   canRetry,
   onRetry,
 }: {
@@ -195,11 +208,27 @@ function AnswerActions({
   question?: string;
   groupName: string;
   groupSlug: string;
+  threadId?: string;
   canRetry: boolean;
   onRetry: () => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const hasText = message.content.trim().length > 0;
+
+  const handleCopyLink = async () => {
+    if (!threadId) return;
+    try {
+      await navigator.clipboard.writeText(
+        researchAnswerUrl(groupSlug, threadId, message._id),
+      );
+      setLinkCopied(true);
+      window.setTimeout(() => setLinkCopied(false), 1500);
+      toast.success("Link copied. Anyone with research access to this group can open it.");
+    } catch {
+      toast.error("Could not copy the link");
+    }
+  };
 
   const handleCopy = async () => {
     try {
@@ -248,6 +277,21 @@ function AnswerActions({
             <Download className="w-3.5 h-3.5" />
           </button>
         </>
+      )}
+      {threadId && (
+        <button
+          type="button"
+          onClick={() => void handleCopyLink()}
+          className={buttonClass}
+          aria-label="Copy a link to this answer"
+          title="Copy link"
+        >
+          {linkCopied ? (
+            <Check className="w-3.5 h-3.5 text-green-600" />
+          ) : (
+            <Link2 className="w-3.5 h-3.5" />
+          )}
+        </button>
       )}
       {canRetry && (
         <button

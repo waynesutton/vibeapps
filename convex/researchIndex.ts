@@ -7,6 +7,7 @@ import {
   buildCombinedLeaderboardDoc,
   buildHumanLeaderboardDoc,
   buildOverviewDoc,
+  buildRulesDoc,
   buildSubmissionDossier,
   loadGroupContext,
   loadGroupSnapshot,
@@ -219,6 +220,7 @@ export const finalizeIndex = internalMutation({
     const snap = await loadGroupSnapshot(ctx, gc);
     await Promise.all([
       upsertDoc(ctx, args.groupId, "overview", undefined, "Group overview", buildOverviewDoc(snap)),
+      upsertDoc(ctx, args.groupId, "rules", undefined, "Rules and rubric", buildRulesDoc(gc)),
       upsertDoc(ctx, args.groupId, "humanLeaderboard", undefined, "Human judges leaderboard", buildHumanLeaderboardDoc(snap, 1000)),
       upsertDoc(ctx, args.groupId, "aiLeaderboard", undefined, "AI judge leaderboard", buildAiLeaderboardDoc(snap, 1000)),
       upsertDoc(ctx, args.groupId, "combinedLeaderboard", undefined, "Combined human and AI view", buildCombinedLeaderboardDoc(snap, 1000)),

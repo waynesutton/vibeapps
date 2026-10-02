@@ -52,8 +52,10 @@ export function ResearchThreadList({
       () => {
         void (async () => {
           try {
-            await deleteThread({ threadId: thread._id });
+            // Leave the thread first so the shared link check does not flag
+            // our own delete as a missing thread
             if (activeId === thread._id) onNew();
+            await deleteThread({ threadId: thread._id });
             toast.success("Thread deleted");
           } catch (error) {
             toast.error(

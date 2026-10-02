@@ -25,6 +25,7 @@ import {
   buildHumanLeaderboardDoc,
   buildOverviewDoc,
   buildRosterDoc,
+  buildRulesDoc,
   buildSubmissionDossier,
   loadGroupContext,
   loadGroupSnapshot,
@@ -68,6 +69,7 @@ export const loadRunContext = internalQuery({
       groupName: v.string(),
       model: v.string(),
       overview: v.string(),
+      rules: v.string(),
       leaderboard: v.string(),
       history: v.array(
         v.object({
@@ -107,6 +109,7 @@ export const loadRunContext = internalQuery({
       groupName: gc.group.name,
       model: message.model ?? "",
       overview: buildOverviewDoc(snap),
+      rules: buildRulesDoc(gc),
       leaderboard: buildCombinedLeaderboardDoc(snap, 15),
       history,
     };
@@ -444,6 +447,7 @@ function systemPrompt(run: {
   groupName: string;
   model: string;
   overview: string;
+  rules: string;
   leaderboard: string;
 }): string {
   return `You are the research analyst for the "${run.groupName}" judging group on VibeApps (${SITE_URL}). Admins ask you to compare submissions, explain rankings, and recommend winners.
@@ -457,6 +461,7 @@ You know this group through tools:
 Rules:
 - Ground every claim in tool output or the context below. If data is missing (for example no human scores yet), say so plainly.
 - Human judge results are the official outcome. AI judge results are advisory. Say which one you are using.
+- For eligibility, criteria, and rubric questions, use the rules and rubric section below. Organizer rules and context there take priority. If a rule is not written down, say so instead of guessing.
 - When ranking or picking winners, give a short reason per pick that cites scores, judge comments, or AI reasoning.
 - Link submissions as [Title](${SITE_URL}/s/slug) using the links from the dossiers. Include repo and live links when relevant.
 - Never reveal judge emails or private contact info.
@@ -467,6 +472,8 @@ You are running on ${researchModelLabel(run.model)}.
 
 # Group overview
 ${run.overview}
+
+${run.rules}
 
 # Top of the combined leaderboard (live)
 ${run.leaderboard}`;

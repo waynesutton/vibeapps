@@ -20,6 +20,26 @@ export function slugify(text: string, max = 48): string {
   return slug || "research";
 }
 
+// DOM id for a message row, shared by deep link scrolling and the view
+export function researchMessageDomId(messageId: string): string {
+  return `research-message-${messageId}`;
+}
+
+// Absolute deep link to one answer. Uses the current origin so links copied
+// on dev or preview deployments open there.
+export function researchAnswerUrl(
+  groupSlug: string,
+  threadId: string,
+  messageId: string,
+): string {
+  const params = new URLSearchParams({
+    section: "research",
+    thread: threadId,
+    message: messageId,
+  });
+  return `${window.location.origin}/admin/judging/${encodeURIComponent(groupSlug)}?${params.toString()}`;
+}
+
 // Trigger a browser download for Markdown text
 export function downloadMarkdown(filename: string, markdown: string): void {
   const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
