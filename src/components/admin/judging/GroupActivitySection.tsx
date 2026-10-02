@@ -32,6 +32,7 @@ const ACTION_LABELS: Record<string, string> = {
   "judging.submissionRemoved": "Submission removed",
   "judging.aiRunStarted": "AI run started",
   "judging.aiRetryQueued": "AI retry queued",
+  "judging.aiRerunQueued": "AI re-run queued",
   "judging.aiReviewCompleted": "AI review completed",
   "judging.aiReviewFailed": "AI review failed",
   "score.submitted": "Score submitted",

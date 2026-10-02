@@ -686,11 +686,22 @@ export const startReview = mutation({
 });
 
 /**
- * Retry the AI review for a single submission (e.g. after a failure).
+ * Retry a failed AI review or re-run a completed one for a single submission.
+ * Idempotent: a row that is already pending is left alone (already queued).
+ * Old scores stay on the row until the new analysis saves, so the row keeps
+ * its rank while it is re-reviewed.
  */
 export const retrySubmission = mutation({
   args: { resultId: v.id("aiJudgeResults") },
-  returns: v.null(),
+  returns: v.object({
+    queued: v.boolean(),
+    previousStatus: v.union(
+      v.literal("pending"),
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("failed"),
+    ),
+  }),
   handler: async (ctx, args) => {
     const result = await ctx.db.get(args.resultId);
     if (!result) {
@@ -700,7 +711,29 @@ export const retrySubmission = mutation({
     if (result.status === "running") {
       throw new ConvexError("This submission is currently being reviewed");
     }
+    if (result.status === "pending") {
+      return { queued: false, previousStatus: result.status };
+    }
 
+    const [group, story] = await Promise.all([
+      ctx.db.get(result.groupId),
+      ctx.db.get(result.storyId),
+    ]);
+    if (!group) {
+      throw new ConvexError("Judging group not found");
+    }
+    if (!group.aiJudgeEnabled) {
+      throw new ConvexError(
+        "The AI judge is turned off for this group. Enable it in the AI judge section, then re-run this submission.",
+      );
+    }
+    if (!isStoryValidForJudging(story)) {
+      throw new ConvexError(
+        "This submission is no longer eligible for judging (deleted, hidden, or missing required fields)",
+      );
+    }
+
+    const previousStatus = result.status;
     await ctx.db.patch(args.resultId, {
       status: "pending" as const,
       error: undefined,
@@ -713,19 +746,21 @@ export const retrySubmission = mutation({
       },
     );
 
-    // Group activity log entry for the audit trail
-    const retryStory = await ctx.db.get(result.storyId);
+    // Group activity log entry: rerun of a completed review vs retry of a failure
+    const isRerun = previousStatus === "completed";
     await logActivity(ctx, {
       category: "judging",
-      action: "judging.aiRetryQueued",
-      message: `Queued an AI review retry for "${retryStory?.title ?? "a submission"}"`,
+      action: isRerun ? "judging.aiRerunQueued" : "judging.aiRetryQueued",
+      message: isRerun
+        ? `Queued an AI review re-run for "${story.title}"`
+        : `Queued an AI review retry for "${story.title}"`,
       targetType: "story",
       targetId: result.storyId,
-      targetLabel: retryStory?.title,
+      targetLabel: story.title,
       groupId: result.groupId,
-      metadata: { storySlug: retryStory?.slug },
+      metadata: { storySlug: story.slug, previousStatus },
     });
-    return null;
+    return { queued: true, previousStatus };
   },
 });
 

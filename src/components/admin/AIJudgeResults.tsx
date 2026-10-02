@@ -23,6 +23,7 @@ import {
   Star,
 } from "lucide-react";
 import { ConvexError } from "convex/values";
+import { toast } from "sonner";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Button } from "../ui/button";
@@ -952,6 +953,10 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
   const { showMessage, showConfirm, DialogComponents } = useDialog();
 
   const [isStarting, setIsStarting] = useState(false);
+  // Rows whose single review mutation is in flight (spinner on the button)
+  const [queuingIds, setQueuingIds] = useState<Set<Id<"aiJudgeResults">>>(
+    () => new Set(),
+  );
   const [expandedId, setExpandedId] = useState<Id<"aiJudgeResults"> | null>(
     null,
   );
@@ -983,8 +988,10 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
     null,
   );
 
-  const isRunning =
-    (data?.counts.pending ?? 0) > 0 || (data?.counts.running ?? 0) > 0;
+  // Pending plus running: covers full runs and single submission re-runs
+  const inFlightCount =
+    (data?.counts.pending ?? 0) + (data?.counts.running ?? 0);
+  const isRunning = inFlightCount > 0;
 
   // Stats need at least one completed review; the report needs the full run done
   const statsReady = (data?.counts.completed ?? 0) > 0;
@@ -1124,12 +1131,59 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
     }
   };
 
-  const handleRetry = async (resultId: Id<"aiJudgeResults">) => {
+  // Queue one submission (retry a failure or re-run a completed review)
+  const queueSingleReview = async (
+    resultId: Id<"aiJudgeResults">,
+    title: string,
+  ) => {
+    setQueuingIds((prev) => new Set(prev).add(resultId));
     try {
-      await retrySubmission({ resultId });
+      const res = await retrySubmission({ resultId });
+      if (res.queued) {
+        toast.success(
+          res.previousStatus === "completed"
+            ? `Re-running the AI review for "${title}"`
+            : `Retrying the AI review for "${title}"`,
+        );
+      } else {
+        toast(`"${title}" is already queued for review`);
+      }
     } catch (error) {
-      showMessage("Retry Failed", errorMessage(error), "error");
+      showMessage("Could Not Queue Review", errorMessage(error), "error");
+    } finally {
+      setQueuingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(resultId);
+        return next;
+      });
     }
+  };
+
+  // Failed rows retry right away; completed rows confirm first because the
+  // new analysis overwrites the current scores (and any admin edits)
+  const handleRetry = (result: {
+    _id: Id<"aiJudgeResults">;
+    storyTitle: string;
+    status: string;
+    editedAt?: number;
+  }) => {
+    if (result.status !== "completed") {
+      void queueSingleReview(result._id, result.storyTitle);
+      return;
+    }
+    showConfirm(
+      `Re-run AI review for "${result.storyTitle}"?`,
+      `Fetches the repo, live site, and video again and scores this submission with the current rubric, weights, and prompt. The new review replaces the current scores and reasoning.${
+        result.editedAt
+          ? " Admin score edits on this submission will be lost."
+          : ""
+      } The current score stays visible until the new review finishes. No other submission is touched.`,
+      () => void queueSingleReview(result._id, result.storyTitle),
+      {
+        confirmButtonText: "Re-run review",
+        confirmButtonVariant: result.editedAt ? "destructive" : "default",
+      },
+    );
   };
 
   // Replace the shortlist with the top N completed results. Ties at the
@@ -1395,7 +1449,9 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
             {isStarting || isRunning ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                {isRunning ? "Review in progress..." : "Starting..."}
+                {isRunning
+                  ? `Reviewing ${inFlightCount} submission${inFlightCount === 1 ? "" : "s"}...`
+                  : "Starting..."}
               </>
             ) : (
               <>
@@ -2077,6 +2133,13 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                   result.storyId,
                 );
                 const isToggling = togglingStoryId === result.storyId;
+                const isQueuing = queuingIds.has(result._id);
+                // Re-run in flight: old scores are still on the row until the
+                // new review saves, so keep showing them as "previous"
+                const isRerunning =
+                  (result.status === "pending" ||
+                    result.status === "running") &&
+                  result.averageScore !== undefined;
                 return (
                   <div
                     key={result._id}
@@ -2084,7 +2147,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                   >
                     {/* Row header: rank, title with facts, score on the right */}
                     <div className="flex items-start gap-3 p-4">
-                      {result.status === "completed" && (
+                      {(result.status === "completed" || isRerunning) && (
                         <span className="flex-shrink-0 w-8 h-8 rounded-full bg-surface-alt text-copy flex items-center justify-center text-sm font-semibold tabular-nums">
                           {index + 1}
                         </span>
@@ -2314,6 +2377,23 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                               )}
                           </div>
                         )}
+                      {/* Previous score, dimmed, while this row is re-reviewed */}
+                      {isRerunning && (
+                        <div
+                          className="flex-shrink-0 pl-2 text-right opacity-60"
+                          title="Score from the last completed review. It is replaced when the re-run finishes."
+                        >
+                          <p className="text-xl font-semibold leading-8 text-ink tabular-nums">
+                            {result.averageScore?.toFixed(1)}
+                            <span className="text-sm font-normal text-faint">
+                              /10
+                            </span>
+                          </p>
+                          <p className="text-xs text-soft whitespace-nowrap">
+                            previous
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Row toolbar: reviewer meta left, actions right */}
@@ -2358,15 +2438,29 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                           )}
                           {isShortlisted ? "Shortlisted" : "Shortlist"}
                         </button>
-                        {result.status === "failed" && (
+                        {/* Single submission review: Retry on failures, Re-run on completed */}
+                        {(result.status === "failed" ||
+                          result.status === "completed") && (
                           <button
                             type="button"
-                            onClick={() => handleRetry(result._id)}
-                            className={`${ROW_ACTION} ${ROW_ACTION_NEUTRAL}`}
-                            title="Retry AI review for this submission"
+                            onClick={() => handleRetry(result)}
+                            disabled={isQueuing || !aiEnabled}
+                            className={`${ROW_ACTION} ${ROW_ACTION_NEUTRAL} disabled:opacity-50 disabled:cursor-not-allowed`}
+                            title={
+                              !aiEnabled
+                                ? "Turn on the AI judge for this group to review submissions"
+                                : result.status === "failed"
+                                  ? "Retry the AI review for this submission"
+                                  : "Re-run the AI review for just this submission"
+                            }
+                            aria-label={`${result.status === "failed" ? "Retry" : "Re-run"} AI review for ${result.storyTitle}`}
                           >
-                            <RefreshCw className="w-3.5 h-3.5" />
-                            Retry
+                            {isQueuing ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <RefreshCw className="w-3.5 h-3.5" />
+                            )}
+                            {result.status === "failed" ? "Retry" : "Re-run"}
                           </button>
                         )}
                         {result.status === "completed" && (
@@ -2971,8 +3065,10 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                         {/* Retry a completed review */}
                         <div className="pt-2 border-t border-hairline">
                           <button
-                            onClick={() => handleRetry(result._id)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium"
+                            type="button"
+                            onClick={() => handleRetry(result)}
+                            disabled={isQueuing || !aiEnabled}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-copy hover:text-ink bg-surface hover:bg-surface-hover rounded-lg border border-hairline hover:border-hairline-strong transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Re-run the AI review for this submission (overwrites current scores)"
                           >
                             <RefreshCw className="w-3.5 h-3.5" />
