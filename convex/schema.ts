@@ -746,10 +746,111 @@ export default defineSchema({
     // Organizer emails for the per-group new-submission alert. Empty or
     // absent means no alert; the dashboard toggle controls the type globally.
     notificationEmails: v.optional(v.array(v.string())),
+    // Research chat: admin only expert chat over this group's submissions,
+    // human scores, and AI results. Absent = off (default).
+    researchEnabled: v.optional(v.boolean()),
+    // Gateway model id picked in the research chat. Absent = env default.
+    researchModel: v.optional(v.string()),
   })
     .index("by_slug", ["slug"])
     .index("by_isPublic", ["isPublic"])
     .index("by_isActive", ["isActive"]),
+
+  // Research index lifecycle, one row per judging group. Kept off the group
+  // doc so batch progress writes never contend with group reads.
+  researchIndexes: defineTable({
+    groupId: v.id("judgingGroups"),
+    status: v.union(
+      v.literal("indexing"),
+      v.literal("ready"),
+      v.literal("failed"),
+    ),
+    processed: v.number(), // Submissions indexed so far
+    total: v.number(), // Submissions in the group when indexing started
+    cursor: v.optional(v.string()), // judgingGroupSubmissions pagination cursor
+    runId: v.number(), // Start timestamp; stale batches from an older run exit
+    startedAt: v.number(),
+    readyAt: v.optional(v.number()),
+    staleSince: v.optional(v.number()), // Set when scores or results change after readyAt
+    error: v.optional(v.string()),
+  }).index("by_groupId", ["groupId"]),
+
+  // Markdown knowledge docs for the research chat: one dossier per
+  // submission plus overview and leaderboard docs per group.
+  researchDocs: defineTable({
+    groupId: v.id("judgingGroups"),
+    storyId: v.optional(v.id("stories")),
+    kind: v.union(
+      v.literal("overview"),
+      v.literal("submission"),
+      v.literal("humanLeaderboard"),
+      v.literal("aiLeaderboard"),
+      v.literal("combinedLeaderboard"),
+    ),
+    title: v.string(),
+    content: v.string(),
+    updatedAt: v.number(),
+  })
+    .index("by_groupId_and_kind", ["groupId", "kind"])
+    .index("by_groupId_and_storyId", ["groupId", "storyId"])
+    .searchIndex("search_content", {
+      searchField: "content",
+      filterFields: ["groupId"],
+    }),
+
+  // Shared research conversations per judging group
+  researchThreads: defineTable({
+    groupId: v.id("judgingGroups"),
+    title: v.string(),
+    createdBy: v.id("users"),
+    createdByName: v.string(),
+    lastMessageAt: v.number(),
+  }).index("by_groupId_and_lastMessageAt", ["groupId", "lastMessageAt"]),
+
+  // Messages inside a research thread. Assistant rows are patched while the
+  // model streams; toolSteps and sources are bounded per answer.
+  researchMessages: defineTable({
+    threadId: v.id("researchThreads"),
+    groupId: v.id("judgingGroups"),
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    content: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("streaming"),
+      v.literal("done"),
+      v.literal("failed"),
+      v.literal("stopped"),
+    ),
+    model: v.optional(v.string()),
+    authorId: v.optional(v.id("users")),
+    authorName: v.optional(v.string()),
+    toolSteps: v.optional(
+      v.array(
+        v.object({
+          id: v.string(), // Tool call id from the model
+          tool: v.string(),
+          label: v.string(), // Human readable step, e.g. "Searched the web for ..."
+          status: v.union(
+            v.literal("running"),
+            v.literal("done"),
+            v.literal("error"),
+          ),
+        }),
+      ),
+    ),
+    sources: v.optional(
+      v.array(v.object({ title: v.string(), url: v.string() })),
+    ),
+    error: v.optional(v.string()),
+    stopRequested: v.optional(v.boolean()),
+    usage: v.optional(
+      v.object({
+        inputTokens: v.optional(v.number()),
+        outputTokens: v.optional(v.number()),
+      }),
+    ),
+    completedAt: v.optional(v.number()),
+  }).index("by_threadId", ["threadId"]),
 
   // AI Judge results: one row per group+story, upserted on re-run.
   // Stored separately from judgeScores so human judging is untouched.

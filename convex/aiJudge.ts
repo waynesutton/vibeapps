@@ -11,6 +11,7 @@ import { internal, components } from "./_generated/api";
 import { Workpool } from "@convex-dev/workpool";
 import { isUserAdmin, getAuthenticatedUserId } from "./users";
 import { requireJudgingGroupPermission } from "./adminAccess";
+import { markResearchStale } from "./researchIndex";
 import { verifyPassword } from "./judgingGroups";
 import { parseHackathonLogHeader } from "./hackathonLog"; // hackathon.md header parsing (admin views)
 import { logActivity } from "./activityLog";
@@ -1226,6 +1227,7 @@ export const updateResultScore = mutation({
       "judging.ai",
     );
     const userId = await getAuthenticatedUserId(ctx);
+    await markResearchStale(ctx, existingResult.groupId);
 
     for (const cs of args.criteriaScores) {
       if (!Number.isFinite(cs.score) || cs.score < 1 || cs.score > 10) {
@@ -1814,6 +1816,7 @@ export const saveResult = internalMutation({
   handler: async (ctx, args) => {
     const result = await ctx.db.get(args.resultId);
     if (!result) return null;
+    await markResearchStale(ctx, result.groupId);
 
     if (args.outcome.kind === "success") {
       const totalScore = args.outcome.criteriaScores.reduce(

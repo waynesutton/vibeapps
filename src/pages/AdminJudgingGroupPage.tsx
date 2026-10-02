@@ -20,6 +20,7 @@ import {
   Settings,
   Sparkles,
   Table2,
+  Telescope,
 } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { NotFoundPage } from "./NotFoundPage";
@@ -45,6 +46,7 @@ import { GroupLinksSection } from "../components/admin/judging/GroupLinksSection
 import { GroupHowToJudgeSection } from "../components/admin/judging/GroupHowToJudgeSection";
 import { GroupActivitySection } from "../components/admin/judging/GroupActivitySection";
 import { GroupSlugEditor } from "../components/admin/judging/GroupSlugEditor";
+import { GroupResearchSection } from "../components/admin/research/GroupResearchSection";
 
 // Sidebar sections. Each maps to a ?section= value and a permission key
 // (null means visible to anyone who can open the page).
@@ -89,6 +91,13 @@ const SECTIONS = [
     perm: "judging.results",
   },
   { key: "ai-results", label: "AI results", icon: Bot, perm: "judging.ai" },
+  // Analyst chat over human and AI results, so it needs both grants
+  {
+    key: "research",
+    label: "Research",
+    icon: Telescope,
+    perm: "judging.research",
+  },
   {
     key: "tracking",
     label: "Judge tracking",
@@ -173,11 +182,14 @@ function GroupWorkspace({ group }: { group: GroupDetails }) {
     });
   };
 
-  // "judging.ai.any" shows the AI section for either manage or ai grants
+  // "judging.ai.any" shows the AI section for either manage or ai grants;
+  // "judging.research" needs both results and ai grants
   const can = (perm: string): boolean =>
     perm === "judging.ai.any"
       ? canPerm("judging.manage") || canPerm("judging.ai")
-      : canPerm(perm);
+      : perm === "judging.research"
+        ? canPerm("judging.results") && canPerm("judging.ai")
+        : canPerm(perm);
 
   const visibleSections = SECTIONS.filter(
     (s) => s.perm === null || can(s.perm),
@@ -337,6 +349,9 @@ function GroupWorkspace({ group }: { group: GroupDetails }) {
           )}
           {activeSection === "ai-results" && canAi && (
             <AIJudgeResults groupId={group._id} groupName={group.name} />
+          )}
+          {activeSection === "research" && can("judging.research") && (
+            <GroupResearchSection group={group} />
           )}
           {activeSection === "tracking" && can("judging.tracking") && (
             <JudgeTracking groupId={group._id} groupName={group.name} />

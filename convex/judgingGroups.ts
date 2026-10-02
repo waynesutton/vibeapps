@@ -9,6 +9,7 @@ import {
   getAllowedJudgingGroupIds,
   getAccessContext,
 } from "./adminAccess";
+import { deleteGroupResearch } from "./researchIndex";
 import { logActivity } from "./activityLog";
 import { ensureStoryInGroup } from "./judgingGroupSubmissions";
 import { showsBelowCut } from "./lib/judgeQueue";
@@ -780,7 +781,10 @@ export const deleteGroup = mutation({
       await ctx.db.delete(aiResult._id);
     }
 
-    // 7. Finally, the group itself
+    // 7. Research chat index, docs, threads, and messages (batched in the background)
+    await deleteGroupResearch(ctx, args.groupId);
+
+    // 8. Finally, the group itself
     await ctx.db.delete(args.groupId);
 
     await logActivity(ctx, {

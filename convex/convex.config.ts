@@ -14,11 +14,14 @@ import contextDev from "@context-dot-dev/convex/convex.config.js";
 // AI_JUDGE_MODEL is the Convex AI gateway model id ("provider/model") for
 // the AI judge, group summary, and spam check. Optional: lib/llm.ts falls
 // back to Claude Fable 5 when unset, so flipping models is a dashboard edit.
+// AI_RESEARCH_MODEL is the default model for the judging research chat.
+// Optional: falls back to AI_JUDGE_MODEL, then Claude Fable 5.
 const app = defineApp({
   env: {
     FIRECRAWL_API_KEY: v.string(),
     CONTEXT_DEV_API_KEY: v.string(),
     AI_JUDGE_MODEL: v.optional(v.string()),
+    AI_RESEARCH_MODEL: v.optional(v.string()),
   },
 });
 app.use(resend);

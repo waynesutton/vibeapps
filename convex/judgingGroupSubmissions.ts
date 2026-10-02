@@ -7,6 +7,7 @@ import {
   getAllowedJudgingGroupIds,
   hasPermission,
 } from "./adminAccess";
+import { markResearchStale } from "./researchIndex";
 import { internal } from "./_generated/api";
 import { logActivity } from "./activityLog";
 import { isInJudgeQueue, showsBelowCut } from "./lib/judgeQueue";
@@ -211,6 +212,7 @@ export const addSubmissions = mutation({
   }),
   handler: async (ctx, args) => {
     await requireJudgingGroupPermission(ctx, args.groupId, "judging.manage");
+    await markResearchStale(ctx, args.groupId);
 
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
@@ -455,6 +457,7 @@ export const removeSubmission = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     await requireJudgingGroupPermission(ctx, args.groupId, "judging.manage");
+    await markResearchStale(ctx, args.groupId);
 
     // Find and delete the group submission
     const submission = await ctx.db
@@ -1600,6 +1603,7 @@ export const updateSubmissionStatus = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const judge = await requireJudgeSession(ctx, args.sessionId, args.groupId);
+    await markResearchStale(ctx, args.groupId);
 
     // Find existing status and the membership row (for the queue check)
     const [existingStatus, membership, group] = await Promise.all([

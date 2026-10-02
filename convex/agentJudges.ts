@@ -10,6 +10,7 @@ import { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { getAuthenticatedUserId } from "./users";
 import { requireJudgingGroupPermission } from "./adminAccess";
+import { markResearchStale } from "./researchIndex";
 import { isInJudgeQueue } from "./lib/judgeQueue";
 
 // --- Agent judging keys ---
@@ -516,6 +517,8 @@ export const submitAgentScores = internalMutation({
     completed: v.boolean(),
   }),
   handler: async (ctx, args) => {
+    await markResearchStale(ctx, args.groupId);
+
     // Validate everything before any write
     const group = await ctx.db.get(args.groupId);
     if (!group || !group.isActive) {

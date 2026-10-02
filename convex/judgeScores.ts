@@ -2,6 +2,7 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { requireJudgingGroupPermission } from "./adminAccess";
+import { markResearchStale } from "./researchIndex";
 import { logActivity } from "./activityLog";
 import { isUserAdmin } from "./users";
 import { verifyPassword } from "./judgingGroups";
@@ -122,6 +123,8 @@ export const submitScore = mutation({
     if (!judge) {
       throw new Error("Invalid judge session");
     }
+
+    await markResearchStale(ctx, judge.groupId);
 
     // Verify the group is active
     const group = await ctx.db.get(judge.groupId);
