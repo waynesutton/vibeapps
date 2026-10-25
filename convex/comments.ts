@@ -1,13 +1,18 @@
 import { query, mutation } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { Doc } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
 import {
   getAuthenticatedUserId,
   ensureUserNotBanned,
+  isUserAdmin,
 } from "./users"; // Import the centralized helper
 import { requirePermission } from "./adminAccess"; // Granular admin permissions
 import { internal } from "./_generated/api";
+import { isPublicStory } from "./siteDirectory"; // Shared public visibility rule
+import { callerKey, enforceLimit } from "./lib/rateLimits"; // Per-user rate limits
+
+const MAX_COMMENT_LENGTH = 5000;
 
 // We might not need this specific type if we don't enhance comments further yet
 // export type CommentWithDetails = Doc<"comments"> & {
@@ -47,6 +52,12 @@ export const listApprovedByStory = query({
   ): Promise<
     Array<Doc<"comments"> & { authorName?: string; authorUsername?: string }>
   > => {
+    // Comments on hidden, spam, or judging-only stories stay private
+    const story = await ctx.db.get(args.storyId);
+    if (!story || (!isPublicStory(story) && !(await isUserAdmin(ctx)))) {
+      return [];
+    }
+
     const comments = await ctx.db
       .query("comments")
       .withIndex("by_storyId_status", (q) =>
@@ -291,7 +302,19 @@ export const add = mutation({
   handler: async (ctx, args) => {
     await ensureUserNotBanned(ctx);
     const userId = await getAuthenticatedUserId(ctx);
-    
+
+    // Length cap and per-user rate limit
+    const content = args.content.trim();
+    if (content.length === 0) {
+      throw new ConvexError("Comment cannot be empty.");
+    }
+    if (content.length > MAX_COMMENT_LENGTH) {
+      throw new ConvexError(
+        `Comments are limited to ${MAX_COMMENT_LENGTH} characters.`,
+      );
+    }
+    await enforceLimit(ctx, "comment", await callerKey(ctx, userId));
+
     // Validate story exists and get parent comment if needed (read operations first)
     const story = await ctx.db.get(args.storyId);
     if (!story) {
@@ -311,7 +334,7 @@ export const add = mutation({
     // All validation complete - now perform writes
     const commentId = await ctx.db.insert("comments", {
       storyId: args.storyId,
-      content: args.content,
+      content,
       userId: userId,
       parentId: args.parentId,
       votes: 0,

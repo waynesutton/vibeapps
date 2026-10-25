@@ -61,6 +61,13 @@ export default function JudgingGroupPage() {
         password: password.trim() || undefined,
       });
 
+      // null means the password no longer matches
+      if (!result) {
+        setIsRegistering(false);
+        setPasswordError("Incorrect password. Please try again.");
+        return;
+      }
+
       // Store session ID in localStorage
       localStorage.setItem("judgeSessionId", result.sessionId);
 

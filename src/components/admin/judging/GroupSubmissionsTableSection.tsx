@@ -38,12 +38,15 @@ import {
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import { Input } from "../../ui/input";
+import { FactChip } from "../../ui/FactChip";
+import { NOT_PUBLIC_TITLE } from "../../../lib/submissionLink";
 import { SimpleSelect } from "../../ui/SimpleSelect";
 import { useAdminAccess } from "../useAdminAccess";
 import { useDialog } from "../../../hooks/useDialog";
 import type { GroupDetails } from "./groupSection";
 import { SubmissionDownloadControl } from "./SubmissionDownloadControl";
 import { LateSubmissionBadge } from "../../LateSubmissionBadge";
+import { safeHref } from "../../../lib/safeHref";
 
 type SubmissionRow = FunctionReturnType<
   typeof api.judgingGroupSubmissions.listSubmissionsTable
@@ -134,7 +137,7 @@ function LinkCell({
   return (
     <div className="flex items-center gap-0.5 min-w-0">
       <a
-        href={url}
+        href={safeHref(url)}
         target="_blank"
         rel="noopener noreferrer"
         title={url}
@@ -316,7 +319,34 @@ export function GroupSubmissionsTableSection({
         header: "Submission",
         sortFn: "text",
         cell: ({ row }) => {
-          const { title, slug } = row.original;
+          const { title, slug, judgingOnly, importSourceUrl, url } =
+            row.original;
+          // Judging only imports have no public page; link the source
+          if (judgingOnly) {
+            const href = safeHref(importSourceUrl ?? url) ?? "";
+            return (
+              <div className="flex items-start gap-1 min-w-0">
+                <div className="min-w-0">
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="app-title-sm text-ink hover:underline inline-flex items-center gap-1 max-w-full"
+                    title={`Open ${title} source page`}
+                  >
+                    <span className="truncate">{title}</span>
+                    <ExternalLink className="w-3 h-3 text-faint flex-shrink-0" />
+                  </a>
+                  <p className="mt-0.5">
+                    <FactChip tone="info" title={NOT_PUBLIC_TITLE}>
+                      Not public
+                    </FactChip>
+                  </p>
+                </div>
+                <CopyButton value={href} label="source link" />
+              </div>
+            );
+          }
           const submissionPath = `/s/${slug}`;
           return (
             <div className="flex items-start gap-1 min-w-0">
@@ -469,7 +499,7 @@ export function GroupSubmissionsTableSection({
         cell: ({ row }) => (
           <div className="flex items-center gap-0.5">
             <a
-              href={row.original.url}
+              href={safeHref(row.original.url)}
               target="_blank"
               rel="noopener noreferrer"
               title={row.original.url}

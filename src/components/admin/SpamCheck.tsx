@@ -35,6 +35,7 @@ import {
 import { toast } from "sonner";
 import { useDialog } from "@/hooks/useDialog";
 import { useAdminAccess } from "./useAdminAccess";
+import { safeHref } from "@/lib/safeHref";
 import {
   DateRangePicker,
   type DateRange,
@@ -1145,7 +1146,7 @@ export function SpamCheck() {
                         })}
                       </span>
                       <a
-                        href={result.storyUrl}
+                        href={safeHref(result.storyUrl)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 hover:underline"
@@ -1159,7 +1160,7 @@ export function SpamCheck() {
                       </a>
                       {result.githubUrl && (
                         <a
-                          href={result.githubUrl}
+                          href={safeHref(result.githubUrl)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 hover:underline"
@@ -1460,7 +1461,7 @@ export function SpamCheck() {
                         {row.storyTitle}
                       </Link>
                       <a
-                        href={row.storyUrl}
+                        href={safeHref(row.storyUrl)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-xs text-soft hover:underline"

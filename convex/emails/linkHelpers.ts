@@ -40,8 +40,9 @@ export const generateUnsubscribeToken = internalMutation({
   },
   returns: v.string(),
   handler: async (ctx, args) => {
-    // Generate a simple token (in production, this should be cryptographically signed)
-    const token = `${args.userId}_${args.purpose}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Unguessable random token; lookups match the stored value, so tokens
+    // issued in the older format keep working until they expire
+    const token = `${crypto.randomUUID()}${crypto.randomUUID()}`.replace(/-/g, "");
 
     // Store token in database
     await ctx.db.insert("emailUnsubscribeTokens", {

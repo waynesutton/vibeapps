@@ -1,5 +1,12 @@
-import { query, mutation, internalQuery } from "./_generated/server";
-import { v } from "convex/values";
+import {
+  query,
+  mutation,
+  internalQuery,
+  type MutationCtx,
+  type QueryCtx,
+} from "./_generated/server";
+import { ConvexError, v } from "convex/values";
+import { callerKey, canUseLimit, tryLimit } from "./lib/rateLimits";
 import { Doc, Id } from "./_generated/dataModel";
 import { isUserAdmin, getAuthenticatedUserId } from "./users";
 import { getRubricForGroup } from "./aiJudge";
@@ -13,6 +20,7 @@ import { deleteGroupResearch } from "./researchIndex";
 import { logActivity } from "./activityLog";
 import { ensureStoryInGroup } from "./judgingGroupSubmissions";
 import { showsBelowCut } from "./lib/judgeQueue";
+import { isStoryJudgeable } from "./lib/judgingEligibility";
 
 // Validator for admin-selectable required fields on the custom submission form.
 // Each key is optional; unset keys fall back to defaults on the public page.
@@ -133,22 +141,91 @@ function generateSlug(name: string): string {
 function isStoryValidForJudging(
   story: Doc<"stories"> | null,
 ): story is Doc<"stories"> {
-  if (!story) return false;
-  if (story.isHidden === true) return false;
-  if (story.isArchived === true) return false;
-  if (story.status === "rejected") return false;
-  return true;
+  return isStoryJudgeable(story);
 }
 
-// SHA-256 hex digest. Older rows used reversible btoa; verifyPassword
-// still accepts those so existing groups keep working until the password
-// is saved again.
+// Group passwords are stored as salted PBKDF2-SHA256:
+//   pbkdf2$<iterations>$<salt hex>$<hash hex>
+// If the runtime lacks PBKDF2, a salted iterated SHA-256 is used instead:
+//   sha256i$<iterations>$<salt hex>$<hash hex>
+// Older rows hold an unsalted SHA-256 hex digest or reversible btoa.
+// verifyPassword still accepts both, and the validate mutations rehash them
+// to the salted format after a correct entry.
+const PBKDF2_ITERATIONS = 100_000;
+const SHA256_ITERATIONS = 5_000;
+
+function toHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function fromHex(hex: string): Uint8Array {
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) {
+    out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  }
+  return out;
+}
+
+async function sha256HexOf(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(value),
+  );
+  return toHex(new Uint8Array(digest));
+}
+
+async function pbkdf2Hex(
+  password: string,
+  salt: Uint8Array,
+  iterations: number,
+): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt, iterations },
+    key,
+    256,
+  );
+  return toHex(new Uint8Array(bits));
+}
+
+async function iteratedSha256Hex(
+  password: string,
+  saltHex: string,
+  iterations: number,
+): Promise<string> {
+  let current = `${saltHex}:${password}`;
+  for (let i = 0; i < iterations; i++) {
+    current = await sha256HexOf(current);
+  }
+  return current;
+}
+
+// Compares two hex strings without exiting early on the first difference
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
 export async function hashPassword(password: string): Promise<string> {
-  const data = new TextEncoder().encode(password);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest), (b) =>
-    b.toString(16).padStart(2, "0"),
-  ).join("");
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const saltHex = toHex(salt);
+  try {
+    const hash = await pbkdf2Hex(password, salt, PBKDF2_ITERATIONS);
+    return `pbkdf2$${PBKDF2_ITERATIONS}$${saltHex}$${hash}`;
+  } catch {
+    const hash = await iteratedSha256Hex(password, saltHex, SHA256_ITERATIONS);
+    return `sha256i$${SHA256_ITERATIONS}$${saltHex}$${hash}`;
+  }
 }
 
 function legacyBtoaHash(password: string): string {
@@ -160,8 +237,119 @@ export async function verifyPassword(
   password: string,
   hash: string,
 ): Promise<boolean> {
-  if ((await hashPassword(password)) === hash) return true;
+  const parts = hash.split("$");
+  if (parts.length === 4 && (parts[0] === "pbkdf2" || parts[0] === "sha256i")) {
+    const iterations = Number(parts[1]);
+    if (!Number.isInteger(iterations) || iterations < 1) return false;
+    const computed =
+      parts[0] === "pbkdf2"
+        ? await pbkdf2Hex(password, fromHex(parts[2]), iterations)
+        : await iteratedSha256Hex(password, parts[2], iterations);
+    return constantTimeEqual(computed, parts[3]);
+  }
+  if (/^[0-9a-f]{64}$/.test(hash)) {
+    return constantTimeEqual(await sha256HexOf(password), hash);
+  }
   return legacyBtoaHash(password) === hash;
+}
+
+// True for stored hashes in an old unsalted format
+export function needsRehash(hash: string): boolean {
+  return !hash.startsWith("pbkdf2$") && !hash.startsWith("sha256i$");
+}
+
+// --- Results access tokens ---
+
+type ResultsTokenKind = "results" | "aiResults";
+
+// Issues a random session token for a results page after a correct password.
+// Only the token's SHA-256 is stored.
+export async function issueResultsToken(
+  ctx: MutationCtx,
+  groupId: Id<"judgingGroups">,
+  kind: ResultsTokenKind,
+  passwordHash: string,
+): Promise<string> {
+  const token = `${crypto.randomUUID()}${crypto.randomUUID()}`.replace(/-/g, "");
+  await ctx.db.insert("resultsAccessTokens", {
+    groupId,
+    kind,
+    tokenHash: await sha256HexOf(token),
+    passwordHash,
+  });
+  return token;
+}
+
+// True when the token was issued for this group and kind, and the group's
+// password has not changed since
+export async function isResultsTokenValid(
+  ctx: QueryCtx,
+  groupId: Id<"judgingGroups">,
+  kind: ResultsTokenKind,
+  token: string | undefined,
+  currentPasswordHash: string | undefined,
+): Promise<boolean> {
+  if (!token || !currentPasswordHash) return false;
+  const tokenHash = await sha256HexOf(token);
+  const row = await ctx.db
+    .query("resultsAccessTokens")
+    .withIndex("by_tokenHash", (q) => q.eq("tokenHash", tokenHash))
+    .first();
+  return (
+    row !== null &&
+    row.groupId === groupId &&
+    row.kind === kind &&
+    row.passwordHash === currentPasswordHash
+  );
+}
+
+// Shared body of the validate mutations: rate limit, verify, upgrade an old
+// hash in place, and return the stored hash that is now current (or null).
+// Only wrong guesses use up the limit, so judges sharing a venue IP are not
+// locked out. Callers must return (not throw) on null, or the count rolls back.
+export async function checkGroupPassword(
+  ctx: MutationCtx,
+  groupId: Id<"judgingGroups">,
+  field:
+    | "judgePassword"
+    | "submissionPagePassword"
+    | "resultsPassword"
+    | "aiResultsPassword",
+  password: string,
+): Promise<string | null> {
+  const callerLimitKey = `${groupId}:${await callerKey(ctx)}`;
+  const allowed =
+    (await canUseLimit(ctx, "passwordAttempt", callerLimitKey)) &&
+    (await canUseLimit(ctx, "passwordAttemptGroup", groupId));
+  if (!allowed) {
+    throw new ConvexError(
+      "Too many password attempts. Please wait 15 minutes and try again.",
+    );
+  }
+
+  const group = await ctx.db.get(groupId);
+  if (!group) return null;
+  // Older groups kept the judge password in a legacy `password` field
+  const legacyJudge =
+    field === "judgePassword"
+      ? ((group as { password?: string }).password ?? undefined)
+      : undefined;
+  const stored = group[field] || legacyJudge;
+  if (!stored) return null;
+  if (!(await verifyPassword(password, stored))) {
+    await tryLimit(ctx, "passwordAttempt", callerLimitKey);
+    await tryLimit(ctx, "passwordAttemptGroup", groupId);
+    return null;
+  }
+
+  if (needsRehash(stored)) {
+    const upgraded = await hashPassword(password);
+    const patch: Partial<Doc<"judgingGroups">> = {};
+    patch[group[field] ? field : "judgePassword"] = upgraded;
+    await ctx.db.patch(groupId, patch);
+    return upgraded;
+  }
+  return stored;
 }
 
 // --- Admin Functions ---
@@ -1299,14 +1487,14 @@ export const validatePassword = mutation({
   },
   returns: v.boolean(),
   handler: async (ctx, args) => {
-    const group = await ctx.db.get(args.groupId);
-    // Backward compatibility: check both new judgePassword and old password fields
-    const storedPassword = group?.judgePassword || (group as any)?.password;
-    if (!group || !storedPassword) {
-      return false;
-    }
-
-    return await verifyPassword(args.password, storedPassword);
+    // Rate limited; also reads the legacy `password` field
+    const current = await checkGroupPassword(
+      ctx,
+      args.groupId,
+      "judgePassword",
+      args.password,
+    );
+    return current !== null;
   },
 });
 
@@ -1320,12 +1508,13 @@ export const validateSubmissionPagePassword = mutation({
   },
   returns: v.boolean(),
   handler: async (ctx, args) => {
-    const group = await ctx.db.get(args.groupId);
-    if (!group || !group.submissionPagePassword) {
-      return false;
-    }
-
-    return await verifyPassword(args.password, group.submissionPagePassword);
+    const current = await checkGroupPassword(
+      ctx,
+      args.groupId,
+      "submissionPagePassword",
+      args.password,
+    );
+    return current !== null;
   },
 });
 
@@ -1337,14 +1526,17 @@ export const validateResultsPassword = mutation({
     groupId: v.id("judgingGroups"),
     password: v.string(),
   },
-  returns: v.boolean(),
+  // Session token for getValidatedGroupScores, or null on a wrong password
+  returns: v.union(v.string(), v.null()),
   handler: async (ctx, args) => {
-    const group = await ctx.db.get(args.groupId);
-    if (!group || !group.resultsPassword) {
-      return false;
-    }
-
-    return await verifyPassword(args.password, group.resultsPassword);
+    const current = await checkGroupPassword(
+      ctx,
+      args.groupId,
+      "resultsPassword",
+      args.password,
+    );
+    if (current === null) return null;
+    return await issueResultsToken(ctx, args.groupId, "results", current);
   },
 });
 
@@ -1540,7 +1732,7 @@ export const getSubmissionPageMetadata = internalQuery({
 /**
  * Verify results password for a judging group
  */
-export const verifyResultsPassword = query({
+export const verifyResultsPassword = internalQuery({
   args: {
     groupId: v.id("judgingGroups"),
     password: v.string(),

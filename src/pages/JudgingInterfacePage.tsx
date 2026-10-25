@@ -31,6 +31,8 @@ import { Textarea } from "../components/ui/textarea";
 import { Label } from "../components/ui/label";
 import { Input } from "../components/ui/input";
 import { SimpleSelect } from "../components/ui/SimpleSelect";
+import { FactChip } from "../components/ui/FactChip";
+import { NOT_PUBLIC_TITLE } from "../lib/submissionLink";
 import { parseMultiselectValue } from "../components/ui/ChoiceFieldInput";
 import { ImageGallery } from "../components/ImageGallery";
 import { renderTextWithMentions } from "../utils/mentions";
@@ -40,6 +42,7 @@ import { SocialProofCard } from "../components/judging/SocialProofCard";
 import { AiReviewCard } from "../components/judging/AiReviewCard";
 import { LateSubmissionBadge } from "../components/LateSubmissionBadge";
 import { useDialog } from "../hooks/useDialog";
+import { safeHref } from "../lib/safeHref";
 
 // Which rows the judge is looking at when below-cut rows are visible:
 // the shortlist queue (default), only the rows that missed the cut, or both
@@ -1499,7 +1502,7 @@ export default function JudgingInterfacePage() {
                               <div className="flex items-center gap-2">
                                 <ExternalLink className="w-4 h-4 text-copy flex-shrink-0" />
                                 <a
-                                  href={currentSubmission.url}
+                                  href={safeHref(currentSubmission.url)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-sm text-copy hover:text-ink hover:underline truncate"
@@ -1513,7 +1516,7 @@ export default function JudgingInterfacePage() {
                               <div className="flex items-center gap-2">
                                 <Linkedin className="w-4 h-4 text-copy flex-shrink-0" />
                                 <a
-                                  href={(currentSubmission as any).linkedinUrl}
+                                  href={safeHref((currentSubmission as any).linkedinUrl)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-sm text-copy hover:text-ink hover:underline truncate"
@@ -1527,7 +1530,7 @@ export default function JudgingInterfacePage() {
                               <div className="flex items-center gap-2">
                                 <Twitter className="w-4 h-4 text-copy flex-shrink-0" />
                                 <a
-                                  href={(currentSubmission as any).twitterUrl}
+                                  href={safeHref((currentSubmission as any).twitterUrl)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-sm text-copy hover:text-ink hover:underline truncate"
@@ -1541,7 +1544,7 @@ export default function JudgingInterfacePage() {
                               <div className="flex items-center gap-2">
                                 <Github className="w-4 h-4 text-copy flex-shrink-0" />
                                 <a
-                                  href={(currentSubmission as any).githubUrl}
+                                  href={safeHref((currentSubmission as any).githubUrl)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-sm text-copy hover:text-ink hover:underline truncate"
@@ -1557,7 +1560,7 @@ export default function JudgingInterfacePage() {
                                   🍲
                                 </span>
                                 <a
-                                  href={(currentSubmission as any).chefShowUrl}
+                                  href={safeHref((currentSubmission as any).chefShowUrl)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-sm text-copy hover:text-ink hover:underline truncate"
@@ -1573,7 +1576,7 @@ export default function JudgingInterfacePage() {
                                   🍲
                                 </span>
                                 <a
-                                  href={(currentSubmission as any).chefAppUrl}
+                                  href={safeHref((currentSubmission as any).chefAppUrl)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-sm text-copy hover:text-ink hover:underline truncate"
@@ -1659,6 +1662,31 @@ export default function JudgingInterfacePage() {
                         )}
 
                       {/* Visit Submission and View Change Log buttons */}
+                      {currentSubmission.judgingOnly ? (
+                        // Judging only import: no public page or change log
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {(currentSubmission.importSourceUrl ??
+                            currentSubmission.url) && (
+                            <a
+                              href={safeHref(
+                                currentSubmission.importSourceUrl ??
+                                  currentSubmission.url,
+                              )}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                            >
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              {currentSubmission.importSourceUrl
+                                ? "View source page"
+                                : "Visit project"}
+                            </a>
+                          )}
+                          <FactChip tone="info" title={NOT_PUBLIC_TITLE}>
+                            Not public
+                          </FactChip>
+                        </div>
+                      ) : (
                       <div className="flex items-center gap-4 flex-wrap">
                         <Link
                           to={`/s/${currentSubmission.slug}`}
@@ -1687,6 +1715,7 @@ export default function JudgingInterfacePage() {
                           View Change Log
                         </Link>
                       </div>
+                      )}
 
                       {/* Originally submitted date */}
                       <div className="text-sm text-copy space-y-1 pt-2 border-t border-hairline">
@@ -1750,7 +1779,7 @@ export default function JudgingInterfacePage() {
                           <Play className="w-4 h-4 text-copy flex-shrink-0" />
                           <h4 className="font-medium text-ink">Video Demo</h4>
                           <a
-                            href={currentSubmission.videoUrl}
+                            href={safeHref(currentSubmission.videoUrl)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-sm text-copy hover:text-ink hover:underline ml-auto"
@@ -1861,7 +1890,7 @@ export default function JudgingInterfacePage() {
                                     Video not embeddable
                                   </p>
                                   <a
-                                    href={url}
+                                    href={safeHref(url)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-ink hover:text-copy underline"

@@ -43,6 +43,7 @@ import { BackToAppsLink } from "./BackToAppsLink";
 import { LumaEventList } from "./LumaEventList";
 import { isLumaWidgetVisible } from "../lib/sidebarWidgets";
 import { getConvexErrorMessage } from "../lib/convexErrors";
+import { safeHref } from "../lib/safeHref";
 
 // Removed MOCK_COMMENTS
 
@@ -348,13 +349,17 @@ export function StoryDetail({ story }: StoryDetailProps) {
   const [expandedChangelogIndices, setExpandedChangelogIndices] =
     React.useState<Set<number>>(new Set());
 
-  // Fetch related stories
+  // Fetch related stories. Private tags never link apps together, since they
+  // can be shared with judging only imports that must stay off public pages
+  const relatedTagIds = (story.tags ?? [])
+    .filter((tag: Doc<"tags">) => tag.isHidden !== true)
+    .map((tag: Doc<"tags">) => tag._id);
   const relatedStories = useQuery(
     api.stories.getRelatedStoriesByTags,
-    story.tags && story.tags.length > 0
+    relatedTagIds.length > 0
       ? {
           currentStoryId: story._id,
-          tagIds: story.tags.map((tag: Doc<"tags">) => tag._id),
+          tagIds: relatedTagIds,
           limit: 3, // Already limits to 3 max from backend
         }
       : "skip",
@@ -1046,7 +1051,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
               <div className="flex-1 min-w-0">
                 <h1 className="text-[26px] sm:text-[30px] leading-[1.2] tracking-[-0.02em] font-semibold capitalize text-ink mb-2">
                   <a
-                    href={story.url}
+                    href={safeHref(story.url)}
                     className="hover:text-copy break-words"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -1128,7 +1133,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   <div className="flex items-center gap-2">
                     <Link2 className="w-4 h-4 text-soft flex-shrink-0" />
                     <a
-                      href={story.url}
+                      href={safeHref(story.url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-copy hover:text-ink hover:underline truncate"
@@ -1143,7 +1148,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   <div className="flex items-center gap-2">
                     <Play className="w-4 h-4 text-soft flex-shrink-0" />
                     <a
-                      href={story.videoUrl}
+                      href={safeHref(story.videoUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-copy hover:text-ink hover:underline truncate"
@@ -1159,7 +1164,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                   <div className="flex items-center gap-2">
                     <Github className="w-4 h-4 text-soft flex-shrink-0" />
                     <a
-                      href={story.githubUrl}
+                      href={safeHref(story.githubUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-copy hover:text-ink hover:underline truncate"
@@ -1239,7 +1244,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                         {getIcon()}
                         {field.fieldType === "url" ? (
                           <a
-                            href={fieldValue}
+                            href={safeHref(fieldValue)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-sm text-copy hover:text-ink hover:underline truncate"
@@ -2214,7 +2219,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 <div className="flex items-center gap-2">
                   <Link2 className="w-4 h-4 text-soft flex-shrink-0" />
                   <a
-                    href={story.url}
+                    href={safeHref(story.url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm text-copy hover:text-ink hover:underline truncate"
@@ -2229,7 +2234,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 <div className="flex items-center gap-2">
                   <Play className="w-4 h-4 text-soft flex-shrink-0" />
                   <a
-                    href={story.videoUrl}
+                    href={safeHref(story.videoUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm text-copy hover:text-ink hover:underline truncate"
@@ -2245,7 +2250,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                 <div className="flex items-center gap-2">
                   <Github className="w-4 h-4 text-soft flex-shrink-0" />
                   <a
-                    href={story.githubUrl}
+                    href={safeHref(story.githubUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm text-copy hover:text-ink hover:underline truncate"
@@ -2325,7 +2330,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                       {getIcon()}
                       {field.fieldType === "url" ? (
                         <a
-                          href={fieldValue}
+                          href={safeHref(fieldValue)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-sm text-copy hover:text-ink hover:underline truncate"
@@ -2436,7 +2441,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
             <Play className="w-4 h-4 text-soft flex-shrink-0" />
             <h3 className="text-lg font-medium text-copy">Video Demo</h3>
             <a
-              href={story.videoUrl}
+              href={safeHref(story.videoUrl)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm text-copy hover:text-ink hover:underline ml-auto"
@@ -2540,7 +2545,7 @@ export function StoryDetail({ story }: StoryDetailProps) {
                     <Play className="w-12 h-12 text-soft mx-auto mb-2" />
                     <p className="text-copy mb-2">Video not embeddable</p>
                     <a
-                      href={url}
+                      href={safeHref(url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-ink hover:text-copy underline"

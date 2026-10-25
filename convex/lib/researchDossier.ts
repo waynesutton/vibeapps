@@ -2,6 +2,7 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";
 import { rankCompletedAiResults } from "./aiRank";
 import { isInJudgeQueue } from "./judgeQueue";
+import { isStoryJudgeable } from "./judgingEligibility";
 import { AI_FRONTEND_PLATFORMS, getRubricForGroup } from "../aiJudge";
 
 /**
@@ -49,11 +50,7 @@ export type SubmissionBundle = {
 export function isStoryValidForJudging(
   story: Doc<"stories"> | null,
 ): story is Doc<"stories"> {
-  if (!story) return false;
-  if (story.isHidden === true) return false;
-  if (story.isArchived === true) return false;
-  if (story.status === "rejected") return false;
-  return true;
+  return isStoryJudgeable(story);
 }
 
 function clip(text: string | undefined, max: number): string {

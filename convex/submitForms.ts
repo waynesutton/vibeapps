@@ -1,9 +1,10 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { getAuthenticatedUserId } from "./users";
 import { requirePermission } from "./adminAccess";
 import { resolveDynamicFieldRecord } from "./storyFormFields"; // Generic mapping for admin-added form fields
+import { assertSafeStoryLinks } from "./lib/urls"; // http/https-only link guard
 
 // Helper to generate slugs
 function generateSlug(title: string): string {
@@ -533,7 +534,9 @@ export const getPublicSubmitForm = query({
 /**
  * Submit form data - processes dynamic form submission to stories - Fixed: Minimized read window for submissionCount
  */
-export const submitFormData = mutation({
+// Internal: no UI calls this, and as a public mutation it was an
+// unlimited anonymous auto-approve path
+export const submitFormData = internalMutation({
   args: {
     formSlug: v.string(),
     formData: v.any(), // Dynamic form data object
@@ -615,6 +618,17 @@ export const submitFormData = mutation({
     const { dynamicColumns, dynamicFormValues } =
       await resolveDynamicFieldRecord(ctx, args.formData);
 
+    // Only http/https links in every mapped column
+    assertSafeStoryLinks({
+      url: args.formData.url,
+      videoUrl: args.formData.videoUrl,
+      linkedinUrl: args.formData.linkedinUrl ?? dynamicColumns.linkedinUrl,
+      twitterUrl: args.formData.twitterUrl ?? dynamicColumns.twitterUrl,
+      githubUrl: args.formData.githubUrl ?? dynamicColumns.githubUrl,
+      chefShowUrl: args.formData.chefShowUrl ?? dynamicColumns.chefShowUrl,
+      chefAppUrl: args.formData.chefAppUrl ?? dynamicColumns.chefAppUrl,
+    });
+
     // Create the story from form data
     const storyId = await ctx.db.insert("stories", {
       title: args.formData.title || "Untitled",
@@ -676,7 +690,7 @@ export const submitFormData = mutation({
 /**
  * Generate upload URL for form submissions
  */
-export const generateUploadUrl = mutation({
+export const generateUploadUrl = internalMutation({
   args: {},
   returns: v.string(),
   handler: async (ctx) => {

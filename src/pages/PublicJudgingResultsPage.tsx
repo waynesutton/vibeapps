@@ -7,6 +7,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { PublicJudgingResultsDashboard } from "../components/PublicJudgingResultsDashboard";
+import { getConvexErrorMessage } from "../lib/convexErrors";
 
 export default function PublicJudgingResultsPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -15,7 +16,8 @@ export default function PublicJudgingResultsPage() {
   const [passwordError, setPasswordError] = useState("");
   const [isValidating, setIsValidating] = useState(false);
 
-  const [enteredPassword, setEnteredPassword] = useState("");
+  // Session token from validateResultsPassword; the password is never stored
+  const [accessToken, setAccessToken] = useState("");
 
   const group = useQuery(
     api.judgingGroups.getPublicGroupForResults,
@@ -26,15 +28,17 @@ export default function PublicJudgingResultsPage() {
     api.judgingGroups.validateResultsPassword,
   );
 
-  // Restore a previously entered password from this browser session
+  // Restore this browser session's access token
   useEffect(() => {
     if (group) {
       if (group.resultsIsPublic === true) {
         setIsPasswordValidated(true);
       } else {
-        const stored = sessionStorage.getItem(`resultsPassword_${group._id}`);
+        // Older sessions stored the raw password; drop it
+        sessionStorage.removeItem(`resultsPassword_${group._id}`);
+        const stored = sessionStorage.getItem(`resultsToken_${group._id}`);
         if (stored) {
-          setEnteredPassword(stored);
+          setAccessToken(stored);
           setIsPasswordValidated(true);
         }
       }
@@ -49,23 +53,25 @@ export default function PublicJudgingResultsPage() {
     setPasswordError("");
 
     try {
-      const isValid = await validateResultsPassword({
+      const token = await validateResultsPassword({
         groupId: group._id,
         password: password.trim(),
       });
 
-      if (isValid) {
+      if (token) {
         setIsPasswordValidated(true);
-        setEnteredPassword(password.trim());
-        sessionStorage.setItem(
-          `resultsPassword_${group._id}`,
-          password.trim(),
-        );
+        setAccessToken(token);
+        sessionStorage.setItem(`resultsToken_${group._id}`, token);
       } else {
         setPasswordError("Incorrect password. Please try again.");
       }
     } catch (error) {
-      setPasswordError("Error validating password. Please try again.");
+      setPasswordError(
+        getConvexErrorMessage(
+          error,
+          "Error validating password. Please try again.",
+        ),
+      );
     } finally {
       setIsValidating(false);
     }
@@ -190,7 +196,13 @@ export default function PublicJudgingResultsPage() {
         <PublicJudgingResultsDashboard
           groupId={group._id}
           isValidated={!group.resultsIsPublic && isPasswordValidated}
-          password={enteredPassword}
+          accessToken={accessToken}
+          onAccessLost={() => {
+            // Password changed since the token was issued; ask again
+            sessionStorage.removeItem(`resultsToken_${group._id}`);
+            setAccessToken("");
+            setIsPasswordValidated(false);
+          }}
         />
       </div>
     </div>

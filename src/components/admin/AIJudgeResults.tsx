@@ -31,12 +31,14 @@ import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
 import { SimpleSelect } from "../ui/SimpleSelect";
 import { FactChip } from "../ui/FactChip";
+import { NOT_PUBLIC_TITLE, submissionLink } from "../../lib/submissionLink";
 import { useDialog } from "../../hooks/useDialog";
 import {
   LateSubmissionBadge,
   describeLateSubmission,
 } from "../LateSubmissionBadge";
 import type { SubmissionTiming } from "../../../convex/lib/submissionTiming";
+import { safeHref } from "../../lib/safeHref";
 
 // Rendered inside the group workspace; the workspace header and sidebar
 // provide navigation, so this component has no back button.
@@ -250,6 +252,8 @@ type ReportSubmission = {
   slug: string;
   url?: string;
   githubUrl?: string;
+  judgingOnly?: boolean;
+  importSourceUrl?: string;
   teamName?: string;
   teamMemberCount?: number;
   teamMembers?: Array<{ name: string; email: string }>;
@@ -347,6 +351,8 @@ type SubmissionBrief = {
   storySlug: string;
   storyUrl?: string;
   githubUrl?: string;
+  judgingOnly?: boolean;
+  importSourceUrl?: string;
   status: string;
   submissionTiming?: SubmissionTiming;
   averageScore?: number;
@@ -412,6 +418,19 @@ async function copyText(text: string): Promise<void> {
   }
 }
 
+// Markdown link to a submission's public page, or to its import source when
+// it is judging only (no public page). Null when neither exists.
+function markdownSubmissionLink(
+  slug: string,
+  origin: string,
+  judgingOnly: boolean | undefined,
+  importSourceUrl: string | undefined,
+  label = "Submission",
+): string | null {
+  if (!judgingOnly) return `[${label}](${origin}/s/${slug})`;
+  return importSourceUrl ? `[${label}](${importSourceUrl})` : null;
+}
+
 function submissionBriefLines(
   submission: SubmissionBrief,
   rank: number,
@@ -422,7 +441,14 @@ function submissionBriefLines(
     `${heading} ${rank}. ${mdCell(submission.storyTitle)}`,
     "",
   ];
-  const links = [`[Submission](${origin}/s/${submission.storySlug})`];
+  const links = [
+    markdownSubmissionLink(
+      submission.storySlug,
+      origin,
+      submission.judgingOnly,
+      submission.importSourceUrl,
+    ),
+  ].filter((link): link is string => link !== null);
   if (submission.storyUrl) links.push(`[Live app](${submission.storyUrl})`);
   if (submission.githubUrl) links.push(`[GitHub](${submission.githubUrl})`);
   lines.push(`- Links: ${links.join(" · ")}`);
@@ -664,9 +690,15 @@ function buildHackathonReport(
   );
   lines.push("| --- | --- | --- | --- | --- | --- | --- |");
   completed.forEach((s, index) => {
-    const submissionLink = `[${mdCell(s.title)}](${origin}/s/${s.slug})${
-      s.submissionTiming?.status === "late" ? " (late submission)" : ""
-    }`;
+    const submissionCell = `${
+      markdownSubmissionLink(
+        s.slug,
+        origin,
+        s.judgingOnly,
+        s.importSourceUrl,
+        mdCell(s.title),
+      ) ?? mdCell(s.title)
+    }${s.submissionTiming?.status === "late" ? " (late submission)" : ""}`;
     const team = s.teamName
       ? mdCell(s.teamName)
       : s.submitterName
@@ -680,7 +712,7 @@ function buildHackathonReport(
     const github = s.githubUrl ? `[Repo](${s.githubUrl})` : "-";
     const features = mdCell((s.convexFeaturesDetected || []).join(", ")) || "-";
     lines.push(
-      `| ${index + 1} | ${submissionLink} | ${team} | ${score} | ${live} | ${github} | ${features} |`,
+      `| ${index + 1} | ${submissionCell} | ${team} | ${score} | ${live} | ${github} | ${features} |`,
     );
   });
 
@@ -715,7 +747,14 @@ function buildHackathonReport(
       `### ${index + 1}. ${s.title}${s.averageScore !== undefined ? ` (${s.averageScore.toFixed(1)}/10)` : ""}`,
     );
     lines.push("");
-    const links: Array<string> = [`[Submission](${origin}/s/${s.slug})`];
+    const links: Array<string> = [];
+    const sourceLink = markdownSubmissionLink(
+      s.slug,
+      origin,
+      s.judgingOnly,
+      s.importSourceUrl,
+    );
+    if (sourceLink) links.push(sourceLink);
     if (s.url) links.push(`[Live app](${s.url})`);
     if (s.githubUrl) links.push(`[GitHub](${s.githubUrl})`);
     lines.push(`- Links: ${links.join(" · ")}`);
@@ -895,7 +934,7 @@ function VideoTranscriptSection({
                     : "Firecrawl"}
                 </span>
                 <a
-                  href={transcript.videoUrl}
+                  href={safeHref(transcript.videoUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 hover:text-copy underline"
@@ -1532,6 +1571,8 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
             })}
           </div>
 
+          <VideoCoveragePanel groupId={groupId} aiEnabled={aiEnabled} />
+
           {/* Tabs: results / stats / Convex recap / organizer report */}
           <div className="flex flex-wrap items-center gap-1 border-b border-hairline">
             <button
@@ -2156,7 +2197,14 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                         {/* Title and review state */}
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-h-8">
                           <a
-                            href={`/s/${result.storySlug}`}
+                            href={
+                              submissionLink({
+                                slug: result.storySlug,
+                                judgingOnly: result.judgingOnly,
+                                importSourceUrl: result.importSourceUrl,
+                                url: result.storyUrl,
+                              }).href
+                            }
                             target="_blank"
                             rel="noopener noreferrer"
                             className="app-title-sm text-ink hover:underline inline-flex items-center gap-1.5 min-w-0 max-w-full"
@@ -2167,6 +2215,11 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                               aria-hidden="true"
                             />
                           </a>
+                          {result.judgingOnly && (
+                            <FactChip tone="info" title={NOT_PUBLIC_TITLE}>
+                              Not public
+                            </FactChip>
+                          )}
                           {statusBadge(result.status)}
                           <LateSubmissionBadge
                             timing={result.submissionTiming}
@@ -3091,6 +3144,96 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
 }
 
 // Screenshot-friendly stats rollup for a completed (or partial) AI review
+// Video transcript coverage for the group plus a "Retry transcripts" action
+// for videos that had no captions yet or a failed scrape. YouTube builds
+// auto captions minutes to hours after upload, so a retry later often helps.
+function VideoCoveragePanel({
+  groupId,
+  aiEnabled,
+}: {
+  groupId: Id<"judgingGroups">;
+  aiEnabled: boolean;
+}) {
+  const coverage = useQuery(api.videoTranscripts.getGroupVideoCoverage, {
+    groupId,
+  });
+  const retryVideoTranscripts = useMutation(api.aiJudge.retryVideoTranscripts);
+  const [retrying, setRetrying] = useState(false);
+
+  if (!coverage || coverage.total === coverage.noVideo) return null;
+
+  const handleRetry = async () => {
+    setRetrying(true);
+    try {
+      const res = await retryVideoTranscripts({ groupId });
+      toast.success(
+        res.cleared === 0
+          ? "No transcripts needed a retry."
+          : `Cleared ${res.cleared} transcript${res.cleared === 1 ? "" : "s"} and queued ${res.queued} review${res.queued === 1 ? "" : "s"}.`,
+      );
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  const withVideo = coverage.total - coverage.noVideo;
+  const items: Array<{ label: string; value: number; tone: string }> = [
+    { label: "Transcribed", value: coverage.completed, tone: "text-green-700" },
+    {
+      label: "No captions yet",
+      value: coverage.noTranscript,
+      tone: "text-amber-700",
+    },
+    { label: "Scrape failed", value: coverage.failed, tone: "text-red-600" },
+    { label: "Unsupported link", value: coverage.unsupported, tone: "text-soft" },
+    { label: "Not fetched yet", value: coverage.notFetched, tone: "text-soft" },
+  ];
+
+  return (
+    <div className="bg-surface rounded-lg border border-hairline px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="min-w-0 space-y-1">
+        <p className="text-sm font-medium text-ink">
+          Video transcripts{" "}
+          <span className="text-soft font-normal tabular-nums">
+            {coverage.completed} of {withVideo} with a video
+          </span>
+        </p>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums">
+          {items
+            .filter((item) => item.value > 0)
+            .map((item) => (
+              <span key={item.label} className="text-soft">
+                <span className={`font-semibold ${item.tone}`}>
+                  {item.value}
+                </span>{" "}
+                {item.label.toLowerCase()}
+              </span>
+            ))}
+        </div>
+      </div>
+      {coverage.retryable.length > 0 && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => void handleRetry()}
+          disabled={retrying || !aiEnabled}
+          title={coverage.retryable.map((r) => r.title).join("\n")}
+        >
+          {retrying ? (
+            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+          ) : (
+            <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+          )}
+          Retry {coverage.retryable.length} transcript
+          {coverage.retryable.length === 1 ? "" : "s"}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 function StatsPanel({
   groupName,
   results,

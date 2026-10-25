@@ -57,6 +57,26 @@ export function computeSubmissionTiming(
   return { status: "on_time", submittedAt, deadlineAt };
 }
 
+// Story aware timing. CSV imported rows use the source submission time when
+// one was mapped; without it they skip the deadline (the source platform
+// enforced it) so they never read as late just because they were imported.
+export function computeStoryTiming(
+  story: {
+    _creationTime: number;
+    submittedAt?: number;
+    importGroupId?: unknown;
+  },
+  deadlineAt: number | undefined | null,
+): SubmissionTiming {
+  if (story.submittedAt !== undefined) {
+    return computeSubmissionTiming(story.submittedAt, deadlineAt);
+  }
+  if (story.importGroupId !== undefined) {
+    return computeSubmissionTiming(story._creationTime, undefined);
+  }
+  return computeSubmissionTiming(story._creationTime, deadlineAt);
+}
+
 // Human readable "2 days 3 hours" style duration for prompts and tooltips.
 // Never returns an empty string; sub minute gaps read "under a minute".
 export function formatLateBy(lateByMs: number): string {

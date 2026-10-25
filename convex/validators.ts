@@ -94,6 +94,12 @@ export const baseStoryValidator = {
       }),
     ),
   ),
+  // Judging only flag and CSV import provenance (mirrors stories table schema)
+  judgingOnly: v.optional(v.boolean()),
+  importGroupId: v.optional(v.id("judgingGroups")),
+  importKey: v.optional(v.string()),
+  importSourceUrl: v.optional(v.string()),
+  submittedAt: v.optional(v.number()),
   // Changelog tracking for user edits
   changeLog: v.optional(
     v.array(
@@ -262,6 +268,12 @@ export type StoryWithDetailsPublic = {
     label: string;
     value: string;
   }>;
+  // Judging only flag and CSV import provenance
+  judgingOnly?: boolean;
+  importGroupId?: Id<"judgingGroups">;
+  importKey?: string;
+  importSourceUrl?: string;
+  submittedAt?: number;
   // Changelog tracking for user edits
   changeLog?: Array<{
     timestamp: number;

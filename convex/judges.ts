@@ -2,8 +2,9 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { requireJudgingGroupPermission } from "./adminAccess";
-import { verifyPassword } from "./judgingGroups";
+import { checkGroupPassword } from "./judgingGroups";
 import { isInJudgeQueue, showsBelowCut } from "./lib/judgeQueue";
+import { isStoryJudgeable } from "./lib/judgingEligibility";
 
 // 32-byte session token as hex (unguessable; Math.random is not)
 function generateSessionId(): string {
@@ -16,11 +17,7 @@ function generateSessionId(): string {
 // Returns true if story is valid for judging (not deleted, hidden, archived, or rejected)
 // Type guard to ensure TypeScript knows story is not null when this returns true
 function isStoryValidForJudging(story: Doc<"stories"> | null): story is Doc<"stories"> {
-  if (!story) return false;
-  if (story.isHidden === true) return false;
-  if (story.isArchived === true) return false;
-  if (story.status === "rejected") return false;
-  return true;
+  return isStoryJudgeable(story);
 }
 
 // --- Admin Functions ---
@@ -146,10 +143,15 @@ export const registerJudge = mutation({
     email: v.optional(v.string()),
     password: v.optional(v.string()),
   },
-  returns: v.object({
-    judgeId: v.id("judges"),
-    sessionId: v.string(),
-  }),
+  // null means a wrong password. It is returned, not thrown, so the
+  // password attempt limit is not rolled back.
+  returns: v.union(
+    v.object({
+      judgeId: v.id("judges"),
+      sessionId: v.string(),
+    }),
+    v.null(),
+  ),
   handler: async (ctx, args) => {
     // Validate name first (before any DB queries)
     const trimmedName = args.name.trim();
@@ -173,12 +175,15 @@ export const registerJudge = mutation({
       group.judgePassword ||
       (group as { password?: string }).password;
     if (storedPassword) {
-      if (
-        !args.password ||
-        !(await verifyPassword(args.password, storedPassword))
-      ) {
-        throw new Error("Invalid password");
-      }
+      if (!args.password) return null;
+      // Rate limited per group and caller; upgrades old hashes on success
+      const current = await checkGroupPassword(
+        ctx,
+        args.groupId,
+        "judgePassword",
+        args.password,
+      );
+      if (current === null) return null;
     }
 
     // Check if user is authenticated

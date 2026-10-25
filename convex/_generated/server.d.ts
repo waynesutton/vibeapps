@@ -30,10 +30,18 @@ import type { DataModel } from "./dataModel.js";
 type Env = {
   readonly CONVEX_CLOUD_URL: string;
   readonly CONVEX_SITE_URL: string;
+  readonly ADMIN_EMAIL: string | undefined;
   readonly AI_JUDGE_MODEL: string | undefined;
   readonly AI_RESEARCH_MODEL: string | undefined;
+  readonly CLERK_JWT_KEY: string | undefined;
+  readonly CLERK_SECRET_KEY: string | undefined;
+  readonly CLERK_WEBHOOK_SECRET: string | undefined;
   readonly CONTEXT_DEV_API_KEY: string;
   readonly FIRECRAWL_API_KEY: string;
+  readonly GITHUB_TOKEN: string | undefined;
+  readonly LUMA_API_KEY: string | undefined;
+  readonly NEXT_PUBLIC_CONVEX_URL: string | undefined;
+  readonly VITE_CLERK_FRONTEND_API_URL: string | undefined;
 };
 
 /**

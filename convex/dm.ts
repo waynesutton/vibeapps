@@ -4,9 +4,10 @@ import {
   internalMutation,
   internalQuery,
 } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
+import { callerKey, enforceLimit } from "./lib/rateLimits"; // Per-user rate limits
 
 /**
  * Toggle user's inbox on or off
@@ -1241,6 +1242,31 @@ export const reportMessageOrUser = mutation({
     if (currentUser._id === args.reportedUserId) {
       throw new Error("You cannot report yourself");
     }
+
+    // Reporter and reported user must both be in this conversation, and the
+    // message (when given) must belong to it
+    const conversation = await ctx.db.get(args.conversationId);
+    const members = conversation
+      ? [conversation.userAId, conversation.userBId]
+      : [];
+    if (
+      !members.includes(currentUser._id) ||
+      !members.includes(args.reportedUserId)
+    ) {
+      throw new ConvexError("You can only report people in your conversations.");
+    }
+    if (args.messageId) {
+      const message = await ctx.db.get(args.messageId);
+      if (!message || message.conversationId !== args.conversationId) {
+        throw new ConvexError("That message is not in this conversation.");
+      }
+    }
+    if (args.reason.length > 2000) {
+      throw new ConvexError("Report reason is limited to 2000 characters.");
+    }
+
+    // Caps report spam (each report emails every admin)
+    await enforceLimit(ctx, "dmReport", await callerKey(ctx, currentUser._id));
 
     // Create DM report
     const dmReportId = await ctx.db.insert("dmReports", {

@@ -6,6 +6,8 @@ import { resend } from "./sendEmails";
 import { registerRoutes } from "@waynesutton/agent-ready";
 import { RateLimiter, MINUTE } from "@convex-dev/rate-limiter";
 import { sha256Hex } from "./agentJudges";
+import { isSafeLink } from "./lib/urls";
+import { callerKey, canUseLimit, tryLimit } from "./lib/rateLimits";
 import {
   SITE_ORIGIN,
   buildLlmsTxt,
@@ -104,6 +106,11 @@ function generateStoryHTML(story: {
   const safeTitle = escapeHtml(story.title);
   const safeDescription = escapeHtml(story.description);
   const safeAuthorName = story.authorName ? escapeHtml(story.authorName) : "";
+  const safeImageUrl = escapeHtml(imageUrl);
+  // Unsafe schemes fall back to the story page so the link never runs script
+  const safeAppUrl = escapeHtml(
+    isSafeLink(story.url) && story.url ? story.url : canonicalUrl,
+  );
 
   const jsonLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -140,7 +147,7 @@ function generateStoryHTML(story: {
   <!-- Open Graph -->
   <meta property="og:title" content="${safeTitle} | ${siteName}">
   <meta property="og:description" content="${safeDescription}">
-  <meta property="og:image" content="${imageUrl}">
+  <meta property="og:image" content="${safeImageUrl}">
   <meta property="og:url" content="${canonicalUrl}">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="${siteName}">
@@ -155,7 +162,7 @@ function generateStoryHTML(story: {
   <meta name="twitter:creator" content="${twitterHandle}">
   <meta name="twitter:title" content="${safeTitle} | ${siteName}">
   <meta name="twitter:description" content="${safeDescription}">
-  <meta name="twitter:image" content="${imageUrl}">
+  <meta name="twitter:image" content="${safeImageUrl}">
   <meta name="twitter:image:alt" content="${safeTitle}">
   
   <script type="application/ld+json">${jsonLd}</script>
@@ -172,7 +179,7 @@ function generateStoryHTML(story: {
     <h1>${safeTitle}</h1>
     <p>${safeDescription}</p>
     ${safeAuthorName ? `<p>By ${safeAuthorName}</p>` : ""}
-    <p><a href="${story.url}" target="_blank" rel="noopener noreferrer">Visit App →</a></p>
+    <p><a href="${safeAppUrl}" target="_blank" rel="noopener noreferrer">Visit App →</a></p>
     <p><small>Redirecting to full page...</small></p>
   </div>
 </body>
@@ -247,6 +254,7 @@ function generateSubmissionPageHTML(page: {
 
   const safeTitle = escapeHtml(page.title);
   const safeDescription = escapeHtml(page.description);
+  const safeImageUrl = escapeHtml(imageUrl);
 
   const jsonLd = JSON.stringify({
     "@context": "https://schema.org",
@@ -278,7 +286,7 @@ function generateSubmissionPageHTML(page: {
   <!-- Open Graph -->
   <meta property="og:title" content="${safeTitle} | ${siteName}">
   <meta property="og:description" content="${safeDescription}">
-  <meta property="og:image" content="${imageUrl}">
+  <meta property="og:image" content="${safeImageUrl}">
   <meta property="og:url" content="${canonicalUrl}">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="${siteName}">
@@ -293,7 +301,7 @@ function generateSubmissionPageHTML(page: {
   <meta name="twitter:creator" content="${twitterHandle}">
   <meta name="twitter:title" content="${safeTitle} | ${siteName}">
   <meta name="twitter:description" content="${safeDescription}">
-  <meta name="twitter:image" content="${imageUrl}">
+  <meta name="twitter:image" content="${safeImageUrl}">
   <meta name="twitter:image:alt" content="${safeTitle}">
   
   <script type="application/ld+json">${jsonLd}</script>
@@ -950,10 +958,20 @@ http.route({
         rateKey = auth.keyId;
       } else {
         const password = url.searchParams.get("password") ?? undefined;
+        // Same failed guess limit as the results page, checked first
+        const guessKey = `results:${slug}:${await callerKey(ctx)}`;
+        if (password && !(await canUseLimit(ctx, "passwordAttempt", guessKey))) {
+          return jsonResponse({ error: "Too many password attempts" }, 429, {
+            "retry-after": "900",
+          });
+        }
         groupId = await ctx.runQuery(internal.aiJudge.resolveResultsAccess, {
           slug,
           password,
         });
+        if (!groupId && password) {
+          await tryLimit(ctx, "passwordAttempt", guessKey);
+        }
         if (!groupId) {
           return jsonResponse(
             { error: "Access denied: provide x-judge-key or ?password=" },

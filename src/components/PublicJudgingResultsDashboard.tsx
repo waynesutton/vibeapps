@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
+import { safeHref } from "../lib/safeHref";
 import {
   Trophy,
   Users,
@@ -18,13 +19,15 @@ import {
 interface PublicJudgingResultsDashboardProps {
   groupId: Id<"judgingGroups">;
   isValidated?: boolean; // Whether user has validated via password
-  password?: string; // Real password; server re-checks it
+  accessToken?: string; // Session token from validateResultsPassword
+  onAccessLost?: () => void; // Token no longer valid (password changed)
 }
 
 export function PublicJudgingResultsDashboard({
   groupId,
   isValidated = false,
-  password = "",
+  accessToken = "",
+  onAccessLost,
 }: PublicJudgingResultsDashboardProps) {
   // Track which ranking items have their judge breakdown expanded
   const [expandedRankings, setExpandedRankings] = useState<Set<string>>(
@@ -49,9 +52,15 @@ export function PublicJudgingResultsDashboard({
   );
   const validatedScores = useQuery(
     api.judgeScores.getValidatedGroupScores,
-    isValidated ? { groupId, password } : "skip",
+    isValidated && accessToken ? { groupId, accessToken } : "skip",
   );
   const groupScores = isValidated ? validatedScores : publicScores;
+
+  // A rejected token sends the visitor back to the password form
+  const tokenRejected = isValidated && !!accessToken && validatedScores === null;
+  useEffect(() => {
+    if (tokenRejected) onAccessLost?.();
+  }, [tokenRejected, onAccessLost]);
 
   // If data is not ready
   if (groupScores === undefined) {
@@ -186,15 +195,33 @@ export function PublicJudgingResultsDashboard({
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <Link
-                            to={`/s/${submission.storySlug}`}
-                            className="app-title-sm text-ink hover:text-blue-600 hover:underline"
-                          >
-                            {submission.storyTitle}
-                          </Link>
+                          {submission.judgingOnly ? (
+                            // Judging only import: no public page on this site
+                            submission.importSourceUrl ? (
+                              <a
+                                href={safeHref(submission.importSourceUrl)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="app-title-sm text-ink hover:text-blue-600 hover:underline"
+                              >
+                                {submission.storyTitle}
+                              </a>
+                            ) : (
+                              <span className="app-title-sm text-ink">
+                                {submission.storyTitle}
+                              </span>
+                            )
+                          ) : (
+                            <Link
+                              to={`/s/${submission.storySlug}`}
+                              className="app-title-sm text-ink hover:text-blue-600 hover:underline"
+                            >
+                              {submission.storyTitle}
+                            </Link>
+                          )}
                           {submission.storyUrl && (
                             <a
-                              href={submission.storyUrl}
+                              href={safeHref(submission.storyUrl)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-soft hover:text-copy"

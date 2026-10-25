@@ -19,6 +19,9 @@ import {
 } from "./validators"; // Updated import path
 import { paginationOptsValidator } from "convex/server"; // Added import
 import { requirePermission } from "./adminAccess"; // Granular admin permissions
+import { isPublicStory } from "./siteDirectory"; // Shared public visibility rule
+import { assertSafeUrl } from "./lib/urls"; // http/https-only link guard
+import { assertValidImageUpload } from "./lib/uploads"; // Server-side upload checks
 
 /**
  * Ensures a user record exists in the Convex database for the authenticated user.
@@ -385,16 +388,6 @@ export async function requireAdminRole(
     throw new Error("Authentication required for admin action.");
   }
 
-  console.log(
-    "[requireAdminRole] Identity subject (Clerk User ID):",
-    identity.subject,
-  );
-  // Log the entire identity object to see all available fields including the top-level role
-  console.log(
-    "[requireAdminRole] Full identity object (includes top-level claims):",
-    JSON.stringify(identity, null, 2),
-  );
-
   // Access role directly from the identity object
   // The JWT template "role": "{{user.public_metadata.role}}" maps it to the top level
   const clerkTokenRole = (identity as any).role;
@@ -435,6 +428,26 @@ export async function requireAdminRole(
 }
 
 // --- Queries for User Profile Page ---
+
+// Loads each referenced story once and keeps only publicly visible ones,
+// so profile activity never reveals hidden, spam, or judging-only titles
+async function loadPublicStories(
+  ctx: QueryCtx,
+  storyIds: Array<Id<"stories">>,
+): Promise<Map<Id<"stories">, Doc<"stories">>> {
+  const uniqueIds = [...new Set(storyIds)];
+  const stories = await Promise.all(uniqueIds.map((id) => ctx.db.get(id)));
+  const publicStories = new Map<Id<"stories">, Doc<"stories">>();
+  for (const story of stories) {
+    if (story && isPublicStory(story)) publicStories.set(story._id, story);
+  }
+  return publicStories;
+}
+
+// Approved comments that moderators have not hidden
+function isPublicComment(comment: Doc<"comments">): boolean {
+  return comment.status === "approved" && comment.isHidden !== true;
+}
 
 /**
  * Lists stories submitted by a specific user.
@@ -496,18 +509,16 @@ export const listUserVotes = query({
       .order("desc")
       .collect();
 
-    // Enhance with story details
-    const votesWithStoryDetails = await Promise.all(
-      votes.map(async (vote) => {
-        const story = await ctx.db.get(vote.storyId);
-        return {
-          ...vote,
-          storyTitle: story?.title,
-          storySlug: story?.slug,
-        };
-      }),
+    // Enhance with story details (publicly visible stories only)
+    const publicStories = await loadPublicStories(
+      ctx,
+      votes.map((vote) => vote.storyId),
     );
-    return votesWithStoryDetails;
+    return votes.flatMap((vote) => {
+      const story = publicStories.get(vote.storyId);
+      if (!story) return [];
+      return [{ ...vote, storyTitle: story.title, storySlug: story.slug }];
+    });
   },
 });
 
@@ -568,11 +579,21 @@ export const listUserComments = query({
   args: { userId: v.id("users") },
   returns: v.array(commentDetailsForProfileValidator), // Use the specific validator
   handler: async (ctx, args): Promise<CommentDetailsForProfile[]> => {
-    const comments = await ctx.db
+    const allComments = await ctx.db
       .query("comments")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .order("desc")
       .collect();
+
+    // Approved, visible comments on publicly visible stories only
+    const publicStories = await loadPublicStories(
+      ctx,
+      allComments.map((comment) => comment.storyId),
+    );
+    const comments = allComments.filter(
+      (comment) =>
+        isPublicComment(comment) && publicStories.has(comment.storyId),
+    );
 
     const commentsWithDetails = await Promise.all(
       comments.map(async (comment) => {
@@ -755,6 +776,15 @@ export const getUserProfileByUsername = query({
           spamMarkedBy: _spamMarkedBy,
           changeLog: _changeLog,
           teamMembers: _teamMembers,
+          // Organizer, import, and storage fields stay server side
+          hackathonLog: _hackathonLog,
+          selfReportedHarness: _selfReportedHarness,
+          selfReportedModel: _selfReportedModel,
+          customFormAnswers: _customFormAnswers,
+          importKey: _importKey,
+          importGroupId: _importGroupId,
+          screenshotId: _screenshotId,
+          additionalImageIds: _additionalImageIds,
           ...publicStoryFields
         } = storyDoc;
 
@@ -780,28 +810,57 @@ export const getUserProfileByUsername = query({
     const storiesWithDetails: StoryWithDetailsPublic[] =
       await Promise.all(storyDetailsPromises);
 
+    // Visitors only see activity on public stories; the owner sees it all
+    const currentUser = await getAuthenticatedUserDoc(ctx);
+    const isOwnProfile = currentUser?._id === userDoc._id;
+
     const userVotes = await ctx.db
       .query("votes")
       .withIndex("by_userId", (q) => q.eq("userId", userDoc._id))
       .order("desc")
       .collect();
 
-    const votesWithStoryDetails = await Promise.all(
-      userVotes.map(async (vote) => {
-        const story = await ctx.db.get(vote.storyId);
-        return {
-          ...vote,
-          storyTitle: story?.title,
-          storySlug: story?.slug,
-        };
-      }),
-    );
-
-    const userComments = await ctx.db
+    const allUserComments = await ctx.db
       .query("comments")
       .withIndex("by_user", (q) => q.eq("userId", userDoc._id))
       .order("desc")
       .collect();
+
+    const userRatings = await ctx.db
+      .query("storyRatings")
+      .withIndex("by_userId", (q) => q.eq("userId", userDoc._id))
+      .order("desc")
+      .collect();
+
+    const publicStories = isOwnProfile
+      ? null
+      : await loadPublicStories(ctx, [
+          ...userVotes.map((vote) => vote.storyId),
+          ...allUserComments.map((comment) => comment.storyId),
+          ...userRatings.map((rating) => rating.storyId),
+        ]);
+    const isVisibleStoryId = (storyId: Id<"stories">) =>
+      publicStories === null || publicStories.has(storyId);
+
+    const votesWithStoryDetails = await Promise.all(
+      userVotes
+        .filter((vote) => isVisibleStoryId(vote.storyId))
+        .map(async (vote) => {
+          const story = await ctx.db.get(vote.storyId);
+          return {
+            ...vote,
+            storyTitle: story?.title,
+            storySlug: story?.slug,
+          };
+        }),
+    );
+
+    const userComments = isOwnProfile
+      ? allUserComments
+      : allUserComments.filter(
+          (comment) =>
+            isPublicComment(comment) && isVisibleStoryId(comment.storyId),
+        );
 
     const commentsWithDetailsPromises = userComments.map(async (comment) => {
       const story = await ctx.db.get(comment.storyId);
@@ -819,21 +878,17 @@ export const getUserProfileByUsername = query({
       commentsWithDetailsPromises,
     );
 
-    const userRatings = await ctx.db
-      .query("storyRatings")
-      .withIndex("by_userId", (q) => q.eq("userId", userDoc._id))
-      .order("desc")
-      .collect();
-
     const ratingsWithStoryDetails = await Promise.all(
-      userRatings.map(async (rating) => {
-        const story = await ctx.db.get(rating.storyId);
-        return {
-          ...rating,
-          storyTitle: story?.title,
-          storySlug: story?.slug,
-        };
-      }),
+      userRatings
+        .filter((rating) => isVisibleStoryId(rating.storyId))
+        .map(async (rating) => {
+          const story = await ctx.db.get(rating.storyId);
+          return {
+            ...rating,
+            storyTitle: story?.title,
+            storySlug: story?.slug,
+          };
+        }),
     );
 
     const followStats: { followersCount: number; followingCount: number } =
@@ -844,8 +899,6 @@ export const getUserProfileByUsername = query({
         profileUserId: userDoc._id,
       },
     );
-    const currentUser = await getAuthenticatedUserDoc(ctx);
-    const isOwnProfile = currentUser?._id === userDoc._id;
 
     return {
       user: userForProfile, // Use the shaped user object
@@ -882,17 +935,16 @@ export const listUserStoryRatings = query({
       .order("desc")
       .collect();
 
-    const ratingsWithDetails = await Promise.all(
-      ratings.map(async (rating) => {
-        const story = await ctx.db.get(rating.storyId);
-        return {
-          ...rating,
-          storyTitle: story?.title,
-          storySlug: story?.slug,
-        };
-      }),
+    // Publicly visible stories only
+    const publicStories = await loadPublicStories(
+      ctx,
+      ratings.map((rating) => rating.storyId),
     );
-    return ratingsWithDetails;
+    return ratings.flatMap((rating) => {
+      const story = publicStories.get(rating.storyId);
+      if (!story) return [];
+      return [{ ...rating, storyTitle: story.title, storySlug: story.slug }];
+    });
   },
 });
 
@@ -1036,9 +1088,13 @@ export const syncUserFromClerkWebhook = internalMutation({
 // Action to generate a short-lived upload URL for profile images
 export const generateUploadUrl = action({
   args: {},
+  returns: v.string(),
   handler: async (ctx) => {
-    // No specific permissions needed here, as it just generates a URL.
-    // The actual upload will be to this URL, and then a mutation will link it.
+    // Only signed in users can upload a profile image
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new ConvexError("Please sign in to upload a profile image.");
+    }
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -1060,6 +1116,9 @@ export const setUserProfileImage = mutation({
     if (!user) {
       throw new Error("User record not found.");
     }
+
+    // Must be a fresh raster upload within the size cap
+    await assertValidImageUpload(ctx, args.storageId);
 
     const imageUrl = await ctx.storage.getUrl(args.storageId);
     if (!imageUrl) {
@@ -1166,6 +1225,12 @@ export const updateProfileDetails = mutation({
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
       .unique();
     if (!user) throw new Error("User record not found.");
+
+    // Links render as hrefs; bare handles (no scheme) still pass
+    assertSafeUrl(args.website, "Website");
+    assertSafeUrl(args.twitter, "Twitter");
+    assertSafeUrl(args.bluesky, "Bluesky");
+    assertSafeUrl(args.linkedin, "LinkedIn");
 
     const updates: Partial<Doc<"users">> = {};
 

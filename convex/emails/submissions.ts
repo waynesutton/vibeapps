@@ -9,6 +9,7 @@ import { internal } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
 import { requireJudgingGroupPermission } from "../adminAccess";
 import { EMAIL_TYPE_DEFAULTS, emailTypeSettingKey } from "./emailTypes";
+import { isJudgingOnlyStory } from "../lib/judgingEligibility";
 import { standardEmailFooter, type EmailFooterOpts } from "./render";
 
 // Submission emails: submitter confirmation on submit, per-group organizer
@@ -245,7 +246,11 @@ export const getResultsLiveRecipients = internalQuery({
 
     for (const submission of submissions) {
       const story = await ctx.db.get(submission.storyId);
-      if (!story || story.isHidden === true || story.status === "rejected") {
+      if (
+        !story ||
+        story.status === "rejected" ||
+        (story.isHidden === true && !isJudgingOnlyStory(story))
+      ) {
         continue;
       }
 
@@ -371,7 +376,11 @@ export const getResultsLiveEmailStatus = query({
     const seen = new Set<string>();
     for (const submission of submissions) {
       const story = await ctx.db.get(submission.storyId);
-      if (!story || story.isHidden === true || story.status === "rejected") {
+      if (
+        !story ||
+        story.status === "rejected" ||
+        (story.isHidden === true && !isJudgingOnlyStory(story))
+      ) {
         continue;
       }
       let email: string | undefined = story.email;

@@ -10,6 +10,7 @@ import {
   Linkedin,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { safeHref } from "../../lib/safeHref";
 
 interface ProfileHoverCardProps {
   username?: string;
@@ -172,7 +173,7 @@ export function ProfileHoverCard({
             <div className="flex flex-wrap gap-2 mb-3">
               {userData.website && (
                 <a
-                  href={userData.website}
+                  href={safeHref(userData.website)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 px-2 py-1 bg-canvas hover:bg-surface-hover rounded text-xs text-copy transition-colors"
@@ -184,7 +185,7 @@ export function ProfileHoverCard({
               )}
               {userData.twitter && (
                 <a
-                  href={userData.twitter}
+                  href={safeHref(userData.twitter)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 px-2 py-1 bg-canvas hover:bg-surface-hover rounded text-xs text-copy transition-colors"
@@ -196,7 +197,7 @@ export function ProfileHoverCard({
               )}
               {userData.linkedin && (
                 <a
-                  href={userData.linkedin}
+                  href={safeHref(userData.linkedin)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 px-2 py-1 bg-canvas hover:bg-surface-hover rounded text-xs text-copy transition-colors"
@@ -208,7 +209,7 @@ export function ProfileHoverCard({
               )}
               {userData.bluesky && (
                 <a
-                  href={userData.bluesky}
+                  href={safeHref(userData.bluesky)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 px-2 py-1 bg-canvas hover:bg-surface-hover rounded text-xs text-copy transition-colors"

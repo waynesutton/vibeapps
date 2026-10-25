@@ -5,18 +5,18 @@ import { requireJudgingGroupPermission } from "./adminAccess";
 import { markResearchStale } from "./researchIndex";
 import { logActivity } from "./activityLog";
 import { isUserAdmin } from "./users";
-import { verifyPassword } from "./judgingGroups";
+import { isResultsTokenValid } from "./judgingGroups";
 import { isInJudgeQueue } from "./lib/judgeQueue";
+import {
+  isJudgingOnlyStory,
+  isStoryJudgeable,
+} from "./lib/judgingEligibility";
 
 // Helper function to check if a story should be included in judging
 // Returns true if story is valid for judging (not deleted, hidden, archived, or rejected)
 // Type guard to ensure TypeScript knows story is not null when this returns true
 function isStoryValidForJudging(story: Doc<"stories"> | null): story is Doc<"stories"> {
-  if (!story) return false;
-  if (story.isHidden === true) return false;
-  if (story.isArchived === true) return false;
-  if (story.status === "rejected") return false;
-  return true;
+  return isStoryJudgeable(story);
 }
 
 // --- Public Functions (for judges) ---
@@ -466,6 +466,9 @@ export const getGroupScores = query({
         storyId: v.id("stories"),
         storyTitle: v.string(),
         storySlug: v.string(),
+        // Judging only imports have no public page; link the source instead
+        judgingOnly: v.boolean(),
+        importSourceUrl: v.optional(v.string()),
         totalScore: v.number(),
         averageScore: v.number(),
         scoreCount: v.number(),
@@ -618,6 +621,8 @@ export const getGroupScores = query({
           storyId: submission.storyId,
           storyTitle: story.title,
           storySlug: story.slug,
+          judgingOnly: isJudgingOnlyStory(story),
+          importSourceUrl: story.importSourceUrl,
           totalScore,
           averageScore,
           scoreCount: submissionScores.length,
@@ -984,6 +989,8 @@ export const getPublicGroupScores = query({
           storyTitle: v.string(),
           storySlug: v.string(),
           storyUrl: v.optional(v.string()),
+          judgingOnly: v.boolean(),
+          importSourceUrl: v.optional(v.string()),
           totalScore: v.number(),
           averageScore: v.number(),
           scoreCount: v.number(),
@@ -1179,6 +1186,8 @@ export const getPublicGroupScores = query({
           storyTitle: story?.title || "Unknown Story",
           storySlug: story?.slug || "",
           storyUrl: story?.url,
+          judgingOnly: story ? isJudgingOnlyStory(story) : false,
+          importSourceUrl: story?.importSourceUrl,
           totalScore: data.totalScore,
           averageScore: data.count > 0 ? data.totalScore / data.count : 0,
           scoreCount: data.count,
@@ -1236,7 +1245,8 @@ export const getPublicGroupScores = query({
  * This query is called after the user has successfully validated the results password
  */
 export const getValidatedGroupScores = query({
-  args: { groupId: v.id("judgingGroups"), password: v.string() },
+  // accessToken comes from judgingGroups.validateResultsPassword
+  args: { groupId: v.id("judgingGroups"), accessToken: v.string() },
   returns: v.union(
     v.null(),
     v.object({
@@ -1254,6 +1264,8 @@ export const getValidatedGroupScores = query({
           storyTitle: v.string(),
           storySlug: v.string(),
           storyUrl: v.optional(v.string()),
+          judgingOnly: v.boolean(),
+          importSourceUrl: v.optional(v.string()),
           totalScore: v.number(),
           averageScore: v.number(),
           scoreCount: v.number(),
@@ -1285,10 +1297,14 @@ export const getValidatedGroupScores = query({
     }
 
     const admin = await isUserAdmin(ctx);
-    const passwordOk =
-      !!group.resultsPassword &&
-      (await verifyPassword(args.password, group.resultsPassword));
-    if (!admin && !passwordOk) {
+    const tokenOk = await isResultsTokenValid(
+      ctx,
+      args.groupId,
+      "results",
+      args.accessToken,
+      group.resultsPassword,
+    );
+    if (!admin && !tokenOk) {
       return null;
     }
 
@@ -1456,6 +1472,8 @@ export const getValidatedGroupScores = query({
           storyTitle: story?.title || "Unknown Story",
           storySlug: story?.slug || "",
           storyUrl: story?.url,
+          judgingOnly: story ? isJudgingOnlyStory(story) : false,
+          importSourceUrl: story?.importSourceUrl,
           totalScore: data.totalScore,
           averageScore: data.count > 0 ? data.totalScore / data.count : 0,
           scoreCount: data.count,

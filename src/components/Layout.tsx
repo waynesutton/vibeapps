@@ -31,6 +31,7 @@ import {
   SignUpButton,
 } from "@clerk/clerk-react";
 import { UserSyncer } from "./UserSyncer";
+import { RouteErrorBoundary } from "./RouteErrorBoundary";
 import { ThemeToggle } from "./ThemeToggle";
 import { WeeklyLeaderboard } from "./WeeklyLeaderboard";
 import { TopCategoriesOfWeek } from "./TopCategoriesOfWeek";
@@ -896,7 +897,12 @@ export function Layout({ children }: { children?: ReactNode }) {
           <div className="flex flex-col lg:flex-row gap-8">
             <div className={showSidebar ? "lg:w-3/4" : "w-full"}>
               {children || (
-                <Outlet context={{ viewMode, selectedTagId, sortPeriod }} />
+                // Lazy routes load here; the header and sidebar stay on screen
+                <RouteErrorBoundary resetKey={location.pathname}>
+                  <React.Suspense fallback={<div>Loading...</div>}>
+                    <Outlet context={{ viewMode, selectedTagId, sortPeriod }} />
+                  </React.Suspense>
+                </RouteErrorBoundary>
               )}
             </div>
             {showSidebar && (

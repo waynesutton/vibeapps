@@ -12,7 +12,12 @@ import { Workpool } from "@convex-dev/workpool";
 import { isUserAdmin, getAuthenticatedUserId } from "./users";
 import { requireJudgingGroupPermission } from "./adminAccess";
 import { markResearchStale } from "./researchIndex";
-import { verifyPassword } from "./judgingGroups";
+import {
+  verifyPassword,
+  checkGroupPassword,
+  issueResultsToken,
+  isResultsTokenValid,
+} from "./judgingGroups";
 import { parseHackathonLogHeader } from "./hackathonLog"; // hackathon.md header parsing (admin views)
 import { logActivity } from "./activityLog";
 import {
@@ -23,7 +28,12 @@ import {
 } from "./lib/aiRank";
 import { isInJudgeQueue, showsBelowCut } from "./lib/judgeQueue";
 import {
-  computeSubmissionTiming,
+  isJudgingOnlyStory,
+  isStoryJudgeable,
+  publicSlugOf,
+} from "./lib/judgingEligibility";
+import {
+  computeStoryTiming,
   submissionTimingValidator,
   type SubmissionTiming,
 } from "./lib/submissionTiming";
@@ -332,6 +342,9 @@ const aiResultValidator = v.object({
   storySlug: v.string(),
   storyUrl: v.optional(v.string()),
   githubUrl: v.optional(v.string()),
+  // Judging only imports have no public page; link the source instead
+  judgingOnly: v.boolean(),
+  importSourceUrl: v.optional(v.string()),
   status: v.union(
     v.literal("pending"),
     v.literal("running"),
@@ -428,11 +441,7 @@ function getGroupSummaryFingerprint(
 function isStoryValidForJudging(
   story: Doc<"stories"> | null,
 ): story is Doc<"stories"> {
-  if (!story) return false;
-  if (story.isHidden === true) return false;
-  if (story.isArchived === true) return false;
-  if (story.status === "rejected") return false;
-  return true;
+  return isStoryJudgeable(story);
 }
 
 // Enrich AI result rows with story metadata, dropping rows whose story is gone/invalid.
@@ -476,6 +485,8 @@ async function enrichResults(
     storySlug: string;
     storyUrl?: string;
     githubUrl?: string;
+    judgingOnly: boolean;
+    importSourceUrl?: string;
     status: "pending" | "running" | "completed" | "failed";
     submissionTiming: SubmissionTiming;
     criteriaScores?: Array<{
@@ -537,11 +548,10 @@ async function enrichResults(
       storySlug: story.slug,
       storyUrl: story.url,
       githubUrl: story.githubUrl,
+      judgingOnly: isJudgingOnlyStory(story),
+      importSourceUrl: story.importSourceUrl,
       status: result.status,
-      submissionTiming: computeSubmissionTiming(
-        story._creationTime,
-        options?.deadlineAt,
-      ),
+      submissionTiming: computeStoryTiming(story, options?.deadlineAt),
       criteriaScores: result.criteriaScores,
       totalScore: result.totalScore,
       averageScore: result.averageScore,
@@ -644,6 +654,7 @@ export const startReview = mutation({
         await ctx.db.patch(existing._id, {
           status: "pending" as const,
           error: undefined,
+          rateLimitRetries: undefined,
         });
         pendingIds.push(existing._id);
       } else {
@@ -737,6 +748,7 @@ export const retrySubmission = mutation({
     await ctx.db.patch(args.resultId, {
       status: "pending" as const,
       error: undefined,
+      rateLimitRetries: undefined,
     });
     await aiJudgePool.enqueueAction(
       ctx,
@@ -758,7 +770,7 @@ export const retrySubmission = mutation({
       targetId: result.storyId,
       targetLabel: story.title,
       groupId: result.groupId,
-      metadata: { storySlug: story.slug, previousStatus },
+      metadata: { storySlug: publicSlugOf(story), previousStatus },
     });
     return { queued: true, previousStatus };
   },
@@ -1186,6 +1198,35 @@ export const updateAiSystemPrompt = mutation({
   },
 });
 
+// Cap for the organizer prize brief (matches the prompt builder cap)
+const MAX_PRIZE_BRIEF_LENGTH = 2000;
+
+/**
+ * Admin: save the prize brief, a short organizer note on what this prize
+ * rewards. Added to the system prompt on top of either the default or a
+ * custom body. Empty clears it.
+ */
+export const updateAiPrizeBrief = mutation({
+  args: {
+    groupId: v.id("judgingGroups"),
+    brief: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.ai");
+    const trimmed = args.brief?.trim() ?? "";
+    if (trimmed.length > MAX_PRIZE_BRIEF_LENGTH) {
+      throw new Error(
+        `Prize brief is too long (max ${MAX_PRIZE_BRIEF_LENGTH} characters)`,
+      );
+    }
+    await ctx.db.patch(args.groupId, {
+      aiJudgePrizeBrief: trimmed.length > 0 ? trimmed : undefined,
+    });
+    return null;
+  },
+});
+
 /**
  * Admin: prompt editor data. Returns the built-in default body, the group's
  * custom body (if any), and the effective rubric the {{rubric}} placeholder
@@ -1198,6 +1239,7 @@ export const getAiPromptConfig = query({
     v.object({
       defaultPrompt: v.string(),
       customPrompt: v.optional(v.string()),
+      prizeBrief: v.optional(v.string()),
       rubric: v.array(
         v.object({
           key: v.string(),
@@ -1228,6 +1270,7 @@ export const getAiPromptConfig = query({
     return {
       defaultPrompt: DEFAULT_AI_JUDGE_PROMPT_BODY,
       customPrompt: group.aiJudgeSystemPrompt,
+      prizeBrief: group.aiJudgePrizeBrief,
       rubric: getRubricForGroup(group, humanCriteria).map((c) => {
         const builtIn = builtInKeys.has(c.key);
         const source = builtIn
@@ -1413,6 +1456,8 @@ export const getGroupAiReportData = query({
           slug: v.string(),
           url: v.optional(v.string()),
           githubUrl: v.optional(v.string()),
+          judgingOnly: v.boolean(),
+          importSourceUrl: v.optional(v.string()),
           teamName: v.optional(v.string()),
           teamMemberCount: v.optional(v.number()),
           teamMembers: v.optional(
@@ -1478,6 +1523,8 @@ export const getGroupAiReportData = query({
       slug: string;
       url?: string;
       githubUrl?: string;
+      judgingOnly: boolean;
+      importSourceUrl?: string;
       teamName?: string;
       teamMemberCount?: number;
       teamMembers?: Array<{ name: string; email: string }>;
@@ -1534,15 +1581,14 @@ export const getGroupAiReportData = query({
         slug: story.slug,
         url: story.url,
         githubUrl: story.githubUrl,
+        judgingOnly: isJudgingOnlyStory(story),
+        importSourceUrl: story.importSourceUrl,
         teamName: story.teamName,
         teamMemberCount: story.teamMemberCount,
         teamMembers: story.teamMembers,
         submitterName: story.submitterName,
         status: row.status,
-        submissionTiming: computeSubmissionTiming(
-          story._creationTime,
-          group.endDate,
-        ),
+        submissionTiming: computeStoryTiming(story, group.endDate),
         criteriaScores: row.criteriaScores,
         totalScore: row.totalScore,
         averageScore: row.averageScore,
@@ -1607,6 +1653,15 @@ export const getGroupSummaryInput = internalQuery({
       fingerprint: v.string(),
       hasInFlightReviews: v.boolean(),
       submissions: v.array(groupSummaryInputValidator),
+      // Saved summary when its fingerprint matches the current reviews
+      cachedSummary: v.optional(
+        v.object({
+          markdown: v.string(),
+          generatedAt: v.number(),
+          provider: v.string(),
+          model: v.string(),
+        }),
+      ),
     }),
   ),
   handler: async (ctx, args) => {
@@ -1650,13 +1705,27 @@ export const getGroupSummaryInput = internalQuery({
       });
     }
 
+    const fingerprint = getGroupSummaryFingerprint(rows);
+    const cachedSummary =
+      group.aiGroupSummary &&
+      group.aiGroupSummaryFingerprint === fingerprint &&
+      group.aiGroupSummaryGeneratedAt !== undefined
+        ? {
+            markdown: group.aiGroupSummary,
+            generatedAt: group.aiGroupSummaryGeneratedAt,
+            provider: group.aiGroupSummaryProvider ?? "",
+            model: group.aiGroupSummaryModel ?? "",
+          }
+        : undefined;
+
     return {
       groupName: group.name,
-      fingerprint: getGroupSummaryFingerprint(rows),
+      fingerprint,
       hasInFlightReviews: rows.some(
         (row) => row.status === "pending" || row.status === "running",
       ),
       submissions,
+      cachedSummary,
     };
   },
 });
@@ -1679,6 +1748,142 @@ export const saveGroupSummary = internalMutation({
       aiGroupSummaryProvider: args.provider,
       aiGroupSummaryModel: args.model,
     });
+    return null;
+  },
+});
+
+/**
+ * Retry video transcripts for a group: drop cached transcript rows that had
+ * no captions or a failed scrape, then re-run the AI review for those
+ * submissions so the fresh transcript lands in their scores. Rows already
+ * pending or running are left alone; their next analysis scrapes again.
+ */
+export const retryVideoTranscripts = mutation({
+  args: { groupId: v.id("judgingGroups") },
+  returns: v.object({ cleared: v.number(), queued: v.number() }),
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.ai");
+    const group = await ctx.db.get(args.groupId);
+    if (!group) throw new ConvexError("Judging group not found");
+    if (!group.aiJudgeEnabled) {
+      throw new ConvexError("Turn on the AI judge for this group first.");
+    }
+
+    const [memberships, results] = await Promise.all([
+      ctx.db
+        .query("judgingGroupSubmissions")
+        .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+        .collect(),
+      ctx.db
+        .query("aiJudgeResults")
+        .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+        .collect(),
+    ]);
+    const resultByStory = new Map(results.map((r) => [r.storyId, r]));
+
+    let cleared = 0;
+    let queued = 0;
+    for (const membership of memberships) {
+      const story = await ctx.db.get(membership.storyId);
+      if (!isStoryValidForJudging(story)) continue;
+      const url = story.videoUrl?.trim();
+      if (!url) continue;
+      const row = await ctx.db
+        .query("videoTranscripts")
+        .withIndex("by_story", (q) => q.eq("storyId", story._id))
+        .unique();
+      if (!row || row.videoUrl !== url) continue;
+      if (row.status !== "no_transcript" && row.status !== "failed") continue;
+      await ctx.db.delete(row._id);
+      cleared++;
+
+      const result = resultByStory.get(story._id);
+      if (result && (result.status === "pending" || result.status === "running")) {
+        continue;
+      }
+      let resultId: Id<"aiJudgeResults">;
+      if (result) {
+        await ctx.db.patch(result._id, {
+          status: "pending" as const,
+          error: undefined,
+          rateLimitRetries: undefined,
+        });
+        resultId = result._id;
+      } else {
+        resultId = await ctx.db.insert("aiJudgeResults", {
+          groupId: args.groupId,
+          storyId: story._id,
+          status: "pending" as const,
+        });
+      }
+      await aiJudgePool.enqueueAction(
+        ctx,
+        internal.aiJudgeAnalysis.analyzeSubmission,
+        { resultId },
+      );
+      queued++;
+    }
+
+    if (cleared > 0) {
+      await logActivity(ctx, {
+        category: "judging",
+        action: "judging.aiTranscriptRetry",
+        message: `Retried video transcripts in ${group.name}: ${cleared} cleared, ${queued} reviews queued`,
+        targetType: "judgingGroup",
+        targetId: args.groupId,
+        targetLabel: group.name,
+        groupId: args.groupId,
+        metadata: { cleared, queued },
+      });
+    }
+    return { cleared, queued };
+  },
+});
+
+// Automatic requeues allowed per run after a GitHub rate limit
+const MAX_RATE_LIMIT_RETRIES = 3;
+
+/**
+ * GitHub rate limit hit mid analysis: set the row back to pending and
+ * enqueue it again shortly after the quota resets. After 3 requeues the row
+ * fails with the rate limit message so an admin can retry by hand.
+ */
+export const requeueAfterRateLimit = internalMutation({
+  args: {
+    resultId: v.id("aiJudgeResults"),
+    resetAt: v.optional(v.number()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const result = await ctx.db.get(args.resultId);
+    if (!result) return null;
+    const retries = result.rateLimitRetries ?? 0;
+    if (retries >= MAX_RATE_LIMIT_RETRIES) {
+      await ctx.db.patch(args.resultId, {
+        status: "failed" as const,
+        error:
+          "GitHub API rate limit exceeded after 3 automatic retries. Re-run the review after the limit resets.",
+      });
+      return null;
+    }
+    const now = Date.now();
+    // Wait until the reset plus a small buffer; at least 1 minute, at most 65
+    const target =
+      args.resetAt !== undefined && Number.isFinite(args.resetAt)
+        ? args.resetAt + 15_000
+        : now + 5 * 60_000;
+    const runAt = Math.min(Math.max(target, now + 60_000), now + 65 * 60_000);
+    await ctx.db.patch(args.resultId, {
+      status: "pending" as const,
+      rateLimitRetries: retries + 1,
+      error: `Waiting for the GitHub rate limit to reset. Automatic retry ${retries + 1} of ${MAX_RATE_LIMIT_RETRIES} at ${new Date(runAt).toISOString()}.`,
+    });
+    await aiJudgePool.enqueueAction(
+      ctx,
+      internal.aiJudgeAnalysis.analyzeSubmission,
+      { resultId: args.resultId },
+      { runAt },
+    );
     return null;
   },
 });
@@ -1709,11 +1914,19 @@ export const getSubmissionForAnalysis = internalQuery({
       // deadline for the SUBMISSION TIMING prompt section
       eventStartDate: v.optional(v.number()),
       eventEndDate: v.optional(v.number()),
-      // Story _creationTime: when the team submitted the app
+      // When the team submitted the app (source time for CSV imports)
       submittedAt: v.number(),
+      // Deadline used for the late check; absent for imports without a
+      // source submission time
+      timingDeadlineAt: v.optional(v.number()),
       // Custom prompt body, extra criteria, and disabled keys for this
       // group's AI judge
       aiJudgeSystemPrompt: v.optional(v.string()),
+      // Organizer prize brief appended to the prompt
+      aiJudgePrizeBrief: v.optional(v.string()),
+      // Self-reported form answers (custom questions, dynamic fields, CSV
+      // extra columns) for the SUBMISSION FORM ANSWERS prompt section
+      formAnswers: v.array(v.object({ label: v.string(), value: v.string() })),
       aiCustomCriteria: v.optional(
         v.array(
           v.object({
@@ -1770,13 +1983,24 @@ export const getSubmissionForAnalysis = internalQuery({
       ? await getHumanCriteriaForGroup(ctx, result.groupId)
       : [];
 
+    const timing = computeStoryTiming(story, group.endDate);
+    const formAnswers = [
+      ...(story.customFormAnswers ?? []),
+      ...(story.dynamicFormValues ?? []),
+    ]
+      .filter((answer) => answer.value.trim().length > 0)
+      .map((answer) => ({ label: answer.label, value: answer.value }));
+
     return {
       groupId: result.groupId,
       groupName: group.name,
       eventStartDate: group.startDate,
       eventEndDate: group.endDate,
-      submittedAt: story._creationTime,
+      submittedAt: timing.submittedAt,
+      timingDeadlineAt: timing.deadlineAt,
       aiJudgeSystemPrompt: group.aiJudgeSystemPrompt,
+      aiJudgePrizeBrief: group.aiJudgePrizeBrief,
+      formAnswers,
       aiCustomCriteria: group.aiCustomCriteria,
       aiDisabledCriteria: group.aiDisabledCriteria,
       aiIncludeHumanCriteria: group.aiIncludeHumanCriteria,
@@ -1927,7 +2151,7 @@ export const saveResult = internalMutation({
         targetId: result.storyId,
         targetLabel: reviewedStory?.title,
         groupId: result.groupId,
-        metadata: { storySlug: reviewedStory?.slug, averageScore: avg },
+        metadata: { storySlug: publicSlugOf(reviewedStory), averageScore: avg },
       });
     } else {
       await logActivity(ctx, {
@@ -1939,7 +2163,7 @@ export const saveResult = internalMutation({
         targetId: result.storyId,
         targetLabel: reviewedStory?.title,
         groupId: result.groupId,
-        metadata: { storySlug: reviewedStory?.slug },
+        metadata: { storySlug: publicSlugOf(reviewedStory) },
       });
     }
 
@@ -1998,20 +2222,25 @@ export const validateAiResultsPassword = mutation({
     groupId: v.id("judgingGroups"),
     password: v.string(),
   },
-  returns: v.boolean(),
+  // Session token for getValidatedAiResults, or null on a wrong password
+  returns: v.union(v.string(), v.null()),
   handler: async (ctx, args) => {
-    const group = await ctx.db.get(args.groupId);
-    if (!group || !group.aiResultsPassword) {
-      return false;
-    }
-    return await verifyPassword(args.password, group.aiResultsPassword);
+    const current = await checkGroupPassword(
+      ctx,
+      args.groupId,
+      "aiResultsPassword",
+      args.password,
+    );
+    if (current === null) return null;
+    return await issueResultsToken(ctx, args.groupId, "aiResults", current);
   },
 });
 
 /**
- * Verify the AI results password (query variant for session revalidation).
+ * Verify the AI results password (internal only; public callers go through
+ * the rate limited validate mutation).
  */
-export const verifyAiResultsPassword = query({
+export const verifyAiResultsPassword = internalQuery({
   args: {
     groupId: v.id("judgingGroups"),
     password: v.string(),
@@ -2112,7 +2341,8 @@ export const resolveResultsAccess = internalQuery({
  * getValidatedGroupScores in judgeScores.ts).
  */
 export const getValidatedAiResults = query({
-  args: { groupId: v.id("judgingGroups"), password: v.string() },
+  // accessToken comes from validateAiResultsPassword
+  args: { groupId: v.id("judgingGroups"), accessToken: v.string() },
   returns: v.union(v.null(), v.array(aiResultValidator)),
   handler: async (ctx, args) => {
     const group = await ctx.db.get(args.groupId);
@@ -2120,10 +2350,14 @@ export const getValidatedAiResults = query({
       return null;
     }
     const admin = await isUserAdmin(ctx);
-    const passwordOk =
-      !!group.aiResultsPassword &&
-      (await verifyPassword(args.password, group.aiResultsPassword));
-    if (!admin && !passwordOk) {
+    const tokenOk = await isResultsTokenValid(
+      ctx,
+      args.groupId,
+      "aiResults",
+      args.accessToken,
+      group.aiResultsPassword,
+    );
+    if (!admin && !tokenOk) {
       return null;
     }
     return await getCompletedResultsForGroup(ctx, args.groupId);

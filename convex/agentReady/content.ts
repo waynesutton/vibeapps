@@ -1,7 +1,7 @@
 import { action, mutation, query } from "../_generated/server";
 import { components } from "../_generated/api";
 import { v } from "convex/values";
-import { requireAdminRole } from "../users";
+import { isUserAdmin, requireAdminRole } from "../users";
 
 // App-facing wrappers for the Agent Ready component.
 // Components run in isolation, so browser clients call these wrappers,
@@ -79,7 +79,12 @@ export const listPages = query({
   args: { includeAllStatuses: v.optional(v.boolean()) },
   returns: v.array(pageValidator),
   handler: async (ctx, args) => {
-    return await ctx.runQuery(components.agentReady.content.listPages, args);
+    // Drafts and archived pages are admin only
+    const includeAllStatuses =
+      args.includeAllStatuses === true && (await isUserAdmin(ctx));
+    return await ctx.runQuery(components.agentReady.content.listPages, {
+      includeAllStatuses,
+    });
   },
 });
 

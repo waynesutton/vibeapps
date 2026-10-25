@@ -9,7 +9,12 @@ import { paginationOptsValidator } from "convex/server";
 import { Doc, Id, DataModel } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { GenericDatabaseReader, StorageReader } from "convex/server";
-import { getAuthenticatedUserId, ensureUserNotBanned } from "./users"; // Centralized auth helpers
+import {
+  getAuthenticatedUserId,
+  ensureUserNotBanned,
+  getUserByCtx,
+  isUserAdmin,
+} from "./users"; // Centralized auth helpers
 import { requirePermission } from "./adminAccess"; // Granular admin permissions
 import { logActivity } from "./activityLog"; // Admin activity log
 import { getTagLimits } from "./tags"; // Configurable tag limits
@@ -27,6 +32,10 @@ import {
   resolveDynamicFieldValues,
   resolveDynamicFieldRecord,
 } from "./storyFormFields"; // Generic mapping for admin-added form fields
+import { assertSafeStoryLinks } from "./lib/urls"; // http/https-only link guard
+import { isPublicStory } from "./siteDirectory"; // Shared public visibility rule
+import { assertValidImageUpload, assertValidImageUploads } from "./lib/uploads"; // Server-side upload checks
+import { callerKey, enforceLimit } from "./lib/rateLimits"; // Per-caller + global rate limits
 
 // Validator for Doc<"tags">
 // REMOVED - Moved to convex/validators.ts
@@ -64,7 +73,10 @@ export type StoryWithDetails = Doc<"stories"> & {
   votesCount: number;
 };
 
-function omitPublicStoryPii(story: StoryWithDetails): StoryWithDetails {
+function omitPublicStoryPii(
+  story: StoryWithDetails,
+  keepPrivateFields = false,
+): StoryWithDetails {
   const {
     email: _email,
     authorEmail: _authorEmail,
@@ -80,19 +92,37 @@ function omitPublicStoryPii(story: StoryWithDetails): StoryWithDetails {
     teamMembers,
     ...rest
   } = story;
-  return {
+  const withoutPii = {
     ...rest,
     teamMembers: teamMembers?.map((member) => ({ name: member.name })),
-  } as StoryWithDetails;
+  };
+  if (keepPrivateFields) return withoutPii as StoryWithDetails;
+
+  // Organizer, import, and storage fields are for judges, admins, and the
+  // owner only. Storage ids let a caller attach (then delete) someone
+  // else's file, so public payloads carry the resolved URLs instead.
+  const {
+    hackathonLog: _hackathonLog,
+    selfReportedHarness: _selfReportedHarness,
+    selfReportedModel: _selfReportedModel,
+    customFormAnswers: _customFormAnswers,
+    importKey: _importKey,
+    importGroupId: _importGroupId,
+    screenshotId: _screenshotId,
+    additionalImageIds: _additionalImageIds,
+    ...publicFields
+  } = withoutPii;
+  return publicFields as StoryWithDetails;
 }
 
 // Helper to fetch tags and related counts for stories
 const fetchTagsAndCountsForStories = async (
   ctx: { db: GenericDatabaseReader<DataModel>; storage: StorageReader },
   stories: Doc<"stories">[],
-  options?: { stripPii?: boolean },
+  options?: { stripPii?: boolean; keepPrivateFields?: boolean },
 ): Promise<StoryWithDetails[]> => {
   const stripPii = options?.stripPii !== false;
+  const keepPrivateFields = options?.keepPrivateFields === true;
   const allTagIds = stories.flatMap((story) => story.tagIds || []);
   const uniqueTagIds = [...new Set(allTagIds)];
 
@@ -214,7 +244,9 @@ const fetchTagsAndCountsForStories = async (
         averageRating,
         votesCount,
       };
-      return stripPii ? omitPublicStoryPii(detailed) : detailed;
+      return stripPii
+        ? omitPublicStoryPii(detailed, keepPrivateFields)
+        : detailed;
     }),
   );
 };
@@ -476,8 +508,18 @@ export const getBySlug = query({
       return null;
     }
 
-    const storiesWithDetails = await fetchTagsAndCountsForStories(ctx, [story]);
+    const storiesWithDetails = await fetchTagsAndCountsForStories(
+      ctx,
+      [story],
+      { keepPrivateFields: true },
+    );
     const storyWithDetails = storiesWithDetails[0];
+
+    // Storage ids only go to the owner (gallery edits) or an admin
+    const viewer = await getUserByCtx(ctx);
+    const canSeeStorageIds =
+      (viewer !== null && story.userId === viewer._id) ||
+      (await isUserAdmin(ctx));
 
     // Map StoryWithDetails to StoryWithDetailsPublic
     return {
@@ -493,7 +535,7 @@ export const getBySlug = query({
       userId: storyWithDetails.userId,
       votes: storyWithDetails.votes,
       commentCount: storyWithDetails.commentCount,
-      screenshotId: storyWithDetails.screenshotId,
+      screenshotId: canSeeStorageIds ? storyWithDetails.screenshotId : undefined,
       ratingSum: storyWithDetails.ratingSum,
       ratingCount: storyWithDetails.ratingCount,
       videoUrl: storyWithDetails.videoUrl,
@@ -518,7 +560,9 @@ export const getBySlug = query({
       screenshotUrl: storyWithDetails.screenshotUrl,
       additionalImageUrls: storyWithDetails.additionalImageUrls,
       // Surface storage ids to allow precise owner edits of gallery
-      additionalImageIds: storyWithDetails.additionalImageIds,
+      additionalImageIds: canSeeStorageIds
+        ? storyWithDetails.additionalImageIds
+        : undefined,
       voteScore: storyWithDetails.voteScore,
       averageRating: storyWithDetails.averageRating,
       commentsCount: storyWithDetails.commentsCount,
@@ -761,6 +805,23 @@ export const submit = mutation({
     const { dynamicColumns, dynamicFormValues } =
       await resolveDynamicFieldValues(ctx, args.dynamicFieldValues);
 
+    // Only http/https links, including the admin-added URL columns
+    assertSafeStoryLinks({
+      url: args.url,
+      videoUrl: args.videoUrl,
+      linkedinUrl: args.linkedinUrl ?? dynamicColumns.linkedinUrl,
+      twitterUrl: args.twitterUrl ?? dynamicColumns.twitterUrl,
+      githubUrl: args.githubUrl ?? dynamicColumns.githubUrl,
+      chefShowUrl: args.chefShowUrl ?? dynamicColumns.chefShowUrl,
+      chefAppUrl: args.chefAppUrl ?? dynamicColumns.chefAppUrl,
+    });
+
+    // Images must be fresh raster uploads within the size cap
+    if (args.screenshotId) {
+      await assertValidImageUpload(ctx, args.screenshotId);
+    }
+    await assertValidImageUploads(ctx, args.additionalImageIds);
+
     const storyId = await ctx.db.insert("stories", {
       title: args.title,
       slug: slug,
@@ -897,10 +958,23 @@ export const submitAnonymous = mutation({
   handler: async (ctx, args) => {
     // No authentication required for anonymous submissions
 
+    // Per-IP and global caps so rotating emails cannot flood the feed
+    await enforceLimit(ctx, "anonSubmit", await callerKey(ctx));
+    await enforceLimit(ctx, "anonSubmitGlobal");
+
     // Validate additional images limit
     if (args.additionalImageIds && args.additionalImageIds.length > 4) {
       throw new ConvexError("Maximum of 4 additional images allowed");
     }
+
+    // Only http/https links
+    assertSafeStoryLinks(args);
+
+    // Images must be fresh raster uploads within the size cap
+    if (args.screenshotId) {
+      await assertValidImageUpload(ctx, args.screenshotId);
+    }
+    await assertValidImageUploads(ctx, args.additionalImageIds);
 
     // Basic rate limiting by email - allow up to 10 submissions per day per email
     const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
@@ -1024,10 +1098,16 @@ export const submitAnonymous = mutation({
   },
 });
 
-// Mutation to generate upload URL for screenshots
+// Mutation to generate upload URL for screenshots. Stays open for the
+// anonymous /resend and /ychack forms, so it is rate limited per caller.
 export const generateUploadUrl = mutation({
   args: {},
+  returns: v.string(),
   handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    const key = identity ? `t:${identity.tokenIdentifier}` : await callerKey(ctx);
+    await enforceLimit(ctx, "uploadUrl", key);
+    await enforceLimit(ctx, "uploadUrlGlobal");
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -1038,6 +1118,9 @@ export const voteStory = mutation({
   handler: async (ctx, args) => {
     await ensureUserNotBanned(ctx); // Check if user is banned
     const userId = await getAuthenticatedUserId(ctx); // Ensure user is authenticated
+
+    // Caps vote toggling, which would otherwise spam owner alerts
+    await enforceLimit(ctx, "vote", await callerKey(ctx, userId));
 
     // Check if the user has already voted for this story
     const existingVote = await ctx.db
@@ -1106,8 +1189,9 @@ export const rate = mutation({
     await ensureUserNotBanned(ctx); // Check if user is banned
     const userId = await getAuthenticatedUserId(ctx);
 
-    if (args.rating < 1 || args.rating > 5) {
-      throw new Error("Rating must be between 1 and 5.");
+    // Whole stars only; also rejects NaN and Infinity
+    if (!Number.isInteger(args.rating) || args.rating < 1 || args.rating > 5) {
+      throw new ConvexError("Rating must be a whole number from 1 to 5.");
     }
 
     // Check if the user has already rated this story
@@ -1603,6 +1687,23 @@ export const updateOwnStory = mutation({
       throw new ConvexError("Only the owner can edit this submission.");
     }
 
+    // Only http/https links
+    assertSafeStoryLinks(args);
+
+    // New images must be fresh uploads; images already on this story pass
+    const attachedImageIds = [
+      ...(story.screenshotId ? [story.screenshotId] : []),
+      ...(story.additionalImageIds ?? []),
+    ];
+    if (args.screenshotId) {
+      await assertValidImageUpload(ctx, args.screenshotId, attachedImageIds);
+    }
+    await assertValidImageUploads(
+      ctx,
+      args.additionalImageIds,
+      attachedImageIds,
+    );
+
     // Track changes for changelog
     const textChanges: Array<{
       field: string;
@@ -1929,6 +2030,9 @@ export const updateStoryAdmin = mutation({
       throw new ConvexError("Maximum of 4 additional images allowed");
     }
 
+    // Only http/https links
+    assertSafeStoryLinks(args);
+
     // Handle new tags if provided
     let finalTagIds = args.tagIds;
     if (args.newTagNames && args.newTagNames.length > 0) {
@@ -2230,10 +2334,12 @@ export const listAllStoriesAdmin = query({
     const isDone = endIndex >= initialStories.length;
     const continueCursor = isDone ? null : endIndex.toString();
 
-    // Fetch additional details for the paginated subset
+    // Fetch additional details for the paginated subset. Admin edits need
+    // the storage ids, so private fields stay.
     const storiesWithDetails = await fetchTagsAndCountsForStories(
       ctx,
       pageStories,
+      { keepPrivateFields: true },
     );
 
     return {
@@ -2442,6 +2548,14 @@ export const submitDynamic = mutation({
       storyData.email = email;
     }
 
+    // Only http/https links in every mapped column
+    assertSafeStoryLinks(storyData);
+
+    // Images must be fresh raster uploads within the size cap
+    if (screenshotId) {
+      await assertValidImageUpload(ctx, screenshotId);
+    }
+
     const storyId = await ctx.db.insert("stories", storyData);
     return storyId;
   },
@@ -2536,6 +2650,9 @@ export const getWeeklyLeaderboardStories = query({
   },
 });
 
+const RELATED_STORIES_MAX = 12;
+const RELATED_STORIES_SCAN = 500;
+
 export const getRelatedStoriesByTags = query({
   args: {
     currentStoryId: v.id("stories"),
@@ -2543,24 +2660,43 @@ export const getRelatedStoriesByTags = query({
     limit: v.number(),
   },
   handler: async (ctx, args) => {
-    if (args.tagIds.length === 0) {
+    // Clamp the client limit (also rejects NaN and Infinity)
+    const limit = Number.isFinite(args.limit)
+      ? Math.min(Math.max(Math.floor(args.limit), 0), RELATED_STORIES_MAX)
+      : 0;
+    if (args.tagIds.length === 0 || limit === 0) {
       return [];
     }
 
-    // This initial fetch of all stories is not scalable for large datasets.
-    // Consider a more optimized approach with join tables or search indexes for production.
-    const allStories = await ctx.db
-      .query("stories")
-      // .withIndex("by_status_votes", q => q.eq("status", "approved")) // Example: if you have a combined index
-      .filter((q) => q.eq(q.field("status"), "approved")) // Filter for approved stories first
-      .order("desc") // This will use the default _creationTime or you need a specific index like by_votes
-      .collect();
+    // Private tracking tags never match, so they cannot be used to find
+    // judging-only imports
+    const tagDocs = await Promise.all(
+      args.tagIds.slice(0, 20).map((tagId) => ctx.db.get(tagId)),
+    );
+    const publicTagIds = new Set(
+      tagDocs
+        .filter((tag): tag is Doc<"tags"> => tag !== null && !tag.isHidden)
+        .map((tag) => tag._id),
+    );
+    if (publicTagIds.size === 0) {
+      return [];
+    }
 
-    const relatedStories = allStories
+    // Bounded read of the most-voted visible stories
+    const candidates = await ctx.db
+      .query("stories")
+      .withIndex("by_status_isHidden_votes", (q) =>
+        q.eq("status", "approved").eq("isHidden", false),
+      )
+      .order("desc")
+      .take(RELATED_STORIES_SCAN);
+
+    const relatedStories = candidates
       .filter(
         (story) =>
           story._id !== args.currentStoryId &&
-          story.tagIds?.some((tagId) => args.tagIds.includes(tagId)),
+          isPublicStory(story) &&
+          story.tagIds?.some((tagId) => publicTagIds.has(tagId)),
       )
       .sort((a, b) => {
         const voteDiff = (b.votes ?? 0) - (a.votes ?? 0);
@@ -2570,7 +2706,7 @@ export const getRelatedStoriesByTags = query({
         if (commentCountDiff !== 0) return commentCountDiff;
         return b._creationTime - a._creationTime;
       })
-      .slice(0, args.limit);
+      .slice(0, limit);
 
     const enrichedStories = await Promise.all(
       relatedStories.map(async (story) => {

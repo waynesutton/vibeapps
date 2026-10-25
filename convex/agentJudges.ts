@@ -12,6 +12,7 @@ import { getAuthenticatedUserId } from "./users";
 import { requireJudgingGroupPermission } from "./adminAccess";
 import { markResearchStale } from "./researchIndex";
 import { isInJudgeQueue } from "./lib/judgeQueue";
+import { isStoryJudgeable } from "./lib/judgingEligibility";
 
 // --- Agent judging keys ---
 //
@@ -320,11 +321,7 @@ export const markAgentKeyUsed = internalMutation({
 
 // Exclude deleted/hidden/archived/rejected stories, same as human judging
 function isStoryValidForJudging(story: Doc<"stories"> | null): story is Doc<"stories"> {
-  if (!story) return false;
-  if (story.isHidden === true) return false;
-  if (story.isArchived === true) return false;
-  if (story.status === "rejected") return false;
-  return true;
+  return isStoryJudgeable(story);
 }
 
 /**

@@ -14,6 +14,7 @@ import {
   tsToDateInput,
   useSaveState,
 } from "./groupSection";
+import { CsvImportCard } from "./CsvImportCard";
 
 // Submission sources: multi-tag auto-include with optional date range,
 // plus backfill sync actions for existing matching submissions.
@@ -208,6 +209,8 @@ export function GroupSubmissionsSection({ group }: { group: GroupDetails }) {
           <p className="text-[13px] text-copy">{addMessage}</p>
         )}
       </SectionCard>
+
+      <CsvImportCard group={group} />
 
       <SectionCard
         title="Auto-include by tag"

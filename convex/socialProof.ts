@@ -11,6 +11,7 @@ import { ConvexError } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireJudgingGroupPermission } from "./adminAccess";
+import { enforceLimit } from "./lib/rateLimits";
 import {
   classifySocialUrl,
   socialPlatformLabel,
@@ -273,6 +274,8 @@ export const refreshSocialProofForGroup = mutation({
     await requireJudgingGroupPermission(ctx, args.groupId, "judging.ai");
     const group = await ctx.db.get(args.groupId);
     if (!group) throw new ConvexError("Judging group not found");
+    // Each refresh fans out paid fetches, so repeat clicks are capped
+    await enforceLimit(ctx, "socialProofRefresh", args.groupId);
 
     const submissions = await ctx.db
       .query("judgingGroupSubmissions")

@@ -12,6 +12,7 @@ import { internal } from "../_generated/api";
 import { Doc, Id } from "../_generated/dataModel";
 import { requireJudgingGroupPermission } from "../adminAccess";
 import { EMAIL_TYPE_DEFAULTS, emailTypeSettingKey } from "./emailTypes";
+import { isJudgingOnlyStory } from "../lib/judgingEligibility";
 import {
   applyTemplateVars,
   firstNameOf,
@@ -118,7 +119,11 @@ async function collectGroupSubmissionOwnerRecipients(
 
   for (const submission of submissions) {
     const story = await ctx.db.get(submission.storyId);
-    if (!story || story.isHidden === true || story.status === "rejected") {
+    if (
+      !story ||
+      story.status === "rejected" ||
+      (story.isHidden === true && !isJudgingOnlyStory(story))
+    ) {
       continue;
     }
 

@@ -5,6 +5,7 @@ import { internal, components } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { ContextDev } from "@context-dot-dev/convex";
 import { requireJudgingGroupPermission } from "./adminAccess";
+import { isStoryJudgeable } from "./lib/judgingEligibility";
 
 // Video demo transcript scraping for the AI judge.
 // Context.dev is the primary scraper: YouTube URLs return title, channel,
@@ -19,8 +20,13 @@ import { requireJudgingGroupPermission } from "./adminAccess";
 const MAX_STORED_TRANSCRIPT_CHARS = 15000;
 // Reuse a stored transcript for the same URL within this window.
 const TRANSCRIPT_CACHE_MS = 7 * 24 * 60 * 60 * 1000;
+// YouTube builds auto captions minutes to hours after upload, so a
+// "no captions" result is only trusted briefly before checking again.
+const NO_TRANSCRIPT_CACHE_MS = 2 * 60 * 60 * 1000;
 // Context.dev server-side cache hint (1 day) so refetches stay cheap.
 const CONTEXT_DEV_MAX_AGE_MS = 86400000;
+// Short server-side cache when re-checking a video that had no captions
+const CONTEXT_DEV_RECHECK_MAX_AGE_MS = 15 * 60 * 1000;
 
 export type VideoTranscriptKind = "youtube" | "page" | "unsupported";
 export type VideoTranscriptStatus =
@@ -168,6 +174,87 @@ export const getTranscriptForStory = query({
   },
 });
 
+/**
+ * Video transcript coverage for a group: how many submissions have a
+ * transcript, no captions yet, a failed scrape, an unsupported link, or no
+ * fetch yet. Feeds the coverage panel on the AI results dashboard.
+ */
+export const getGroupVideoCoverage = query({
+  args: { groupId: v.id("judgingGroups") },
+  returns: v.object({
+    total: v.number(),
+    noVideo: v.number(),
+    completed: v.number(),
+    noTranscript: v.number(),
+    failed: v.number(),
+    unsupported: v.number(),
+    notFetched: v.number(),
+    // Rows a "Retry transcripts" run would refresh (no captions or failed)
+    retryable: v.array(
+      v.object({
+        storyId: v.id("stories"),
+        title: v.string(),
+        status: v.union(v.literal("no_transcript"), v.literal("failed")),
+      }),
+    ),
+  }),
+  handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.ai");
+    const memberships = await ctx.db
+      .query("judgingGroupSubmissions")
+      .withIndex("by_groupId", (q) => q.eq("groupId", args.groupId))
+      .collect();
+    const stories = await Promise.all(
+      memberships.map((m) => ctx.db.get(m.storyId)),
+    );
+
+    const counts = {
+      total: 0,
+      noVideo: 0,
+      completed: 0,
+      noTranscript: 0,
+      failed: 0,
+      unsupported: 0,
+      notFetched: 0,
+    };
+    const retryable: Array<{
+      storyId: Id<"stories">;
+      title: string;
+      status: "no_transcript" | "failed";
+    }> = [];
+
+    for (const story of stories) {
+      if (!isStoryJudgeable(story)) continue;
+      counts.total++;
+      const url = story.videoUrl?.trim();
+      if (!url) {
+        counts.noVideo++;
+        continue;
+      }
+      const row = await ctx.db
+        .query("videoTranscripts")
+        .withIndex("by_story", (q) => q.eq("storyId", story._id))
+        .unique();
+      if (!row || row.videoUrl !== url) {
+        counts.notFetched++;
+        continue;
+      }
+      if (row.status === "completed") counts.completed++;
+      else if (row.status === "unsupported") counts.unsupported++;
+      else {
+        if (row.status === "no_transcript") counts.noTranscript++;
+        else counts.failed++;
+        retryable.push({
+          storyId: story._id,
+          title: story.title,
+          status: row.status,
+        });
+      }
+    }
+    return { ...counts, retryable };
+  },
+});
+
 // Single YouTube video URL patterns handled first class by Context.dev
 // (/watch, youtu.be, /shorts, /embed, /live). Channel URLs are not videos.
 const YOUTUBE_VIDEO_REGEX =
@@ -205,6 +292,7 @@ type ScrapeAttempt = {
 async function scrapeWithContextDev(
   ctx: ActionCtx,
   url: string,
+  maxAgeMs: number = CONTEXT_DEV_MAX_AGE_MS,
 ): Promise<ScrapeAttempt | null> {
   if (!process.env.CONTEXT_DEV_API_KEY) return null;
   try {
@@ -212,7 +300,7 @@ async function scrapeWithContextDev(
       params: {
         url,
         useMainContentOnly: true,
-        maxAgeMs: CONTEXT_DEV_MAX_AGE_MS,
+        maxAgeMs,
       },
     });
     return {
@@ -309,14 +397,21 @@ export async function fetchVideoContext(
   const existing = await ctx.runQuery(internal.videoTranscripts.getForStory, {
     storyId,
   });
+  const cacheMs =
+    existing?.status === "no_transcript"
+      ? NO_TRANSCRIPT_CACHE_MS
+      : TRANSCRIPT_CACHE_MS;
   if (
     existing &&
     existing.videoUrl === url &&
-    now - existing.fetchedAt < TRANSCRIPT_CACHE_MS &&
+    now - existing.fetchedAt < cacheMs &&
     existing.status !== "failed"
   ) {
     return contextFromStored(existing.kind, existing.status, existing.markdown ?? "");
   }
+  // Re-checking a video that had no captions: skip the day long scrape cache
+  const recheck =
+    existing?.videoUrl === url && existing.status === "no_transcript";
 
   if (kind === "unsupported") {
     await ctx.runMutation(internal.videoTranscripts.save, {
@@ -340,7 +435,11 @@ export async function fetchVideoContext(
 
   // Scrape: Context.dev first, Firecrawl fallback for non-YouTube pages.
   // Firecrawl cannot extract YouTube captions, so it is not used for YouTube.
-  let attempt = await scrapeWithContextDev(ctx, url);
+  let attempt = await scrapeWithContextDev(
+    ctx,
+    url,
+    recheck ? CONTEXT_DEV_RECHECK_MAX_AGE_MS : CONTEXT_DEV_MAX_AGE_MS,
+  );
   let provider: "contextdev" | "firecrawl" = "contextdev";
   if ((!attempt || !attempt.ok) && kind === "page") {
     const fallback = await scrapeWithFirecrawl(url);

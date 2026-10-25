@@ -285,15 +285,35 @@ export function JudgingResultsDashboard({
                           </div>
                         </td>
                         <td className="p-4">
-                          <a
-                            href={`/s/${submission.storySlug}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-copy hover:text-ink hover:underline text-xs inline-flex items-center gap-1"
-                          >
-                            <ExternalLink className="w-3 h-3" />
-                            View
-                          </a>
+                          {submission.judgingOnly ? (
+                            // Judging only import: link the source page
+                            submission.importSourceUrl ? (
+                              <a
+                                href={submission.importSourceUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-copy hover:text-ink hover:underline text-xs inline-flex items-center gap-1"
+                                title="Not public: opens the source page"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                Source
+                              </a>
+                            ) : (
+                              <span className="text-xs text-faint">
+                                Not public
+                              </span>
+                            )
+                          ) : (
+                            <a
+                              href={`/s/${submission.storySlug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-copy hover:text-ink hover:underline text-xs inline-flex items-center gap-1"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              View
+                            </a>
+                          )}
                         </td>
                       </tr>
                     ))}

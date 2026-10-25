@@ -156,6 +156,17 @@ export default defineSchema({
         }),
       ),
     ),
+    // Judging only: pairs with isHidden=true so every public surface keeps the
+    // story private while judging, AI judging, and group emails still see it.
+    judgingOnly: v.optional(v.boolean()),
+    // CSV import provenance (Devpost etc). importKey is unique per group and
+    // drives idempotent re-uploads; importSourceUrl is the source listing.
+    importGroupId: v.optional(v.id("judgingGroups")),
+    importKey: v.optional(v.string()),
+    importSourceUrl: v.optional(v.string()),
+    // Original submission time from the import source. Imported rows without
+    // it skip the late check instead of reading as late at import time.
+    submittedAt: v.optional(v.number()),
     // Changelog tracking for user edits
     changeLog: v.optional(
       v.array(
@@ -200,6 +211,7 @@ export default defineSchema({
     .index("by_votes", ["votes"])
     .index("by_status_isHidden_votes", ["status", "isHidden", "votes"])
     .index("by_status_isHidden", ["status", "isHidden"])
+    .index("by_importGroupId_and_importKey", ["importGroupId", "importKey"])
     .searchIndex("search_all", {
       searchField: "title",
       filterFields: ["status", "isHidden"],
@@ -720,6 +732,15 @@ export default defineSchema({
     // Supports a {{rubric}} placeholder; the JSON response contract is
     // always appended by the analysis action and is never editable.
     aiJudgeSystemPrompt: v.optional(v.string()),
+    // Organizer prize brief appended to the default or custom prompt so
+    // event specific framing never freezes the built-in prompt body.
+    aiJudgePrizeBrief: v.optional(v.string()),
+    // Last CSV import column mapping (header -> target) for one click re-uploads
+    csvImportMapping: v.optional(
+      v.array(v.object({ header: v.string(), target: v.string() })),
+    ),
+    // Tag applied by the last CSV import, preselected on the next upload
+    csvImportTagId: v.optional(v.id("tags")),
     // Optional privacy-safe cohort summary generated from saved AI results.
     // The fingerprint lets admin UI identify summaries made stale by reruns
     // or manual review edits without exposing this content publicly.
@@ -969,6 +990,8 @@ export default defineSchema({
       v.union(v.literal("public"), v.literal("private_or_missing")),
     ),
     error: v.optional(v.string()), // Error message when status is "failed"
+    // Automatic requeues after a GitHub rate limit; cleared on a new run
+    rateLimitRetries: v.optional(v.number()),
     sourcesUsed: v.optional(
       v.object({
         github: v.boolean(), // Whether the GitHub repo was fetched
@@ -1171,6 +1194,18 @@ export default defineSchema({
     callCount: v.number(), // Approximate authenticated call count
   })
     .index("by_keyHash", ["keyHash"])
+    .index("by_groupId", ["groupId"]),
+
+  // Session tokens issued after a correct results password. Only the SHA-256
+  // of the raw token is stored. A token works only while passwordHash still
+  // equals the group's current stored hash, so changing the password revokes it.
+  resultsAccessTokens: defineTable({
+    groupId: v.id("judgingGroups"),
+    kind: v.union(v.literal("results"), v.literal("aiResults")),
+    tokenHash: v.string(),
+    passwordHash: v.string(),
+  })
+    .index("by_tokenHash", ["tokenHash"])
     .index("by_groupId", ["groupId"]),
 
   // DEPRECATED: audit trail from the removed hackathon skill registration

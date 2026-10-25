@@ -27,14 +27,15 @@ export type LinkEntry = {
   password?: string;
 };
 
-// Stored passwords are SHA-256 hex (see hashPassword in
+// Stored passwords are salted PBKDF2 or SHA-256 hashes (see hashPassword in
 // convex/judgingGroups.ts). Older rows used reversible btoa; decode those
 // so the admin-only event kit export can still include the access code.
 function decodeStoredPassword(
   encoded: string | undefined,
 ): string | undefined {
   if (!encoded) return undefined;
-  // SHA-256 hex is 64 lowercase hex chars and cannot be reversed
+  // Hashes cannot be reversed: salted "pbkdf2$" / "sha256i$" or 64 char hex
+  if (/^(pbkdf2|sha256i)\$/.test(encoded)) return undefined;
   if (/^[0-9a-f]{64}$/.test(encoded)) return undefined;
   try {
     const bytes = Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0));

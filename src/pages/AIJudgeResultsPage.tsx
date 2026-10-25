@@ -17,6 +17,8 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { LateSubmissionBadge } from "../components/LateSubmissionBadge";
 import { Id } from "../../convex/_generated/dataModel";
+import { safeHref } from "../lib/safeHref";
+import { getConvexErrorMessage } from "../lib/convexErrors";
 
 // Human labels for how a sponsor product is wired in (keys match
 // sponsorEvidenceValidator in convex/aiJudge.ts)
@@ -31,7 +33,8 @@ const SPONSOR_VIA_LABELS: Record<string, string> = {
 export default function AIJudgeResultsPage() {
   const { slug } = useParams<{ slug: string }>();
   const [password, setPassword] = useState("");
-  const [enteredPassword, setEnteredPassword] = useState("");
+  // Session token from validateAiResultsPassword; the password is never stored
+  const [accessToken, setAccessToken] = useState("");
   const [isPasswordValidated, setIsPasswordValidated] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [isValidating, setIsValidating] = useState(false);
@@ -56,9 +59,11 @@ export default function AIJudgeResultsPage() {
   // Check sessionStorage for an existing validation for this group
   useEffect(() => {
     if (info && !info.isAiResultsPublic && !info.isAdmin) {
-      const stored = sessionStorage.getItem(`aiResultsPassword_${info._id}`);
+      // Older sessions stored the raw password; drop it
+      sessionStorage.removeItem(`aiResultsPassword_${info._id}`);
+      const stored = sessionStorage.getItem(`aiResultsToken_${info._id}`);
       if (stored) {
-        setEnteredPassword(stored);
+        setAccessToken(stored);
         setIsPasswordValidated(true);
       }
     }
@@ -75,13 +80,28 @@ export default function AIJudgeResultsPage() {
   const validatedResults = useQuery(
     api.aiJudge.getValidatedAiResults,
     info && hasAccess && !info.isAiResultsPublic && !info.isAdmin
-      ? { groupId: info._id, password: enteredPassword }
+      ? { groupId: info._id, accessToken }
       : "skip",
   );
   const results =
     info && (info.isAiResultsPublic || info.isAdmin)
       ? publicResults
       : validatedResults;
+
+  // A rejected token (password changed) sends the visitor back to the form
+  const tokenRejected =
+    !!info &&
+    !info.isAiResultsPublic &&
+    !info.isAdmin &&
+    isPasswordValidated &&
+    validatedResults === null;
+  useEffect(() => {
+    if (tokenRejected && info) {
+      sessionStorage.removeItem(`aiResultsToken_${info._id}`);
+      setAccessToken("");
+      setIsPasswordValidated(false);
+    }
+  }, [tokenRejected, info]);
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,23 +111,25 @@ export default function AIJudgeResultsPage() {
     setPasswordError("");
 
     try {
-      const isValid = await validateAiResultsPassword({
+      const token = await validateAiResultsPassword({
         groupId: info._id,
         password: password.trim(),
       });
 
-      if (isValid) {
+      if (token) {
         setIsPasswordValidated(true);
-        setEnteredPassword(password.trim());
-        sessionStorage.setItem(
-          `aiResultsPassword_${info._id}`,
-          password.trim(),
-        );
+        setAccessToken(token);
+        sessionStorage.setItem(`aiResultsToken_${info._id}`, token);
       } else {
         setPasswordError("Incorrect password. Please try again.");
       }
     } catch (error) {
-      setPasswordError("Error validating password. Please try again.");
+      setPasswordError(
+        getConvexErrorMessage(
+          error,
+          "Error validating password. Please try again.",
+        ),
+      );
     } finally {
       setIsValidating(false);
     }
@@ -348,18 +370,26 @@ export default function AIJudgeResultsPage() {
                     <div className="border-t border-hairline p-4 space-y-4">
                       {/* Links */}
                       <div className="flex flex-wrap items-center gap-3 text-sm">
-                        <a
-                          href={`/s/${result.storySlug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800"
-                        >
-                          View submission
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
+                        {(!result.judgingOnly || result.importSourceUrl) && (
+                          <a
+                            href={
+                              result.judgingOnly
+                                ? safeHref(result.importSourceUrl)
+                                : `/s/${result.storySlug}`
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800"
+                          >
+                            {result.judgingOnly
+                              ? "View source page"
+                              : "View submission"}
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        )}
                         {result.githubUrl && (
                           <a
-                            href={result.githubUrl}
+                            href={safeHref(result.githubUrl)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800"
@@ -370,7 +400,7 @@ export default function AIJudgeResultsPage() {
                         )}
                         {result.storyUrl && (
                           <a
-                            href={result.storyUrl}
+                            href={safeHref(result.storyUrl)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800"

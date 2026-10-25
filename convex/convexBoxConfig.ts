@@ -133,7 +133,10 @@ export const update = mutation({
  */
 export const generateUploadUrl = mutation({
   args: {},
+  returns: v.string(),
   handler: async (ctx) => {
-  return await ctx.storage.generateUploadUrl();
-}
+    // Only settings admins upload the ConvexBox logo
+    await requirePermission(ctx, "settings.manage");
+    return await ctx.storage.generateUploadUrl();
+  },
 });

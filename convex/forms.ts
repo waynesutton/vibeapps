@@ -1,7 +1,8 @@
 import { query, mutation } from "./_generated/server";
-import { Infer, v } from "convex/values";
+import { Infer, v, ConvexError } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { requirePermission } from "./adminAccess";
+import { callerKey, enforceLimit } from "./lib/rateLimits"; // Per-IP + global caps
 
 // Helper to generate slugs (can be moved to a utility file)
 function generateSlug(title: string): string {
@@ -241,9 +242,17 @@ export const saveFields = mutation({
 export const submitForm = mutation({
   args: {
     slug: v.string(), // Use slug to identify the form
-    data: v.any(), // Expecting a JSON object representing form data
+    // Keys come from field labels (may be non-ASCII, which v.record keys
+    // reject), so the shape and size are checked in the handler instead
+    data: v.any(),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
+    // Anonymous endpoint: per-IP and global caps, then a bounded payload
+    await enforceLimit(ctx, "formSubmit", await callerKey(ctx));
+    await enforceLimit(ctx, "formSubmitGlobal");
+    assertFormSubmissionShape(args.data);
+
     // Find the form by slug
     const form = await ctx.db
       .query("forms")
@@ -262,8 +271,44 @@ export const submitForm = mutation({
       formId: form._id, // Use the found form's ID
       data: args.data,
     });
+    return null;
   },
 });
+
+const MAX_FORM_FIELDS = 50;
+const MAX_FORM_TEXT = 5000;
+const MAX_FORM_OPTIONS = 50;
+const MAX_FORM_BYTES = 32 * 1024;
+
+// Public form payloads: a flat object of text, number, boolean, or
+// multi-select (string list) values, with field and size caps
+function assertFormSubmissionShape(data: unknown): void {
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    throw new ConvexError("Invalid form submission.");
+  }
+  const entries = Object.entries(data as Record<string, unknown>);
+  if (entries.length > MAX_FORM_FIELDS) {
+    throw new ConvexError("This form submission has too many fields.");
+  }
+  for (const [key, value] of entries) {
+    const isOk =
+      key.length <= 200 &&
+      ((typeof value === "string" && value.length <= MAX_FORM_TEXT) ||
+        typeof value === "boolean" ||
+        (typeof value === "number" && Number.isFinite(value)) ||
+        (Array.isArray(value) &&
+          value.length <= MAX_FORM_OPTIONS &&
+          value.every(
+            (item) => typeof item === "string" && item.length <= 500,
+          )));
+    if (!isOk) {
+      throw new ConvexError("One of the form answers is too long or invalid.");
+    }
+  }
+  if (JSON.stringify(data).length > MAX_FORM_BYTES) {
+    throw new ConvexError("This form submission is too large.");
+  }
+}
 
 // Query to list submissions for a specific form (for admin, using formId)
 export const listSubmissions = query({

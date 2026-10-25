@@ -12,12 +12,17 @@ import { internal } from "./_generated/api";
 import { logActivity } from "./activityLog";
 import { isInJudgeQueue, showsBelowCut } from "./lib/judgeQueue";
 import {
+  isJudgingOnlyStory,
+  isStoryJudgeable,
+  publicSlugOf,
+} from "./lib/judgingEligibility";
+import {
   computeWeightedScore,
   rankCompletedAiResults,
   type AiRankEntry,
 } from "./lib/aiRank";
 import {
-  computeSubmissionTiming,
+  computeStoryTiming,
   submissionTimingValidator,
 } from "./lib/submissionTiming";
 
@@ -25,11 +30,7 @@ import {
 // Returns true if story is valid for judging (not deleted, hidden, archived, or rejected)
 // Type guard to ensure TypeScript knows story is not null when this returns true
 function isStoryValidForJudging(story: Doc<"stories"> | null): story is Doc<"stories"> {
-  if (!story) return false;
-  if (story.isHidden === true) return false;
-  if (story.isArchived === true) return false;
-  if (story.status === "rejected") return false;
-  return true;
+  return isStoryJudgeable(story);
 }
 
 async function requireJudgeSession(
@@ -148,7 +149,7 @@ export async function ensureStoryInGroup(
     targetId: storyId,
     targetLabel: story?.title,
     groupId,
-    metadata: { storySlug: story?.slug },
+    metadata: { storySlug: publicSlugOf(story) },
   });
 
   return true;
@@ -557,7 +558,7 @@ export const removeSubmission = mutation({
       targetLabel: story?.title,
       groupId: args.groupId,
       metadata: {
-        storySlug: story?.slug,
+        storySlug: publicSlugOf(story),
         scoresDeleted: scores.length,
         hadAiReview: aiResults.length > 0,
         aiReviewStatus: aiStatus,
@@ -951,6 +952,9 @@ export const listSubmissionsTable = query({
       submittedAt: v.number(),
       // Submitted vs the group's event end; recomputed on every read
       submissionTiming: submissionTimingValidator,
+      // Judging only imports have no public page; link the source instead
+      judgingOnly: v.boolean(),
+      importSourceUrl: v.optional(v.string()),
       addedAt: v.number(),
       status: v.union(
         v.literal("pending"),
@@ -1034,11 +1038,10 @@ export const listSubmissionsTable = query({
         title: story.title,
         slug: story.slug,
         url: story.url,
-        submittedAt: story._creationTime,
-        submissionTiming: computeSubmissionTiming(
-          story._creationTime,
-          deadlineAt,
-        ),
+        submittedAt: story.submittedAt ?? story._creationTime,
+        submissionTiming: computeStoryTiming(story, deadlineAt),
+        judgingOnly: isJudgingOnlyStory(story),
+        importSourceUrl: story.importSourceUrl,
         addedAt,
         shortlisted,
         status: story.status,
@@ -1326,6 +1329,9 @@ export const getGroupSubmissions = query({
       ai: v.optional(judgeAiRankValidator),
       // Submitted vs the group's event end so judges see late entries
       submissionTiming: submissionTimingValidator,
+      // Judging only imports have no public page; link the source instead
+      judgingOnly: v.boolean(),
+      importSourceUrl: v.optional(v.string()),
       title: v.string(),
       slug: v.string(),
       description: v.string(),
@@ -1516,10 +1522,9 @@ export const getGroupSubmissions = query({
             _creationTime: story._creationTime,
             inJudgeQueue,
             ai: undefined as AiRankEntry | undefined,
-            submissionTiming: computeSubmissionTiming(
-              story._creationTime,
-              group.endDate,
-            ),
+            submissionTiming: computeStoryTiming(story, group.endDate),
+            judgingOnly: isJudgingOnlyStory(story),
+            importSourceUrl: story.importSourceUrl,
             title: story.title,
             slug: story.slug,
             description: story.description,
@@ -1680,6 +1685,8 @@ export const getSubmissionStatuses = query({
     }),
   ),
   handler: async (ctx, args) => {
+    await requireJudgingGroupPermission(ctx, args.groupId, "judging.view");
+
     // Get all submission statuses for the group
     const statuses = await ctx.db
       .query("submissionStatuses")
@@ -2202,11 +2209,27 @@ export const getStorySubmissionStatuses = query({
     }),
   ),
   handler: async (ctx, args) => {
+    // Same gate as getStoryJudgingGroups: moderators, or judging users
+    // limited to their allowed groups
+    const canModerate = await hasPermission(ctx, "moderation.view");
+    const allowedGroupIds = await getAllowedJudgingGroupIds(ctx);
+    if (
+      !canModerate &&
+      allowedGroupIds !== "all" &&
+      allowedGroupIds.length === 0
+    ) {
+      throw new Error("Permission required: moderation.view or judging.view");
+    }
+
     // First, find all judging groups this story belongs to
-    const storySubmissions = await ctx.db
+    const allSubmissions = await ctx.db
       .query("judgingGroupSubmissions")
       .withIndex("by_storyId", (q) => q.eq("storyId", args.storyId))
       .collect();
+    const storySubmissions =
+      canModerate || allowedGroupIds === "all"
+        ? allSubmissions
+        : allSubmissions.filter((s) => allowedGroupIds.includes(s.groupId));
 
     if (storySubmissions.length === 0) {
       return [];

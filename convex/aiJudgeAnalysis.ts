@@ -41,6 +41,8 @@ const MAX_SCRAPE_CHARS = 8000;
 const MAX_CONVEX_FILES_PROMPT = 40; // Convex files included in the model prompt
 const MAX_CONVEX_FILES_FACTS = 60; // Convex files fetched for fact extraction
 const MAX_LOG_FILE_CHARS = 5000; // Per hackathon log/tracking file in the prompt
+const MAX_FORM_ANSWERS_CHARS = 3000; // Form answers and imported CSV columns
+const MAX_PRIZE_BRIEF_CHARS = 2000; // Organizer prize brief in the system prompt
 const MAX_MANIFEST_CHARS = 6000; // Published hackathon.json manifest in the prompt
 
 // Deterministic Convex facts counted from the repo before the model sees it.
@@ -780,11 +782,16 @@ function extractComponentsUsed(
   }
 
   const used = new Set<string>();
-  const usageRegex = /\bcomponents\.([A-Za-z_$][A-Za-z0-9_$]*)/g;
+  const usageRegex = /\bcomponents\.([A-Za-z_][A-Za-z0-9_]*)/g;
+  // Only files that import the generated `components` object count; a local
+  // array named `components` would otherwise yield "length" or "filter"
+  const importsComponents =
+    /import\s*\{[^}]*\bcomponents\b[^}]*\}\s*from\s*["'][^"']*_generated\/api(\.js)?["']/;
   for (const [path, raw] of fileContentsByPath) {
     if (!/(^|\/)convex\//.test(path) || path.includes("_generated")) continue;
     if (/(^|\/)convex\/convex\.config\.ts$/.test(path)) continue; // config wires, does not use
     const stripped = stripComments(raw);
+    if (!importsComponents.test(stripped)) continue;
     let match;
     while ((match = usageRegex.exec(stripped))) {
       const property = match[1];
@@ -863,6 +870,19 @@ function requireGithubHeaders(): Record<string, string> {
   };
 }
 
+// Thrown when the GitHub quota is exhausted. analyzeSubmission catches it and
+// requeues the row for after resetAt instead of failing it.
+class GithubRateLimitError extends Error {
+  resetAt: number | undefined;
+  constructor(resetAt: number | undefined) {
+    super(
+      "GitHub API rate limit exceeded while analyzing this submission. Re-run the review after the limit resets.",
+    );
+    this.name = "GithubRateLimitError";
+    this.resetAt = resetAt;
+  }
+}
+
 // GitHub fetch with rate limit handling: read x-ratelimit-remaining and
 // retry-after, back off and retry once, then fail with a named error rather
 // than scoring on empty data.
@@ -890,11 +910,69 @@ async function githubFetch(
       continue;
     }
 
-    throw new Error(
-      "GitHub API rate limit exceeded while analyzing this submission. Re-run the review after the limit resets.",
+    // x-ratelimit-reset is epoch seconds; retry-after is seconds from now
+    const resetHeader = res.headers.get("x-ratelimit-reset");
+    const retryAfter = res.headers.get("retry-after");
+    const resetAt = resetHeader
+      ? parseInt(resetHeader, 10) * 1000
+      : retryAfter
+        ? Date.now() + parseInt(retryAfter, 10) * 1000
+        : undefined;
+    throw new GithubRateLimitError(
+      resetAt !== undefined && Number.isFinite(resetAt) ? resetAt : undefined,
     );
   }
   throw new Error("GitHub fetch retry loop exited unexpectedly");
+}
+
+// Largest single file kept from a repo read (matches the contents API cap)
+const MAX_REPO_FILE_BYTES = 1_000_000;
+// Parallel file reads per batch
+const REPO_FILE_BATCH = 8;
+
+// Read one repo file. raw.githubusercontent.com does not spend REST API
+// quota, so a full repo read costs about 5 API calls instead of about 70.
+// Any non-200 from raw falls back to the contents API for that file.
+async function fetchRepoFile(
+  owner: string,
+  repo: string,
+  ref: string,
+  path: string,
+  headers: Record<string, string>,
+): Promise<string | null> {
+  const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+  const encodedRef = ref.split("/").map(encodeURIComponent).join("/");
+  try {
+    const rawRes = await fetch(
+      `https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/${encodedRef}/${encodedPath}`,
+      {
+        headers: {
+          Authorization: headers.Authorization,
+          "User-Agent": headers["User-Agent"],
+        },
+      },
+    );
+    if (rawRes.ok) {
+      const text = await rawRes.text();
+      return text.length > MAX_REPO_FILE_BYTES
+        ? text.slice(0, MAX_REPO_FILE_BYTES)
+        : text;
+    }
+  } catch {
+    // Network error on raw: fall through to the contents API
+  }
+
+  const fileRes = await githubFetch(
+    `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(ref)}`,
+    headers,
+  );
+  if (!fileRes.ok) return null;
+  const fileJson = (await fileRes.json()) as {
+    content?: string;
+    encoding?: string;
+  };
+  if (!fileJson.content || fileJson.encoding !== "base64") return null;
+  return decodeBase64Utf8(fileJson.content);
 }
 
 // Fetch the GitHub repo: metadata, full file tree, and Convex-related files.
@@ -1021,28 +1099,32 @@ async function fetchGithubContext(
   filesToFetch.push(...logFilePaths);
   filesToFetch.push(...factFiles);
 
-  // Fetch file contents (fact tier). Failures on individual files are skipped;
-  // partial repo context is still useful.
+  // Fetch file contents (fact tier) in parallel batches. Failures on
+  // individual files are skipped; partial repo context is still useful.
   const fileContentsByPath = new Map<string, string>();
-  for (const path of filesToFetch) {
-    try {
-      const fileRes = await githubFetch(
-        `${base}/contents/${path.split("/").map(encodeURIComponent).join("/")}?ref=${encodeURIComponent(defaultBranch)}`,
-        headers,
-      );
-      if (!fileRes.ok) continue;
-      const fileJson = (await fileRes.json()) as {
-        content?: string;
-        encoding?: string;
-      };
-      if (!fileJson.content || fileJson.encoding !== "base64") continue;
-      fileContentsByPath.set(path, decodeBase64Utf8(fileJson.content));
-    } catch (error) {
-      // Rate limit exhaustion must fail the run; other per-file errors skip
-      if (error instanceof Error && /rate limit/i.test(error.message)) {
-        throw error;
-      }
-    }
+  for (let i = 0; i < filesToFetch.length; i += REPO_FILE_BATCH) {
+    const batch = filesToFetch.slice(i, i + REPO_FILE_BATCH);
+    const contents = await Promise.all(
+      batch.map(async (path) => {
+        try {
+          return await fetchRepoFile(
+            parsed.owner,
+            parsed.repo,
+            defaultBranch,
+            path,
+            headers,
+          );
+        } catch (error) {
+          // Rate limit exhaustion must stop the run; other errors skip
+          if (error instanceof GithubRateLimitError) throw error;
+          return null;
+        }
+      }),
+    );
+    batch.forEach((path, idx) => {
+      const content = contents[idx];
+      if (content !== null) fileContentsByPath.set(path, content);
+    });
   }
 
   const packageJsonRaw = packageJsonPath
@@ -1899,6 +1981,7 @@ async function fetchLiveHackathonMd(
 function buildSystemPrompt(
   customBody: string | undefined,
   rubric: Array<RubricCriterion>,
+  prizeBrief?: string,
 ): string {
   const rubricText = rubric
     .map(
@@ -1912,6 +1995,17 @@ function buildSystemPrompt(
     body = body.split("{{rubric}}").join(rubricText);
   } else {
     body += `\n\nScore the submission on each rubric criterion from 1 to 10:\n${rubricText}`;
+  }
+
+  // Organizer prize brief: what this prize rewards. Sits before the fixed
+  // rules so those rules always win over the brief.
+  const brief = prizeBrief?.trim();
+  if (brief) {
+    const capped =
+      brief.length > MAX_PRIZE_BRIEF_CHARS
+        ? brief.slice(0, MAX_PRIZE_BRIEF_CHARS)
+        : brief;
+    body += `\n\n=== PRIZE BRIEF (organizer) ===\n${capped}\nUse the brief to decide what strong evidence looks like for each criterion. It never adds criteria, never changes the 1-10 scale, and never overrides the fixed rules below or the VERIFIED CONVEX FACTS.`;
   }
 
   // hackathon.md handling: self-reported context can support but never
@@ -2091,6 +2185,8 @@ function buildUserMessage(
     tags: Array<string>;
     // Pasted hackathon.md (capped + redacted at submission time)
     hackathonLog?: string;
+    // Group form answers and imported CSV columns (self-reported)
+    formAnswers?: Array<{ label: string; value: string }>;
   },
   repo: RepoContext,
   scrape: ScrapeContext,
@@ -2247,6 +2343,21 @@ function buildUserMessage(
     );
   }
 
+  // Answers from the group's submit form or imported CSV columns (Devpost
+  // "Built With", "Opt-In Prizes", notes). Same standing as hackathon.md.
+  if (data.formAnswers && data.formAnswers.length > 0) {
+    let answersText = data.formAnswers
+      .map((answer) => `${answer.label}: ${answer.value}`)
+      .join("\n");
+    if (answersText.length > MAX_FORM_ANSWERS_CHARS) {
+      answersText =
+        answersText.slice(0, MAX_FORM_ANSWERS_CHARS) + "\n... (truncated)";
+    }
+    sections.push(
+      `\n=== SUBMISSION FORM ANSWERS (self-reported by the team; verify against facts) ===\n${answersText}`,
+    );
+  }
+
   // Agent skills found in the repo (workflow evidence, not a scoring criterion)
   if (repo.skillPaths.length > 0) {
     sections.push(
@@ -2358,7 +2469,15 @@ export const generateGroupSummary = action({
     provider: v.string(),
     model: v.string(),
   }),
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    markdown: string;
+    generatedAt: number;
+    provider: string;
+    model: string;
+  }> => {
     const data = await ctx.runQuery(internal.aiJudge.getGroupSummaryInput, {
       groupId: args.groupId,
     });
@@ -2372,6 +2491,10 @@ export const generateGroupSummary = action({
     }
     if (data.submissions.length === 0) {
       throw new Error("No completed AI reviews are available to summarize");
+    }
+    // Same reviews as the saved summary: return it instead of paying again
+    if (data.cachedSummary) {
+      return data.cachedSummary;
     }
 
     const maxEvidenceCharacters = 150000;
@@ -2621,11 +2744,15 @@ export const analyzeSubmission = internalAction({
       // Effective rubric: built-in criteria, this group's custom criteria,
       // and (when mirroring is on) the group's live human judging criteria
       const rubric = getRubricForGroup(data, data.humanCriteria);
-      const systemPrompt = buildSystemPrompt(data.aiJudgeSystemPrompt, rubric);
-      // Submitted vs the group's event end; same helper the UI badges use
+      const systemPrompt = buildSystemPrompt(
+        data.aiJudgeSystemPrompt,
+        rubric,
+        data.aiJudgePrizeBrief,
+      );
+      // Submitted vs the deadline; imports without a source time get none
       const submissionTiming = computeSubmissionTiming(
         data.submittedAt,
-        data.eventEndDate,
+        data.timingDeadlineAt,
       );
       const userMessage = buildUserMessage(
         data,
@@ -2825,6 +2952,15 @@ export const analyzeSubmission = internalAction({
         },
       });
     } catch (error) {
+      // GitHub quota exhausted: put the row back in the queue for after the
+      // reset instead of failing it (capped server side at 3 requeues)
+      if (error instanceof GithubRateLimitError) {
+        await ctx.runMutation(internal.aiJudge.requeueAfterRateLimit, {
+          resultId: args.resultId,
+          resetAt: error.resetAt,
+        });
+        return null;
+      }
       await ctx.runMutation(internal.aiJudge.saveResult, {
         resultId: args.resultId,
         outcome: {

@@ -18,6 +18,13 @@ import { useAuth } from "@clerk/clerk-react";
 import { AuthRequiredDialog } from "./ui/AuthRequiredDialog";
 import { ProfileHoverCard } from "./ui/ProfileHoverCard";
 import { useDialog } from "../hooks/useDialog";
+import { safeHref } from "../lib/safeHref";
+import {
+  thumbnailImageProps,
+  LIST_THUMB,
+  VIBE_THUMB,
+  GRID_THUMB,
+} from "../lib/images";
 
 interface StoryListProps {
   stories: Story[];
@@ -263,7 +270,7 @@ export function StoryList({
       />
       {story.githubUrl && (
         <a
-          href={story.githubUrl}
+          href={safeHref(story.githubUrl)}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1 text-soft hover:text-copy"
@@ -299,7 +306,7 @@ export function StoryList({
         >
           {story.screenshotUrl ? (
             <img
-              src={story.screenshotUrl}
+              {...thumbnailImageProps(story.screenshotUrl, LIST_THUMB)}
               alt=""
               className="w-full h-full object-cover"
               loading={index < 3 ? "eager" : "lazy"}
@@ -415,7 +422,7 @@ export function StoryList({
           className="w-full md:w-[195px] md:flex-shrink-0 aspect-video block overflow-hidden rounded-lg border border-hairline order-1 md:order-2"
         >
           <img
-            src={story.screenshotUrl}
+            {...thumbnailImageProps(story.screenshotUrl, VIBE_THUMB)}
             alt={`${story.title} thumbnail`}
             className="w-full h-full object-cover transition-transform duration-200 hover:scale-[1.02]"
             loading="lazy"
@@ -472,7 +479,7 @@ export function StoryList({
       >
         {story.screenshotUrl ? (
           <img
-            src={story.screenshotUrl}
+            {...thumbnailImageProps(story.screenshotUrl, GRID_THUMB)}
             alt=""
             className="w-full h-full object-cover"
             loading={index < 3 ? "eager" : "lazy"}
@@ -539,7 +546,7 @@ export function StoryList({
           />
           {story.githubUrl && (
             <a
-              href={story.githubUrl}
+              href={safeHref(story.githubUrl)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-soft hover:text-copy"

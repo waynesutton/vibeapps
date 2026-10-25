@@ -17,5 +17,20 @@
 # since unsubscribe tokens live in that deployment's database.
 /api/unsubscribe https://whimsical-dalmatian-205.convex.site/api/unsubscribe 200
 
+# Resized screenshots. /_src proxies prod Convex storage (the imageSource
+# edge function only lets raster images through). /_img runs it through the
+# Netlify Image CDN. Only these widths exist so random sizes cannot burn
+# transform credits; keep them in sync with THUMBNAIL_WIDTHS in src/lib/images.ts.
+/_src/:id https://whimsical-dalmatian-205.convex.cloud/api/storage/:id 200!
+/_img/160/:id /.netlify/images?url=/_src/:id&w=160 200!
+/_img/320/:id /.netlify/images?url=/_src/:id&w=320 200!
+/_img/400/:id /.netlify/images?url=/_src/:id&w=400 200!
+/_img/720/:id /.netlify/images?url=/_src/:id&w=720 200!
+/_img/1080/:id /.netlify/images?url=/_src/:id&w=1080 200!
+
+# Missing build assets (old hashed chunks) return a real 404 instead of
+# index.html, so a stale tab fails fast and reloads once.
+/assets/* /404.html 404
+
 # All routes go to the SPA (including /s/:slug)
 /* /index.html 200

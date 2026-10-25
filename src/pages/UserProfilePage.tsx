@@ -40,6 +40,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useDialog } from "../hooks/useDialog";
+import { safeHref } from "../lib/safeHref";
 
 const PROFILE_SECTION_IDS = ["email-preferences", "manage-profile"] as const;
 type ProfileSectionId = (typeof PROFILE_SECTION_IDS)[number];
@@ -1205,7 +1206,7 @@ export default function UserProfilePage() {
                   <>
                     {loadedProfileUser?.website && (
                       <a
-                        href={loadedProfileUser.website}
+                        href={safeHref(loadedProfileUser.website)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs text-soft hover:text-ink"
@@ -1216,7 +1217,7 @@ export default function UserProfilePage() {
                     )}
                     {loadedProfileUser?.twitter && (
                       <a
-                        href={loadedProfileUser.twitter}
+                        href={safeHref(loadedProfileUser.twitter)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs text-soft hover:text-ink"
@@ -1227,7 +1228,7 @@ export default function UserProfilePage() {
                     )}
                     {loadedProfileUser?.bluesky && (
                       <a
-                        href={loadedProfileUser.bluesky}
+                        href={safeHref(loadedProfileUser.bluesky)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs text-soft hover:text-ink"
@@ -1238,7 +1239,7 @@ export default function UserProfilePage() {
                     )}
                     {loadedProfileUser?.linkedin && (
                       <a
-                        href={loadedProfileUser.linkedin}
+                        href={safeHref(loadedProfileUser.linkedin)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs text-soft hover:text-ink"

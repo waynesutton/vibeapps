@@ -153,6 +153,25 @@ export const getMessageReactions = query({
     }),
   ),
   handler: async (ctx, args) => {
+    // Only the two people in the conversation can see its reactions
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+    if (!currentUser) return [];
+    const message = await ctx.db.get(args.messageId);
+    if (!message) return [];
+    const conversation = await ctx.db.get(message.conversationId);
+    if (
+      !conversation ||
+      (conversation.userAId !== currentUser._id &&
+        conversation.userBId !== currentUser._id)
+    ) {
+      return [];
+    }
+
     // Get all reactions for this message
     const reactions = await ctx.db
       .query("dmReactions")

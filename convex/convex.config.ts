@@ -16,12 +16,22 @@ import contextDev from "@context-dot-dev/convex/convex.config.js";
 // back to Claude Fable 5 when unset, so flipping models is a dashboard edit.
 // AI_RESEARCH_MODEL is the default model for the judging research chat.
 // Optional: falls back to AI_JUDGE_MODEL, then Claude Fable 5.
+// The rest are read through process.env. They are declared optional so a
+// deployment that has not set one still pushes; code paths check for them.
 const app = defineApp({
   env: {
     FIRECRAWL_API_KEY: v.string(),
     CONTEXT_DEV_API_KEY: v.string(),
     AI_JUDGE_MODEL: v.optional(v.string()),
     AI_RESEARCH_MODEL: v.optional(v.string()),
+    ADMIN_EMAIL: v.optional(v.string()),
+    CLERK_JWT_KEY: v.optional(v.string()),
+    CLERK_SECRET_KEY: v.optional(v.string()),
+    CLERK_WEBHOOK_SECRET: v.optional(v.string()),
+    GITHUB_TOKEN: v.optional(v.string()),
+    LUMA_API_KEY: v.optional(v.string()),
+    VITE_CLERK_FRONTEND_API_URL: v.optional(v.string()),
+    NEXT_PUBLIC_CONVEX_URL: v.optional(v.string()),
   },
 });
 app.use(resend);

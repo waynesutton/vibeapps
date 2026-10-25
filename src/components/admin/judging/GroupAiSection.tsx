@@ -9,7 +9,9 @@ import {
   Plus,
   RotateCcw,
   Trash2,
+  X,
 } from "lucide-react";
+import type { FunctionReturnType } from "convex/server";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { Input } from "../../ui/input";
@@ -60,6 +62,7 @@ export function GroupAiSection({
   return (
     <div className="space-y-4">
       {canManage && <AiSettingsCard group={group} />}
+      {canAi && group.aiJudgeEnabled && <ReadinessCard group={group} />}
       {canAi && group.aiJudgeEnabled && (
         <RubricWeightsCard key={`weights-${criteriaKey}`} group={group} />
       )}
@@ -1071,6 +1074,155 @@ function AiReviewForJudgesBlock({ group }: { group: GroupDetails }) {
   );
 }
 
+type ReadinessResult = FunctionReturnType<
+  typeof api.aiJudgeReadiness.checkReadiness
+>;
+
+// One readiness line: green check or red mark, label, and a short detail
+function ReadinessRow({
+  ok,
+  label,
+  detail,
+}: {
+  ok: boolean;
+  label: string;
+  detail: string;
+}) {
+  return (
+    <div className="flex items-start gap-2 px-3 py-2 text-[13px]">
+      {ok ? (
+        <Check
+          className="w-4 h-4 text-green-700 flex-shrink-0 mt-0.5"
+          aria-label="Ready"
+        />
+      ) : (
+        <X
+          className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5"
+          aria-label="Not ready"
+        />
+      )}
+      <div className="min-w-0">
+        <p className="text-copy">{label}</p>
+        <p className="text-xs text-soft">{detail}</p>
+      </div>
+    </div>
+  );
+}
+
+// Preflight before a judging day run: keys set, GitHub quota left, and a
+// one token AI gateway ping. Reports booleans only, never key values.
+function ReadinessCard({ group }: { group: GroupDetails }) {
+  const checkReadiness = useAction(api.aiJudgeReadiness.checkReadiness);
+  const [result, setResult] = useState<ReadinessResult | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleCheck = async () => {
+    setChecking(true);
+    setError("");
+    try {
+      setResult(await checkReadiness({ groupId: group._id }));
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message.replace(/^\[.*?\]\s*/, "")
+          : "Readiness check failed",
+      );
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const githubDetail = (r: ReadinessResult): string => {
+    if (!r.githubToken) {
+      return "Not set. The AI judge refuses to run without GITHUB_TOKEN.";
+    }
+    if (r.githubError) return r.githubError;
+    if (r.githubRemaining === undefined) return "Set.";
+    const reset = r.githubResetAt
+      ? `, resets ${formatDistanceToNow(r.githubResetAt, { addSuffix: true })}`
+      : "";
+    return `Set. ${r.githubRemaining} of ${r.githubLimit ?? "?"} API calls left this hour${reset}. A review uses about 5.`;
+  };
+
+  return (
+    <SectionCard
+      title="Run readiness"
+      description="Check this before a big run. Confirms the keys the AI judge needs are set and the AI gateway answers."
+      headerAction={
+        <button
+          type="button"
+          onClick={() => void handleCheck()}
+          disabled={checking}
+          className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md border border-hairline text-copy hover:bg-surface-hover transition-colors disabled:opacity-50"
+        >
+          {checking ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            <RotateCcw className="w-3 h-3" />
+          )}
+          {checking ? "Checking..." : result ? "Check again" : "Run check"}
+        </button>
+      }
+    >
+      {error && <p className="text-[13px] text-red-600">{error}</p>}
+      {!result && !error && (
+        <p className="text-[13px] text-soft">
+          Not checked yet. The check makes one small AI request.
+        </p>
+      )}
+      {result && (
+        <div
+          className="rounded-md border border-hairline divide-y divide-hairline"
+          aria-live="polite"
+        >
+          <ReadinessRow
+            ok={
+              result.githubToken &&
+              !result.githubError &&
+              (result.githubRemaining === undefined ||
+                result.githubRemaining > 50)
+            }
+            label="GitHub token"
+            detail={githubDetail(result)}
+          />
+          <ReadinessRow
+            ok={result.gatewayOk}
+            label="AI gateway"
+            detail={
+              result.gatewayOk
+                ? `Answered with ${result.gatewayModel}.`
+                : `No answer from ${result.gatewayModel}: ${result.gatewayError ?? "unknown error"}`
+            }
+          />
+          <ReadinessRow
+            ok={result.contextDev}
+            label="Video transcripts (CONTEXT_DEV_API_KEY)"
+            detail={
+              result.contextDev
+                ? "Set. YouTube captions are read for the VIDEO section."
+                : "Not set. Videos are skipped with a note."
+            }
+          />
+          <ReadinessRow
+            ok={result.firecrawl}
+            label="Live site scrape (FIRECRAWL_API_KEY)"
+            detail={
+              result.firecrawl
+                ? "Set. Covers the live site, screenshot, and Vimeo and Loom pages."
+                : "Not set. No live site scrape, screenshot, or Vimeo and Loom fallback."
+            }
+          />
+          <p className="px-3 py-1.5 text-xs text-faint">
+            Checked{" "}
+            {formatDistanceToNow(result.checkedAt, { addSuffix: true })}
+          </p>
+        </div>
+      )}
+    </SectionCard>
+  );
+}
+
 // Editable AI judge system prompt with a reset-to-default action. The JSON
 // response contract is always appended server-side and is not editable, so
 // a custom prompt can never break score parsing.
@@ -1117,6 +1269,10 @@ function SystemPromptCard({ group }: { group: GroupDetails }) {
               ))}
             </div>
           </div>
+          <PrizeBriefEditor
+            groupId={group._id}
+            prizeBrief={promptConfig.prizeBrief}
+          />
           <SystemPromptEditor
             groupId={group._id}
             defaultPrompt={promptConfig.defaultPrompt}
@@ -1125,6 +1281,80 @@ function SystemPromptCard({ group }: { group: GroupDetails }) {
         </>
       )}
     </SectionCard>
+  );
+}
+
+// Max length mirrors the server cap in aiJudge.updateAiPrizeBrief
+const PRIZE_BRIEF_MAX = 2000;
+
+// Short organizer note on what the prize rewards. Added on top of the
+// default or custom prompt body, so the default prompt stays untouched.
+function PrizeBriefEditor({
+  groupId,
+  prizeBrief,
+}: {
+  groupId: Id<"judgingGroups">;
+  prizeBrief?: string;
+}) {
+  const updateAiPrizeBrief = useMutation(api.aiJudge.updateAiPrizeBrief);
+  const { saving, saved, error, run } = useSaveState();
+  const [text, setText] = useState(prizeBrief ?? "");
+  const dirty = text.trim() !== (prizeBrief ?? "");
+
+  const handleSave = () => {
+    void run(async () => {
+      await updateAiPrizeBrief({ groupId, brief: text });
+    });
+  };
+
+  return (
+    <div className="space-y-2">
+      <div>
+        <label
+          htmlFor={`prize-brief-${groupId}`}
+          className="text-[13px] font-medium text-copy"
+        >
+          Prize brief
+        </label>
+        <p className="text-xs text-soft mt-0.5">
+          Tell the judge what this prize rewards. It shapes what strong
+          evidence looks like for each criterion and never adds criteria.
+          Works with the default prompt or a custom one.
+        </p>
+      </div>
+      <Textarea
+        id={`prize-brief-${groupId}`}
+        value={text}
+        onChange={(e) => setText(e.target.value.slice(0, PRIZE_BRIEF_MAX))}
+        rows={5}
+        disabled={saving}
+        className="text-[13px] leading-relaxed"
+      />
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 text-[13px]">
+          {error ? (
+            <span className="text-red-600">{error}</span>
+          ) : saved ? (
+            <span className="text-green-700 inline-flex items-center gap-1">
+              <Check className="w-3.5 h-3.5" /> Saved
+            </span>
+          ) : (
+            <span className="text-faint tabular-nums">
+              {text.length} / {PRIZE_BRIEF_MAX}
+              {prizeBrief ? " · Active on the next run" : " · Not set"}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving || !dirty}
+          className="px-3.5 py-1.5 text-[13px] font-medium rounded-md bg-cta text-on-cta hover:bg-cta-hover transition-colors disabled:opacity-50 flex-shrink-0"
+        >
+          {saving ? "Saving..." : "Save brief"}
+        </button>
+      </div>
+    </div>
   );
 }
 

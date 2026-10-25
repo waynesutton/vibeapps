@@ -25,6 +25,21 @@ if (!import.meta.env.VITE_CONVEX_URL) {
   );
 }
 
+// After a deploy, an open tab can ask for a chunk that no longer exists.
+// Reload once per build to pick up the new files; a second failure in the
+// same build falls through to RouteErrorBoundary instead of looping.
+window.addEventListener("vite:preloadError", (event) => {
+  const key = "vibeapps-chunk-reload";
+  try {
+    if (sessionStorage.getItem(key) === import.meta.url) return;
+    sessionStorage.setItem(key, import.meta.url);
+  } catch {
+    return;
+  }
+  event.preventDefault();
+  window.location.reload();
+});
+
 // Wraps ClerkProvider so its modals/cards follow the active site theme
 function AppWithProviders() {
   const { theme } = useTheme();

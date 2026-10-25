@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
+import { safeHref } from "../../lib/safeHref";
 
 // Social proof snapshot for the judge interface. Reads the same stored
 // snapshot the AI judge prompt used, so every judge sees identical numbers
@@ -126,7 +127,7 @@ function SnapshotRow({ snap }: { snap: Snapshot }) {
           )}
         </div>
         <a
-          href={snap.url}
+          href={safeHref(snap.url)}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-xs text-copy hover:text-ink hover:underline flex-shrink-0"

@@ -1,6 +1,7 @@
 import { query, type QueryCtx, type MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
+import { isJudgingOnlyStory } from "./lib/judgingEligibility";
 
 // --- Hackathon URL helpers ---
 //
@@ -47,8 +48,10 @@ export async function groupHasDuplicateUrl(
   for (const submission of submissions) {
     const story = await ctx.db.get(submission.storyId);
     if (!story) continue;
-    // Hidden or rejected entries free up the URL for a clean resubmission
-    if (story.isHidden === true || story.status === "rejected") continue;
+    // Hidden or rejected entries free up the URL for a clean resubmission;
+    // judging only imports still count as live entries
+    if (story.status === "rejected") continue;
+    if (story.isHidden === true && !isJudgingOnlyStory(story)) continue;
     if (normalizeProjectUrl(story.url) === target) return true;
   }
   return false;
