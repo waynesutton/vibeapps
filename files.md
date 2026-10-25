@@ -38,6 +38,7 @@
 
 All PRD files are now organized in the `prds/` folder for better project structure:
 
+- `prds/ai-judge-devpost-csv-live-url.md`: Findings from the real Devpost "Best use of Convex" CSV and the two fixes: the AI judge skips GitHub and Devpost URLs as the live app, and imported taglines drop raw Markdown
 - `prds/judging-group-csv-import.md`: CSV import into a judging group (Devpost mapping, judging only visibility, upsert by import key, AI judge form answers and prize brief, GitHub rate limit requeue, readiness card, video coverage and retry), verification notes, what did not ship
 - `prds/calhacks-convex-submitter-prompt.md`: The short prompt Cal Hacks teams paste into their coding agent so the README and repo give the Best Use of Convex AI judge clear evidence, plus the suggested rubric weights and prize brief
 - `prds/what-i-need-from-you.md`: Running log of asks for the project owner (A1, A2, ...) with Open, Done, and a session log

@@ -39,3 +39,7 @@ bun.lockb
 # Security fix details stay local, never in the public repo
 .cursor/plans/vibeapps_security_fixes_336f6e0a.plan.md
 prds/security-check-fixes.md
+
+# Local sample data (hackathon submission exports)
+/sample/
+/sample/\[Convex\] Best use of Convex - Copy of \[Convex\] Best use of Convex.csv

@@ -92,10 +92,20 @@ function cleanEmail(value: string | undefined): string | undefined {
   return trimmed && EMAIL_REGEX.test(trimmed) ? trimmed : undefined;
 }
 
-// Short tagline fallback from the long description
+// Short tagline fallback from the long description. Devpost "About" text is
+// Markdown that usually opens with "## Inspiration" or an image, so headings,
+// images, emphasis, and escapes are dropped before taking the first line.
 function taglineFrom(longDescription: string | undefined): string {
   if (!longDescription) return "";
-  const flat = longDescription.replace(/\s+/g, " ").trim();
+  const plain = longDescription
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/^\s{0,3}#{1,6}\s*(inspiration|about|overview)?\s*$/gim, " ")
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    .replace(/\\([\\_*`#[\]()-])/g, "$1")
+    .replace(/\*\*|__|`/g, "");
+  const flat = plain.replace(/\s+/g, " ").trim();
   return flat.length > 140 ? `${flat.slice(0, 137).trimEnd()}...` : flat;
 }
 

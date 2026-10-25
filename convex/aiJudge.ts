@@ -20,6 +20,7 @@ import {
 } from "./judgingGroups";
 import { parseHackathonLogHeader } from "./hackathonLog"; // hackathon.md header parsing (admin views)
 import { logActivity } from "./activityLog";
+import { normalizeProjectUrl } from "./hackathon";
 import {
   FRONTEND_CHECKER_KEY,
   computeWeightedScore,
@@ -1900,6 +1901,33 @@ export const markRunning = internalMutation({
   },
 });
 
+// The story URL is only a live app when it is not a repo page or a listing.
+// CSV imports without a "Try it out" app link fall back to the GitHub repo
+// or the Devpost page, which must not be scraped, screenshotted, or
+// reported as LIVE.
+function liveAppUrlForJudging(
+  url: string,
+  importSourceUrl: string | undefined,
+): string | undefined {
+  const trimmed = url.trim();
+  if (!trimmed) return undefined;
+  if (
+    importSourceUrl &&
+    normalizeProjectUrl(importSourceUrl) === normalizeProjectUrl(trimmed)
+  ) {
+    return undefined;
+  }
+  try {
+    const host = new URL(trimmed).hostname.toLowerCase();
+    const isRepoOrListing = ["github.com", "devpost.com"].some(
+      (domain) => host === domain || host.endsWith(`.${domain}`),
+    );
+    return isRepoOrListing ? undefined : trimmed;
+  } catch {
+    return trimmed;
+  }
+}
+
 /**
  * Gather everything the analysis action needs for one submission.
  */
@@ -2011,7 +2039,7 @@ export const getSubmissionForAnalysis = internalQuery({
       title: story.title,
       description: story.description,
       longDescription: story.longDescription,
-      url: story.url,
+      url: liveAppUrlForJudging(story.url, story.importSourceUrl),
       githubUrl: story.githubUrl,
       videoUrl: story.videoUrl,
       linkedinUrl: story.linkedinUrl,
