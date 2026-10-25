@@ -20,6 +20,7 @@ import {
   Users,
   Video,
   Megaphone,
+  Search,
   Star,
 } from "lucide-react";
 import { ConvexError } from "convex/values";
@@ -27,6 +28,7 @@ import { toast } from "sonner";
 import { api } from "../../../convex/_generated/api";
 import { Id } from "../../../convex/_generated/dataModel";
 import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
 import { SimpleSelect } from "../ui/SimpleSelect";
@@ -1013,6 +1015,8 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [reasonFilter, setReasonFilter] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>("rank");
+  // Search box: title, slug, and the live, GitHub, and source links
+  const [search, setSearch] = useState("");
   const [reportMarkdown, setReportMarkdown] = useState<string | null>(null);
   const [reportCopied, setReportCopied] = useState(false);
   const [recapMarkdown, setRecapMarkdown] = useState<string | null>(null);
@@ -1407,10 +1411,26 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
       ? reasonFilter
       : null;
 
+  const searchTerm = search.trim().toLowerCase();
   const visibleResults = (data?.results || [])
     .filter((r) => {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (activeReason !== null && failureReason(r.error) !== activeReason) {
+        return false;
+      }
+      if (
+        searchTerm &&
+        ![
+          r.storyTitle,
+          r.storySlug,
+          r.storyUrl ?? "",
+          r.githubUrl ?? "",
+          r.importSourceUrl ?? "",
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(searchTerm)
+      ) {
         return false;
       }
       if (timelineFilter === "all") return true;
@@ -1439,11 +1459,15 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
       return byRank;
     });
   const filtersActive =
-    statusFilter !== "all" || timelineFilter !== "all" || activeReason !== null;
+    statusFilter !== "all" ||
+    timelineFilter !== "all" ||
+    activeReason !== null ||
+    searchTerm.length > 0;
   const clearFilters = () => {
     setStatusFilter("all");
     setReasonFilter(null);
     setTimelineFilter("all");
+    setSearch("");
   };
   // Stat cards and the Status select share this so the reason pick resets
   const pickStatus = (next: StatusFilter) => {
@@ -1985,6 +2009,24 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                 </div>
               </div>
 
+              {/* Search across title, slug, and submission links */}
+              <div className="relative">
+                <Search
+                  className="w-4 h-4 text-faint absolute left-3 top-1/2 -translate-y-1/2"
+                  aria-hidden="true"
+                />
+                <Input
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search title, slug, or link..."
+                  className="pl-9"
+                  aria-label="Search AI results in this group"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </div>
+
               {/* Filter toolbar: status, eligibility, sort */}
               <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                 <p className="text-xs text-soft tabular-nums" aria-live="polite">
@@ -2157,7 +2199,11 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
 
               {visibleResults.length === 0 && (
                 <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-soft bg-surface rounded-lg border border-hairline p-4">
-                  <span>No submissions match these filters.</span>
+                  <span>
+                    {searchTerm
+                      ? `No submissions match "${search.trim()}" with these filters.`
+                      : "No submissions match these filters."}
+                  </span>
                   {filtersActive && (
                     <Button variant="outline" size="sm" onClick={clearFilters}>
                       Clear filters
