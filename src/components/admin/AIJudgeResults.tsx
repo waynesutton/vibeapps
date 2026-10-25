@@ -1021,6 +1021,10 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
   const [reportCopied, setReportCopied] = useState(false);
   const [recapMarkdown, setRecapMarkdown] = useState<string | null>(null);
   const [recapCopied, setRecapCopied] = useState(false);
+  // Results fingerprint at build time, so a later retry or re-run can flag
+  // the recap and report as out of date
+  const [recapSignature, setRecapSignature] = useState<string | null>(null);
+  const [reportSignature, setReportSignature] = useState<string | null>(null);
   const [copiedBriefId, setCopiedBriefId] =
     useState<Id<"aiJudgeResults"> | null>(null);
   const [openBriefId, setOpenBriefId] =
@@ -1046,9 +1050,22 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
     activeTab === "report" && reportReady ? { groupId } : "skip",
   );
 
+  // Changes whenever a row's status, score, reasoning, or admin edit changes
+  const resultsSignature = (data?.results || [])
+    .map(
+      (r) =>
+        `${r._id}:${r.status}:${r.averageScore ?? ""}:${r.weightedScore ?? ""}:${r.editedAt ?? ""}:${r.overallReasoning?.length ?? 0}`,
+    )
+    .join("|");
+  const recapStale =
+    recapMarkdown !== null && recapSignature !== resultsSignature;
+  const reportStale =
+    reportMarkdown !== null && reportSignature !== resultsSignature;
+
   const handleGenerateReport = () => {
     if (!reportData) return;
     setReportMarkdown(buildHackathonReport(reportData, window.location.origin));
+    setReportSignature(resultsSignature);
   };
 
   const handleCopyReport = async () => {
@@ -1083,6 +1100,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
           : data.groupSummary?.markdown,
       ),
     );
+    setRecapSignature(resultsSignature);
   };
 
   const handleCopyRecap = async () => {
@@ -1150,6 +1168,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
             summary.markdown,
           ),
         );
+        setRecapSignature(resultsSignature);
       }
     } catch (error) {
       setGroupSummaryError(errorMessage(error));
@@ -1670,8 +1689,35 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
           </div>
 
           {activeTab === "stats" && statsReady && (
-            <StatsPanel groupName={groupName} results={data.results} />
+            <div className="space-y-2">
+              {/* Stats read the live results query, so no reload is needed */}
+              <p className="text-xs text-soft" aria-live="polite">
+                {isRunning
+                  ? `Reviewing ${inFlightCount} submission${inFlightCount === 1 ? "" : "s"}. Stats update on their own as each one finishes.`
+                  : "Stats update on their own whenever a review, retry, or re-run finishes."}
+              </p>
+              <StatsPanel groupName={groupName} results={data.results} />
+            </div>
           )}
+
+          {/* Recap and report stay locked during a retry or re-run; say why
+              instead of leaving the tab blank */}
+          {(activeTab === "recap" || activeTab === "report") &&
+            !reportReady && (
+              <div className="flex items-start gap-3 rounded-lg border border-hairline bg-surface p-4 text-sm text-soft">
+                {isRunning && (
+                  <Loader2
+                    className="w-4 h-4 mt-0.5 shrink-0 animate-spin"
+                    aria-hidden="true"
+                  />
+                )}
+                <p aria-live="polite">
+                  {isRunning
+                    ? `Reviewing ${inFlightCount} submission${inFlightCount === 1 ? "" : "s"}. The ${activeTab === "recap" ? "recap" : "report"} unlocks when they finish, then use Reload to include the new results.`
+                    : "Available after at least one review completes."}
+                </p>
+              </div>
+            )}
 
           {activeTab === "recap" && reportReady && (
             <div className="space-y-4">
@@ -1691,8 +1737,12 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                     onClick={handleGenerateRecap}
                     className="bg-cta hover:bg-cta-hover"
                   >
-                    <FileText className="w-4 h-4 mr-2" />
-                    {recapMarkdown ? "Regenerate Recap" : "Generate Recap"}
+                    {recapMarkdown ? (
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                    ) : (
+                      <FileText className="w-4 h-4 mr-2" />
+                    )}
+                    {recapMarkdown ? "Reload Recap" : "Generate Recap"}
                   </Button>
                   {recapMarkdown && (
                     <>
@@ -1787,6 +1837,13 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                 )}
               </div>
 
+              {recapStale && (
+                <StaleSnapshotNotice
+                  what="recap"
+                  onReload={handleGenerateRecap}
+                />
+              )}
+
               {recapMarkdown ? (
                 <div className="bg-surface rounded-lg border border-hairline p-4">
                   <pre className="whitespace-pre-wrap text-sm text-ink font-mono max-h-[36rem] overflow-y-auto">
@@ -1834,12 +1891,15 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         Loading data...
                       </>
+                    ) : reportMarkdown ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Reload Report
+                      </>
                     ) : (
                       <>
                         <FileText className="w-4 h-4 mr-2" />
-                        {reportMarkdown
-                          ? "Regenerate Report"
-                          : "Generate Report"}
+                        Generate Report
                       </>
                     )}
                   </Button>
@@ -1866,6 +1926,13 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                   )}
                 </div>
               </div>
+
+              {reportStale && reportData !== undefined && (
+                <StaleSnapshotNotice
+                  what="report"
+                  onReload={handleGenerateReport}
+                />
+              )}
 
               {/* Report preview */}
               {reportMarkdown ? (
@@ -3276,6 +3343,32 @@ function VideoCoveragePanel({
           {coverage.retryable.length === 1 ? "" : "s"}
         </Button>
       )}
+    </div>
+  );
+}
+
+// Shown above a built recap or report once the results it was built from
+// have changed (a retry, re-run, or score edit finished)
+function StaleSnapshotNotice({
+  what,
+  onReload,
+}: {
+  what: "recap" | "report";
+  onReload: () => void;
+}) {
+  return (
+    <div
+      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3"
+      role="status"
+    >
+      <p className="text-sm text-amber-800">
+        Results changed since this {what} was built. Reload to include the
+        latest reviews, retries, and score edits.
+      </p>
+      <Button variant="outline" size="sm" onClick={onReload}>
+        <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+        Reload {what === "recap" ? "Recap" : "Report"}
+      </Button>
     </div>
   );
 }
