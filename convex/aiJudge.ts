@@ -343,6 +343,12 @@ const aiResultValidator = v.object({
   storySlug: v.string(),
   storyUrl: v.optional(v.string()),
   githubUrl: v.optional(v.string()),
+  // Live app link for the "site" chip; undefined for repo or listing pages
+  liveAppUrl: v.optional(v.string()),
+  // Admin views only (includeSourceLinks); undefined on public results
+  videoUrl: v.optional(v.string()),
+  linkedinUrl: v.optional(v.string()),
+  twitterUrl: v.optional(v.string()),
   // Judging only imports have no public page; link the source instead
   judgingOnly: v.boolean(),
   importSourceUrl: v.optional(v.string()),
@@ -457,6 +463,9 @@ async function enrichResults(
     // When true (admin views only), include hackathon.md cross-check notes and
     // the header event text. Public callers leave this undefined.
     includeLogMeta?: boolean;
+    // When true (admin views only), include the video and social links so
+    // the source chips can open them. Public callers leave this undefined.
+    includeSourceLinks?: boolean;
     // Story ids currently in the group. Pass when the caller already loaded
     // memberships; otherwise they are read here.
     memberStoryIds?: Set<Id<"stories">>;
@@ -486,6 +495,10 @@ async function enrichResults(
     storySlug: string;
     storyUrl?: string;
     githubUrl?: string;
+    liveAppUrl?: string;
+    videoUrl?: string;
+    linkedinUrl?: string;
+    twitterUrl?: string;
     judgingOnly: boolean;
     importSourceUrl?: string;
     status: "pending" | "running" | "completed" | "failed";
@@ -549,6 +562,11 @@ async function enrichResults(
       storySlug: story.slug,
       storyUrl: story.url,
       githubUrl: story.githubUrl,
+      // Same rule the analysis uses: a repo or listing page is not the app
+      liveAppUrl: liveAppUrlForJudging(story.url, story.importSourceUrl),
+      videoUrl: options?.includeSourceLinks ? story.videoUrl : undefined,
+      linkedinUrl: options?.includeSourceLinks ? story.linkedinUrl : undefined,
+      twitterUrl: options?.includeSourceLinks ? story.twitterUrl : undefined,
       judgingOnly: isJudgingOnlyStory(story),
       importSourceUrl: story.importSourceUrl,
       status: result.status,
@@ -1398,6 +1416,7 @@ export const getGroupAiResults = query({
       group?.aiFrontendWeights,
       {
         includeLogMeta: true, // Admin view: show log cross-check notes
+        includeSourceLinks: true, // Admin view: clickable video and social chips
         memberStoryIds: new Set(memberships.map((m) => m.storyId)),
         deadlineAt: group?.endDate,
       },

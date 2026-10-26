@@ -2350,6 +2350,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                 {
                                   key: "repo",
                                   on: result.sourcesUsed.github,
+                                  href: result.githubUrl,
                                   Icon: Github,
                                   label: "repo",
                                   title: result.sourcesUsed.github
@@ -2359,6 +2360,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                 {
                                   key: "site",
                                   on: result.sourcesUsed.liveUrl,
+                                  href: result.liveAppUrl,
                                   Icon: Globe,
                                   label: "site",
                                   title: result.sourcesUsed.liveUrl
@@ -2368,6 +2370,7 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                 {
                                   key: "video",
                                   on: result.sourcesUsed.videoTranscript,
+                                  href: result.videoUrl,
                                   Icon: Video,
                                   label: "video",
                                   title: result.sourcesUsed.videoTranscript
@@ -2380,6 +2383,9 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                       {
                                         key: "social",
                                         on: result.sourcesUsed.socialProof,
+                                        href:
+                                          result.twitterUrl ??
+                                          result.linkedinUrl,
                                         Icon: Megaphone,
                                         label: "social",
                                         title: result.sourcesUsed.socialProof
@@ -2389,16 +2395,38 @@ export function AIJudgeResults({ groupId, groupName }: AIJudgeResultsProps) {
                                     ]
                                   : []),
                               ]
-                            ).map(({ key, on, Icon, label, title }) => (
-                              <span
-                                key={key}
-                                className={`inline-flex items-center gap-1 whitespace-nowrap ${on ? "text-green-700 dark:text-green-300" : "text-faint"}`}
-                                title={title}
-                              >
-                                <Icon className="w-3 h-3" aria-hidden="true" />
-                                {on ? label : `no ${label}`}
-                              </span>
-                            ))}
+                            ).map(({ key, on, href, Icon, label, title }) => {
+                              const className = `inline-flex items-center gap-1 whitespace-nowrap ${on ? "text-green-700 dark:text-green-300" : "text-faint"}`;
+                              const content = (
+                                <>
+                                  <Icon
+                                    className="w-3 h-3"
+                                    aria-hidden="true"
+                                  />
+                                  {on ? label : `no ${label}`}
+                                </>
+                              );
+                              // Link whenever the submission has the URL,
+                              // even if the review could not read it
+                              const safe = safeHref(href);
+                              return safe ? (
+                                <a
+                                  key={key}
+                                  href={safe}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`${className} hover:underline underline-offset-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-hairline-strong`}
+                                  title={`${title}. Opens ${safe}`}
+                                  aria-label={`Open ${label} for ${result.storyTitle} (new tab)`}
+                                >
+                                  {content}
+                                </a>
+                              ) : (
+                                <span key={key} className={className} title={title}>
+                                  {content}
+                                </span>
+                              );
+                            })}
                           </div>
                         )}
 
